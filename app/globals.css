@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Design tokens - Easy to customize */
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-card: #ffffff;
+  --color-card-hover: #f8fafc;
+  
+  /* Brand colors - Update these to match Garment Decor */
+  --color-brand-primary: #0ea5e9;
+  --color-brand-secondary: #0369a1;
+  
+  /* Stock indicators */
+  --color-stock-high: #22c55e;
+  --color-stock-low: #eab308;
+  --color-stock-out: #9ca3af;
+  
+  /* Spacing */
+  --spacing-card: 1.5rem;
+  --spacing-section: 3rem;
+  
+  /* Border radius */
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2;
+  }
+  
+  .card {
+    @apply rounded-card bg-white shadow-card transition-shadow hover:shadow-card-hover;
+  }
+  
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+  }
+
+  /* Inventory matrix styling */
+  .stock-high {
+    @apply bg-green-50 text-green-700;
+  }
+  
+  .stock-low {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+  
+  .stock-out {
+    @apply bg-slate-100 text-slate-400 line-through;
+  }
+}
+
+/* Custom scrollbar for inventory matrix */
+.inventory-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.inventory-scroll::-webkit-scrollbar-track {
+  @apply bg-slate-100 rounded-full;
+}
+
+.inventory-scroll::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400;
+}
