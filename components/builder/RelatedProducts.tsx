@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
@@ -8,8 +8,9 @@ import { Product } from '@/lib/types';
 import { formatPrice, cn } from '@/lib/utils';
 
 interface RelatedProductsProps {
-  categoryId?: number;
-  brandId?: number;
+  styleId?: number;        // For comparableGroup lookup (preferred)
+  categoryId?: number;     // Fallback: products from same category
+  brandId?: number;        // Fallback: products from same brand
   currentProductId: string;
   title?: string;
   maxProducts?: number;
@@ -17,34 +18,52 @@ interface RelatedProductsProps {
 }
 
 export function RelatedProducts({
+  styleId,
   categoryId,
   brandId,
   currentProductId,
-  title = 'You May Also Like',
+  title = 'Similar Products',
   maxProducts = 8,
   className,
 }: RelatedProductsProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [scrollPosition, setScrollPosition] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
     const fetchRelated = async () => {
       setIsLoading(true);
       try {
-        const params = new URLSearchParams();
-        if (categoryId) params.set('category', categoryId.toString());
-        else if (brandId) params.set('brand', brandId.toString());
-
-        const response = await fetch(`/api/products?${params.toString()}`);
-        if (response.ok) {
-          const data = await response.json();
-          // Filter out current product and limit results
-          const filtered = (data.data || [])
-            .filter((p: Product) => p.id !== currentProductId)
-            .slice(0, maxProducts);
-          setProducts(filtered);
+        let fetchedProducts: Product[] = [];
+        
+        // Priority 1: Use comparableGroup if styleId provided
+        if (styleId) {
+          const response = await fetch(`/api/products/${styleId}/comparable`);
+          if (response.ok) {
+            fetchedProducts = await response.json();
+          }
         }
+        
+        // Fallback to category/brand if no comparable products found
+        if (fetchedProducts.length === 0 && (categoryId || brandId)) {
+          const params = new URLSearchParams();
+          if (categoryId) params.set('category', categoryId.toString());
+          else if (brandId) params.set('brand', brandId.toString());
+
+          const response = await fetch(`/api/products?${params.toString()}`);
+          if (response.ok) {
+            const data = await response.json();
+            fetchedProducts = data.data || [];
+          }
+        }
+        
+        // Filter out current product and limit results
+        const filtered = fetchedProducts
+          .filter((p: Product) => p.id !== currentProductId)
+          .slice(0, maxProducts);
+        setProducts(filtered);
       } catch (error) {
         console.error('Error fetching related products:', error);
       } finally {
@@ -52,26 +71,48 @@ export function RelatedProducts({
       }
     };
 
-    if (categoryId || brandId) {
+    if (styleId || categoryId || brandId) {
       fetchRelated();
     }
-  }, [categoryId, brandId, currentProductId, maxProducts]);
+  }, [styleId, categoryId, brandId, currentProductId, maxProducts]);
+
+  const checkScrollState = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      setCanScrollLeft(container.scrollLeft > 0);
+      setCanScrollRight(
+        container.scrollLeft < container.scrollWidth - container.clientWidth - 10
+      );
+    }
+  };
+
+  useEffect(() => {
+    checkScrollState();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollState);
+      window.addEventListener('resize', checkScrollState);
+      return () => {
+        container.removeEventListener('scroll', checkScrollState);
+        window.removeEventListener('resize', checkScrollState);
+      };
+    }
+  }, [products]);
 
   const scroll = (direction: 'left' | 'right') => {
-    const container = document.getElementById('related-products-scroll');
+    const container = scrollContainerRef.current;
     if (container) {
       const scrollAmount = 300;
-      const newPosition = direction === 'left' 
-        ? Math.max(0, scrollPosition - scrollAmount)
-        : scrollPosition + scrollAmount;
-      container.scrollTo({ left: newPosition, behavior: 'smooth' });
-      setScrollPosition(newPosition);
+      container.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
     }
   };
 
   if (isLoading) {
     return (
-      <div className={cn('mt-12', className)}>
+      <div className={className}>
         <h2 className="text-xl font-bold text-slate-900">{title}</h2>
         <div className="mt-6 flex gap-4 overflow-hidden">
           {[...Array(4)].map((_, i) => (
@@ -91,30 +132,44 @@ export function RelatedProducts({
   }
 
   return (
-    <div className={cn('mt-12', className)}>
+    <div className={className}>
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => scroll('left')}
-            className="rounded-full border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="rounded-full border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
+        {products.length > 3 && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => scroll('left')}
+              disabled={!canScrollLeft}
+              className={cn(
+                'p-2 rounded-full border transition-colors',
+                canScrollLeft
+                  ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+              )}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              disabled={!canScrollRight}
+              className={cn(
+                'p-2 rounded-full border transition-colors',
+                canScrollRight
+                  ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+              )}
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div
-        id="related-products-scroll"
-        className="mt-6 flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
+        ref={scrollContainerRef}
+        className="mt-6 flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {products.map((product) => (
@@ -123,13 +178,13 @@ export function RelatedProducts({
             href={`/catalog/${product.id}`}
             className="group w-56 flex-shrink-0"
           >
-            <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
+            <div className="relative aspect-square overflow-hidden rounded-xl bg-white">
               {product.imageUrl ? (
                 <Image
                   src={product.imageUrl}
                   alt={product.title || product.styleName}
                   fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"
                   sizes="224px"
                 />
               ) : (

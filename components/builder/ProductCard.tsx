@@ -48,7 +48,19 @@ export function ProductCard({
   const [imageError, setImageError] = useState(false);
   const [showAllColors, setShowAllColors] = useState(false);
 
-  const imageUrl = selectedColor?.frontImage || product.imageUrl;
+  // Image priority when color is selected:
+  // 1. colorFrontImage (flat image) - preferred
+  // 2. colorOnModelFrontImage (model image) - fallback if no flat image
+  // 3. product.imageUrl (styleImage) - fallback if no color images
+  const getImageUrl = () => {
+    if (selectedColor) {
+      // Try flat image first, then model image, then styleImage
+      if (selectedColor.frontImage) return selectedColor.frontImage;
+      if (selectedColor.onModelFrontImage) return selectedColor.onModelFrontImage;
+    }
+    return product.imageUrl;
+  };
+  const imageUrl = getImageUrl();
   
   // Reset image error state when image URL changes
   const handleColorChange = (color: ProductColor) => {

@@ -371,6 +371,10 @@ export async function getProducts(params?: {
           const product = transformSkuDataToProduct(skuData);
           product.title = style.title || product.styleName;
           product.description = style.description || '';
+          // FIX: Use styleImage as primary image
+          if (style.styleImage) {
+            product.imageUrl = buildImageUrl(style.styleImage);
+          }
           if (style.categories) {
             const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
             product.categories = catIds.map(id => ({ id, name: '' }));
@@ -411,6 +415,10 @@ export async function getProducts(params?: {
           const product = transformSkuDataToProduct(skuData);
           product.title = style.title || product.styleName;
           product.description = style.description || '';
+          // FIX: Use styleImage as primary image
+          if (style.styleImage) {
+            product.imageUrl = buildImageUrl(style.styleImage);
+          }
           if (style.categories) {
             const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
             product.categories = catIds.map(id => ({ id, name: '' }));
@@ -535,6 +543,10 @@ export async function getProducts(params?: {
         // Merge in title and description from style data
         product.title = style.title || product.styleName;
         product.description = style.description || '';
+        // Use styleImage as primary image (guaranteed to exist), fall back to colorFrontImage
+        if (style.styleImage) {
+          product.imageUrl = buildImageUrl(style.styleImage);
+        }
         if (style.categories) {
           const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
           product.categories = catIds.map(id => ({ id, name: '' }));
@@ -642,12 +654,252 @@ export async function getProductById(styleId: number): Promise<Product | null> {
     if (styleData && styleData.length > 0) {
       product.title = styleData[0].title || product.styleName;
       product.description = styleData[0].description || '';
+      // FIX: Use styleImage as primary image
+      if (styleData[0].styleImage) {
+        product.imageUrl = buildImageUrl(styleData[0].styleImage);
+      }
+      // Add categories from style data
+      if (styleData[0].categories) {
+        const catIds = styleData[0].categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+        product.categories = catIds.map(id => ({ id, name: '' }));
+      }
+      // Store baseCategory for breadcrumbs
+      if (styleData[0].baseCategory) {
+        (product as ProductWithExtras).baseCategory = styleData[0].baseCategory;
+      }
     }
     
     return product;
   } catch (error) {
     console.error(`Error fetching product ${styleId}:`, error);
     return null;
+  }
+}
+
+// Extended Product type with extras
+interface ProductWithExtras extends Product {
+  baseCategory?: string;
+  companionStyleIds?: number[];
+}
+
+/**
+ * Spec item from the /specs API
+ */
+export interface ProductSpec {
+  specName: string;
+  specValue: string;
+}
+
+/**
+ * Spec data organized by size for table display
+ */
+export interface SpecTableData {
+  sizes: string[]; // Ordered list of sizes (S, M, L, XL, etc.)
+  specs: Array<{
+    specName: string;
+    values: Record<string, string>; // { "S": "28", "M": "29", ... }
+  }>;
+}
+
+/**
+ * Get product specifications from the /specs API
+ * Returns data organized for table display with sizes as columns
+ */
+export async function getProductSpecs(styleId: number): Promise<SpecTableData> {
+  try {
+    console.log(`[getProductSpecs] Fetching specs for styleID: ${styleId}`);
+    
+    // Use noCache to avoid the 2MB cache limit issue
+    // SS API returns: { specID, styleID, partNumber, brandName, styleName, sizeName, sizeOrder, specName, value }
+    const allSpecs = await ssRequest<Array<{ 
+      styleID: number;
+      specName: string; 
+      sizeName: string;
+      sizeOrder: string;
+      value: string;
+    }>>(
+      `/specs/?styleID=${styleId}`,
+      { noCache: true, timeoutMs: 15000 }
+    );
+    
+    console.log(`[getProductSpecs] Raw specs response length: ${allSpecs?.length || 0}`);
+    
+    if (!allSpecs || allSpecs.length === 0) {
+      return { sizes: [], specs: [] };
+    }
+    
+    // Filter to only specs for this styleID (API may return all specs)
+    const filteredSpecs = allSpecs.filter(spec => spec.styleID === styleId);
+    console.log(`[getProductSpecs] Filtered to ${filteredSpecs.length} specs for styleID ${styleId}`);
+    
+    if (filteredSpecs.length === 0) {
+      return { sizes: [], specs: [] };
+    }
+    
+    // Collect all unique sizes with their order
+    const sizeOrderMap = new Map<string, string>();
+    for (const spec of filteredSpecs) {
+      if (spec.sizeName && !sizeOrderMap.has(spec.sizeName)) {
+        sizeOrderMap.set(spec.sizeName, spec.sizeOrder || 'Z99');
+      }
+    }
+    
+    // Sort sizes by sizeOrder
+    const sizes = Array.from(sizeOrderMap.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([sizeName]) => sizeName);
+    
+    // Group specs by specName, then by size
+    const specMap = new Map<string, Record<string, string>>();
+    for (const spec of filteredSpecs) {
+      if (!spec.specName || !spec.value) continue;
+      
+      if (!specMap.has(spec.specName)) {
+        specMap.set(spec.specName, {});
+      }
+      specMap.get(spec.specName)![spec.sizeName] = spec.value;
+    }
+    
+    // Convert to array format
+    const specs = Array.from(specMap.entries()).map(([specName, values]) => ({
+      specName,
+      values,
+    }));
+    
+    return { sizes, specs };
+  } catch (error) {
+    console.error(`Error fetching specs for style ${styleId}:`, error);
+    return { sizes: [], specs: [] };
+  }
+}
+
+/**
+ * Companion product info
+ */
+export interface CompanionProduct {
+  styleId: number;
+  styleName: string;
+  title: string;
+  brandName: string;
+  imageUrl: string;
+  price: number;
+}
+
+/**
+ * Get companion products for a style using the companionGroup ID
+ * companionGroup is a numeric ID - we need to find all styles that share this group
+ */
+export async function getCompanionProducts(styleId: number): Promise<CompanionProduct[]> {
+  try {
+    // First, get the style data to find its companion group
+    const styleData = await ssRequest<Array<SSProduct & { companionGroup?: number }>>(
+      `/styles/?styleID=${styleId}`,
+      { revalidate: 3600, noCache: true }
+    );
+    
+    const companionGroupId = styleData?.[0]?.companionGroup;
+    console.log(`[getCompanionProducts] Style ${styleId} companionGroup ID:`, companionGroupId);
+    
+    if (!styleData || styleData.length === 0 || !companionGroupId) {
+      console.log(`[getCompanionProducts] No companion group found for style ${styleId}`);
+      return [];
+    }
+    
+    // Fetch all styles that have the same companionGroup
+    // Use the cached styles to find companions by group ID
+    const allStyles = await getCachedStyles();
+    const companionStyles = (allStyles as Array<SSProduct & { companionGroup?: number }>)
+      .filter(style => 
+        style.companionGroup === companionGroupId && 
+        style.styleID !== styleId
+      )
+      .slice(0, 8); // Limit to 8 for performance
+    
+    console.log(`[getCompanionProducts] Found ${companionStyles.length} companions in group ${companionGroupId}`);
+    
+    if (companionStyles.length === 0) {
+      return [];
+    }
+    
+    // Transform to simplified companion product format
+    return companionStyles.map(style => ({
+      styleId: style.styleID,
+      styleName: style.styleName,
+      title: style.title || style.styleName,
+      brandName: style.brandName,
+      imageUrl: buildImageUrl(style.styleImage),
+      price: style.ourPrice || style.basePrice || 0,
+    }));
+  } catch (error) {
+    console.error(`Error fetching companion products for style ${styleId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Get comparable/similar products for a style using the comparableGroup field
+ * comparableGroup is a string - styles with the same group are similar
+ * Returns enriched products with colors for the full card display
+ */
+export async function getComparableProducts(styleId: number, maxProducts: number = 8): Promise<Product[]> {
+  try {
+    // First, get the style data to find its comparable group
+    const allStyles = await getCachedStyles();
+    const currentStyle = (allStyles as Array<SSProduct & { comparableGroup?: string }>)
+      .find(s => s.styleID === styleId);
+    
+    const comparableGroupId = currentStyle?.comparableGroup;
+    console.log(`[getComparableProducts] Style ${styleId} comparableGroup:`, comparableGroupId);
+    
+    if (!currentStyle || !comparableGroupId) {
+      console.log(`[getComparableProducts] No comparable group found for style ${styleId}`);
+      return [];
+    }
+    
+    // Find styles with the same comparableGroup
+    const comparableStyles = (allStyles as Array<SSProduct & { comparableGroup?: string }>)
+      .filter(style => 
+        style.comparableGroup === comparableGroupId && 
+        style.styleID !== styleId
+      )
+      .slice(0, maxProducts);
+    
+    console.log(`[getComparableProducts] Found ${comparableStyles.length} comparable styles in group "${comparableGroupId}"`);
+    
+    if (comparableStyles.length === 0) {
+      return [];
+    }
+    
+    // Fetch enriched product data with colors
+    const styleIds = comparableStyles.map(s => s.styleID);
+    const productsMap = await fetchProductsForStyles(styleIds);
+    
+    const products: Product[] = [];
+    productsMap.forEach((skus, styleId) => {
+      if (skus && skus.length > 0) {
+        try {
+          const product = transformSkuDataToProduct(skus);
+          // Merge in title and description from style data
+          const styleInfo = comparableStyles.find(s => s.styleID === styleId);
+          if (styleInfo) {
+            product.title = styleInfo.title || product.styleName;
+            product.description = styleInfo.description || '';
+            // FIX: Use styleImage as primary image
+            if (styleInfo.styleImage) {
+              product.imageUrl = buildImageUrl(styleInfo.styleImage);
+            }
+          }
+          products.push(product);
+        } catch (e) {
+          console.warn(`Skipping invalid comparable product for style ${styleId}`);
+        }
+      }
+    });
+
+    return products;
+  } catch (error) {
+    console.error(`Error fetching comparable products for style ${styleId}:`, error);
+    return [];
   }
 }
 
@@ -731,6 +983,10 @@ export async function searchProducts(query: string): Promise<Product[]> {
           // Merge in title and description from style data
           product.title = style.title || product.styleName;
           product.description = style.description || '';
+          // FIX: Use styleImage as primary image
+          if (style.styleImage) {
+            product.imageUrl = buildImageUrl(style.styleImage);
+          }
           if (style.categories) {
             const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
             product.categories = catIds.map(id => ({ id, name: '' }));
@@ -880,6 +1136,8 @@ function transformProduct(ssProduct: SSProduct): Product {
     categories: categoryIds.map(id => ({ id, name: ssProduct.baseCategory || '' })),
     colors,
   };
+
+  return result;
 }
 
 /**
@@ -954,9 +1212,14 @@ function transformSkuDataToProduct(skuData: SSProductSku[]): Product {
       colorFamily: firstColorSku.colorFamily || firstColorSku.colorGroupName || '',
       swatchImage: buildImageUrl(firstColorSku.colorSwatchImage),
       swatchTextColor: firstColorSku.colorSwatchTextColor || '#000000',
+      // Flat product images
       frontImage: buildImageUrl(firstColorSku.colorFrontImage),
       backImage: buildImageUrl(firstColorSku.colorBackImage),
       sideImage: buildImageUrl(firstColorSku.colorSideImage || firstColorSku.colorDirectSideImage),
+      // Model images
+      onModelFrontImage: buildImageUrl(firstColorSku.colorOnModelFrontImage),
+      onModelBackImage: buildImageUrl(firstColorSku.colorOnModelBackImage),
+      onModelSideImage: buildImageUrl(firstColorSku.colorOnModelSideImage),
       sizes,
     });
   });

@@ -159,9 +159,14 @@ export interface ProductColor {
   colorFamily?: string; // For filtering by color family
   swatchImage: string;
   swatchTextColor: string;
+  // Flat product images
   frontImage: string;
   backImage: string;
   sideImage: string;
+  // Model images (on-model photography)
+  onModelFrontImage?: string;
+  onModelBackImage?: string;
+  onModelSideImage?: string;
   sizes: ProductSize[];
 }
 
