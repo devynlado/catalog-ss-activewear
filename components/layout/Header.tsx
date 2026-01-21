@@ -224,7 +224,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
       {/* Top bar */}
-      <div className="bg-slate-900 text-white">
+      <div className="bg-navy-800 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-10 items-center justify-between text-sm">
             {/* Phone & Availability */}
@@ -263,10 +263,10 @@ export function Header() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white font-bold text-lg">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-white font-bold text-lg">
                 GD
               </div>
-              <span className="hidden font-bold text-xl text-slate-900 lg:block">
+              <span className="hidden font-bold text-xl text-navy-800 lg:block">
                 Garment Decor
               </span>
             </Link>
@@ -283,7 +283,7 @@ export function Header() {
               />
               <button
                 type="submit"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-brand-600 p-2 text-white hover:bg-brand-700"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-brand-500 p-2 text-white hover:bg-brand-600"
               >
                 <Search className="h-4 w-4" />
               </button>
@@ -295,12 +295,12 @@ export function Header() {
             {/* Quote button */}
             <button
               onClick={openDrawer}
-              className="relative flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              className="relative flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
               <ShoppingBag className="h-5 w-5" />
               <span className="hidden sm:inline">Quote</span>
               {itemCount > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-600">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-500">
                   {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}
@@ -500,7 +500,7 @@ export function Header() {
                 />
                 <button
                   type="submit"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-brand-600 p-2 text-white"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-brand-500 p-2 text-white hover:bg-brand-600"
                 >
                   <Search className="h-4 w-4" />
                 </button>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
 
 const dmSans = DM_Sans({
@@ -10,8 +11,8 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Garment Decor Catalog | SS Activewear',
-  description: 'Browse our catalog of blank apparel. View colors, check inventory, and request quotes.',
+  title: 'Garment Decor Catalog | Blank Apparel & Decoration Services',
+  description: 'Browse our catalog of blank apparel. View colors, check inventory, and request quotes for your business.',
 };
 
 export default function RootLayout({
@@ -21,11 +22,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={dmSans.variable}>
-      <body className="min-h-screen bg-slate-50 font-sans">
+      <body className="min-h-screen bg-background font-sans text-text">
         <Header />
-        <main className="pb-20">
+        <main>
           {children}
         </main>
+        <Footer />
         <QuoteDrawer />
       </body>
     </html>

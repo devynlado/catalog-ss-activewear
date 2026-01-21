@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 :root {
-  /* Design tokens - Easy to customize */
-  --color-background: #ffffff;
-  --color-foreground: #0f172a;
-  --color-muted: #64748b;
+  /* Garment Decor Brand Colors */
+  --color-brand-primary: #EE8935;    /* Orange - CTAs */
+  --color-brand-secondary: #070131;  /* Navy - Titles */
+  
+  /* UI Colors */
+  --color-background: #FAF6F3;       /* Warm cream */
+  --color-foreground: #242424;       /* Body text */
+  --color-muted: #6B7280;
   --color-border: #e2e8f0;
   --color-card: #ffffff;
   --color-card-hover: #f8fafc;
-  
-  /* Brand colors - Update these to match Garment Decor */
-  --color-brand-primary: #0ea5e9;
-  --color-brand-secondary: #0369a1;
   
   /* Stock indicators */
   --color-stock-high: #22c55e;
@@ -31,7 +31,12 @@
 
 @layer base {
   body {
-    @apply bg-white text-slate-900 antialiased;
+    @apply bg-background text-text antialiased;
+  }
+  
+  /* Titles use navy */
+  h1, h2, h3, h4, h5, h6 {
+    color: #070131;
   }
 }
 

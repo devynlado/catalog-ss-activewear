@@ -9,19 +9,40 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Design tokens - customize these to match Garment Decor branding
+        // Garment Decor Brand Colors
         brand: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
+          50: '#FEF7F0',
+          100: '#FDEAD9',
+          200: '#FBD2B2',
+          300: '#F8B382',
+          400: '#F49B52',
+          500: '#EE8935',  // PRIMARY ORANGE - CTAs, buttons, links
+          600: '#D97118',
+          700: '#B45812',
+          800: '#91460F',
+          900: '#77390D',
+          950: '#5C2B09',
+        },
+        // Navy for titles and headers
+        navy: {
+          50: '#E8E8F0',
+          100: '#C4C4D4',
+          200: '#9D9DB8',
+          300: '#75759C',
+          400: '#4E4E80',
+          500: '#272764',
+          600: '#1A1A4A',
+          700: '#0F0F35',
+          800: '#070131',  // PRIMARY NAVY - titles, headers
+          900: '#040022',
+        },
+        // UI Colors
+        background: '#FAF6F3',  // Warm cream page background
+        surface: '#FFFFFF',     // White containers/cards
+        text: {
+          DEFAULT: '#242424',   // Body text
+          muted: '#6B7280',     // Secondary text
+          light: '#9CA3AF',     // Tertiary text
         },
         // Stock level colors
         stock: {
