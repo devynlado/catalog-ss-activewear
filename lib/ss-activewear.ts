@@ -64,9 +64,9 @@ let productDataCache: Map<number, CachedProductData> | null = null;
 let productCacheStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
 let productCacheProgress: number = 0; // 0-100
 
-// Batch settings for fetching products
-const BATCH_SIZE = 100;
-const MAX_PARALLEL_BATCHES = 4;
+// Batch settings for fetching products - smaller batches to avoid API throttling/timeouts
+const BATCH_SIZE = 25;
+const MAX_PARALLEL_BATCHES = 2;
 
 /**
  * Initialize the product cache in the background
@@ -338,6 +338,7 @@ export async function getProducts(params?: {
   category?: string;
   colorFamily?: string;
   limit?: number;
+  offset?: number;
 }): Promise<Product[]> {
   const limit = params?.limit || 100;
   const startTime = Date.now();
@@ -352,11 +353,36 @@ export async function getProducts(params?: {
     ? params.colorFamily.split(',').map(cf => cf.trim().toLowerCase()).filter(Boolean)
     : [];
   
-  // CASE 1: Brand filter - API supports this, use direct call for fresh data
+  // CASE 1: Brand filter - API supports this, enrich with SKU data
   if (params?.brand && !params?.category) {
     console.log(`[getProducts] Brand filter: ${params.brand}`);
     const styles = await ssRequest<SSProduct[]>(`/styles/?brandID=${params.brand}`, { revalidate: 3600 });
-    let products = styles.map(transformProduct);
+    
+    // Get style IDs and fetch SKU data for colors/sizes/prices
+    const styleIds = styles.map(s => s.styleID).slice(0, limit); // Limit for performance
+    const productsMap = await fetchProductsForStyles(styleIds);
+    
+    // Build enriched products
+    let products: Product[] = [];
+    for (const style of styles.slice(0, limit)) {
+      const skuData = productsMap.get(style.styleID);
+      if (skuData && skuData.length > 0) {
+        try {
+          const product = transformSkuDataToProduct(skuData);
+          product.title = style.title || product.styleName;
+          product.description = style.description || '';
+          if (style.categories) {
+            const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+            product.categories = catIds.map(id => ({ id, name: '' }));
+          }
+          products.push(product);
+        } catch (e) {
+          products.push(transformProduct(style));
+        }
+      } else {
+        products.push(transformProduct(style));
+      }
+    }
     
     // Apply color family filter if specified
     if (colorFamilies.length > 0) {
@@ -364,14 +390,39 @@ export async function getProducts(params?: {
     }
     
     console.log(`[getProducts] Brand ${params.brand}: ${products.length} products in ${Date.now() - startTime}ms`);
-    return products.slice(0, limit);
+    return products;
   }
   
-  // CASE 2: Style name search - API supports this
+  // CASE 2: Style name search - API supports this, enrich with SKU data
   if (params?.style) {
     console.log(`[getProducts] Style search: ${params.style}`);
     const styles = await ssRequest<SSProduct[]>(`/styles/?styleName=${encodeURIComponent(params.style)}`, { revalidate: 3600 });
-    let products = styles.map(transformProduct);
+    
+    // Get style IDs and fetch SKU data for colors/sizes/prices
+    const styleIds = styles.map(s => s.styleID);
+    const productsMap = await fetchProductsForStyles(styleIds);
+    
+    // Build enriched products
+    let products: Product[] = [];
+    for (const style of styles) {
+      const skuData = productsMap.get(style.styleID);
+      if (skuData && skuData.length > 0) {
+        try {
+          const product = transformSkuDataToProduct(skuData);
+          product.title = style.title || product.styleName;
+          product.description = style.description || '';
+          if (style.categories) {
+            const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+            product.categories = catIds.map(id => ({ id, name: '' }));
+          }
+          products.push(product);
+        } catch (e) {
+          products.push(transformProduct(style));
+        }
+      } else {
+        products.push(transformProduct(style));
+      }
+    }
     
     // Apply category filter if also specified
     if (categoryIds.length > 0) {
@@ -441,49 +492,98 @@ export async function getProducts(params?: {
     return products.slice(0, limit);
   }
   
-  // CASE 4: Category filter or no filter - use CACHED styles (fast!)
-  // SS API ignores categoryID, so we fetch all styles once and filter client-side
+  // CASE 4: Category filter or no filter - use CACHED styles + fetch SKU data for colors
   console.log(`[getProducts] Using cached styles, category filter: ${categoryIds.join(',') || 'none'}`);
-  
-  // Trigger background cache initialization (non-blocking)
-  if (productCacheStatus === 'idle') {
-    // Start loading in background - don't await
-    initializeProductCache().catch(err => console.error('[Product Cache] Background init failed:', err));
-  }
   
   const allStyles = await getCachedStyles();
   
-  // Transform styles and enrich with cached product data (pricing, colors)
-  let products = allStyles.map(style => {
-    const baseProduct = transformProduct(style);
-    
-    // Try to enrich with cached pricing and color data
-    const cachedData = getCachedProductData(style.styleID);
-    if (cachedData) {
-      return {
-        ...baseProduct,
-        price: cachedData.price || baseProduct.price,
-        salePrice: cachedData.salePrice,
-        colors: cachedData.colors.length > 0 ? cachedData.colors : baseProduct.colors,
-      };
-    }
-    
-    return baseProduct;
-  });
-  
-  // Apply category filter (client-side since API ignores it)
+  // First, filter styles by category (client-side since SS API ignores categoryID)
+  let matchingStyles = allStyles;
   if (categoryIds.length > 0) {
-    products = filterByCategory(products, categoryIds);
+    matchingStyles = allStyles.filter(style => {
+      if (!style.categories) return false;
+      const styleCats = style.categories.split(',').map(id => parseInt(id.trim(), 10));
+      return categoryIds.every(catId => styleCats.includes(catId));
+    });
   }
   
-  // Apply brand filter if specified along with category
+  // Apply brand filter if specified
   if (params?.brand) {
-    const brandId = parseInt(params.brand, 10);
-    products = products.filter(p => p.brandId === brandId);
+    matchingStyles = matchingStyles.filter(s => s.brandID?.toString() === params.brand);
   }
   
-  console.log(`[getProducts] Filtered to ${products.length} products (cache: ${productCacheStatus}) in ${Date.now() - startTime}ms`);
-  return products.slice(0, limit);
+  console.log(`[getProducts] Found ${matchingStyles.length} styles matching filters`);
+  
+  // Apply offset for pagination, then limit
+  const offset = params?.offset || 0;
+  const stylesToFetch = matchingStyles.slice(offset, offset + limit);
+  const styleIds = stylesToFetch.map(s => s.styleID);
+  
+  console.log(`[getProducts] Fetching SKU data for ${styleIds.length} styles (offset: ${offset}, limit: ${limit})`);
+  
+  // Fetch SKU data for colors/sizes/prices
+  const productsMap = await fetchProductsForStyles(styleIds);
+  
+  // Build enriched products with full SKU data
+  const products: Product[] = [];
+  for (const style of stylesToFetch) {
+    const skuData = productsMap.get(style.styleID);
+    
+    if (skuData && skuData.length > 0) {
+      try {
+        const product = transformSkuDataToProduct(skuData);
+        // Merge in title and description from style data
+        product.title = style.title || product.styleName;
+        product.description = style.description || '';
+        if (style.categories) {
+          const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+          product.categories = catIds.map(id => ({ id, name: '' }));
+        }
+        products.push(product);
+      } catch (e) {
+        // Fall back to basic transform if SKU transform fails
+        products.push(transformProduct(style));
+      }
+    } else {
+      // No SKU data, use basic transform
+      products.push(transformProduct(style));
+    }
+  }
+  
+  console.log(`[getProducts] Returning ${products.length} products with SKU data in ${Date.now() - startTime}ms`);
+  return products;
+}
+
+/**
+ * Get count of styles matching filters (without fetching SKU data)
+ * Used for pagination - much faster than fetching full product data
+ */
+export async function getFilteredStyleCount(params?: {
+  brand?: string;
+  category?: string;
+}): Promise<number> {
+  const allStyles = await getCachedStyles();
+  
+  let matchingStyles = allStyles;
+  
+  // Apply category filter
+  if (params?.category) {
+    const categoryIds = params.category.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+    if (categoryIds.length > 0) {
+      matchingStyles = matchingStyles.filter(style => {
+        if (!style.categories) return false;
+        const styleCats = style.categories.split(',').map(id => parseInt(id.trim(), 10));
+        return categoryIds.every(catId => styleCats.includes(catId));
+      });
+    }
+  }
+  
+  // Apply brand filter
+  if (params?.brand) {
+    matchingStyles = matchingStyles.filter(s => s.brandID?.toString() === params.brand);
+  }
+  
+  return matchingStyles.length;
 }
 
 /**
@@ -563,82 +663,96 @@ export async function searchProducts(query: string): Promise<Product[]> {
     return [];
   }
   
+  console.log(`[searchProducts] Searching for: "${normalizedQuery}"`);
+  
   // Check if query looks like a style number (alphanumeric, typically 2-10 chars)
-  const isLikelyStyleNumber = /^[A-Z0-9]{2,10}$/i.test(normalizedQuery);
+  const isLikelyStyleNumber = /^[A-Z0-9]{2,15}$/i.test(normalizedQuery);
   
-  // Try exact/prefix match first via styleName parameter
-  let results = await getProducts({ style: normalizedQuery, limit: 100 });
-  
-  // If we got results, return them
-  if (results.length > 0) {
-    return results;
-  }
-  
-  // Smart fallback: for style-number-like queries, try fetching all styles
-  // and filtering client-side (SS API styleName param can be picky)
-  if (isLikelyStyleNumber) {
-    try {
-      // Fetch from styles endpoint without filter, then search client-side
-      // This is heavier but catches cases where SS API exact match fails
-      const allStyles = await ssRequest<SSProduct[]>('/styles/', { 
-        revalidate: 3600,
-        noCache: true 
+  try {
+    // STEP 1: Get matching styles from cached data (fast)
+    const allStyles = await getCachedStyles();
+    
+    // Filter by styleName containing or starting with the query
+    let matchingStyles = allStyles.filter(style => {
+      const styleName = (style.styleName || style.uniqueStyleName || '').toUpperCase();
+      // Exact match, prefix match, or contains match
+      return styleName === normalizedQuery || 
+             styleName.startsWith(normalizedQuery) ||
+             styleName.includes(normalizedQuery);
+    });
+    
+    // If no matches by styleName, also try title for keyword searches
+    if (matchingStyles.length === 0 && !isLikelyStyleNumber) {
+      matchingStyles = allStyles.filter(style => {
+        const title = (style.title || '').toUpperCase();
+        return title.includes(normalizedQuery);
       });
-      
-      // Filter by styleName containing or starting with the query
-      const matchingStyles = allStyles.filter(style => {
-        const styleName = (style.styleName || style.uniqueStyleName || '').toUpperCase();
-        // Exact match, prefix match, or contains match
-        return styleName === normalizedQuery || 
-               styleName.startsWith(normalizedQuery) ||
-               styleName.includes(normalizedQuery);
-      });
-      
-      if (matchingStyles.length > 0) {
-        // Sort: exact matches first, then prefix, then contains
-        matchingStyles.sort((a, b) => {
-          const aName = (a.styleName || '').toUpperCase();
-          const bName = (b.styleName || '').toUpperCase();
-          
-          const aExact = aName === normalizedQuery ? 0 : 1;
-          const bExact = bName === normalizedQuery ? 0 : 1;
-          if (aExact !== bExact) return aExact - bExact;
-          
-          const aPrefix = aName.startsWith(normalizedQuery) ? 0 : 1;
-          const bPrefix = bName.startsWith(normalizedQuery) ? 0 : 1;
-          if (aPrefix !== bPrefix) return aPrefix - bPrefix;
-          
-          return aName.localeCompare(bName);
-        });
-        
-        // Transform and return (limit to avoid huge responses)
-        results = matchingStyles.slice(0, 50).map(transformProduct);
-        
-        // For better UX, try to enrich with SKU data for the first few results
-        // to get color swatches (optional enhancement)
-        if (results.length <= 10) {
-          const enrichedResults = await Promise.all(
-            results.map(async (product) => {
-              try {
-                const enriched = await getProductById(product.styleId);
-                return enriched || product;
-              } catch {
-                return product;
-              }
-            })
-          );
-          return enrichedResults;
-        }
-        
-        return results;
-      }
-    } catch (error) {
-      console.error('Fallback search failed:', error);
     }
+    
+    console.log(`[searchProducts] Found ${matchingStyles.length} matching styles`);
+    
+    if (matchingStyles.length === 0) {
+      return [];
+    }
+    
+    // Sort: exact matches first, then prefix, then contains
+    matchingStyles.sort((a, b) => {
+      const aName = (a.styleName || '').toUpperCase();
+      const bName = (b.styleName || '').toUpperCase();
+      
+      const aExact = aName === normalizedQuery ? 0 : 1;
+      const bExact = bName === normalizedQuery ? 0 : 1;
+      if (aExact !== bExact) return aExact - bExact;
+      
+      const aPrefix = aName.startsWith(normalizedQuery) ? 0 : 1;
+      const bPrefix = bName.startsWith(normalizedQuery) ? 0 : 1;
+      if (aPrefix !== bPrefix) return aPrefix - bPrefix;
+      
+      return aName.localeCompare(bName);
+    });
+    
+    // Limit to top 50 matches
+    const topMatches = matchingStyles.slice(0, 50);
+    const styleIds = topMatches.map(s => s.styleID);
+    
+    // STEP 2: Fetch SKU data for all matching styles (batch fetch for colors/sizes/prices)
+    console.log(`[searchProducts] Fetching SKU data for ${styleIds.length} styles...`);
+    const productsMap = await fetchProductsForStyles(styleIds);
+    
+    // STEP 3: Build enriched products with full SKU data
+    const products: Product[] = [];
+    for (const style of topMatches) {
+      const skuData = productsMap.get(style.styleID);
+      
+      if (skuData && skuData.length > 0) {
+        // Full product with colors/sizes/prices from SKU data
+        try {
+          const product = transformSkuDataToProduct(skuData);
+          // Merge in title and description from style data
+          product.title = style.title || product.styleName;
+          product.description = style.description || '';
+          if (style.categories) {
+            const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+            product.categories = catIds.map(id => ({ id, name: '' }));
+          }
+          products.push(product);
+        } catch (e) {
+          // Fall back to basic transform if SKU transform fails
+          products.push(transformProduct(style));
+        }
+      } else {
+        // No SKU data, use basic transform
+        products.push(transformProduct(style));
+      }
+    }
+    
+    console.log(`[searchProducts] Returning ${products.length} products with SKU data`);
+    return products;
+    
+  } catch (error) {
+    console.error('[searchProducts] Error:', error);
+    return [];
   }
-  
-  // No results found
-  return [];
 }
 
 /**

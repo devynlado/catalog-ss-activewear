@@ -143,28 +143,12 @@ const megaMenuConfig: MegaMenuConfig = {
   ],
 };
 
-// Featured product style numbers to fetch from API per category
-const featuredStyleNumbers: Record<string, string[]> = {
-  '21': ['5000', '3001'],      // T-Shirts: Gildan 5000, Bella+Canvas 3001
-  '9': ['18000', 'SS3000'],    // Fleece: Gildan 18000, Independent SS3000
-  '11': ['112', '6606'],       // Headwear: Richardson 112, Yupoong 6606
-  '15': ['J317'],              // Outerwear: Port Authority J317
-  '52': ['K500'],              // Polos: Port Authority K500
-};
-
-interface FeaturedProduct {
-  id: string;
-  styleName: string;
-  brandName: string;
-  imageUrl: string;
-}
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [brandsOpen, setBrandsOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<Record<string, FeaturedProduct[]>>({});
   const brandsRef = useRef<HTMLDivElement>(null);
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -187,44 +171,6 @@ export function Header() {
     fetchBrands();
   }, []);
 
-  // Fetch featured products for mega menu
-  useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      const results: Record<string, FeaturedProduct[]> = {};
-      
-      for (const [categoryId, styleNumbers] of Object.entries(featuredStyleNumbers)) {
-        const products: FeaturedProduct[] = [];
-        
-        for (const styleNum of styleNumbers) {
-          try {
-            const res = await fetch(`/api/products?search=${styleNum}&pageSize=1`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.data && data.data.length > 0) {
-                const product = data.data[0];
-                products.push({
-                  id: product.id,
-                  styleName: product.styleName,
-                  brandName: product.brandName,
-                  imageUrl: product.imageUrl,
-                });
-              }
-            }
-          } catch (e) {
-            console.error(`Error fetching featured product ${styleNum}:`, e);
-          }
-        }
-        
-        if (products.length > 0) {
-          results[categoryId] = products;
-        }
-      }
-      
-      setFeaturedProducts(results);
-    };
-    
-    fetchFeaturedProducts();
-  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -391,7 +337,7 @@ export function Header() {
                   {/* Mega Menu Panel */}
                   {hasMegaMenu && activeMegaMenu === cat.categoryId && (
                     <div 
-                      className="absolute left-0 top-full z-50 mt-1 w-[800px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
+                      className="absolute left-0 top-full z-50 mt-1 w-[600px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
                       onMouseLeave={() => setActiveMegaMenu(null)}
                     >
                       <div className="mb-4 flex items-center justify-between">
@@ -407,67 +353,28 @@ export function Header() {
                         </Link>
                       </div>
                       
-                      <div className="flex gap-6">
-                        {/* Category Links */}
-                        <div className="flex-1 grid grid-cols-3 gap-6">
-                          {megaMenuConfig[cat.categoryId].map((group) => (
-                            <div key={group.title}>
-                              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                {group.title}
-                              </h4>
-                              <ul className="space-y-1">
-                                {group.items.map((item) => (
-                                  <li key={item.name}>
-                                    <Link
-                                      href={item.href}
-                                      onClick={() => setActiveMegaMenu(null)}
-                                      className="block rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                                    >
-                                      {item.name}
-                                    </Link>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        {/* Featured Products */}
-                        {featuredProducts[cat.categoryId] && featuredProducts[cat.categoryId].length > 0 && (
-                          <div className="w-44 border-l border-slate-100 pl-6">
-                            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Popular
+                      {/* Category Links */}
+                      <div className="grid grid-cols-4 gap-6">
+                        {megaMenuConfig[cat.categoryId].map((group) => (
+                          <div key={group.title}>
+                            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              {group.title}
                             </h4>
-                            <div className="space-y-3">
-                              {featuredProducts[cat.categoryId].map((product) => (
-                                <Link
-                                  key={product.id}
-                                  href={`/catalog/${product.id}`}
-                                  onClick={() => setActiveMegaMenu(null)}
-                                  className="block group"
-                                >
-                                  <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-white border border-slate-100 mb-1.5">
-                                    {product.imageUrl && (
-                                      <Image
-                                        src={product.imageUrl}
-                                        alt={product.styleName}
-                                        fill
-                                        className="object-contain p-1 group-hover:scale-105 transition-transform"
-                                        sizes="176px"
-                                      />
-                                    )}
-                                  </div>
-                                  <p className="text-xs font-medium text-slate-900 group-hover:text-brand-600">
-                                    {product.brandName}
-                                  </p>
-                                  <p className="text-xs text-slate-500 truncate">
-                                    {product.styleName}
-                                  </p>
-                                </Link>
+                            <ul className="space-y-1">
+                              {group.items.map((item) => (
+                                <li key={item.name}>
+                                  <Link
+                                    href={item.href}
+                                    onClick={() => setActiveMegaMenu(null)}
+                                    className="block rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                  >
+                                    {item.name}
+                                  </Link>
+                                </li>
                               ))}
-                            </div>
+                            </ul>
                           </div>
-                        )}
+                        ))}
                       </div>
                     </div>
                   )}
