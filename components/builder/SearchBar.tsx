@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, Tag, Palette, Grid3X3, Hash } from 'lucide-react';
 import { cn, debounce } from '@/lib/utils';
 
 interface SearchBarProps {
@@ -13,8 +13,15 @@ interface SearchBarProps {
   autoFocus?: boolean;
 }
 
+// Suggestion types for categorized display
+interface Suggestion {
+  type: 'style' | 'brand' | 'color' | 'category';
+  value: string;
+  label: string;
+}
+
 export function SearchBar({
-  placeholder = 'Search by style # or keyword...',
+  placeholder = 'Search by style #, brand, or keyword...',
   showSuggestions = true,
   onSearch,
   className,
@@ -26,16 +33,53 @@ export function SearchBar({
   
   const [query, setQuery] = useState(initialSearch);
   const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Popular style numbers for suggestions
+  // Popular style numbers
   const popularStyles = [
     'G500', 'G200', 'G640', 'BC3001', 'BC3413', 
-    'NL6210', 'NL3600', 'PC61', 'PC54', '5000'
+    'NL6210', 'NL3600', 'PC61', 'PC54', '5000',
+    'G180', 'G185', 'G240', 'G800', 'DT6000',
   ];
+
+  // Popular brands (top brands in the catalog)
+  const popularBrands = [
+    'Gildan', 'Hanes', 'Next Level', 'Bella+Canvas', 'Champion',
+    'Fruit of the Loom', 'Adidas', 'Nike', 'Port Authority', 'Sport-Tek',
+    'Comfort Colors', 'American Apparel', 'Alternative', 'JERZEES', 'District',
+  ];
+
+  // Color families for suggestions
+  const colorFamilies = [
+    'Black', 'White', 'Grey', 'Navy', 'Blue', 'Red', 
+    'Green', 'Orange', 'Yellow', 'Pink', 'Purple', 'Brown',
+  ];
+
+  // Main categories for suggestions
+  const mainCategories = [
+    { value: 'T-Shirts', label: 'T-Shirts' },
+    { value: 'Fleece', label: 'Fleece & Sweatshirts' },
+    { value: 'Polos', label: 'Polos' },
+    { value: 'Outerwear', label: 'Outerwear & Jackets' },
+    { value: 'Headwear', label: 'Headwear & Caps' },
+    { value: 'Bottoms', label: 'Bottoms & Pants' },
+    { value: 'Bags', label: 'Bags & Totes' },
+    { value: 'Accessories', label: 'Accessories' },
+  ];
+
+  // Default suggestions when no query
+  const defaultSuggestions = useMemo<Suggestion[]>(() => [
+    // Show a mix of popular items
+    { type: 'style', value: 'G500', label: 'Gildan G500' },
+    { type: 'style', value: 'BC3001', label: 'Bella+Canvas 3001' },
+    { type: 'brand', value: 'Gildan', label: 'Gildan' },
+    { type: 'brand', value: 'Next Level', label: 'Next Level' },
+    { type: 'category', value: 'T-Shirts', label: 'T-Shirts' },
+    { type: 'color', value: 'Navy', label: 'Navy' },
+  ], []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -53,22 +97,54 @@ export function SearchBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Generate suggestions based on query
+  const generateSuggestions = useCallback((searchQuery: string): Suggestion[] => {
+    if (!searchQuery || searchQuery.length < 2) {
+      return [];
+    }
+
+    const q = searchQuery.toLowerCase();
+    const results: Suggestion[] = [];
+
+    // Match style numbers
+    popularStyles.forEach(style => {
+      if (style.toLowerCase().includes(q)) {
+        results.push({ type: 'style', value: style, label: style });
+      }
+    });
+
+    // Match brands
+    popularBrands.forEach(brand => {
+      if (brand.toLowerCase().includes(q)) {
+        results.push({ type: 'brand', value: brand, label: brand });
+      }
+    });
+
+    // Match colors
+    colorFamilies.forEach(color => {
+      if (color.toLowerCase().includes(q)) {
+        results.push({ type: 'color', value: color, label: color });
+      }
+    });
+
+    // Match categories
+    mainCategories.forEach(cat => {
+      if (cat.value.toLowerCase().includes(q) || cat.label.toLowerCase().includes(q)) {
+        results.push({ type: 'category', value: cat.value, label: cat.label });
+      }
+    });
+
+    // Limit and dedupe
+    return results.slice(0, 8);
+  }, []);
+
   // Debounced suggestion fetching
   const fetchSuggestions = useCallback(
     debounce(async (searchQuery: string) => {
-      if (!searchQuery || searchQuery.length < 2) {
-        setSuggestions([]);
-        return;
-      }
-
-      // Filter popular styles that match the query
-      const matchingStyles = popularStyles.filter((style) =>
-        style.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
-      setSuggestions(matchingStyles.slice(0, 5));
-    }, 200),
-    []
+      const results = generateSuggestions(searchQuery);
+      setSuggestions(results);
+    }, 150),
+    [generateSuggestions]
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,10 +192,55 @@ export function SearchBar({
     inputRef.current?.focus();
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion);
-    handleSearch(suggestion);
+  const handleSuggestionClick = (suggestion: Suggestion) => {
+    setQuery(suggestion.value);
+    handleSearch(suggestion.value);
   };
+
+  // Get icon for suggestion type
+  const getSuggestionIcon = (type: Suggestion['type']) => {
+    switch (type) {
+      case 'style':
+        return <Hash className="h-4 w-4 text-slate-400" />;
+      case 'brand':
+        return <Tag className="h-4 w-4 text-blue-500" />;
+      case 'color':
+        return <Palette className="h-4 w-4 text-pink-500" />;
+      case 'category':
+        return <Grid3X3 className="h-4 w-4 text-green-500" />;
+      default:
+        return <Search className="h-4 w-4 text-slate-400" />;
+    }
+  };
+
+  // Get label for suggestion type
+  const getSuggestionTypeLabel = (type: Suggestion['type']) => {
+    switch (type) {
+      case 'style': return 'Style';
+      case 'brand': return 'Brand';
+      case 'color': return 'Color';
+      case 'category': return 'Category';
+      default: return '';
+    }
+  };
+
+  // Group suggestions by type for display
+  const groupedSuggestions = useMemo(() => {
+    const groups: Record<Suggestion['type'], Suggestion[]> = {
+      style: [],
+      brand: [],
+      color: [],
+      category: [],
+    };
+    
+    (query.length === 0 ? defaultSuggestions : suggestions).forEach(s => {
+      groups[s.type].push(s);
+    });
+    
+    return groups;
+  }, [suggestions, defaultSuggestions, query.length]);
+
+  const hasAnySuggestions = Object.values(groupedSuggestions).some(arr => arr.length > 0);
 
   return (
     <div className={cn('relative', className)}>
@@ -163,38 +284,111 @@ export function SearchBar({
       </div>
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && showDropdown && (suggestions.length > 0 || query.length === 0) && (
+      {showSuggestions && showDropdown && hasAnySuggestions && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-slate-200 bg-white py-2 shadow-lg"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-96 overflow-y-auto rounded-xl border border-slate-200 bg-white py-2 shadow-lg"
         >
-          {query.length === 0 ? (
-            <>
-              <p className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-400">
-                Popular Style Numbers
-              </p>
-              {popularStyles.slice(0, 6).map((style) => (
+          {query.length === 0 && (
+            <p className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+              Quick Suggestions
+            </p>
+          )}
+          
+          {/* Style suggestions */}
+          {groupedSuggestions.style.length > 0 && (
+            <div className="border-b border-slate-100 pb-2 mb-2">
+              {query.length > 0 && (
+                <p className="px-4 py-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Styles
+                </p>
+              )}
+              {groupedSuggestions.style.map((suggestion) => (
                 <button
-                  key={style}
-                  onClick={() => handleSuggestionClick(style)}
+                  key={`style-${suggestion.value}`}
+                  onClick={() => handleSuggestionClick(suggestion)}
                   className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
                 >
-                  <Search className="h-4 w-4 text-slate-400" />
-                  <span>{style}</span>
+                  {getSuggestionIcon(suggestion.type)}
+                  <span className="font-medium">{suggestion.label}</span>
+                  <span className="ml-auto text-xs text-slate-400">
+                    {getSuggestionTypeLabel(suggestion.type)}
+                  </span>
                 </button>
               ))}
-            </>
-          ) : (
-            suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => handleSuggestionClick(suggestion)}
-                className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
-              >
-                <Search className="h-4 w-4 text-slate-400" />
-                <span>{suggestion}</span>
-              </button>
-            ))
+            </div>
+          )}
+
+          {/* Brand suggestions */}
+          {groupedSuggestions.brand.length > 0 && (
+            <div className="border-b border-slate-100 pb-2 mb-2">
+              {query.length > 0 && (
+                <p className="px-4 py-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Brands
+                </p>
+              )}
+              {groupedSuggestions.brand.map((suggestion) => (
+                <button
+                  key={`brand-${suggestion.value}`}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                >
+                  {getSuggestionIcon(suggestion.type)}
+                  <span className="font-medium">{suggestion.label}</span>
+                  <span className="ml-auto text-xs text-slate-400">
+                    {getSuggestionTypeLabel(suggestion.type)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Category suggestions */}
+          {groupedSuggestions.category.length > 0 && (
+            <div className="border-b border-slate-100 pb-2 mb-2">
+              {query.length > 0 && (
+                <p className="px-4 py-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Categories
+                </p>
+              )}
+              {groupedSuggestions.category.map((suggestion) => (
+                <button
+                  key={`category-${suggestion.value}`}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                >
+                  {getSuggestionIcon(suggestion.type)}
+                  <span className="font-medium">{suggestion.label}</span>
+                  <span className="ml-auto text-xs text-slate-400">
+                    {getSuggestionTypeLabel(suggestion.type)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Color suggestions */}
+          {groupedSuggestions.color.length > 0 && (
+            <div>
+              {query.length > 0 && (
+                <p className="px-4 py-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Colors
+                </p>
+              )}
+              {groupedSuggestions.color.map((suggestion) => (
+                <button
+                  key={`color-${suggestion.value}`}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                >
+                  {getSuggestionIcon(suggestion.type)}
+                  <span className="font-medium">{suggestion.label}</span>
+                  <span className="ml-auto text-xs text-slate-400">
+                    {getSuggestionTypeLabel(suggestion.type)}
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}

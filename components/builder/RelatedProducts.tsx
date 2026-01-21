@@ -178,17 +178,17 @@ export function RelatedProducts({
             href={`/catalog/${product.id}`}
             className="group w-56 flex-shrink-0"
           >
-            <div className="relative aspect-square overflow-hidden rounded-xl bg-white">
+            <div className="overflow-hidden rounded-xl border border-slate-200">
               {product.imageUrl ? (
                 <Image
                   src={product.imageUrl}
                   alt={product.title || product.styleName}
-                  fill
-                  className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"
-                  sizes="224px"
+                  width={224}
+                  height={224}
+                  className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-slate-300">
+                <div className="flex aspect-square w-full items-center justify-center bg-slate-50 text-slate-300">
                   <ShoppingBag className="h-12 w-12" />
                 </div>
               )}

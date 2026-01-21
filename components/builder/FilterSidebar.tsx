@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown, X, Search } from 'lucide-react';
+import { ChevronDown, X, Search, Leaf, Tag, Sparkles } from 'lucide-react';
 import { Brand, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { classifyAllCategories, getAttributeGroupName, type ClassifiedCategory, type AttributeGroup } from '@/lib/category-taxonomy';
@@ -37,6 +37,7 @@ export function FilterSidebar({
   const [brandSearch, setBrandSearch] = useState('');
 
   const [sections, setSections] = useState<Record<string, FilterSection>>({
+    quickFilters: { title: 'Quick Filters', isOpen: true },
     categories: { title: 'Categories', isOpen: true },
     colorFamily: { title: 'Color', isOpen: true },
     gender: { title: 'Gender/Age', isOpen: false },
@@ -101,6 +102,8 @@ export function FilterSidebar({
   const selectedAttributes = searchParams.get('attr')?.split(',').filter(Boolean) || []; // Category IDs for attribute filters
   const minPrice = searchParams.get('minPrice');
   const maxPrice = searchParams.get('maxPrice');
+  const onSaleFilter = searchParams.get('onSale') === 'true';
+  const sustainableFilter = searchParams.get('sustainable') === 'true';
 
   // Fetch filter options
   useEffect(() => {
@@ -217,7 +220,7 @@ export function FilterSidebar({
     return selectedAttributes.includes(categoryId.toString());
   };
 
-  const hasActiveFilters = selectedBrand || selectedCategory || selectedColorFamilies.length > 0 || selectedAttributes.length > 0 || minPrice || maxPrice;
+  const hasActiveFilters = selectedBrand || selectedCategory || selectedColorFamilies.length > 0 || selectedAttributes.length > 0 || minPrice || maxPrice || onSaleFilter || sustainableFilter;
 
   return (
     <aside className={cn('w-full', className)}>
@@ -250,6 +253,54 @@ export function FilterSidebar({
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Quick Filters - Sale & Sustainable */}
+          <FilterSection
+            title={sections.quickFilters.title}
+            isOpen={sections.quickFilters.isOpen}
+            onToggle={() => toggleSection('quickFilters')}
+            collapsible={collapsible}
+          >
+            <div className="space-y-2">
+              {/* On Sale Toggle */}
+              <button
+                onClick={() => updateFilter('onSale', onSaleFilter ? null : 'true')}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                  onSaleFilter
+                    ? 'bg-red-50 font-medium text-red-700'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                <Tag className={cn('h-4 w-4', onSaleFilter ? 'text-red-500' : 'text-slate-400')} />
+                <span>On Sale</span>
+                {onSaleFilter && (
+                  <span className="ml-auto rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                    Active
+                  </span>
+                )}
+              </button>
+
+              {/* Sustainable Toggle */}
+              <button
+                onClick={() => updateFilter('sustainable', sustainableFilter ? null : 'true')}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                  sustainableFilter
+                    ? 'bg-green-50 font-medium text-green-700'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                <Leaf className={cn('h-4 w-4', sustainableFilter ? 'text-green-500' : 'text-slate-400')} />
+                <span>Sustainable / Eco-Friendly</span>
+                {sustainableFilter && (
+                  <span className="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                    Active
+                  </span>
+                )}
+              </button>
+            </div>
+          </FilterSection>
+
           {/* Main Categories (from taxonomy) */}
           {showCategories && classifiedCategories && classifiedCategories.main.length > 0 && (
             <FilterSection

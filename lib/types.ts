@@ -151,6 +151,10 @@ export interface Product {
   imageUrl: string;
   categories: Category[];
   colors: ProductColor[];
+  // Product flags for badges and filters
+  isOnSale?: boolean;
+  isSustainable?: boolean;
+  isNew?: boolean;
 }
 
 export interface ProductColor {

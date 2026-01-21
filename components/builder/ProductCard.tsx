@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Eye, ShoppingBag } from 'lucide-react';
+import { Eye, ShoppingBag, Leaf, Sparkles } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
@@ -100,12 +100,26 @@ export function ProductCard({
           </div>
         )}
 
-        {/* Sale Badge */}
-        {hasDiscount && (
-          <Badge variant="error" className="absolute left-3 top-3">
-            Sale
-          </Badge>
-        )}
+        {/* Product Badges */}
+        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+          {hasDiscount && (
+            <Badge variant="error">
+              Sale
+            </Badge>
+          )}
+          {product.isSustainable && (
+            <Badge variant="success" className="flex items-center gap-1">
+              <Leaf className="h-3 w-3" />
+              Eco
+            </Badge>
+          )}
+          {product.isNew && (
+            <Badge variant="info" className="flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              New
+            </Badge>
+          )}
+        </div>
 
         {/* Quick View Button */}
         {onQuickView && (

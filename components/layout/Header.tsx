@@ -151,9 +151,37 @@ export function Header() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const brandsRef = useRef<HTMLDivElement>(null);
   const megaMenuRef = useRef<HTMLDivElement>(null);
+  const megaMenuCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
   const { items, openDrawer } = useQuoteStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Mega menu hover handlers with 300ms close delay
+  const handleMegaMenuEnter = (categoryId: string | null) => {
+    // Clear any pending close timer
+    if (megaMenuCloseTimer.current) {
+      clearTimeout(megaMenuCloseTimer.current);
+      megaMenuCloseTimer.current = null;
+    }
+    setActiveMegaMenu(categoryId);
+  };
+
+  const handleMegaMenuLeave = () => {
+    // Start 300ms timer before closing
+    megaMenuCloseTimer.current = setTimeout(() => {
+      setActiveMegaMenu(null);
+      megaMenuCloseTimer.current = null;
+    }, 300);
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (megaMenuCloseTimer.current) {
+        clearTimeout(megaMenuCloseTimer.current);
+      }
+    };
+  }, []);
 
   // Fetch brands for dropdown
   useEffect(() => {
@@ -304,7 +332,7 @@ export function Header() {
                   ? 'bg-brand-50 text-brand-700'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               )}
-              onMouseEnter={() => setActiveMegaMenu(null)}
+              onMouseEnter={() => handleMegaMenuEnter(null)}
             >
               All Products
             </Link>
@@ -314,7 +342,12 @@ export function Header() {
               const hasMegaMenu = megaMenuConfig[cat.categoryId];
               
               return (
-                <div key={cat.name} className="relative">
+                <div 
+                  key={cat.name} 
+                  className="relative"
+                  onMouseEnter={() => handleMegaMenuEnter(hasMegaMenu ? cat.categoryId : null)}
+                  onMouseLeave={handleMegaMenuLeave}
+                >
                   <Link
                     href={cat.href}
                     className={cn(
@@ -323,7 +356,6 @@ export function Header() {
                         ? 'bg-slate-100 text-slate-900'
                         : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                     )}
-                    onMouseEnter={() => setActiveMegaMenu(hasMegaMenu ? cat.categoryId : null)}
                   >
                     {cat.name}
                     {hasMegaMenu && (
@@ -337,8 +369,7 @@ export function Header() {
                   {/* Mega Menu Panel */}
                   {hasMegaMenu && activeMegaMenu === cat.categoryId && (
                     <div 
-                      className="absolute left-0 top-full z-50 mt-1 w-[600px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
-                      onMouseLeave={() => setActiveMegaMenu(null)}
+                      className="absolute left-0 top-full z-50 w-[600px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
                     >
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-lg font-semibold text-slate-900">

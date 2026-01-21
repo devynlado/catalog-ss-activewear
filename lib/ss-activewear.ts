@@ -371,10 +371,13 @@ export async function getProducts(params?: {
           const product = transformSkuDataToProduct(skuData);
           product.title = style.title || product.styleName;
           product.description = style.description || '';
-          // FIX: Use styleImage as primary image
+          // Use styleImage as primary image
           if (style.styleImage) {
             product.imageUrl = buildImageUrl(style.styleImage);
           }
+          // Set product flags from style data
+          product.isSustainable = style.sustainableStyle || false;
+          product.isNew = style.newStyle || false;
           if (style.categories) {
             const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
             product.categories = catIds.map(id => ({ id, name: '' }));
@@ -415,10 +418,13 @@ export async function getProducts(params?: {
           const product = transformSkuDataToProduct(skuData);
           product.title = style.title || product.styleName;
           product.description = style.description || '';
-          // FIX: Use styleImage as primary image
+          // Use styleImage as primary image
           if (style.styleImage) {
             product.imageUrl = buildImageUrl(style.styleImage);
           }
+          // Set product flags from style data
+          product.isSustainable = style.sustainableStyle || false;
+          product.isNew = style.newStyle || false;
           if (style.categories) {
             const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
             product.categories = catIds.map(id => ({ id, name: '' }));
@@ -547,6 +553,9 @@ export async function getProducts(params?: {
         if (style.styleImage) {
           product.imageUrl = buildImageUrl(style.styleImage);
         }
+        // Set product flags from style data
+        product.isSustainable = style.sustainableStyle || false;
+        product.isNew = style.newStyle || false;
         if (style.categories) {
           const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
           product.categories = catIds.map(id => ({ id, name: '' }));
@@ -652,20 +661,24 @@ export async function getProductById(styleId: number): Promise<Product | null> {
     
     // Merge in title and description from style data if available
     if (styleData && styleData.length > 0) {
-      product.title = styleData[0].title || product.styleName;
-      product.description = styleData[0].description || '';
-      // FIX: Use styleImage as primary image
-      if (styleData[0].styleImage) {
-        product.imageUrl = buildImageUrl(styleData[0].styleImage);
+      const style = styleData[0];
+      product.title = style.title || product.styleName;
+      product.description = style.description || '';
+      // Use styleImage as primary image
+      if (style.styleImage) {
+        product.imageUrl = buildImageUrl(style.styleImage);
       }
+      // Set product flags from style data
+      product.isSustainable = style.sustainableStyle || false;
+      product.isNew = style.newStyle || false;
       // Add categories from style data
-      if (styleData[0].categories) {
-        const catIds = styleData[0].categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+      if (style.categories) {
+        const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
         product.categories = catIds.map(id => ({ id, name: '' }));
       }
       // Store baseCategory for breadcrumbs
-      if (styleData[0].baseCategory) {
-        (product as ProductWithExtras).baseCategory = styleData[0].baseCategory;
+      if (style.baseCategory) {
+        (product as ProductWithExtras).baseCategory = style.baseCategory;
       }
     }
     
@@ -904,9 +917,9 @@ export async function getComparableProducts(styleId: number, maxProducts: number
 }
 
 /**
- * Search products by keyword or style number
- * Uses smart matching: exact/prefix first, then broadens if no results
- * Returns rich product data with colors and prices
+ * Enhanced search with multi-field matching and relevance scoring
+ * Searches: styleName, brandName, title, description
+ * Supports multi-word queries (e.g., "Gildan Navy Cotton")
  */
 export async function searchProducts(query: string): Promise<Product[]> {
   const normalizedQuery = query.trim().toUpperCase();
@@ -917,61 +930,78 @@ export async function searchProducts(query: string): Promise<Product[]> {
   
   console.log(`[searchProducts] Searching for: "${normalizedQuery}"`);
   
-  // Check if query looks like a style number (alphanumeric, typically 2-10 chars)
-  const isLikelyStyleNumber = /^[A-Z0-9]{2,15}$/i.test(normalizedQuery);
+  // Parse query into individual search terms
+  const searchTerms = normalizedQuery.split(/\s+/).filter(term => term.length >= 2);
   
   try {
-    // STEP 1: Get matching styles from cached data (fast)
+    // STEP 1: Get all styles from cache
     const allStyles = await getCachedStyles();
     
-    // Filter by styleName containing or starting with the query
-    let matchingStyles = allStyles.filter(style => {
-      const styleName = (style.styleName || style.uniqueStyleName || '').toUpperCase();
-      // Exact match, prefix match, or contains match
-      return styleName === normalizedQuery || 
-             styleName.startsWith(normalizedQuery) ||
-             styleName.includes(normalizedQuery);
-    });
+    // STEP 2: Score each style based on multi-field matching
+    const scoredStyles: Array<{ style: SSProduct; score: number }> = [];
     
-    // If no matches by styleName, also try title for keyword searches
-    if (matchingStyles.length === 0 && !isLikelyStyleNumber) {
-      matchingStyles = allStyles.filter(style => {
-        const title = (style.title || '').toUpperCase();
-        return title.includes(normalizedQuery);
-      });
+    for (const style of allStyles) {
+      let score = 0;
+      const styleName = (style.styleName || '').toUpperCase();
+      const brandName = (style.brandName || '').toUpperCase();
+      const title = (style.title || '').toUpperCase();
+      const description = (style.description || '').toUpperCase();
+      
+      for (const term of searchTerms) {
+        // Style number matching (highest priority)
+        if (styleName === term) {
+          score += 100; // Exact style match
+        } else if (styleName.startsWith(term)) {
+          score += 80; // Style prefix match
+        } else if (styleName.includes(term)) {
+          score += 60; // Style contains match
+        }
+        
+        // Brand name matching
+        if (brandName === term) {
+          score += 70; // Exact brand match
+        } else if (brandName.includes(term)) {
+          score += 50; // Brand contains match
+        }
+        
+        // Title matching
+        if (title.includes(term)) {
+          score += 30; // Title contains match
+        }
+        
+        // Description matching (lowest priority)
+        if (description.includes(term)) {
+          score += 10; // Description contains match
+        }
+      }
+      
+      // Only include products with at least some match
+      if (score > 0) {
+        scoredStyles.push({ style, score });
+      }
     }
     
-    console.log(`[searchProducts] Found ${matchingStyles.length} matching styles`);
+    console.log(`[searchProducts] Found ${scoredStyles.length} matching styles`);
     
-    if (matchingStyles.length === 0) {
+    if (scoredStyles.length === 0) {
       return [];
     }
     
-    // Sort: exact matches first, then prefix, then contains
-    matchingStyles.sort((a, b) => {
-      const aName = (a.styleName || '').toUpperCase();
-      const bName = (b.styleName || '').toUpperCase();
-      
-      const aExact = aName === normalizedQuery ? 0 : 1;
-      const bExact = bName === normalizedQuery ? 0 : 1;
-      if (aExact !== bExact) return aExact - bExact;
-      
-      const aPrefix = aName.startsWith(normalizedQuery) ? 0 : 1;
-      const bPrefix = bName.startsWith(normalizedQuery) ? 0 : 1;
-      if (aPrefix !== bPrefix) return aPrefix - bPrefix;
-      
-      return aName.localeCompare(bName);
+    // Sort by score (highest first), then by style name
+    scoredStyles.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (a.style.styleName || '').localeCompare(b.style.styleName || '');
     });
     
     // Limit to top 50 matches
-    const topMatches = matchingStyles.slice(0, 50);
+    const topMatches = scoredStyles.slice(0, 50).map(s => s.style);
     const styleIds = topMatches.map(s => s.styleID);
     
-    // STEP 2: Fetch SKU data for all matching styles (batch fetch for colors/sizes/prices)
+    // STEP 3: Fetch SKU data for all matching styles (batch fetch for colors/sizes/prices)
     console.log(`[searchProducts] Fetching SKU data for ${styleIds.length} styles...`);
     const productsMap = await fetchProductsForStyles(styleIds);
     
-    // STEP 3: Build enriched products with full SKU data
+    // STEP 4: Build enriched products with full SKU data
     const products: Product[] = [];
     for (const style of topMatches) {
       const skuData = productsMap.get(style.styleID);
@@ -983,10 +1013,13 @@ export async function searchProducts(query: string): Promise<Product[]> {
           // Merge in title and description from style data
           product.title = style.title || product.styleName;
           product.description = style.description || '';
-          // FIX: Use styleImage as primary image
+          // Use styleImage as primary image
           if (style.styleImage) {
             product.imageUrl = buildImageUrl(style.styleImage);
           }
+          // Add product flags
+          product.isSustainable = style.sustainableStyle || false;
+          product.isNew = style.newStyle || false;
           if (style.categories) {
             const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
             product.categories = catIds.map(id => ({ id, name: '' }));
@@ -1121,6 +1154,9 @@ function transformProduct(ssProduct: SSProduct): Product {
     ? ssProduct.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id))
     : [];
   
+  const price = ssProduct.ourPrice || ssProduct.basePrice || 0;
+  const salePrice = ssProduct.salePrice || null;
+  
   return {
     id: ssProduct.styleID.toString(),
     styleId: ssProduct.styleID,
@@ -1130,14 +1166,16 @@ function transformProduct(ssProduct: SSProduct): Product {
     title: ssProduct.title || ssProduct.styleName,
     description: ssProduct.description || '',
     basePrice: ssProduct.basePrice || 0,
-    price: ssProduct.ourPrice || ssProduct.basePrice || 0,
-    salePrice: ssProduct.salePrice || null,
+    price,
+    salePrice,
     imageUrl: buildImageUrl(ssProduct.styleImage),
     categories: categoryIds.map(id => ({ id, name: ssProduct.baseCategory || '' })),
     colors,
+    // Product flags
+    isOnSale: salePrice !== null && salePrice > 0 && salePrice < price,
+    isSustainable: ssProduct.sustainableStyle || false,
+    isNew: ssProduct.newStyle || false,
   };
-
-  return result;
 }
 
 /**
@@ -1229,6 +1267,7 @@ function transformSkuDataToProduct(skuData: SSProductSku[]): Product {
 
   // Get base price from first SKU
   const basePrice = firstSku.piecePrice || firstSku.customerPrice || 0;
+  const salePrice = firstSku.salePrice || null;
 
   return {
     id: firstSku.styleID.toString(),
@@ -1240,10 +1279,15 @@ function transformSkuDataToProduct(skuData: SSProductSku[]): Product {
     description: '', // Products endpoint doesn't have description
     basePrice,
     price: basePrice,
-    salePrice: firstSku.salePrice || null,
+    salePrice,
     imageUrl: buildImageUrl(firstSku.colorFrontImage),
     categories: [],
     colors,
+    // Flags - isOnSale is determined by salePrice vs price
+    isOnSale: salePrice !== null && salePrice > 0 && salePrice < basePrice,
+    // isSustainable and isNew are set from style data after transform
+    isSustainable: false,
+    isNew: false,
   };
 }
 

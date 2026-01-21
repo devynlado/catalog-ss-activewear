@@ -18,20 +18,16 @@ interface CatalogPageProps {
   };
 }
 
-// Default to T-Shirts category (ID: 21) for better UX with swatches
-const DEFAULT_CATEGORY = '21';
-
 export default function CatalogPage({ searchParams }: CatalogPageProps) {
   const { search, brand, colorFamily, attr } = searchParams;
   
-  // Use provided category, or default to T-Shirts if no filters applied
-  const hasAnyFilter = searchParams.search || searchParams.category || searchParams.brand || searchParams.colorFamily || searchParams.attr;
-  const category = searchParams.category || (hasAnyFilter ? undefined : DEFAULT_CATEGORY);
+  // Use provided category filter (no default - show all products)
+  const category = searchParams.category;
   
   // Get category name for display
   const categoryId = category ? parseInt(category, 10) : null;
   const categoryInfo = categoryId ? MAIN_CATEGORIES[categoryId] : null;
-  const pageTitle = categoryInfo ? categoryInfo.name : 'Product Catalog';
+  const pageTitle = categoryInfo ? categoryInfo.name : 'All Products';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -42,7 +38,7 @@ export default function CatalogPage({ searchParams }: CatalogPageProps) {
           <p className="mt-2 text-slate-600">
             {categoryInfo 
               ? `Browse our selection of ${categoryInfo.name.toLowerCase()}`
-              : 'Browse our complete selection of blank apparel'
+              : 'Browse our complete catalog of blank apparel and accessories'
             }
           </p>
         </div>
