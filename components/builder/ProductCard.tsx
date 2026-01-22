@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Eye, ShoppingBag, Leaf, Sparkles } from 'lucide-react';
+import { Plus, ShoppingBag, Leaf, Sparkles } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
@@ -121,7 +121,7 @@ export function ProductCard({
           )}
         </div>
 
-        {/* Quick View Button */}
+        {/* Quick Add Button - Subtle "+" in corner */}
         {onQuickView && (
           <button
             onClick={(e) => {
@@ -129,15 +129,10 @@ export function ProductCard({
               e.stopPropagation();
               onQuickView(product);
             }}
-            className={cn(
-              'absolute bottom-3 left-1/2 -translate-x-1/2 transform rounded-lg bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-lg backdrop-blur-sm transition-all',
-              isHovered ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            )}
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-md backdrop-blur-sm transition-all hover:bg-brand-500 hover:text-white hover:scale-110"
+            title="Quick add to quote"
           >
-            <span className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Quick View
-            </span>
+            <Plus className="h-5 w-5" />
           </button>
         )}
       </div>

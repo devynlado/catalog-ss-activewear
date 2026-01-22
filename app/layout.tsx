@@ -4,6 +4,7 @@ import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
+import { MobileQuoteBar } from '@/components/quote/MobileQuoteBar';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -29,6 +30,7 @@ export default function RootLayout({
         </main>
         <Footer />
         <QuoteDrawer />
+        <MobileQuoteBar />
       </body>
     </html>
   );

@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Minus, Plus, ShoppingBag, ExternalLink } from 'lucide-react';
+import { ShoppingBag, ExternalLink, Check, Info } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
-import { formatPrice, cn } from '@/lib/utils';
+import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { ColorSwatches } from './ColorSwatches';
-import { InventoryMatrix } from './InventoryMatrix';
+import { SizeDistributionRow } from './SizeDistributionRow';
 
 interface QuickViewModalProps {
   product: Product;
@@ -19,177 +19,340 @@ interface QuickViewModalProps {
   productId?: string; // For Builder.io standalone usage
 }
 
+// Type for tracking quantities per color per size
+type ColorQuantities = Record<string, Record<string, number>>;
+
 export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps) {
-  const [selectedColor, setSelectedColor] = useState<ProductColor | null>(
-    product.colors?.[0] || null
-  );
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [selectedQty, setSelectedQty] = useState(0);
+  // Track selected colors (array for multi-color support)
+  const [selectedColors, setSelectedColors] = useState<ProductColor[]>([]);
+  
+  // Track quantities per color: { colorCode: { sizeName: quantity } }
+  const [colorQuantities, setColorQuantities] = useState<ColorQuantities>({});
+  
+  const [addedToQuote, setAddedToQuote] = useState(false);
 
   const { addItem } = useQuoteStore();
 
-  const imageUrl = selectedColor?.frontImage || product.imageUrl;
+  // Get image from first selected color or product default
+  const displayColor = selectedColors[0] || product.colors?.[0] || null;
+  const imageUrl = displayColor?.frontImage || displayColor?.onModelFrontImage || product.imageUrl;
   const displayPrice = product.salePrice || product.price;
 
-  const handleSizeColorSelect = (colorCode: string, size: string, qty: number) => {
-    const color = product.colors?.find((c) => c.colorCode === colorCode);
-    if (color) {
-      setSelectedColor(color);
-      setSelectedSize(size);
-      setSelectedQty(qty);
+  // Calculate total pieces across all colors and sizes
+  const totalPieces = useMemo(() => {
+    let total = 0;
+    Object.values(colorQuantities).forEach((sizeQtys) => {
+      Object.values(sizeQtys).forEach((qty) => {
+        total += qty;
+      });
+    });
+    return total;
+  }, [colorQuantities]);
+
+  // Calculate per-color subtotals and grand total
+  const { colorSubtotals, grandTotal } = useMemo(() => {
+    const subtotals: Array<{ colorCode: string; colorName: string; pieces: number; total: number }> = [];
+    let grand = 0;
+
+    selectedColors.forEach((color) => {
+      const sizeQtys = colorQuantities[color.colorCode] || {};
+      let colorPieces = 0;
+      let colorTotal = 0;
+
+      Object.entries(sizeQtys).forEach(([sizeName, qty]) => {
+        if (qty > 0) {
+          const size = color.sizes.find((s) => s.name === sizeName);
+          const unitPrice = size?.salePrice || size?.price || 0;
+          colorPieces += qty;
+          colorTotal += unitPrice * qty;
+        }
+      });
+
+      if (colorPieces > 0) {
+        subtotals.push({
+          colorCode: color.colorCode,
+          colorName: color.colorName,
+          pieces: colorPieces,
+          total: colorTotal,
+        });
+        grand += colorTotal;
+      }
+    });
+
+    return { colorSubtotals: subtotals, grandTotal: grand };
+  }, [selectedColors, colorQuantities]);
+
+  // Handle color swatch click - toggle selection
+  const handleColorClick = (color: ProductColor | null) => {
+    if (!color) return;
+
+    const isSelected = selectedColors.some((c) => c.colorCode === color.colorCode);
+    
+    if (isSelected) {
+      // Remove from selection
+      setSelectedColors(selectedColors.filter((c) => c.colorCode !== color.colorCode));
+      // Also remove quantities for this color
+      const newQuantities = { ...colorQuantities };
+      delete newQuantities[color.colorCode];
+      setColorQuantities(newQuantities);
+    } else {
+      // Add to selection at the FRONT so it becomes the active preview color
+      setSelectedColors([color, ...selectedColors]);
     }
   };
 
+  // Handle quantity changes for a specific color
+  const handleQuantitiesChange = (colorCode: string, quantities: Record<string, number>) => {
+    setColorQuantities({
+      ...colorQuantities,
+      [colorCode]: quantities,
+    });
+  };
+
+  // Remove a color row
+  const handleRemoveColor = (colorCode: string) => {
+    setSelectedColors(selectedColors.filter((c) => c.colorCode !== colorCode));
+    const newQuantities = { ...colorQuantities };
+    delete newQuantities[colorCode];
+    setColorQuantities(newQuantities);
+  };
+
+  // Add all items to quote
   const handleAddToQuote = () => {
-    if (!selectedColor || !selectedSize) {
-      return;
-    }
+    if (totalPieces === 0) return;
 
-    const sizeInfo = selectedColor.sizes.find((s) => s.name === selectedSize);
+    // Loop through all colors and sizes with quantities
+    Object.entries(colorQuantities).forEach(([colorCode, sizeQtys]) => {
+      const color = selectedColors.find((c) => c.colorCode === colorCode);
+      if (!color) return;
 
-    addItem({
-      productId: product.id,
-      styleId: product.styleId,
-      styleName: product.styleName,
-      brandName: product.brandName,
-      colorName: selectedColor.colorName,
-      colorCode: selectedColor.colorCode,
-      sizeName: selectedSize,
-      quantity,
-      unitPrice: sizeInfo?.price || displayPrice,
-      imageUrl: selectedColor.frontImage || product.imageUrl,
+      Object.entries(sizeQtys).forEach(([sizeName, quantity]) => {
+        if (quantity <= 0) return;
+
+        const sizeInfo = color.sizes.find((s) => s.name === sizeName);
+
+        addItem({
+          productId: product.id,
+          styleId: product.styleId,
+          styleName: product.styleName,
+          brandName: product.brandName,
+          colorName: color.colorName,
+          colorCode: color.colorCode,
+          sizeName,
+          quantity,
+          unitPrice: sizeInfo?.price || displayPrice,
+          imageUrl: color.frontImage || product.imageUrl,
+        });
+      });
     });
 
-    // Reset and close
-    setQuantity(1);
+    setAddedToQuote(true);
+    
+    // Reset and close after success animation
+    setTimeout(() => {
+      setAddedToQuote(false);
+      setSelectedColors([]);
+      setColorQuantities({});
+      onClose();
+    }, 1500);
+  };
+
+  // Reset state when modal closes
+  const handleClose = () => {
+    setSelectedColors([]);
+    setColorQuantities({});
+    setAddedToQuote(false);
     onClose();
   };
 
-  const canAddToQuote = selectedColor && selectedSize && selectedQty > 0;
+  const canAddToQuote = totalPieces > 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
-      <div className="grid gap-6 p-6 md:grid-cols-2">
+    <Modal isOpen={isOpen} onClose={handleClose} size="xl">
+      <div className="flex flex-col lg:flex-row gap-6 p-6 max-h-[90vh] overflow-hidden">
         {/* Left: Image */}
-        <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={product.title}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-slate-300">
-              <ShoppingBag className="h-20 w-20" />
-            </div>
-          )}
+        <div className="lg:w-2/5 flex-shrink-0">
+          <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-50">
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={product.title}
+                fill
+                className="object-contain p-4"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-slate-300">
+                <ShoppingBag className="h-20 w-20" />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right: Details */}
-        <div className="flex flex-col">
-          {/* Header */}
-          <div>
+        {/* Right: Details - Scrollable */}
+        <div className="lg:w-3/5 flex flex-col min-h-0">
+          {/* Header - Fixed */}
+          <div className="flex-shrink-0">
             <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
               {product.brandName}
             </p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-900">
-              {product.styleName}
+            <h2 className="mt-1 text-xl font-bold text-slate-900">
+              {product.title || product.styleName}
             </h2>
-            <p className="mt-2 text-2xl font-semibold text-brand-600">
-              {formatPrice(displayPrice)}
-              <span className="ml-2 text-sm font-normal text-slate-500">per piece</span>
+            <p className="mt-1 text-sm text-slate-500">
+              Style #{product.styleName}
             </p>
-          </div>
-
-          {/* Color Selection */}
-          {product.colors && product.colors.length > 0 && (
-            <div className="mt-6">
-              <ColorSwatches
-                colors={product.colors}
-                selectedColor={selectedColor}
-                onColorSelect={setSelectedColor}
-                swatchSize="lg"
-                maxVisible={12}
-              />
-            </div>
-          )}
-
-          {/* Inventory Matrix */}
-          <div className="mt-6 flex-1 overflow-hidden">
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">
-              Select Size (Click to select)
-            </h3>
-            <div className="max-h-[200px] overflow-y-auto">
-              <InventoryMatrix
-                colors={product.colors}
-                onSizeColorSelect={handleSizeColorSelect}
-                selectedColor={selectedColor?.colorCode}
-                selectedSize={selectedSize || undefined}
-                showQuantities={true}
-              />
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-semibold text-brand-600">
+                {formatPrice(displayPrice)}
+              </span>
+              <span className="text-sm text-slate-500">per piece</span>
             </div>
           </div>
 
-          {/* Selection Summary */}
-          {selectedColor && selectedSize && (
-            <div className="mt-4 rounded-lg bg-slate-50 p-3">
-              <p className="text-sm text-slate-600">
-                Selected: <span className="font-medium">{selectedColor.colorName}</span> / 
-                <span className="font-medium"> {selectedSize}</span>
-                {selectedQty > 0 && (
-                  <span className="ml-2 text-green-600">({selectedQty} available)</span>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto mt-4 pr-2 -mr-2">
+            {/* Color Selection */}
+            {product.colors && product.colors.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Select Colors ({product.colors.length} available)
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Click colors to add size rows below. Click again to remove.
+                </p>
+                <div className="mt-3">
+                  <ColorSwatches
+                    colors={product.colors}
+                    selectedColor={null}
+                    selectedColors={selectedColors}
+                    onColorSelect={handleColorClick}
+                    swatchSize="lg"
+                    maxVisible={12}
+                    multiSelect={true}
+                    showSearch={product.colors.length > 12}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Size Distribution Rows */}
+            {selectedColors.length > 0 && (
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Enter Quantities by Size
+                  </h3>
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <Info className="h-3.5 w-3.5" />
+                    <span>Stock shown below each size</span>
+                  </div>
+                </div>
+
+                {selectedColors.map((color) => (
+                  <SizeDistributionRow
+                    key={color.colorCode}
+                    color={color}
+                    quantities={colorQuantities[color.colorCode] || {}}
+                    onQuantitiesChange={(qtys) => handleQuantitiesChange(color.colorCode, qtys)}
+                    onRemove={() => handleRemoveColor(color.colorCode)}
+                    showRemoveButton={selectedColors.length > 1}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* No colors selected prompt */}
+            {selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
+              <div className="mt-5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <ShoppingBag className="mx-auto h-8 w-8 text-slate-400" />
+                <p className="mt-2 text-sm font-medium text-slate-600">
+                  Select a color above to enter quantities
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  You can select multiple colors for a multi-color order
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer: Order Summary & Add to Quote - Fixed */}
+          <div className="flex-shrink-0 mt-4 pt-4 border-t border-slate-200">
+            {/* Order Summary */}
+            {selectedColors.length > 0 && grandTotal > 0 && (
+              <div className="rounded-lg bg-brand-50 p-4 mb-4">
+                {/* Per-color breakdown - only show when 2+ colors */}
+                {colorSubtotals.length > 1 && (
+                  <div className="space-y-1.5 mb-2 pb-2 border-b border-brand-200">
+                    {colorSubtotals.map((item) => (
+                      <div key={item.colorCode} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-700">
+                          {item.colorName}{' '}
+                          <span className="text-slate-500">
+                            ({item.pieces} {item.pieces === 1 ? 'pc' : 'pcs'})
+                          </span>
+                        </span>
+                        <span className="font-semibold text-slate-700">
+                          {formatPrice(item.total)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </p>
-            </div>
-          )}
 
-          {/* Quantity & Add to Quote */}
-          <div className="mt-6 flex items-center gap-4">
-            {/* Quantity Selector */}
-            <div className="flex items-center rounded-lg border border-slate-200">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="px-3 py-2 text-slate-600 hover:bg-slate-50"
-              >
-                <Minus className="h-4 w-4" />
-              </button>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-16 border-x border-slate-200 py-2 text-center text-sm focus:outline-none"
-                min="1"
-              />
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="px-3 py-2 text-slate-600 hover:bg-slate-50"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
+                {/* Grand Total */}
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-700 font-medium">
+                    Total:{' '}
+                    <span className="font-bold text-brand-700">
+                      {formatNumber(totalPieces)} {totalPieces === 1 ? 'piece' : 'pieces'}
+                    </span>
+                  </span>
+                  <span className="text-xl font-bold text-brand-700">
+                    {formatPrice(grandTotal)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Add to Quote Button */}
             <Button
               onClick={handleAddToQuote}
               disabled={!canAddToQuote}
-              className="flex-1"
               size="lg"
+              className={cn(
+                'w-full',
+                addedToQuote && 'bg-green-600 hover:bg-green-700'
+              )}
             >
-              <ShoppingBag className="mr-2 h-4 w-4" />
-              Add to Quote
+              {addedToQuote ? (
+                <>
+                  <Check className="mr-2 h-5 w-5" />
+                  Added to Quote!
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  Add to Quote
+                </>
+              )}
             </Button>
-          </div>
 
-          {/* View Full Details Link */}
-          <Link
-            href={`/catalog/${product.id}`}
-            className="mt-4 flex items-center justify-center gap-2 text-sm text-brand-600 hover:text-brand-700"
-          >
-            View Full Details
-            <ExternalLink className="h-4 w-4" />
-          </Link>
+            {!canAddToQuote && selectedColors.length > 0 && (
+              <p className="mt-2 text-xs text-center text-slate-500">
+                Enter quantities for at least one size
+              </p>
+            )}
+
+            {/* View Full Details Link */}
+            <Link
+              href={`/catalog/${product.id}`}
+              onClick={handleClose}
+              className="mt-3 flex items-center justify-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+            >
+              View Full Product Details
+              <ExternalLink className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </Modal>

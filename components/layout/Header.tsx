@@ -153,7 +153,7 @@ export function Header() {
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const megaMenuCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
-  const { items, openDrawer } = useQuoteStore();
+  const { items, openDrawer, justAdded } = useQuoteStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   // Mega menu hover handlers with 300ms close delay
@@ -295,12 +295,18 @@ export function Header() {
             {/* Quote button */}
             <button
               onClick={openDrawer}
-              className="relative flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              className={cn(
+                "relative flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-brand-600",
+                justAdded && "animate-pulse ring-2 ring-brand-300 ring-offset-2"
+              )}
             >
               <ShoppingBag className="h-5 w-5" />
               <span className="hidden sm:inline">Quote</span>
               {itemCount > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-500">
+                <span className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-500 transition-transform",
+                  justAdded && "scale-125"
+                )}>
                   {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}

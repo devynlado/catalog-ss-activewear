@@ -37,9 +37,12 @@ export default function CatalogPage({ searchParams }: CatalogPageProps) {
           <h1 className="text-3xl font-bold text-slate-900">{pageTitle}</h1>
           <p className="mt-2 text-slate-600">
             {categoryInfo 
-              ? `Browse our selection of ${categoryInfo.name.toLowerCase()}`
-              : 'Browse our complete catalog of blank apparel and accessories'
+              ? `Select ${categoryInfo.name.toLowerCase()} to add to your quote`
+              : 'Select products to add to your quote — we\'ll follow up with pricing within 24 hours'
             }
+          </p>
+          <p className="mt-0.5 text-sm text-brand-600">
+            💡 Mix sizes, colors & styles across products — 50 piece minimum
           </p>
         </div>
       </div>

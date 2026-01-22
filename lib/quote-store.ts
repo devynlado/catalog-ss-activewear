@@ -5,6 +5,7 @@ import { QuoteItem } from './types';
 interface QuoteStore {
   items: QuoteItem[];
   isDrawerOpen: boolean;
+  justAdded: boolean; // For pulse animation
   
   // Actions
   addItem: (item: Omit<QuoteItem, 'id' | 'addedAt'>) => void;
@@ -14,6 +15,7 @@ interface QuoteStore {
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
+  clearJustAdded: () => void;
   
   // Computed
   getItemCount: () => number;
@@ -25,6 +27,7 @@ export const useQuoteStore = create<QuoteStore>()(
     (set, get) => ({
       items: [],
       isDrawerOpen: false,
+      justAdded: false,
       
       addItem: (item) => {
         const newItem: QuoteItem = {
@@ -45,14 +48,20 @@ export const useQuoteStore = create<QuoteStore>()(
           // Update quantity of existing item
           const items = [...get().items];
           items[existingIndex].quantity += item.quantity;
-          set({ items, isDrawerOpen: true });
+          set({ items, isDrawerOpen: true, justAdded: true });
         } else {
           // Add new item
           set((state) => ({ 
             items: [...state.items, newItem],
             isDrawerOpen: true,
+            justAdded: true,
           }));
         }
+        
+        // Clear justAdded after animation
+        setTimeout(() => {
+          set({ justAdded: false });
+        }, 1000);
       },
       
       removeItem: (id) => {
@@ -81,6 +90,7 @@ export const useQuoteStore = create<QuoteStore>()(
       openDrawer: () => set({ isDrawerOpen: true }),
       closeDrawer: () => set({ isDrawerOpen: false }),
       toggleDrawer: () => set((state) => ({ isDrawerOpen: !state.isDrawerOpen })),
+      clearJustAdded: () => set({ justAdded: false }),
       
       getItemCount: () => {
         return get().items.reduce((sum, item) => sum + item.quantity, 0);
