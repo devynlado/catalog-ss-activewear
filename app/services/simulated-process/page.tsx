@@ -1,0 +1,230 @@
+'use client';
+
+import { Palette, Music, Camera, Droplets, Award, Layers, Check, Sparkles } from 'lucide-react';
+import {
+  ServiceHero,
+  BenefitsBadges,
+  HowItWorks,
+  ComparisonTable,
+  TipsSection,
+  PortfolioGrid,
+  RetailFinishingUpsell,
+  ServiceCTA,
+  ShopBlanksSection,
+  WhyChooseSection,
+} from '@/components/services';
+
+// Metadata handled in layout
+
+const whyChooseReasons = [
+  {
+    icon: Palette,
+    title: 'Pantone Color Matching',
+    description: 'Unlike digital methods, simulated process allows exact Pantone matching for brand-accurate colors.',
+  },
+  {
+    icon: Camera,
+    title: 'Photorealistic Results',
+    description: 'Reproduce portraits, album art, and complex imagery with stunning detail and depth.',
+  },
+  {
+    icon: Music,
+    title: 'The Vintage Concert Tee Feel',
+    description: 'That iconic, nostalgic look of classic band merch—soft ink, rich colors, timeless appeal.',
+  },
+  {
+    icon: Layers,
+    title: '17" x 23" Max Size',
+    description: 'Larger than digital screen printing, giving you more canvas for impactful designs.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Special Effects Available',
+    description: 'Combine with puff, metallic, or high-density inks for added dimension.',
+  },
+  {
+    icon: Droplets,
+    title: 'Soft Hand Feel',
+    description: 'Carefully controlled ink deposit creates a comfortable, wearable print.',
+  },
+];
+
+const comparisonData = {
+  columns: ['Simulated Process', 'Digital Screen Printing'],
+  rows: [
+    { feature: 'Definition', values: ['Halftones + spot colors for photorealistic prints', 'Digital print head for full CMYK color'] },
+    { feature: 'Best For', values: ['Vibrant colors, vintage feel, Pantone matching', 'Photorealistic with complex color gradients'] },
+    { feature: 'Color Accuracy', values: ['Pantone match any color', 'CMYK only, reduced vibrancy'] },
+    { feature: 'Detail', values: ['Artistically interpreted', 'True-to-image'] },
+    { feature: 'Max Print Size', values: ['17" x 23"', '15" x 18"'] },
+    { feature: 'Special Effects', values: ['✓ Yes', '✗ No'] },
+  ],
+};
+
+const tips = [
+  {
+    title: 'Be Flexible',
+    description: 'Simulated process may require color adjustments. Trust your rep—minor tweaks often improve the final result.',
+  },
+  {
+    title: 'Optimize Color Count',
+    description: 'We balance design integrity with cost by reducing colors where possible. More colors = higher cost.',
+  },
+  {
+    title: 'Leverage the Garment',
+    description: 'Consider how the shirt color can replace ink colors in your design, creating a more cost-effective print.',
+  },
+  {
+    title: 'Mind Ink Density',
+    description: 'Lighter ink coverage gives a softer, more premium feel. We optimize for comfort and quality.',
+  },
+  {
+    title: 'Expect Adjustments',
+    description: 'Minor tweaks during setup are normal. Simulated process is an art as much as a science.',
+  },
+];
+
+const portfolioItems = [
+  { title: 'Tour Merch - Artist Portrait', tags: ['Simulated Process', 'Music'] },
+  { title: 'Album Art Full Back Print', tags: ['Simulated Process', 'Music'] },
+  { title: 'Vintage Band Tee Recreation', tags: ['Simulated Process', 'Vintage'] },
+  { title: 'Festival Lineup Poster Shirt', tags: ['Simulated Process', 'Events'] },
+  { title: 'Photorealistic Product Promo', tags: ['Simulated Process', 'Corporate'] },
+  { title: 'Complex Illustration Print', tags: ['Simulated Process', 'Art'] },
+  { title: 'Moody Gradient Design', tags: ['Simulated Process', 'Fashion'] },
+  { title: 'Sports Team Photo Tee', tags: ['Simulated Process', 'Sports'] },
+];
+
+const shopCategories = [
+  { name: 'T-Shirts', href: '/catalog?category=21' },
+  { name: 'Heavyweight Tees', href: '/catalog?category=21' },
+  { name: 'Hoodies', href: '/catalog?category=9' },
+  { name: 'Long Sleeve Tees', href: '/catalog?category=40' },
+];
+
+export default function SimulatedProcessPage() {
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Hero */}
+      <ServiceHero
+        title="Simulated Process Printing"
+        tagline="Photorealistic Prints with Vintage Soul"
+        description="Simulated process screen printing reproduces full-color images—especially photorealistic artwork—using traditional screen printing techniques. By separating your design into a custom set of spot colors with halftones, we create stunning prints that pop on any shirt, especially dark ones. It's our go-to for anything complex, vivid, or requiring that nostalgic concert tee feel."
+        icon={Palette}
+        gradient="from-rose-500 to-pink-600"
+        maxPrintSize="17&quot; x 23&quot;"
+        backLink={{ href: '/services/screen-printing', label: 'Back to Screen Printing' }}
+      />
+
+      {/* Benefits Badges */}
+      <BenefitsBadges />
+
+      {/* How It Works */}
+      <HowItWorks
+        title="How Does Simulated Process Work?"
+        description="Simulated process printing works by separating a full-color image into a custom set of spot colors. These colors are carefully chosen to reproduce gradients, shadows, highlights, and photorealistic details through halftones and layering techniques. Unlike digital printing (CMYK), simulated process uses Pantone-matched spot colors that can be more vibrant and precise. The end result is a soft-feel, photorealistic print with that iconic band tee quality."
+        steps={[
+          { title: 'Color Separation', description: 'Your artwork is analyzed and separated into individual spot colors optimized for screen printing.' },
+          { title: 'Halftone Generation', description: 'Gradients and tones are converted to halftone patterns for smooth transitions.' },
+          { title: 'Screen Creation', description: 'A separate screen is created for each color in the separation.' },
+          { title: 'Print Sequence', description: 'Colors are printed in precise sequence, building up the image layer by layer.' },
+          { title: 'Final Cure', description: 'The completed print is cured to bond all layers permanently to the fabric.' },
+        ]}
+      />
+
+      {/* Tour Merch Section */}
+      <section className="py-16 lg:py-20 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-12 lg:grid-cols-2 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 text-brand-600 mb-4">
+                <Music className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-wider">Built for Artists</span>
+              </div>
+              <h2 className="text-3xl font-bold text-navy-800 sm:text-4xl">
+                Why Touring Artists Love Simulated Process
+              </h2>
+              <p className="mt-4 text-lg text-slate-600 leading-relaxed">
+                Simulated process screen printing is the go-to for artists who want merch that looks as good as the album cover.
+              </p>
+              <p className="mt-4 text-slate-600 leading-relaxed">
+                From photorealistic portraits to moody gradients, this method brings complex art to life—especially on dark tees. It's built for tours, built for fans, built to last.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  'Reproduce album art with stunning accuracy',
+                  'Vibrant colors that pop on black shirts',
+                  'Durable prints that survive the mosh pit',
+                  'That classic, vintage band tee aesthetic',
+                ].map((item, index) => (
+                  <li key={index} className="flex items-center gap-3 text-slate-700">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            {/* Placeholder for tour merch image */}
+            <div className="relative">
+              <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center overflow-hidden border border-rose-200">
+                <div className="text-center p-8">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-rose-500/10 flex items-center justify-center">
+                    <Music className="w-10 h-10 text-rose-500" />
+                  </div>
+                  <p className="text-sm text-rose-600 font-medium">Tour Merch Example</p>
+                  <p className="text-xs text-rose-500 mt-1">Image placeholder</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison Table */}
+      <ComparisonTable
+        title="Simulated Process vs Digital Screen Printing"
+        subtitle="Choose the right method for your artwork"
+        columns={comparisonData.columns}
+        rows={comparisonData.rows}
+        highlightColumn={0}
+      />
+
+      {/* Why Choose */}
+      <WhyChooseSection
+        title="Why Choose Simulated Process?"
+        subtitle="For artwork that demands the best"
+        reasons={whyChooseReasons}
+      />
+
+      {/* Portfolio */}
+      <PortfolioGrid
+        title="Simulated Process Portfolio"
+        subtitle="Photorealistic prints with character"
+        items={portfolioItems}
+      />
+
+      {/* Tips */}
+      <TipsSection
+        title="5 Tips for Simulated Process Printing"
+        tips={tips}
+      />
+
+      {/* Shop Blanks */}
+      <ShopBlanksSection
+        title="Shop Simulated Process-Ready Blanks"
+        subtitle="Dark garments work best for photorealistic prints"
+        categories={shopCategories}
+      />
+
+      {/* Retail Finishing Upsell */}
+      <RetailFinishingUpsell title="Upgrade Your Simulated Process Order" />
+
+      {/* CTA */}
+      <ServiceCTA
+        title="Ready for Photorealistic Prints?"
+        subtitle="Get a quote within 24 hours. 50 piece minimum."
+      />
+    </div>
+  );
+}

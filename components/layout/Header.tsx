@@ -3,12 +3,47 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { cn } from '@/lib/utils';
 import { Brand } from '@/lib/types';
 import { getMainCategories } from '@/lib/category-taxonomy';
+
+// Services menu configuration
+const servicesMenu = {
+  screenPrinting: {
+    title: 'Screen Printing',
+    href: '/services/screen-printing',
+    icon: Layers,
+    description: 'Standard plastisol printing',
+    subItems: [
+      { name: 'Puff Printing', href: '/services/puff-screen-printing', icon: Sparkles },
+      { name: 'Jumbo Printing', href: '/services/jumbo-screen-printing', icon: Maximize2 },
+      { name: 'Digital Screen', href: '/services/digital-screen-printing', icon: Monitor },
+      { name: 'Simulated Process', href: '/services/simulated-process', icon: Palette },
+    ],
+  },
+  embroidery: {
+    title: 'Embroidery',
+    href: '/services/embroidery',
+    icon: Scissors,
+    description: 'Premium stitched logos',
+  },
+  finishing: {
+    title: 'Retail Finishing',
+    href: '/services/retail-finishing',
+    icon: Package,
+    description: 'Tags, labels & packaging',
+  },
+  rush: {
+    title: 'Rush Turnaround',
+    href: '/services/rush',
+    icon: Zap,
+    description: 'As fast as 48 hours',
+    highlight: true,
+  },
+};
 
 // Get main navigation categories from taxonomy
 const mainCategories = getMainCategories().map((cat) => ({
@@ -147,14 +182,34 @@ const megaMenuConfig: MegaMenuConfig = {
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [brandsOpen, setBrandsOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
   const brandsRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const megaMenuCloseTimer = useRef<NodeJS.Timeout | null>(null);
+  const servicesCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
   const { items, openDrawer, justAdded } = useQuoteStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Services menu hover handlers with 300ms close delay
+  const handleServicesEnter = () => {
+    if (servicesCloseTimer.current) {
+      clearTimeout(servicesCloseTimer.current);
+      servicesCloseTimer.current = null;
+    }
+    setServicesOpen(true);
+    setActiveMegaMenu(null); // Close product mega menus
+  };
+
+  const handleServicesLeave = () => {
+    servicesCloseTimer.current = setTimeout(() => {
+      setServicesOpen(false);
+      servicesCloseTimer.current = null;
+    }, 300);
+  };
 
   // Mega menu hover handlers with 300ms close delay
   const handleMegaMenuEnter = (categoryId: string | null) => {
@@ -174,11 +229,14 @@ export function Header() {
     }, 300);
   };
 
-  // Cleanup timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (megaMenuCloseTimer.current) {
         clearTimeout(megaMenuCloseTimer.current);
+      }
+      if (servicesCloseTimer.current) {
+        clearTimeout(servicesCloseTimer.current);
       }
     };
   }, []);
@@ -205,6 +263,9 @@ export function Header() {
     const handleClickOutside = (event: MouseEvent) => {
       if (brandsRef.current && !brandsRef.current.contains(event.target as Node)) {
         setBrandsOpen(false);
+      }
+      if (servicesRef.current && !servicesRef.current.contains(event.target as Node)) {
+        setServicesOpen(false);
       }
       if (megaMenuRef.current && !megaMenuRef.current.contains(event.target as Node)) {
         setActiveMegaMenu(null);
@@ -428,6 +489,120 @@ export function Header() {
               );
             })}
 
+            {/* Services Dropdown */}
+            <div 
+              className="relative" 
+              ref={servicesRef}
+              onMouseEnter={handleServicesEnter}
+              onMouseLeave={handleServicesLeave}
+            >
+              <button
+                className={cn(
+                  'flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  servicesOpen || pathname.startsWith('/services')
+                    ? 'bg-brand-50 text-brand-700'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                <span className="text-brand-500">Services</span>
+                <ChevronDown className={cn('h-4 w-4 transition-transform text-brand-500', servicesOpen && 'rotate-180')} />
+              </button>
+
+              {servicesOpen && (
+                <div className="absolute left-0 top-full z-50 w-[480px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Screen Printing Hub */}
+                    <div className="col-span-2 rounded-lg bg-slate-50 p-4">
+                      <Link
+                        href={servicesMenu.screenPrinting.href}
+                        onClick={() => setServicesOpen(false)}
+                        className="flex items-start gap-3 group"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500 text-white">
+                          <Layers className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                            {servicesMenu.screenPrinting.title}
+                          </h3>
+                          <p className="text-xs text-slate-500">{servicesMenu.screenPrinting.description}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-brand-500" />
+                      </Link>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {servicesMenu.screenPrinting.subItems.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={() => setServicesOpen(false)}
+                              className="flex items-center gap-2 rounded-md p-2 text-sm text-slate-600 hover:bg-white hover:text-slate-900"
+                            >
+                              <Icon className="h-4 w-4 text-slate-400" />
+                              {item.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Embroidery */}
+                    <Link
+                      href={servicesMenu.embroidery.href}
+                      onClick={() => setServicesOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+                        <Scissors className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                          {servicesMenu.embroidery.title}
+                        </h3>
+                        <p className="text-xs text-slate-500">{servicesMenu.embroidery.description}</p>
+                      </div>
+                    </Link>
+
+                    {/* Retail Finishing */}
+                    <Link
+                      href={servicesMenu.finishing.href}
+                      onClick={() => setServicesOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                          {servicesMenu.finishing.title}
+                        </h3>
+                        <p className="text-xs text-slate-500">{servicesMenu.finishing.description}</p>
+                      </div>
+                    </Link>
+
+                    {/* Rush - Full Width Highlight */}
+                    <Link
+                      href={servicesMenu.rush.href}
+                      onClick={() => setServicesOpen(false)}
+                      className="col-span-2 flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 p-3 hover:bg-amber-100 group"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white">
+                        <Zap className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-amber-800 group-hover:text-amber-900">
+                          {servicesMenu.rush.title}
+                        </h3>
+                        <p className="text-xs text-amber-600">{servicesMenu.rush.description}</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-amber-400 group-hover:text-amber-600" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Brands Dropdown */}
             <div className="relative" ref={brandsRef}>
               <button
@@ -546,6 +721,45 @@ export function Header() {
                     {cat.name}
                   </Link>
                 ))}
+              </div>
+
+              {/* Services Section */}
+              <div className="border-t border-slate-100 pt-2 mt-2">
+                <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-brand-500">
+                  Services
+                </p>
+                <Link
+                  href="/services/screen-printing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <Layers className="h-4 w-4 text-brand-500" />
+                  Screen Printing
+                </Link>
+                <Link
+                  href="/services/embroidery"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <Scissors className="h-4 w-4 text-indigo-500" />
+                  Embroidery
+                </Link>
+                <Link
+                  href="/services/retail-finishing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <Package className="h-4 w-4 text-amber-500" />
+                  Retail Finishing
+                </Link>
+                <Link
+                  href="/services/rush"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg mx-4 my-2 px-3 py-2.5 text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100"
+                >
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  Rush Turnaround
+                </Link>
               </div>
 
               <div className="border-t border-slate-100 pt-2 mt-2">

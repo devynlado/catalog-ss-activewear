@@ -1,0 +1,10 @@
+export { ServiceHero } from './ServiceHero';
+export { BenefitsBadges } from './BenefitsBadges';
+export { HowItWorks } from './HowItWorks';
+export { ComparisonTable } from './ComparisonTable';
+export { TipsSection } from './TipsSection';
+export { PortfolioGrid } from './PortfolioGrid';
+export { RetailFinishingUpsell } from './RetailFinishingUpsell';
+export { ServiceCTA } from './ServiceCTA';
+export { ShopBlanksSection } from './ShopBlanksSection';
+export { WhyChooseSection } from './WhyChooseSection';
