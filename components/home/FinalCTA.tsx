@@ -5,7 +5,7 @@ import { ArrowRight, Phone } from 'lucide-react';
 
 export function FinalCTA() {
   return (
-    <section className="bg-navy-800 py-20">
+    <section className="bg-navy-800 py-20 border-b border-white/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white sm:text-4xl">

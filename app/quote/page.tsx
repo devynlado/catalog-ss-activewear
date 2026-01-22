@@ -14,9 +14,61 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useQuoteStore } from '@/lib/quote-store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+
+// Decoration method options
+const decorationOptions = [
+  {
+    id: 'screen',
+    name: 'Screen Printing',
+    description: 'Best for 1-8 colors, bulk orders',
+    image: '/images/services/screen-printing.jpg',
+  },
+  {
+    id: 'embroidery',
+    name: 'Embroidery',
+    description: 'Professional stitched logos',
+    image: '/images/services/embroidery.jpg',
+  },
+  {
+    id: 'digital',
+    name: 'Digital Printing',
+    description: 'Full color, photo-quality',
+    image: '/images/services/digital-printing.jpg',
+  },
+  {
+    id: 'none',
+    name: 'No Decoration',
+    description: 'Blanks only',
+    image: null,
+  },
+] as const;
+
+// Finishing service options
+const finishingOptions = [
+  {
+    id: 'fold-bag',
+    name: 'Fold & Bag',
+    image: '/images/services/fold-bag.jpg',
+  },
+  {
+    id: 'printed-tags',
+    name: 'Printed Tags',
+    image: '/images/services/printed-tags.jpg',
+  },
+  {
+    id: 'hang-tags',
+    name: 'Hang Tags',
+    image: '/images/services/hang-tags.jpg',
+  },
+  {
+    id: 'sewn-tags',
+    name: 'Sewn Tags',
+    image: '/images/services/sewn-tags.jpg',
+  },
+] as const;
 
 export default function QuotePage() {
   const { items, removeItem, updateQuantity, clearQuote } = useQuoteStore();
@@ -31,6 +83,11 @@ export default function QuotePage() {
     company: '',
     message: '',
   });
+  
+  // Decoration & Finishing Services
+  const [decorationType, setDecorationType] = useState<'screen' | 'embroidery' | 'digital' | 'none'>('none');
+  const [designDescription, setDesignDescription] = useState('');
+  const [finishingServices, setFinishingServices] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
@@ -73,6 +130,11 @@ export default function QuotePage() {
         body: JSON.stringify({
           items,
           contact: formData,
+          decoration: {
+            type: decorationType,
+            description: designDescription,
+          },
+          finishing: finishingServices,
           submittedAt: new Date(),
         }),
       });
@@ -243,6 +305,135 @@ export default function QuotePage() {
                   ))}
                 </div>
               </div>
+
+              {/* Decoration Services */}
+              <div className="mt-8 rounded-xl bg-white shadow-sm">
+                <div className="border-b border-slate-100 px-6 py-4">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Decoration Services
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Select a decoration method for your order
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    {decorationOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setDecorationType(option.id)}
+                        className={cn(
+                          'relative flex flex-col items-center rounded-xl border-2 p-4 text-center transition-all',
+                          decorationType === option.id
+                            ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200'
+                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        )}
+                      >
+                        {/* Image placeholder */}
+                        <div className="mb-3 h-16 w-16 overflow-hidden rounded-lg bg-slate-100">
+                          {option.image ? (
+                            <Image
+                              src={option.image}
+                              alt={option.name}
+                              width={64}
+                              height={64}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-slate-400">
+                              <ShoppingBag className="h-6 w-6" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-slate-900">
+                          {option.name}
+                        </span>
+                        <span className="mt-1 text-xs text-slate-500">
+                          {option.description}
+                        </span>
+                        {/* Selection indicator */}
+                        {decorationType === option.id && (
+                          <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Design description - show when decoration selected */}
+                  {decorationType !== 'none' && (
+                    <div className="mt-6">
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                        Describe your design
+                      </label>
+                      <textarea
+                        value={designDescription}
+                        onChange={(e) => setDesignDescription(e.target.value)}
+                        rows={2}
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                        placeholder="Describe placement (front, back, sleeve), number of colors, and size. We'll request artwork in our response."
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Finishing Services */}
+              <div className="mt-8 rounded-xl bg-white shadow-sm">
+                <div className="border-b border-slate-100 px-6 py-4">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Finishing Services
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Optional add-ons for retail-ready packaging
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    {finishingOptions.map((option) => {
+                      const isSelected = finishingServices.includes(option.id);
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setFinishingServices(finishingServices.filter(id => id !== option.id));
+                            } else {
+                              setFinishingServices([...finishingServices, option.id]);
+                            }
+                          }}
+                          className={cn(
+                            'relative flex flex-col items-center rounded-xl border-2 p-4 text-center transition-all',
+                            isSelected
+                              ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200'
+                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          )}
+                        >
+                          {/* Image placeholder */}
+                          <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">
+                            <ShoppingBag className="h-6 w-6" />
+                          </div>
+                          <span className="text-sm font-medium text-slate-900">
+                            {option.name}
+                          </span>
+                          {/* Checkbox indicator */}
+                          <div className={cn(
+                            'mt-2 flex h-5 w-5 items-center justify-center rounded border-2 transition-colors',
+                            isSelected
+                              ? 'border-brand-500 bg-brand-500'
+                              : 'border-slate-300 bg-white'
+                          )}>
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Quote Summary & Form */}
@@ -260,6 +451,24 @@ export default function QuotePage() {
                       <dt className="text-slate-600">Estimated Subtotal</dt>
                       <dd className="font-medium text-slate-900">{formatPrice(subtotal)}</dd>
                     </div>
+                    {decorationType !== 'none' && (
+                      <div className="flex justify-between text-sm">
+                        <dt className="text-slate-600">Decoration</dt>
+                        <dd className="font-medium text-slate-900">
+                          {decorationOptions.find(o => o.id === decorationType)?.name}
+                        </dd>
+                      </div>
+                    )}
+                    {finishingServices.length > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <dt className="text-slate-600">Finishing</dt>
+                        <dd className="font-medium text-slate-900 text-right">
+                          {finishingServices.map(id => 
+                            finishingOptions.find(o => o.id === id)?.name
+                          ).join(', ')}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                   <p className="mt-4 text-xs text-slate-500">
                     * Final pricing will be confirmed in your quote response

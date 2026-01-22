@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Star } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { cn } from '@/lib/utils';
@@ -224,35 +224,44 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
       {/* Top bar */}
-      <div className="bg-navy-800 text-white">
+      <div className="bg-[#070131] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-10 items-center justify-between text-sm">
-            {/* Phone & Availability */}
+          <div className="flex h-9 items-center justify-between text-xs">
+            {/* Left - Phone */}
             <a 
               href="tel:+18559427636" 
-              className="hidden items-center gap-2 text-slate-200 hover:text-white transition-colors sm:flex"
+              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
             >
-              <Phone className="h-3.5 w-3.5" />
+              <Phone className="h-3 w-3" />
               <span className="font-medium">(855) 942-7636</span>
-              <span className="text-slate-400">•</span>
-              <span className="text-slate-300">Avg. wait: 10-30 sec</span>
             </a>
             
-            {/* Center - Google Rating */}
-            <div className="hidden items-center gap-1.5 md:flex">
-              <div className="flex text-yellow-400">
-                <Star className="h-3.5 w-3.5 fill-current" />
-                <Star className="h-3.5 w-3.5 fill-current" />
-                <Star className="h-3.5 w-3.5 fill-current" />
-                <Star className="h-3.5 w-3.5 fill-current" />
-                <Star className="h-3.5 w-3.5 fill-current stroke-yellow-400" style={{ clipPath: 'inset(0 20% 0 0)' }} />
-              </div>
-              <span className="font-medium">4.8</span>
-              <span className="text-slate-400">on Google</span>
-            </div>
+            {/* Center - Value Props */}
+            <p className="hidden text-slate-300 md:block">
+              Free quotes <span className="mx-1.5 text-slate-500">•</span> Fast production <span className="mx-1.5 text-slate-500">•</span> Guaranteed deliveries
+            </p>
             
-            {/* Right - Tagline */}
-            <p className="text-slate-300">Free quotes • Fast shipping</p>
+            {/* Right - Info Links */}
+            <div className="flex items-center gap-4">
+              <Link
+                href="/contact"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Contact
+              </Link>
+              <Link
+                href="/about"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                About
+              </Link>
+              <Link
+                href="/faq"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                FAQ
+              </Link>
+            </div>
           </div>
         </div>
       </div>
