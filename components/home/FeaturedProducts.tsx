@@ -20,9 +20,9 @@ export function FeaturedProducts() {
           const data = await response.json();
           // Get a balanced mix from the results
           const allFeatured = data.data || [];
-          // Shuffle and take 6 for display
+          // Shuffle and take 8 for display (2 rows of 4)
           const shuffled = allFeatured.sort(() => Math.random() - 0.5);
-          setProducts(shuffled.slice(0, 6));
+          setProducts(shuffled.slice(0, 8));
         }
       } catch (error) {
         console.error('Error fetching featured products:', error);
@@ -66,8 +66,8 @@ export function FeaturedProducts() {
               <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
             </div>
           ) : products.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {products.slice(0, 6).map((product) => (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {products.slice(0, 8).map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}

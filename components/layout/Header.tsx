@@ -477,7 +477,7 @@ export function Header() {
               <span className="text-slate-300 ml-1">4.8 stars on Google</span>
             </div>
             
-            {/* Right - Resources dropdown + links */}
+            {/* Right - Resources dropdown + Rush promo */}
             <div className="flex items-center gap-4">
               {/* Resources Dropdown */}
               <div 
@@ -540,6 +540,15 @@ export function Header() {
                 )}
               </div>
               
+              {/* Rush Promo - subtle upsell */}
+              <Link
+                href="/services/rush"
+                className="hidden items-center gap-1.5 text-amber-400 hover:text-amber-300 transition-colors sm:flex"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">Rush: 48hr</span>
+              </Link>
+              
               {/* Search icon for mobile */}
               <Link
                 href="/catalog"
@@ -547,27 +556,6 @@ export function Header() {
               >
                 <Search className="h-4 w-4" />
               </Link>
-              
-              {/* Quote Cart */}
-              <button
-                onClick={openDrawer}
-                className={cn(
-                  "relative flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors",
-                  justAdded && "text-white"
-                )}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                <span className="hidden sm:inline">Quote</span>
-                {itemCount > 0 && (
-                  <span className={cn(
-                    "flex items-center justify-center rounded-full bg-brand-500 font-bold text-white transition-transform",
-                    itemCount > 99 ? "h-4 min-w-[1.5rem] px-1 text-[9px]" : "h-4 w-4 text-[10px]",
-                    justAdded && "scale-125 bg-green-500"
-                  )}>
-                    {itemCount > 999 ? '999+' : itemCount}
-                  </span>
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -906,7 +894,8 @@ export function Header() {
                 <span>Get Quote</span>
                 {itemCount > 0 && (
                   <span className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-500 transition-transform",
+                    "flex items-center justify-center rounded-full bg-white font-bold text-brand-500 transition-transform",
+                    itemCount > 99 ? "h-5 min-w-[1.25rem] px-1.5 text-[10px]" : "h-5 w-5 text-xs",
                     justAdded && "scale-125"
                   )}>
                     {itemCount > 99 ? '99+' : itemCount}
