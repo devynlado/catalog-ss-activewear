@@ -6,11 +6,14 @@
  * - Sub-attributes (collar, sleeve, fit, gender for attribute filtering)
  * - Tier (bestseller, staff-pick, value, streetwear)
  * 
- * Total: ~280+ products covering all filter combinations
- * Expanded based on competitor research (JiffyShirts, BlankStyle, BulkApparel)
+ * Total: ~335+ products covering all filter combinations
+ * Expanded based on competitor research (JiffyShirts, BlankStyle, BulkApparel, ShirtSpace)
  * 
  * Premium Brands Featured: Bella+Canvas, Next Level, Comfort Colors, Champion,
  * Independent Trading Co, Lane Seven, Shaka Wear, Yupoong, Los Angeles Apparel
+ * 
+ * Value Brands Featured: Gildan, Hanes, Jerzees, Fruit of the Loom, Tultex,
+ * Port & Company, A4, Augusta, Outdoor Cap, Sportsman
  * 
  * To update: Simply add/remove entries from the POPULAR_PRODUCTS array.
  * The styleNumber is the primary identifier (e.g., "3001", "G500").
@@ -44,8 +47,8 @@ export interface PopularProduct {
 }
 
 // ============================================================================
-// POPULAR PRODUCTS LIST (~300+ products)
-// Expanded based on competitor research (JiffyShirts, BlankStyle, BulkApparel)
+// POPULAR PRODUCTS LIST (~335+ products)
+// Expanded based on competitor research (JiffyShirts, BlankStyle, BulkApparel, ShirtSpace)
 // ============================================================================
 
 export const POPULAR_PRODUCTS: PopularProduct[] = [
@@ -468,6 +471,105 @@ export const POPULAR_PRODUCTS: PopularProduct[] = [
   
   // Cap Sleeve
   { styleNumber: '8703', brand: 'Bella+Canvas', name: 'Womens Flowy Muscle Tee', tier: 'streetwear', category: 'womens', attributes: ['cap-sleeve', 'flowy'], note: 'Trendy cap sleeve' },
+
+  // ==========================================================================
+  // ADDITIONAL BESTSELLERS - Expanded from Competitor Research
+  // (JiffyShirts, BulkApparel, ShirtSpace top sellers)
+  // ==========================================================================
+
+  // Additional T-Shirts - High Volume Sellers
+  { styleNumber: '241', brand: 'Tultex', name: 'Unisex Poly-Rich Tee', tier: 'value', category: 't-shirts', note: 'Tultex bestseller, soft poly blend' },
+  { styleNumber: '254', brand: 'Tultex', name: 'Unisex Vintage Tee', tier: 'streetwear', category: 't-shirts', attributes: ['garment-dyed'], note: 'Vintage wash trend' },
+  { styleNumber: '290', brand: 'Tultex', name: 'Unisex Jersey Tee', tier: 'value', category: 't-shirts', note: 'Budget-friendly basic' },
+  { styleNumber: 'G270', brand: 'Gildan', name: 'DryBlend Adult Tee', tier: 'value', category: 't-shirts', attributes: ['moisture-wicking'], note: 'Moisture-wicking budget' },
+  { styleNumber: '5170', brand: 'Hanes', name: 'EcoSmart 50/50 Tee', tier: 'value', category: 't-shirts', attributes: ['eco'], note: 'Recycled content' },
+  { styleNumber: '5280', brand: 'Hanes', name: 'ComfortSoft Tagless Tee', tier: 'value', category: 't-shirts', note: 'Soft tagless comfort' },
+  { styleNumber: '29MR', brand: 'Jerzees', name: 'DRI-POWER Active Tee', tier: 'value', category: 't-shirts', attributes: ['moisture-wicking'], note: 'Performance value' },
+  { styleNumber: '363V', brand: 'Fruit of the Loom', name: 'HD Cotton V-Neck', tier: 'value', category: 't-shirts', attributes: ['v-neck'], note: 'Budget v-neck' },
+  { styleNumber: '39VR', brand: 'Fruit of the Loom', name: 'HD Cotton V-Neck', tier: 'value', category: 't-shirts', attributes: ['v-neck'], note: 'Same as 363V' },
+
+  // Additional Long Sleeve
+  { styleNumber: '5586', brand: 'Hanes', name: 'ComfortSoft LS', tier: 'value', category: 'long-sleeve', note: 'Soft tagless LS' },
+  { styleNumber: '4930R', brand: 'Fruit of the Loom', name: 'HD Cotton LS', tier: 'value', category: 'long-sleeve', note: 'Budget long sleeve' },
+  { styleNumber: '29LSR', brand: 'Jerzees', name: 'DRI-POWER LS', tier: 'value', category: 'long-sleeve', attributes: ['moisture-wicking'], note: 'Performance LS value' },
+  { styleNumber: '245', brand: 'Tultex', name: 'Unisex Fine Jersey LS', tier: 'value', category: 'long-sleeve', note: 'Tultex long sleeve' },
+
+  // Additional Sweatshirts/Fleece
+  { styleNumber: '12000', brand: 'Gildan', name: 'DryBlend Crewneck', tier: 'value', category: 'crewneck', note: 'Moisture-wicking fleece' },
+  { styleNumber: 'G120', brand: 'Gildan', name: 'DryBlend Crewneck', tier: 'value', category: 'crewneck', note: 'Same as 12000' },
+  { styleNumber: 'F260', brand: 'Hanes', name: 'PrintPro Sweatshirt', tier: 'value', category: 'crewneck', note: 'Print-ready fleece' },
+  { styleNumber: '562', brand: 'Jerzees', name: 'NuBlend Crewneck', tier: 'value', category: 'crewneck', note: 'Soft budget fleece' },
+  { styleNumber: 'SF72R', brand: 'Fruit of the Loom', name: 'Sofspun Crewneck', tier: 'value', category: 'crewneck', note: 'Budget soft fleece' },
+  { styleNumber: '580', brand: 'Jerzees', name: 'NuBlend Cadet Collar', tier: 'staff-pick', category: 'quarter-zip', note: 'Cadet collar style' },
+
+  // Additional Hoodies
+  { styleNumber: '12500', brand: 'Gildan', name: 'DryBlend Hoodie', tier: 'value', category: 'hoodies', note: 'Moisture-wicking hoodie' },
+  { styleNumber: 'G125', brand: 'Gildan', name: 'DryBlend Hoodie', tier: 'value', category: 'hoodies', note: 'Same as 12500' },
+  { styleNumber: 'P998', brand: 'Hanes', name: 'EcoSmart Pullover Hoodie', tier: 'value', category: 'hoodies', attributes: ['eco'], note: 'Eco hoodie' },
+  { styleNumber: '996', brand: 'Jerzees', name: 'NuBlend Pullover Hood', tier: 'value', category: 'hoodies', note: 'Budget fleece hood' },
+  { styleNumber: 'SF76R', brand: 'Fruit of the Loom', name: 'Sofspun Hoodie', tier: 'value', category: 'hoodies', note: 'Soft budget hoodie' },
+  { styleNumber: 'IND4000C', brand: 'Independent', name: 'Heavyweight Cross-Grain', tier: 'streetwear', category: 'hoodies', note: 'Premium cross-grain' },
+  { styleNumber: 'PRM4500', brand: 'Independent', name: 'Pigment Dyed Hoodie', tier: 'streetwear', category: 'hoodies', attributes: ['garment-dyed'], note: 'Pigment dyed premium' },
+
+  // Additional Zip Hoodies
+  { styleNumber: '993', brand: 'Jerzees', name: 'NuBlend Full Zip', tier: 'value', category: 'zip-hoodies', note: 'Budget full zip' },
+  { styleNumber: 'SF73R', brand: 'Fruit of the Loom', name: 'Sofspun Full Zip', tier: 'value', category: 'zip-hoodies', note: 'Budget soft zip' },
+  { styleNumber: 'N280', brand: 'Hanes', name: 'Nano Full Zip Hoodie', tier: 'value', category: 'zip-hoodies', note: 'Lightweight zip' },
+
+  // Additional Performance & Athletic
+  { styleNumber: 'N3165', brand: 'A4', name: 'Cooling Performance LS Tee', tier: 'value', category: 'performance', attributes: ['moisture-wicking'], note: 'Budget performance LS' },
+  { styleNumber: 'N3184', brand: 'A4', name: 'Shorts Sleeve Cooling Tee', tier: 'value', category: 'performance', attributes: ['moisture-wicking'], note: 'Cooling performance' },
+  { styleNumber: 'N3293', brand: 'A4', name: 'Sprint Performance Tee', tier: 'value', category: 'performance', attributes: ['moisture-wicking'], note: 'Sprint athletic tee' },
+  { styleNumber: '790', brand: 'Augusta', name: 'Wicking T-Shirt', tier: 'value', category: 'performance', attributes: ['moisture-wicking'], note: 'Augusta performance tee' },
+  { styleNumber: '791', brand: 'Augusta', name: 'Wicking T-Shirt Youth', tier: 'value', category: 'performance', attributes: ['moisture-wicking', 'youth'], note: 'Youth performance' },
+  { styleNumber: '215', brand: 'Augusta', name: 'Reversible Practice Jersey', tier: 'staff-pick', category: 'performance', note: 'Practice jersey' },
+  { styleNumber: 'ST340', brand: 'Sport-Tek', name: 'RacerMesh Tee', tier: 'staff-pick', category: 'performance', attributes: ['moisture-wicking'], note: 'Breathable mesh tee' },
+  { styleNumber: 'ST360', brand: 'Sport-Tek', name: 'Heather Contender Tee', tier: 'staff-pick', category: 'performance', attributes: ['moisture-wicking'], note: 'Heather performance' },
+  { styleNumber: 'CW22', brand: 'Champion', name: 'Double Dry Performance Tee', tier: 'staff-pick', category: 'performance', attributes: ['moisture-wicking'], note: 'Champion performance' },
+  { styleNumber: 'T525C', brand: 'Champion', name: 'Double Dry Eco Tee', tier: 'value', category: 'performance', attributes: ['moisture-wicking', 'eco'], note: 'Eco performance' },
+
+  // Additional Headwear - Caps & Hats
+  { styleNumber: '112FP-R', brand: 'Richardson', name: 'Five Panel Trucker', tier: 'streetwear', category: 'headwear', attributes: ['trucker', '5-panel'], note: '5-panel alternative' },
+  { styleNumber: '115', brand: 'Richardson', name: 'Low Profile Trucker', tier: 'staff-pick', category: 'headwear', attributes: ['trucker'], note: 'Low pro style' },
+  { styleNumber: '172', brand: 'Richardson', name: 'Fitted Pulse Cap', tier: 'staff-pick', category: 'headwear', attributes: ['structured'], note: 'Fitted alternative' },
+  { styleNumber: '514', brand: 'Richardson', name: 'Surge Adjustable Cap', tier: 'staff-pick', category: 'headwear', attributes: ['structured'], note: 'Adjustable performance' },
+  { styleNumber: '6789', brand: 'Yupoong', name: 'Premium Curved Visor Snapback', tier: 'staff-pick', category: 'headwear', attributes: ['snapback'], note: 'Premium snapback' },
+  { styleNumber: 'NE400', brand: 'New Era', name: 'Structured Cap', tier: 'staff-pick', category: 'headwear', attributes: ['structured'], note: 'New Era structured' },
+  { styleNumber: 'OC771', brand: 'Outdoor Cap', name: 'Premium Low Profile', tier: 'value', category: 'headwear', attributes: ['unstructured'], note: 'Budget dad hat' },
+  { styleNumber: 'OC770', brand: 'Outdoor Cap', name: 'Washed Chino Cap', tier: 'value', category: 'headwear', attributes: ['unstructured'], note: 'Washed casual cap' },
+  { styleNumber: '3000', brand: 'Sportsman', name: 'Mesh-Back Cap', tier: 'value', category: 'headwear', attributes: ['trucker'], note: 'Budget trucker' },
+  { styleNumber: 'SP08', brand: 'Sportsman', name: 'Cuff Beanie', tier: 'value', category: 'headwear', attributes: ['beanie'], note: 'Budget cuff beanie' },
+
+  // Additional Youth & Kids
+  { styleNumber: '3001YCVC', brand: 'Bella+Canvas', name: 'Youth CVC Tee', tier: 'staff-pick', category: 'youth', attributes: ['cvc'], note: 'Soft CVC youth' },
+  { styleNumber: '2000B', brand: 'Gildan', name: 'Youth Ultra Cotton', tier: 'value', category: 'youth', note: 'Budget youth tee' },
+  { styleNumber: 'G240B', brand: 'Gildan', name: 'Youth Ultra Cotton LS', tier: 'value', category: 'youth', note: 'Youth long sleeve' },
+  { styleNumber: '996YR', brand: 'Jerzees', name: 'Youth NuBlend Hoodie', tier: 'value', category: 'youth', note: 'Budget youth hoodie' },
+  { styleNumber: 'RS3302', brand: 'Rabbit Skins', name: 'Infant Cotton Snap Tee', tier: 'staff-pick', category: 'youth', attributes: ['infant'], note: 'Lap shoulder infant' },
+  { styleNumber: 'RS1004', brand: 'Rabbit Skins', name: 'Infant Long Sleeve Bodysuit', tier: 'staff-pick', category: 'youth', attributes: ['infant'], note: 'Infant onesie LS' },
+
+  // Additional Womens
+  { styleNumber: 'G180L', brand: 'Gildan', name: 'Ladies Heavy Blend Crew', tier: 'value', category: 'womens', note: 'Womens crewneck value' },
+  { styleNumber: 'G185FL', brand: 'Gildan', name: 'Ladies Heavy Blend Hoodie', tier: 'value', category: 'womens', note: 'Womens hoodie value' },
+  { styleNumber: '6610', brand: 'Next Level', name: 'Womens CVC Tee', tier: 'staff-pick', category: 'womens', attributes: ['cvc'], note: 'Soft CVC womens' },
+  { styleNumber: '6051', brand: 'Next Level', name: 'Womens Tri-Blend 3/4 Raglan', tier: 'staff-pick', category: 'womens', attributes: ['3/4-sleeve', 'tri-blend'], note: 'Womens raglan' },
+  { styleNumber: 'B6400', brand: 'Bella+Canvas', name: 'Womens Relaxed Jersey Tee', tier: 'staff-pick', category: 'womens', attributes: ['relaxed'], note: 'Relaxed fit womens' },
+  { styleNumber: '6400', brand: 'Bella+Canvas', name: 'Womens Relaxed Jersey SS', tier: 'staff-pick', category: 'womens', note: 'Same as B6400' },
+  { styleNumber: '1537', brand: 'Next Level', name: 'Womens Ideal Racerback', tier: 'staff-pick', category: 'womens', attributes: ['racerback'], note: 'Racerback tank' },
+  { styleNumber: '6480', brand: 'Bella+Canvas', name: 'Womens Cropped Tee', tier: 'streetwear', category: 'womens', attributes: ['cropped'], note: 'Trendy crop tee' },
+
+  // Additional Tanks
+  { styleNumber: '5307', brand: 'Tultex', name: 'Unisex Fine Jersey Tank', tier: 'value', category: 'tank-tops', note: 'Tultex tank value' },
+  { styleNumber: 'G270', brand: 'Gildan', name: 'Adult Tank', tier: 'value', category: 'tank-tops', note: 'Budget basic tank' },
+  { styleNumber: '3620', brand: 'Next Level', name: 'Cotton Tank', tier: 'staff-pick', category: 'tank-tops', note: 'Premium cotton tank' },
+  { styleNumber: '5003', brand: 'Comfort Colors', name: 'Heavyweight Pocket Tank', tier: 'streetwear', category: 'tank-tops', attributes: ['pocket', 'garment-dyed'], note: 'Pocket tank trending' },
+
+  // Bags & Accessories
+  { styleNumber: 'BG100', brand: 'Port Authority', name: 'Basic Tote', tier: 'bestseller', category: 'outerwear', attributes: ['bags'], note: 'Popular tote bag' },
+  { styleNumber: 'BG408', brand: 'Port Authority', name: 'Document Tote', tier: 'staff-pick', category: 'outerwear', attributes: ['bags'], note: 'Document carry tote' },
+  { styleNumber: 'C922', brand: 'Port Authority', name: 'Knit Cuff Beanie', tier: 'value', category: 'headwear', attributes: ['beanie'], note: 'Port Authority beanie' },
+  { styleNumber: 'BX001', brand: 'Big Accessories', name: '6-Panel Brushed Twill', tier: 'value', category: 'headwear', attributes: ['structured'], note: 'Classic 6-panel' },
+  { styleNumber: 'BX880', brand: 'Big Accessories', name: '5-Panel Golf Cap', tier: 'staff-pick', category: 'headwear', attributes: ['5-panel'], note: 'Golf style cap' },
 ];
 
 // ============================================================================

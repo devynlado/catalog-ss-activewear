@@ -492,50 +492,27 @@ export async function GET(request: NextRequest) {
     }
     
     // Normal pagination - ALWAYS apply smart sorting
-    // SPECIAL CASE: When no filters applied, prioritize fetching popular products first
+    // SPECIAL CASE: When no filters applied, ONLY show curated popular products
+    // This gives customers a curated shopping experience instead of overwhelming them
     const noFilters = !brand && !category && !attr && !colorFamily && !style;
     
     if (noFilters) {
-      console.log(`[API] No filters - fetching popular products first for better UX`);
+      console.log(`[API] No filters - showing ONLY curated popular products`);
       
-      // Step 1: Fetch popular products directly
+      // Fetch ALL popular products from our curated list
       const popularStyleNums = getPopularStyleNumbers();
-      let popularProducts = await getProductsByStyleNumbers(popularStyleNums, { limit: 100 });
+      let popularProducts = await getProductsByStyleNumbers(popularStyleNums, { limit: 500 });
       popularProducts = addPopularFlags(popularProducts);
       popularProducts = popularProducts.filter(p => p.isPopular); // Only keep matched popular
       popularProducts = sortPopularFirst(popularProducts);
       
-      console.log(`[API] Found ${popularProducts.length} popular products`);
+      console.log(`[API] Found ${popularProducts.length} curated popular products`);
       
-      // Step 2: Calculate how many regular products we need to fill the page
-      const popularCount = popularProducts.length;
-      const regularNeeded = Math.max(0, (page * pageSize) - popularCount + pageSize);
-      
-      // Step 3: Fetch regular products (skip popular ones by offset)
-      let regularProducts: Product[] = [];
-      if (regularNeeded > 0 || page > 1) {
-        regularProducts = await getProducts({
-          limit: regularNeeded + pageSize, // Fetch extra for sorting
-          offset: 0,
-        });
-        regularProducts = addPopularFlags(regularProducts);
-        // Remove any that are already in popular list to avoid duplicates
-        const popularIds = new Set(popularProducts.map(p => p.id));
-        regularProducts = regularProducts.filter(p => !popularIds.has(p.id) && !p.isPopular);
-        regularProducts = sortPopularFirst(regularProducts); // Sort by brand tier, newness, price
-      }
-      
-      // Step 4: Combine: popular first, then regular
-      allProducts = [...popularProducts, ...regularProducts];
-      
-      // Paginate
-      const startIndex = (page - 1) * pageSize;
-      const paginatedProducts = allProducts.slice(startIndex, startIndex + pageSize);
-      
-      // Get total count
-      const { getFilteredStyleCount } = await import('@/lib/ss-activewear');
-      const total = await getFilteredStyleCount({});
+      // Paginate the curated list ONLY
+      const total = popularProducts.length;
       const totalPages = Math.ceil(total / pageSize);
+      const startIndex = (page - 1) * pageSize;
+      const paginatedProducts = popularProducts.slice(startIndex, startIndex + pageSize);
       
       return NextResponse.json({
         data: paginatedProducts,

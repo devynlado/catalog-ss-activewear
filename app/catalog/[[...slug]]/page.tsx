@@ -80,7 +80,7 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
     const categoryInfo = getCategoryDisplayName(searchParams.category);
     pageTitle = categoryInfo?.name || 'Products';
   } else {
-    // No filter: show all products
+    // No filter: show curated popular products
     pageTitle = 'All Products';
   }
 
@@ -98,7 +98,7 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
           <p className="mt-1 text-sm text-slate-600 sm:mt-2 sm:text-base">
             {route || searchParams.category
               ? `Add ${pageTitle.toLowerCase()} to your quote`
-              : 'Add to quote — pricing within 24hrs'
+              : 'Our curated selection of bestsellers and staff picks — pricing within 24hrs'
             }
           </p>
           <p className="mt-1 hidden text-sm text-brand-600 sm:block">
