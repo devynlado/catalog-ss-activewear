@@ -2,19 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Flame, Star, TrendingUp, BadgeDollarSign } from 'lucide-react';
 import { Product } from '@/lib/types';
 import { ProductCard } from '@/components/builder/ProductCard';
-
-// Popular style IDs to feature
-const FEATURED_STYLE_IDS = [
-  16,    // Gildan 5000 - Heavy Cotton Tee
-  7,     // Gildan G200 - Ultra Cotton Tee
-  87,    // Bella+Canvas 3001 - Unisex Jersey Tee
-  223,   // Next Level 6210 - CVC Crew
-  17,    // Gildan G500 - Heavy Cotton Tee
-  181,   // Comfort Colors 1717 - Garment Dyed
-];
+import { getTierInfo, ProductTier } from '@/lib/popular-products';
 
 export function FeaturedProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -23,11 +14,15 @@ export function FeaturedProducts() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Fetch products by searching for popular styles
-        const response = await fetch('/api/products?search=G500&pageSize=6');
+        // Fetch only popular/featured products
+        const response = await fetch('/api/products?featured=true&pageSize=12');
         if (response.ok) {
           const data = await response.json();
-          setProducts(data.data || []);
+          // Get a balanced mix from the results
+          const allFeatured = data.data || [];
+          // Shuffle and take 6 for display
+          const shuffled = allFeatured.sort(() => Math.random() - 0.5);
+          setProducts(shuffled.slice(0, 6));
         }
       } catch (error) {
         console.error('Error fetching featured products:', error);

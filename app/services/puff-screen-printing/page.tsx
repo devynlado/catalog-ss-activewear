@@ -101,6 +101,9 @@ export default function PuffScreenPrintingPage() {
         gradient="from-purple-500 to-violet-600"
         maxPrintSize="14&quot; x 16&quot;"
         backLink={{ href: '/services/screen-printing', label: 'Back to Screen Printing' }}
+        serviceSlug="puff-screen-printing"
+        samplePrice="Starting at $3.35/piece"
+        minimumOrder={50}
       />
 
       {/* Benefits Badges */}
@@ -227,6 +230,7 @@ export default function PuffScreenPrintingPage() {
       <ServiceCTA
         title="Ready for 3D Puff Prints?"
         subtitle="Get a quote within 24 hours. 50 piece minimum."
+        serviceSlug="puff-screen-printing"
       />
     </div>
   );

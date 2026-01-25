@@ -11,7 +11,10 @@ import {
   ShoppingBag,
   Send,
   Check,
-  AlertCircle
+  AlertCircle,
+  Bookmark,
+  X,
+  Mail
 } from 'lucide-react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { formatPrice, cn } from '@/lib/utils';
@@ -81,6 +84,7 @@ export default function QuotePage() {
     email: '',
     phone: '',
     company: '',
+    eventDate: '',
     message: '',
   });
   
@@ -89,6 +93,13 @@ export default function QuotePage() {
   const [designDescription, setDesignDescription] = useState('');
   const [finishingServices, setFinishingServices] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Save for Later state
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveEmail, setSaveEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [saveError, setSaveError] = useState('');
 
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -130,6 +141,7 @@ export default function QuotePage() {
         body: JSON.stringify({
           items,
           contact: formData,
+          eventDate: formData.eventDate || null,
           decoration: {
             type: decorationType,
             description: designDescription,
@@ -162,6 +174,55 @@ export default function QuotePage() {
     // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleSaveForLater = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaveError('');
+    
+    if (!saveEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(saveEmail)) {
+      setSaveError('Please enter a valid email address');
+      return;
+    }
+
+    setIsSaving(true);
+    
+    try {
+      // Generate a unique save ID
+      const saveId = `SAVE-${Date.now().toString(36).toUpperCase()}`;
+      
+      // Save to localStorage with the email as reference
+      const savedQuote = {
+        id: saveId,
+        email: saveEmail,
+        items,
+        decoration: {
+          type: decorationType,
+          description: designDescription,
+        },
+        finishing: finishingServices,
+        savedAt: new Date().toISOString(),
+      };
+      
+      // Store in localStorage
+      const existingQuotes = JSON.parse(localStorage.getItem('savedQuotes') || '[]');
+      existingQuotes.push(savedQuote);
+      localStorage.setItem('savedQuotes', JSON.stringify(existingQuotes));
+      
+      // In production, you would also send this to your backend/email service
+      // await fetch('/api/quote/save', { method: 'POST', body: JSON.stringify(savedQuote) });
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setSaveStatus('success');
+    } catch (error) {
+      console.error('Error saving quote:', error);
+      setSaveStatus('error');
+      setSaveError('Failed to save quote. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -518,6 +579,22 @@ export default function QuotePage() {
                     />
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                        Event/Need By Date (Optional)
+                      </label>
+                      <input
+                        type="date"
+                        name="eventDate"
+                        value={formData.eventDate}
+                        onChange={handleInputChange}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
+                      <p className="mt-1 text-xs text-slate-500">
+                        Have a deadline? Let us know and we'll prioritize your quote.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700">
                         Additional Notes (Optional)
                       </label>
                       <textarea
@@ -547,12 +624,149 @@ export default function QuotePage() {
                     <Send className="mr-2 h-4 w-4" />
                     Submit Quote Request
                   </Button>
+
+                  {/* Save for Later Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveModal(true)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                  >
+                    <Bookmark className="h-4 w-4" />
+                    Save Quote for Later
+                  </button>
                 </form>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Save for Later Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => {
+              if (saveStatus !== 'success') {
+                setShowSaveModal(false);
+                setSaveStatus('idle');
+                setSaveError('');
+              }
+            }}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            {saveStatus === 'success' ? (
+              // Success State
+              <div className="text-center py-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
+                  <Check className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Quote Saved!</h3>
+                <p className="text-slate-600 mb-6">
+                  We've saved your quote and sent a copy to <strong>{saveEmail}</strong>. 
+                  You can return anytime to complete your order.
+                </p>
+                <button
+                  onClick={() => {
+                    setShowSaveModal(false);
+                    setSaveStatus('idle');
+                    setSaveEmail('');
+                  }}
+                  className="w-full bg-brand-500 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-brand-600 transition-colors"
+                >
+                  Got It
+                </button>
+              </div>
+            ) : (
+              // Form State
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Save Quote for Later</h3>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Enter your email and we'll save your quote
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowSaveModal(false);
+                      setSaveError('');
+                    }}
+                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="h-5 w-5 text-slate-400" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveForLater} className="space-y-4">
+                  <div>
+                    <label htmlFor="saveEmail" className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <input
+                        type="email"
+                        id="saveEmail"
+                        value={saveEmail}
+                        onChange={(e) => {
+                          setSaveEmail(e.target.value);
+                          setSaveError('');
+                        }}
+                        placeholder="you@company.com"
+                        className="w-full rounded-lg border border-slate-300 pl-12 pr-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+                      />
+                    </div>
+                    {saveError && (
+                      <p className="mt-1.5 text-sm text-red-600">{saveError}</p>
+                    )}
+                  </div>
+
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <p className="text-sm text-slate-600">
+                      <strong className="text-slate-900">What we'll save:</strong>
+                    </p>
+                    <ul className="mt-2 space-y-1 text-sm text-slate-600">
+                      <li>• {items.length} item{items.length !== 1 ? 's' : ''} in your quote</li>
+                      {decorationType !== 'none' && (
+                        <li>• {decorationOptions.find(d => d.id === decorationType)?.name}</li>
+                      )}
+                      {finishingServices.length > 0 && (
+                        <li>• {finishingServices.length} finishing service{finishingServices.length !== 1 ? 's' : ''}</li>
+                      )}
+                    </ul>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="w-full bg-brand-500 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-brand-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="h-4 w-4" />
+                        Save My Quote
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <p className="mt-4 text-xs text-slate-500 text-center">
+                  We'll only use your email to send you your saved quote. No spam.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

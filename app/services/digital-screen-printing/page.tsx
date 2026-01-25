@@ -114,6 +114,9 @@ export default function DigitalScreenPrintingPage() {
         gradient="from-blue-500 to-indigo-600"
         maxPrintSize="15&quot; x 18&quot;"
         backLink={{ href: '/services/screen-printing', label: 'Back to Screen Printing' }}
+        serviceSlug="digital-screen-printing"
+        samplePrice="Starting at $5.50/piece"
+        minimumOrder={50}
       />
 
       {/* Benefits Badges */}
@@ -238,6 +241,7 @@ export default function DigitalScreenPrintingPage() {
       <ServiceCTA
         title="Ready for Full-Color Digital Prints?"
         subtitle="Get a quote within 24 hours. 50 piece minimum."
+        serviceSlug="digital-screen-printing"
       />
     </div>
   );

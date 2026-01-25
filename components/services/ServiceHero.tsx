@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calculator } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
 interface ServiceHeroProps {
@@ -12,6 +12,9 @@ interface ServiceHeroProps {
   gradient?: string;
   maxPrintSize?: string;
   backLink?: { href: string; label: string };
+  serviceSlug?: string; // For context passing: 'screen-printing', 'embroidery', etc.
+  samplePrice?: string; // e.g., "Starting at $2.45/piece"
+  minimumOrder?: number; // e.g., 50
 }
 
 export function ServiceHero({
@@ -22,6 +25,9 @@ export function ServiceHero({
   gradient = 'from-brand-500 to-brand-600',
   maxPrintSize,
   backLink,
+  serviceSlug,
+  samplePrice,
+  minimumOrder = 50,
 }: ServiceHeroProps) {
   return (
     <section className={`relative overflow-hidden bg-gradient-to-br ${gradient} py-20 lg:py-28`}>
@@ -56,10 +62,34 @@ export function ServiceHero({
             {tagline}
           </p>
           
-          {maxPrintSize && (
-            <p className="mt-2 text-sm font-medium text-white/70">
-              Max Print Size: {maxPrintSize}
-            </p>
+          {/* Info badges row */}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {maxPrintSize && (
+              <span className="inline-flex items-center rounded-full bg-white/20 px-3 py-1 text-sm font-medium text-white">
+                Max Size: {maxPrintSize}
+              </span>
+            )}
+            <span className="inline-flex items-center rounded-full bg-amber-400/90 px-3 py-1 text-sm font-semibold text-amber-950">
+              {minimumOrder} Piece Minimum
+            </span>
+          </div>
+
+          {/* Sample price callout */}
+          {samplePrice && (
+            <div className="mt-4 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-white/10 backdrop-blur-sm px-4 py-2">
+              <div className="flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-white/80" />
+                <span className="text-sm font-medium text-white">
+                  {samplePrice}
+                </span>
+              </div>
+              <Link 
+                href={serviceSlug ? `/pricing?service=${serviceSlug}` : '/pricing'}
+                className="text-sm font-semibold text-white underline underline-offset-2 hover:no-underline whitespace-nowrap"
+              >
+                See full pricing →
+              </Link>
+            </div>
           )}
           
           <p className="mt-6 text-lg text-white/80 leading-relaxed">
@@ -68,7 +98,7 @@ export function ServiceHero({
           
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link
-              href="/contact"
+              href={serviceSlug ? `/contact?service=${serviceSlug}` : '/contact'}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-slate-900 transition-all hover:bg-slate-100"
             >
               Request a Quote

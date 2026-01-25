@@ -169,10 +169,10 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="xl">
-      <div className="flex flex-col lg:flex-row gap-6 p-6 max-h-[90vh] overflow-hidden">
-        {/* Left: Image */}
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-4 lg:p-6">
+        {/* Left: Image - smaller on mobile */}
         <div className="lg:w-2/5 flex-shrink-0">
-          <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-50">
+          <div className="relative aspect-[4/3] lg:aspect-square overflow-hidden rounded-xl bg-slate-50">
             {imageUrl ? (
               <Image
                 src={imageUrl}
@@ -182,45 +182,45 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-300">
-                <ShoppingBag className="h-20 w-20" />
+                <ShoppingBag className="h-16 w-16 lg:h-20 lg:w-20" />
               </div>
             )}
           </div>
         </div>
 
-        {/* Right: Details - Scrollable */}
+        {/* Right: Details */}
         <div className="lg:w-3/5 flex flex-col min-h-0">
           {/* Header - Fixed */}
           <div className="flex-shrink-0">
-            <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
+            <p className="text-xs lg:text-sm font-medium uppercase tracking-wide text-slate-500">
               {product.brandName}
             </p>
-            <h2 className="mt-1 text-xl font-bold text-slate-900">
+            <h2 className="mt-0.5 lg:mt-1 text-lg lg:text-xl font-bold text-slate-900 pr-8">
               {product.title || product.styleName}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="text-xs lg:text-sm text-slate-500">
               Style #{product.styleName}
             </p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-semibold text-brand-600">
+            <div className="mt-1 lg:mt-2 flex items-baseline gap-2">
+              <span className="text-xl lg:text-2xl font-semibold text-brand-600">
                 {formatPrice(displayPrice)}
               </span>
-              <span className="text-sm text-slate-500">per piece</span>
+              <span className="text-xs lg:text-sm text-slate-500">per piece</span>
             </div>
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto mt-4 pr-2 -mr-2">
+          <div className="mt-3 lg:mt-4">
             {/* Color Selection */}
             {product.colors && product.colors.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">
+                <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
                   Select Colors ({product.colors.length} available)
                 </h3>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
                   Click colors to add size rows below. Click again to remove.
                 </p>
-                <div className="mt-3">
+                <div className="mt-2 lg:mt-3">
                   <ColorSwatches
                     colors={product.colors}
                     selectedColor={null}
@@ -237,12 +237,12 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
             {/* Size Distribution Rows */}
             {selectedColors.length > 0 && (
-              <div className="mt-5 space-y-3">
+              <div className="mt-4 lg:mt-5 space-y-2 lg:space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">
+                  <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
                     Enter Quantities by Size
                   </h3>
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <div className="hidden lg:flex items-center gap-1 text-xs text-slate-500">
                     <Info className="h-3.5 w-3.5" />
                     <span>Stock shown below each size</span>
                   </div>
@@ -263,12 +263,12 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
             {/* No colors selected prompt */}
             {selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
-              <div className="mt-5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                <ShoppingBag className="mx-auto h-8 w-8 text-slate-400" />
+              <div className="mt-4 lg:mt-5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 lg:p-6 text-center">
+                <ShoppingBag className="mx-auto h-6 w-6 lg:h-8 lg:w-8 text-slate-400" />
                 <p className="mt-2 text-sm font-medium text-slate-600">
                   Select a color above to enter quantities
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 hidden lg:block">
                   You can select multiple colors for a multi-color order
                 </p>
               </div>
@@ -276,10 +276,10 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
           </div>
 
           {/* Footer: Order Summary & Add to Quote - Fixed */}
-          <div className="flex-shrink-0 mt-4 pt-4 border-t border-slate-200">
+          <div className="flex-shrink-0 mt-3 lg:mt-4 pt-3 lg:pt-4 border-t border-slate-200">
             {/* Order Summary */}
             {selectedColors.length > 0 && grandTotal > 0 && (
-              <div className="rounded-lg bg-brand-50 p-4 mb-4">
+              <div className="rounded-lg bg-brand-50 p-3 lg:p-4 mb-3 lg:mb-4">
                 {/* Per-color breakdown - only show when 2+ colors */}
                 {colorSubtotals.length > 1 && (
                   <div className="space-y-1.5 mb-2 pb-2 border-b border-brand-200">
@@ -301,13 +301,13 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
                 {/* Grand Total */}
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-700 font-medium">
+                  <span className="text-sm lg:text-base text-slate-700 font-medium">
                     Total:{' '}
                     <span className="font-bold text-brand-700">
-                      {formatNumber(totalPieces)} {totalPieces === 1 ? 'piece' : 'pieces'}
+                      {formatNumber(totalPieces)} {totalPieces === 1 ? 'pc' : 'pcs'}
                     </span>
                   </span>
-                  <span className="text-xl font-bold text-brand-700">
+                  <span className="text-lg lg:text-xl font-bold text-brand-700">
                     {formatPrice(grandTotal)}
                   </span>
                 </div>
@@ -345,12 +345,12 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
             {/* View Full Details Link */}
             <Link
-              href={`/catalog/${product.id}`}
+              href={`/product/${product.styleId}`}
               onClick={handleClose}
-              className="mt-3 flex items-center justify-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+              className="mt-2 lg:mt-3 flex items-center justify-center gap-2 text-xs lg:text-sm text-brand-600 hover:text-brand-700 pb-2"
             >
               View Full Product Details
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
             </Link>
           </div>
         </div>

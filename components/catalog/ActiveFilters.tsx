@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { Brand, Category } from '@/lib/types';
-import { getCategoryName, MAIN_CATEGORIES } from '@/lib/category-taxonomy';
+import { getCategoryDisplayName } from '@/lib/category-taxonomy';
 
 interface ActiveFiltersProps {
   search?: string;
@@ -49,31 +49,37 @@ export function ActiveFilters({ search, category, brand, colorFamily, attr }: Ac
     fetchBrandName();
   }, [brand]);
 
-  // Resolve category name (try taxonomy first, then fetch)
+  // Resolve category name using taxonomy (supports both main and sub-categories)
   useEffect(() => {
     if (!category) {
       setCategoryName(null);
       return;
     }
 
-    const categoryId = parseInt(category, 10);
-    
-    // Check if it's a main category from taxonomy
-    if (MAIN_CATEGORIES[categoryId]) {
-      setCategoryName(MAIN_CATEGORIES[categoryId].name);
+    // Use the new getCategoryDisplayName which handles comma-separated IDs
+    const categoryInfo = getCategoryDisplayName(category);
+    if (categoryInfo) {
+      setCategoryName(categoryInfo.name);
       return;
     }
 
-    // Otherwise fetch from API
+    // Fallback: fetch from API if not found in taxonomy
     const fetchCategoryName = async () => {
       try {
         const res = await fetch('/api/categories');
         if (res.ok) {
           const data = await res.json();
-          const foundCategory = (data.data as Category[])?.find(
-            (c) => c.id.toString() === category
-          );
-          setCategoryName(foundCategory?.name || null);
+          // Try to find any of the category IDs
+          const categoryIds = category.split(',').map(id => id.trim());
+          for (const catId of categoryIds) {
+            const foundCategory = (data.data as Category[])?.find(
+              (c) => c.id.toString() === catId
+            );
+            if (foundCategory) {
+              setCategoryName(foundCategory.name);
+              return;
+            }
+          }
         }
       } catch (e) {
         console.error('Error fetching category:', e);
@@ -115,10 +121,22 @@ export function ActiveFilters({ search, category, brand, colorFamily, attr }: Ac
   }, [attr]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeFilter = (key: string) => {
+    // For category, always navigate to /catalog since we use slug-based routing
+    if (key === 'category') {
+      const params = new URLSearchParams(searchParams.toString());
+      // Keep other filters if any
+      params.delete('category');
+      params.delete('page');
+      const queryString = params.toString();
+      router.push(queryString ? `/catalog?${queryString}` : '/catalog');
+      return;
+    }
+    
     const params = new URLSearchParams(searchParams.toString());
     params.delete(key);
     params.delete('page');
-    router.push(`/catalog?${params.toString()}`);
+    const queryString = params.toString();
+    router.push(queryString ? `/catalog?${queryString}` : '/catalog');
   };
 
   const clearAllFilters = () => {
@@ -138,7 +156,8 @@ export function ActiveFilters({ search, category, brand, colorFamily, attr }: Ac
       params.delete('attr');
     }
     params.delete('page');
-    router.push(`/catalog?${params.toString()}`);
+    const queryString = params.toString();
+    router.push(queryString ? `/catalog?${queryString}` : '/catalog');
   };
   
   const hasFilters = search || category || brand || colorFamilies.length > 0 || attributeIds.length > 0;

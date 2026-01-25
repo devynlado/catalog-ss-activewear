@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { cn } from '@/lib/utils';
@@ -45,10 +45,10 @@ const servicesMenu = {
   },
 };
 
-// Get main navigation categories from taxonomy
+// Get main navigation categories from taxonomy - using slug-based URLs
 const mainCategories = getMainCategories().map((cat) => ({
   name: cat.name,
-  href: `/catalog?category=${cat.id}`,
+  href: `/catalog/${cat.slug}`,
   categoryId: cat.id.toString(),
 }));
 
@@ -63,54 +63,64 @@ interface MegaMenuConfig {
   [categoryId: string]: SubcategoryGroup[];
 }
 
-// SS Activewear uses comma-separated category IDs for combined filters
-// e.g., ?categoryID=21,57 = T-Shirts + Short Sleeves
+// Mega menu configuration using SEO-friendly slug URLs
+// Format: /catalog/{parent-slug}/{sub-slug}
 const megaMenuConfig: MegaMenuConfig = {
-  // T-Shirts (category 21 - was incorrectly 1)
+  // T-Shirts (category 21)
   '21': [
+    {
+      title: 'By Style',
+      items: [
+        { name: 'Core T-Shirts', href: '/catalog/t-shirts/core-tshirts' },
+        { name: 'Fashion T-Shirts', href: '/catalog/t-shirts/fashion-tshirts' },
+        { name: 'Tank Tops', href: '/catalog/t-shirts/tank-tops' },
+        { name: 'Long Sleeve Tees', href: '/catalog/t-shirts/long-sleeve' },
+      ],
+    },
     {
       title: 'By Sleeve',
       items: [
-        { name: 'Short Sleeve', href: '/catalog?category=21,57' },
-        { name: 'Long Sleeve', href: '/catalog?category=21,56' },
-        { name: 'Sleeveless', href: '/catalog?category=21,63' },
-        { name: '3/4 Sleeve', href: '/catalog?category=21,81' },
+        { name: 'Short Sleeve', href: '/catalog/t-shirts/short-sleeve' },
+        { name: 'Long Sleeve', href: '/catalog/t-shirts/long-sleeve' },
+        { name: 'Sleeveless', href: '/catalog/t-shirts/sleeveless' },
+        { name: '3/4 Sleeve', href: '/catalog/t-shirts/3-4-sleeve' },
       ],
     },
     {
       title: 'By Collar',
       items: [
-        { name: 'Crewneck', href: '/catalog?category=21,8' },
-        { name: 'V-Neck', href: '/catalog?category=21,66' },
+        { name: 'Crewneck', href: '/catalog/t-shirts/crewneck' },
+        { name: 'V-Neck', href: '/catalog/t-shirts/v-neck' },
       ],
     },
     {
       title: 'By Material',
       items: [
-        { name: '100% Cotton', href: '/catalog?category=21,71' },
-        { name: 'Polyester', href: '/catalog?category=21,85' },
-        { name: 'Tri-Blend', href: '/catalog?category=21,95' },
-        { name: 'Performance', href: '/catalog?category=21,16' },
-      ],
-    },
-    {
-      title: 'By Fit',
-      items: [
-        { name: 'Fitted', href: '/catalog?category=21,150' },
-        { name: 'Relaxed', href: '/catalog?category=21,157' },
+        { name: '100% Cotton', href: '/catalog/t-shirts/cotton' },
+        { name: 'Polyester', href: '/catalog/t-shirts/polyester' },
+        { name: 'Tri-Blend', href: '/catalog/t-shirts/tri-blend' },
+        { name: 'Performance', href: '/catalog/t-shirts/performance' },
       ],
     },
   ],
-  // Fleece (category 9)
+  // Sweatshirts (category 9)
   '9': [
     {
       title: 'By Style',
       items: [
-        { name: 'Hoodies', href: '/catalog?category=9,1161' },
-        { name: 'Crewnecks', href: '/catalog?category=9,8' },
-        { name: 'Full-Zip', href: '/catalog?category=9,38' },
-        { name: 'Quarter-Zip', href: '/catalog?category=9,48' },
-        { name: 'Pullover', href: '/catalog?category=9,142' },
+        { name: 'Hoodies', href: '/catalog/sweatshirts/hoodies' },
+        { name: 'Crewnecks', href: '/catalog/sweatshirts/crewneck-sweatshirts' },
+        { name: 'Full-Zip', href: '/catalog/sweatshirts/full-zip' },
+        { name: 'Quarter-Zip', href: '/catalog/sweatshirts/quarter-zip' },
+        { name: 'Pullover', href: '/catalog/sweatshirts/pullover' },
+      ],
+    },
+    {
+      title: 'By Weight',
+      items: [
+        { name: 'Lightweight', href: '/catalog/sweatshirts/lightweight' },
+        { name: 'Midweight', href: '/catalog/sweatshirts/midweight' },
+        { name: 'Heavyweight', href: '/catalog/sweatshirts/heavyweight' },
       ],
     },
   ],
@@ -119,30 +129,39 @@ const megaMenuConfig: MegaMenuConfig = {
     {
       title: 'By Sleeve',
       items: [
-        { name: 'Short Sleeve', href: '/catalog?category=52,57' },
-        { name: 'Long Sleeve', href: '/catalog?category=52,56' },
+        { name: 'Short Sleeve', href: '/catalog/polos/short-sleeve' },
+        { name: 'Long Sleeve', href: '/catalog/polos/long-sleeve' },
       ],
     },
     {
       title: 'By Material',
       items: [
-        { name: 'Cotton', href: '/catalog?category=52,71' },
-        { name: 'Performance', href: '/catalog?category=52,16' },
+        { name: 'Cotton', href: '/catalog/polos/cotton' },
+        { name: 'Performance', href: '/catalog/polos/performance' },
+        { name: 'Pique', href: '/catalog/polos/pique' },
       ],
     },
   ],
-  // Outerwear (category 15)
+  // Jackets (category 15)
   '15': [
     {
       title: 'By Style',
       items: [
-        { name: 'Jackets', href: '/catalog?category=15,47' },
-        { name: 'Lightweight', href: '/catalog?category=15,665' },
-        { name: 'Vests', href: '/catalog?category=15,62' },
-        { name: 'Windbreakers', href: '/catalog?category=15,380' },
-        { name: 'Soft Shells', href: '/catalog?category=15,403' },
-        { name: 'Rainwear', href: '/catalog?category=15,401' },
-        { name: 'Puffers', href: '/catalog?category=15,141' },
+        { name: 'Lightweight Jackets', href: '/catalog/jackets/lightweight' },
+        { name: 'Vests', href: '/catalog/jackets/vests' },
+        { name: 'Windbreakers', href: '/catalog/jackets/windbreakers' },
+        { name: 'Soft Shells', href: '/catalog/jackets/soft-shell' },
+        { name: 'Rain Coats', href: '/catalog/jackets/rain-coats' },
+        { name: 'Puffer Jackets', href: '/catalog/jackets/puffer' },
+        { name: 'Fleece Jackets', href: '/catalog/jackets/fleece' },
+      ],
+    },
+    {
+      title: 'By Feature',
+      items: [
+        { name: 'Full-Zip', href: '/catalog/jackets/full-zip' },
+        { name: 'Quarter-Zip', href: '/catalog/jackets/quarter-zip' },
+        { name: 'Hooded', href: '/catalog/jackets/hooded' },
       ],
     },
   ],
@@ -151,28 +170,122 @@ const megaMenuConfig: MegaMenuConfig = {
     {
       title: 'By Style',
       items: [
-        { name: 'Snapbacks', href: '/catalog?category=11,363' },
-        { name: 'Fitted Hats', href: '/catalog?category=11,1216' },
-        { name: 'Trucker Hats', href: '/catalog?category=11,147' },
-        { name: 'Dad Hats', href: '/catalog?category=11,796' },
-        { name: 'Bucket Hats', href: '/catalog?category=11,242' },
-        { name: 'Beanies', href: '/catalog?category=11,120' },
-        { name: 'Visors', href: '/catalog?category=11,241' },
+        { name: 'Trucker Hats', href: '/catalog/headwear/trucker-hats' },
+        { name: 'Dad Caps', href: '/catalog/headwear/dad-caps' },
+        { name: 'Snapbacks', href: '/catalog/headwear/snapbacks' },
+        { name: 'Fitted Caps', href: '/catalog/headwear/fitted-caps' },
+        { name: 'Bucket Hats', href: '/catalog/headwear/bucket-hats' },
+        { name: 'Beanies', href: '/catalog/headwear/beanies' },
+        { name: 'Visors', href: '/catalog/headwear/visors' },
+        { name: 'Flat Bills', href: '/catalog/headwear/flat-bills' },
       ],
     },
     {
       title: 'By Structure',
       items: [
-        { name: 'Structured', href: '/catalog?category=11,244' },
-        { name: 'Unstructured', href: '/catalog?category=11,245' },
-        { name: '5-Panel', href: '/catalog?category=11,238' },
-        { name: '6-Panel', href: '/catalog?category=11,239' },
+        { name: 'Structured', href: '/catalog/headwear/structured' },
+        { name: 'Unstructured', href: '/catalog/headwear/unstructured' },
+        { name: 'Soft-Structured', href: '/catalog/headwear/soft-structured' },
+        { name: '5-Panel', href: '/catalog/headwear/5-panel' },
+        { name: '6-Panel', href: '/catalog/headwear/6-panel' },
       ],
     },
     {
-      title: 'Other',
+      title: 'By Closure',
       items: [
-        { name: 'Bandanas', href: '/catalog?category=11,398' },
+        { name: 'Snapback', href: '/catalog/headwear/snapbacks' },
+        { name: 'Adjustable', href: '/catalog/headwear/adjustable' },
+        { name: 'Hook and Loop', href: '/catalog/headwear/hook-and-loop' },
+      ],
+    },
+  ],
+  // Bottoms (category 384)
+  '384': [
+    {
+      title: 'By Style',
+      items: [
+        { name: 'Shorts', href: '/catalog/bottoms/shorts' },
+        { name: 'Sweatpants', href: '/catalog/bottoms/sweatpants' },
+        { name: 'Leggings', href: '/catalog/bottoms/leggings' },
+        { name: 'Pants', href: '/catalog/bottoms/pants' },
+      ],
+    },
+    {
+      title: 'By Gender',
+      items: [
+        { name: 'Mens & Unisex', href: '/catalog/bottoms/mens-unisex' },
+        { name: 'Womens', href: '/catalog/bottoms/womens' },
+        { name: 'Youth', href: '/catalog/bottoms/youth' },
+      ],
+    },
+  ],
+  // Bags (category 102)
+  '102': [
+    {
+      title: 'By Style',
+      items: [
+        { name: 'Backpacks', href: '/catalog/bags/backpacks' },
+        { name: 'Tote Bags', href: '/catalog/bags/tote-bags' },
+        { name: 'Duffel Bags', href: '/catalog/bags/duffel-bags' },
+        { name: 'Cooler Bags', href: '/catalog/bags/cooler-bags' },
+        { name: 'Drawstring Bags', href: '/catalog/bags/drawstring-bags' },
+        { name: 'Messenger Bags', href: '/catalog/bags/messenger-bags' },
+      ],
+    },
+  ],
+  // Accessories (category 53)
+  '53': [
+    {
+      title: 'By Type',
+      items: [
+        { name: 'Scarves', href: '/catalog/accessories/scarves' },
+        { name: 'Blankets', href: '/catalog/accessories/blankets' },
+        { name: 'Towels', href: '/catalog/accessories/towels' },
+        { name: 'Aprons', href: '/catalog/accessories/aprons' },
+        { name: 'Bandanas', href: '/catalog/accessories/bandanas' },
+        { name: 'Gloves', href: '/catalog/accessories/gloves' },
+        { name: 'Socks', href: '/catalog/accessories/socks' },
+      ],
+    },
+  ],
+  // Womens (category 13)
+  '13': [
+    {
+      title: 'By Category',
+      items: [
+        { name: 'T-Shirts', href: '/catalog/womens/t-shirts' },
+        { name: 'Tank Tops', href: '/catalog/womens/tank-tops' },
+        { name: 'Sweatshirts', href: '/catalog/womens/sweatshirts' },
+        { name: 'Polos', href: '/catalog/womens/polos' },
+        { name: 'Bottoms', href: '/catalog/womens/bottoms' },
+      ],
+    },
+    {
+      title: 'By Fit',
+      items: [
+        { name: 'Fitted', href: '/catalog/womens/fitted' },
+        { name: 'Relaxed', href: '/catalog/womens/relaxed' },
+        { name: 'Cropped', href: '/catalog/womens/cropped' },
+        { name: 'Flowy', href: '/catalog/womens/flowy' },
+      ],
+    },
+  ],
+  // Workwear (category 49)
+  '49': [
+    {
+      title: 'By Style',
+      items: [
+        { name: 'Safety Vests', href: '/catalog/workwear/safety-vests' },
+        { name: 'Hi-Vis', href: '/catalog/workwear/hi-vis' },
+        { name: 'Work Jackets', href: '/catalog/workwear/work-jackets' },
+        { name: 'Work Pants', href: '/catalog/workwear/work-pants' },
+      ],
+    },
+    {
+      title: 'By Feature',
+      items: [
+        { name: 'ANSI Class 2', href: '/catalog/workwear/ansi-class-2' },
+        { name: 'ANSI Class 3', href: '/catalog/workwear/ansi-class-3' },
       ],
     },
   ],
@@ -181,18 +294,41 @@ const megaMenuConfig: MegaMenuConfig = {
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [brandsOpen, setBrandsOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
-  const brandsRef = useRef<HTMLDivElement>(null);
+  const shopRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
+  const resourcesRef = useRef<HTMLDivElement>(null);
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const megaMenuCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const servicesCloseTimer = useRef<NodeJS.Timeout | null>(null);
+  const shopCloseTimer = useRef<NodeJS.Timeout | null>(null);
+  const resourcesCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
   const { items, openDrawer, justAdded } = useQuoteStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Shop menu hover handlers with 300ms close delay
+  const handleShopEnter = () => {
+    if (shopCloseTimer.current) {
+      clearTimeout(shopCloseTimer.current);
+      shopCloseTimer.current = null;
+    }
+    setShopOpen(true);
+    setServicesOpen(false);
+    setResourcesOpen(false);
+  };
+
+  const handleShopLeave = () => {
+    shopCloseTimer.current = setTimeout(() => {
+      setShopOpen(false);
+      setActiveMegaMenu(null);
+      shopCloseTimer.current = null;
+    }, 300);
+  };
 
   // Services menu hover handlers with 300ms close delay
   const handleServicesEnter = () => {
@@ -201,7 +337,8 @@ export function Header() {
       servicesCloseTimer.current = null;
     }
     setServicesOpen(true);
-    setActiveMegaMenu(null); // Close product mega menus
+    setShopOpen(false);
+    setResourcesOpen(false);
   };
 
   const handleServicesLeave = () => {
@@ -211,7 +348,25 @@ export function Header() {
     }, 300);
   };
 
-  // Mega menu hover handlers with 300ms close delay
+  // Resources menu hover handlers with 300ms close delay
+  const handleResourcesEnter = () => {
+    if (resourcesCloseTimer.current) {
+      clearTimeout(resourcesCloseTimer.current);
+      resourcesCloseTimer.current = null;
+    }
+    setResourcesOpen(true);
+    setShopOpen(false);
+    setServicesOpen(false);
+  };
+
+  const handleResourcesLeave = () => {
+    resourcesCloseTimer.current = setTimeout(() => {
+      setResourcesOpen(false);
+      resourcesCloseTimer.current = null;
+    }, 300);
+  };
+
+  // Mega menu hover handlers with 300ms close delay (for shop submenu)
   const handleMegaMenuEnter = (categoryId: string | null) => {
     // Clear any pending close timer
     if (megaMenuCloseTimer.current) {
@@ -238,6 +393,12 @@ export function Header() {
       if (servicesCloseTimer.current) {
         clearTimeout(servicesCloseTimer.current);
       }
+      if (shopCloseTimer.current) {
+        clearTimeout(shopCloseTimer.current);
+      }
+      if (resourcesCloseTimer.current) {
+        clearTimeout(resourcesCloseTimer.current);
+      }
     };
   }, []);
 
@@ -261,11 +422,15 @@ export function Header() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (brandsRef.current && !brandsRef.current.contains(event.target as Node)) {
-        setBrandsOpen(false);
+      if (shopRef.current && !shopRef.current.contains(event.target as Node)) {
+        setShopOpen(false);
+        setActiveMegaMenu(null);
       }
       if (servicesRef.current && !servicesRef.current.contains(event.target as Node)) {
         setServicesOpen(false);
+      }
+      if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
+        setResourcesOpen(false);
       }
       if (megaMenuRef.current && !megaMenuRef.current.contains(event.target as Node)) {
         setActiveMegaMenu(null);
@@ -284,403 +449,503 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
-      {/* Top bar */}
+      {/* ============== TIER 1: UTILITY BAR ============== */}
       <div className="bg-[#070131] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-9 items-center justify-between text-xs">
-            {/* Left - Phone */}
+          <div className="flex h-10 items-center justify-between text-xs">
+            {/* Left - Talk to Our Team */}
             <a 
               href="tel:+18559427636" 
-              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-white hover:text-brand-300 transition-colors group"
             >
-              <Phone className="h-3 w-3" />
-              <span className="font-medium">(855) 942-7636</span>
+              <div className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white">
+                <Phone className="h-3 w-3" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="font-semibold text-white group-hover:text-brand-300">Talk to Our Team</span>
+                <span className="text-[10px] text-slate-400">(855) 942-7636 • 10-30 sec wait</span>
+              </div>
             </a>
             
-            {/* Center - Value Props */}
-            <p className="hidden text-slate-300 md:block">
-              Free quotes <span className="mx-1.5 text-slate-500">•</span> Fast production <span className="mx-1.5 text-slate-500">•</span> Guaranteed deliveries
-            </p>
+            {/* Center - Rating badge */}
+            <div className="hidden items-center gap-1 md:flex">
+              <div className="flex">
+                {[1,2,3,4,5].map((i) => (
+                  <Star key={i} className={cn("h-3 w-3", i <= 4 ? "text-yellow-400 fill-yellow-400" : "text-yellow-400 fill-yellow-400/50")} />
+                ))}
+              </div>
+              <span className="text-slate-300 ml-1">4.8 stars on Google</span>
+            </div>
             
-            {/* Right - Info Links */}
+            {/* Right - Resources dropdown + links */}
             <div className="flex items-center gap-4">
-              <Link
-                href="/contact"
-                className="text-slate-300 hover:text-white transition-colors"
+              {/* Resources Dropdown */}
+              <div 
+                className="relative" 
+                ref={resourcesRef}
+                onMouseEnter={handleResourcesEnter}
+                onMouseLeave={handleResourcesLeave}
               >
-                Contact
-              </Link>
+                <button className="flex items-center gap-1 text-slate-300 hover:text-white transition-colors">
+                  Resources
+                  <ChevronDown className={cn('h-3 w-3 transition-transform', resourcesOpen && 'rotate-180')} />
+                </button>
+                
+                {resourcesOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg bg-white p-3 shadow-xl ring-1 ring-slate-200">
+                    <Link
+                      href="/resources/screen-printing-guide"
+                      onClick={() => setResourcesOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-slate-50 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
+                        <BookOpen className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Screen Printing Guide</span>
+                        <span className="text-xs text-slate-500">Prepare your artwork</span>
+                      </div>
+                    </Link>
+                    <Link
+                      href="/resources/embroidery-guide"
+                      onClick={() => setResourcesOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-slate-50 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+                        <BookOpen className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Embroidery Guide</span>
+                        <span className="text-xs text-slate-500">Digitizing tips</span>
+                      </div>
+                    </Link>
+                    <div className="my-2 border-t border-slate-100" />
+                    <Link
+                      href="/faq"
+                      onClick={() => setResourcesOpen(false)}
+                      className="flex items-center gap-3 rounded-lg p-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                      FAQ
+                    </Link>
+                    <Link
+                      href="/about"
+                      onClick={() => setResourcesOpen(false)}
+                      className="flex items-center gap-3 rounded-lg p-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      <Users className="h-4 w-4" />
+                      About Us
+                    </Link>
+                  </div>
+                )}
+              </div>
+              
+              {/* Search icon for mobile */}
               <Link
-                href="/about"
-                className="text-slate-300 hover:text-white transition-colors"
+                href="/catalog"
+                className="text-slate-300 hover:text-white transition-colors lg:hidden"
               >
-                About
+                <Search className="h-4 w-4" />
               </Link>
-              <Link
-                href="/faq"
-                className="text-slate-300 hover:text-white transition-colors"
+              
+              {/* Quote Cart */}
+              <button
+                onClick={openDrawer}
+                className={cn(
+                  "relative flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors",
+                  justAdded && "text-white"
+                )}
               >
-                FAQ
-              </Link>
+                <ShoppingBag className="h-4 w-4" />
+                <span className="hidden sm:inline">Quote</span>
+                {itemCount > 0 && (
+                  <span className={cn(
+                    "flex items-center justify-center rounded-full bg-brand-500 font-bold text-white transition-transform",
+                    itemCount > 99 ? "h-4 min-w-[1.5rem] px-1 text-[9px]" : "h-4 w-4 text-[10px]",
+                    justAdded && "scale-125 bg-green-500"
+                  )}>
+                    {itemCount > 999 ? '999+' : itemCount}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main navigation */}
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-white font-bold text-lg">
-                GD
-              </div>
-              <span className="hidden font-bold text-xl text-navy-800 lg:block">
-                Garment Decor
-              </span>
-            </Link>
-          </div>
-
-          {/* Search Bar (desktop) */}
-          <div className="hidden flex-1 max-w-xl mx-8 md:block">
-            <form action="/catalog" method="GET" className="relative">
-              <input
-                type="text"
-                name="search"
-                placeholder="Search by style # or keyword..."
-                className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-12 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
-              />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-brand-500 p-2 text-white hover:bg-brand-600"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            </form>
-          </div>
-
-          {/* Right side actions */}
-          <div className="flex items-center gap-2">
-            {/* Quote button */}
-            <button
-              onClick={openDrawer}
-              className={cn(
-                "relative flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-brand-600",
-                justAdded && "animate-pulse ring-2 ring-brand-300 ring-offset-2"
-              )}
-            >
-              <ShoppingBag className="h-5 w-5" />
-              <span className="hidden sm:inline">Quote</span>
-              {itemCount > 0 && (
-                <span className={cn(
-                  "flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-500 transition-transform",
-                  justAdded && "scale-125"
-                )}>
-                  {itemCount > 99 ? '99+' : itemCount}
+      {/* ============== TIER 2: MAIN NAVIGATION ============== */}
+      <nav className="border-b border-slate-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-14 items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center">
+              <Link href="/" className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-white font-bold text-lg">
+                  GD
+                </div>
+                <span className="hidden font-bold text-xl text-navy-800 sm:block">
+                  Garment Decor
                 </span>
-              )}
-            </button>
+              </Link>
+            </div>
 
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 lg:hidden"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Category Navigation (desktop) */}
-        <div className="hidden border-t border-slate-100 lg:block" ref={megaMenuRef}>
-          <div className="flex items-center gap-1 py-2">
-            {/* All Products */}
-            <Link
-              href="/catalog"
-              className={cn(
-                'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                pathname === '/catalog' && !pathname.includes('?')
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-              )}
-              onMouseEnter={() => handleMegaMenuEnter(null)}
-            >
-              All Products
-            </Link>
-
-            {/* Main Categories with Mega Menu */}
-            {mainCategories.map((cat) => {
-              const hasMegaMenu = megaMenuConfig[cat.categoryId];
-              
-              return (
-                <div 
-                  key={cat.name} 
-                  className="relative"
-                  onMouseEnter={() => handleMegaMenuEnter(hasMegaMenu ? cat.categoryId : null)}
-                  onMouseLeave={handleMegaMenuLeave}
+            {/* Main Nav Items (Desktop) */}
+            <div className="hidden items-center gap-1 lg:flex">
+              {/* Shop Dropdown */}
+              <div 
+                className="relative" 
+                ref={shopRef}
+                onMouseEnter={handleShopEnter}
+                onMouseLeave={handleShopLeave}
+              >
+                <button
+                  className={cn(
+                    'flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                    shopOpen
+                      ? 'bg-slate-100 text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                  )}
                 >
-                  <Link
-                    href={cat.href}
-                    className={cn(
-                      'flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      activeMegaMenu === cat.categoryId
-                        ? 'bg-slate-100 text-slate-900'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                    )}
-                  >
-                    {cat.name}
-                    {hasMegaMenu && (
-                      <ChevronDown className={cn(
-                        'h-3.5 w-3.5 transition-transform',
-                        activeMegaMenu === cat.categoryId && 'rotate-180'
-                      )} />
-                    )}
-                  </Link>
+                  Shop
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', shopOpen && 'rotate-180')} />
+                </button>
 
-                  {/* Mega Menu Panel */}
-                  {hasMegaMenu && activeMegaMenu === cat.categoryId && (
-                    <div 
-                      className="absolute left-0 top-full z-50 w-[600px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
-                    >
-                      <div className="mb-4 flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-slate-900">
-                          Shop {cat.name}
+                {shopOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1 w-[800px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                    <div className="grid grid-cols-12 gap-6">
+                      {/* Categories Column */}
+                      <div className="col-span-3">
+                        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Categories
                         </h3>
-                        <Link
-                          href={cat.href}
-                          onClick={() => setActiveMegaMenu(null)}
-                          className="text-sm font-medium text-brand-600 hover:text-brand-700"
-                        >
-                          View All {cat.name} →
-                        </Link>
+                        <div className="space-y-1">
+                          <Link
+                            href="/catalog"
+                            onClick={() => setShopOpen(false)}
+                            onMouseEnter={() => handleMegaMenuEnter(null)}
+                            className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-900 hover:bg-brand-50 hover:text-brand-700"
+                          >
+                            All Products
+                          </Link>
+                          {mainCategories.map((cat) => {
+                            const hasMegaMenu = megaMenuConfig[cat.categoryId];
+                            return (
+                              <Link
+                                key={cat.name}
+                                href={cat.href}
+                                onClick={() => setShopOpen(false)}
+                                onMouseEnter={() => handleMegaMenuEnter(hasMegaMenu ? cat.categoryId : null)}
+                                className={cn(
+                                  'flex items-center justify-between rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900',
+                                  activeMegaMenu === cat.categoryId && 'bg-slate-50 text-slate-900'
+                                )}
+                              >
+                                {cat.name}
+                                {hasMegaMenu && <ChevronRight className="h-4 w-4 text-slate-400" />}
+                              </Link>
+                            );
+                          })}
+                        </div>
                       </div>
                       
-                      {/* Category Links */}
-                      <div className="grid grid-cols-4 gap-6">
-                        {megaMenuConfig[cat.categoryId].map((group) => (
-                          <div key={group.title}>
-                            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              {group.title}
-                            </h4>
-                            <ul className="space-y-1">
-                              {group.items.map((item) => (
-                                <li key={item.name}>
-                                  <Link
-                                    href={item.href}
-                                    onClick={() => setActiveMegaMenu(null)}
-                                    className="block rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                                  >
-                                    {item.name}
-                                  </Link>
-                                </li>
+                      {/* Subcategory Panel (shows when hovering category) */}
+                      <div className="col-span-6 border-l border-slate-100 pl-6">
+                        {activeMegaMenu && megaMenuConfig[activeMegaMenu] ? (
+                          <>
+                            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Shop {mainCategories.find(c => c.categoryId === activeMegaMenu)?.name}
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              {megaMenuConfig[activeMegaMenu].map((group) => (
+                                <div key={group.title}>
+                                  <h4 className="mb-2 text-xs font-medium text-slate-400">
+                                    {group.title}
+                                  </h4>
+                                  <ul className="space-y-1">
+                                    {group.items.map((item) => (
+                                      <li key={item.name}>
+                                        <Link
+                                          href={item.href}
+                                          onClick={() => setShopOpen(false)}
+                                          className="block rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                        >
+                                          {item.name}
+                                        </Link>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
                               ))}
-                            </ul>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex h-full flex-col items-center justify-center text-center py-8">
+                            <div className="text-4xl mb-3">👕</div>
+                            <h3 className="text-lg font-semibold text-slate-900">Browse Our Catalog</h3>
+                            <p className="text-sm text-slate-500 mt-1">Hover over a category to explore subcategories</p>
+                            <Link
+                              href="/catalog"
+                              onClick={() => setShopOpen(false)}
+                              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+                            >
+                              View All Products
+                              <ChevronRight className="h-4 w-4" />
+                            </Link>
                           </div>
-                        ))}
+                        )}
+                      </div>
+                      
+                      {/* Brands Column */}
+                      <div className="col-span-3 border-l border-slate-100 pl-6">
+                        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Popular Brands
+                        </h3>
+                        <div className="space-y-1">
+                          {popularBrands.slice(0, 8).map((brand) => (
+                            <Link
+                              key={brand.id}
+                              href={`/catalog?brand=${brand.id}`}
+                              onClick={() => setShopOpen(false)}
+                              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                            >
+                              {brand.image && (
+                                <Image
+                                  src={brand.image}
+                                  alt={brand.name}
+                                  width={20}
+                                  height={20}
+                                  className="rounded"
+                                />
+                              )}
+                              <span className="truncate">{brand.name}</span>
+                            </Link>
+                          ))}
+                        </div>
+                        <Link
+                          href="/brands"
+                          onClick={() => setShopOpen(false)}
+                          className="mt-3 block text-sm font-medium text-brand-600 hover:text-brand-700"
+                        >
+                          All {brands.length} brands →
+                        </Link>
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                )}
+              </div>
 
-            {/* Services Dropdown */}
-            <div 
-              className="relative" 
-              ref={servicesRef}
-              onMouseEnter={handleServicesEnter}
-              onMouseLeave={handleServicesLeave}
-            >
-              <button
+              {/* Services Dropdown - PROMINENT */}
+              <div 
+                className="relative" 
+                ref={servicesRef}
+                onMouseEnter={handleServicesEnter}
+                onMouseLeave={handleServicesLeave}
+              >
+                <button
+                  className={cn(
+                    'flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
+                    servicesOpen || pathname.startsWith('/services')
+                      ? 'bg-brand-50 text-brand-700'
+                      : 'text-brand-600 hover:bg-brand-50 hover:text-brand-700'
+                  )}
+                >
+                  Services
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', servicesOpen && 'rotate-180')} />
+                </button>
+
+                {servicesOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1 w-[480px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Screen Printing Hub */}
+                      <div className="col-span-2 rounded-lg bg-slate-50 p-4">
+                        <Link
+                          href={servicesMenu.screenPrinting.href}
+                          onClick={() => setServicesOpen(false)}
+                          className="flex items-start gap-3 group"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500 text-white">
+                            <Layers className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                              {servicesMenu.screenPrinting.title}
+                            </h3>
+                            <p className="text-xs text-slate-500">{servicesMenu.screenPrinting.description}</p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-brand-500" />
+                        </Link>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          {servicesMenu.screenPrinting.subItems.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <Link
+                                key={item.name}
+                                href={item.href}
+                                onClick={() => setServicesOpen(false)}
+                                className="flex items-center gap-2 rounded-md p-2 text-sm text-slate-600 hover:bg-white hover:text-slate-900"
+                              >
+                                <Icon className="h-4 w-4 text-slate-400" />
+                                {item.name}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Embroidery */}
+                      <Link
+                        href={servicesMenu.embroidery.href}
+                        onClick={() => setServicesOpen(false)}
+                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+                          <Scissors className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                            {servicesMenu.embroidery.title}
+                          </h3>
+                          <p className="text-xs text-slate-500">{servicesMenu.embroidery.description}</p>
+                        </div>
+                      </Link>
+
+                      {/* Retail Finishing */}
+                      <Link
+                        href={servicesMenu.finishing.href}
+                        onClick={() => setServicesOpen(false)}
+                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                          <Package className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                            {servicesMenu.finishing.title}
+                          </h3>
+                          <p className="text-xs text-slate-500">{servicesMenu.finishing.description}</p>
+                        </div>
+                      </Link>
+
+                      {/* Rush - Full Width Highlight */}
+                      <Link
+                        href={servicesMenu.rush.href}
+                        onClick={() => setServicesOpen(false)}
+                        className="col-span-2 flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 p-3 hover:bg-amber-100 group"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white">
+                          <Zap className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-amber-800 group-hover:text-amber-900">
+                            {servicesMenu.rush.title}
+                          </h3>
+                          <p className="text-xs text-amber-600">{servicesMenu.rush.description}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-amber-400 group-hover:text-amber-600" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Pricing - Direct Link */}
+              <Link
+                href="/pricing"
                 className={cn(
-                  'flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  servicesOpen || pathname.startsWith('/services')
-                    ? 'bg-brand-50 text-brand-700'
+                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                  pathname === '/pricing'
+                    ? 'bg-slate-100 text-slate-900'
                     : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                 )}
               >
-                <span className="text-brand-500">Services</span>
-                <ChevronDown className={cn('h-4 w-4 transition-transform text-brand-500', servicesOpen && 'rotate-180')} />
-              </button>
+                Pricing
+              </Link>
 
-              {servicesOpen && (
-                <div className="absolute left-0 top-full z-50 w-[480px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Screen Printing Hub */}
-                    <div className="col-span-2 rounded-lg bg-slate-50 p-4">
-                      <Link
-                        href={servicesMenu.screenPrinting.href}
-                        onClick={() => setServicesOpen(false)}
-                        className="flex items-start gap-3 group"
-                      >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500 text-white">
-                          <Layers className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
-                            {servicesMenu.screenPrinting.title}
-                          </h3>
-                          <p className="text-xs text-slate-500">{servicesMenu.screenPrinting.description}</p>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-brand-500" />
-                      </Link>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        {servicesMenu.screenPrinting.subItems.map((item) => {
-                          const Icon = item.icon;
-                          return (
-                            <Link
-                              key={item.name}
-                              href={item.href}
-                              onClick={() => setServicesOpen(false)}
-                              className="flex items-center gap-2 rounded-md p-2 text-sm text-slate-600 hover:bg-white hover:text-slate-900"
-                            >
-                              <Icon className="h-4 w-4 text-slate-400" />
-                              {item.name}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Embroidery */}
-                    <Link
-                      href={servicesMenu.embroidery.href}
-                      onClick={() => setServicesOpen(false)}
-                      className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
-                        <Scissors className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
-                          {servicesMenu.embroidery.title}
-                        </h3>
-                        <p className="text-xs text-slate-500">{servicesMenu.embroidery.description}</p>
-                      </div>
-                    </Link>
-
-                    {/* Retail Finishing */}
-                    <Link
-                      href={servicesMenu.finishing.href}
-                      onClick={() => setServicesOpen(false)}
-                      className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-                        <Package className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
-                          {servicesMenu.finishing.title}
-                        </h3>
-                        <p className="text-xs text-slate-500">{servicesMenu.finishing.description}</p>
-                      </div>
-                    </Link>
-
-                    {/* Rush - Full Width Highlight */}
-                    <Link
-                      href={servicesMenu.rush.href}
-                      onClick={() => setServicesOpen(false)}
-                      className="col-span-2 flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 p-3 hover:bg-amber-100 group"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white">
-                        <Zap className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-amber-800 group-hover:text-amber-900">
-                          {servicesMenu.rush.title}
-                        </h3>
-                        <p className="text-xs text-amber-600">{servicesMenu.rush.description}</p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-amber-400 group-hover:text-amber-600" />
-                    </Link>
-                  </div>
-                </div>
-              )}
+              {/* Contact - Direct Link */}
+              <Link
+                href="/contact"
+                className={cn(
+                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                  pathname === '/contact'
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                Contact
+              </Link>
             </div>
 
-            {/* Brands Dropdown */}
-            <div className="relative" ref={brandsRef}>
+            {/* Search Bar (desktop) */}
+            <div className="hidden flex-1 max-w-md mx-6 lg:block">
+              <form action="/catalog" method="GET" className="relative">
+                <input
+                  type="text"
+                  name="search"
+                  placeholder="Search by style # or keyword..."
+                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-brand-500 p-1.5 text-white hover:bg-brand-600"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
+
+            {/* Right side - Quote CTA */}
+            <div className="hidden items-center gap-3 lg:flex">
               <button
-                onClick={() => setBrandsOpen(!brandsOpen)}
-                className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                onClick={openDrawer}
+                className={cn(
+                  "relative flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-600",
+                  justAdded && "animate-pulse ring-2 ring-brand-300 ring-offset-2"
+                )}
               >
-                Brands
-                <ChevronDown className={cn('h-4 w-4 transition-transform', brandsOpen && 'rotate-180')} />
+                <ShoppingBag className="h-5 w-5" />
+                <span>Get Quote</span>
+                {itemCount > 0 && (
+                  <span className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-500 transition-transform",
+                    justAdded && "scale-125"
+                  )}>
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
               </button>
+            </div>
 
-              {brandsOpen && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-[600px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
-                  {/* Popular Brands */}
-                  {popularBrands.length > 0 && (
-                    <div className="mb-4">
-                      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Popular Brands
-                      </h3>
-                      <div className="grid grid-cols-4 gap-2">
-                        {popularBrands.map((brand) => (
-                          <Link
-                            key={brand.id}
-                            href={`/catalog?brand=${brand.id}`}
-                            onClick={() => setBrandsOpen(false)}
-                            className="flex items-center gap-2 rounded-lg p-2 text-sm text-slate-700 hover:bg-slate-50"
-                          >
-                            {brand.image && (
-                              <Image
-                                src={brand.image}
-                                alt={brand.name}
-                                width={24}
-                                height={24}
-                                className="rounded"
-                              />
-                            )}
-                            <span className="truncate">{brand.name}</span>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* All Brands */}
-                  <div className="border-t border-slate-100 pt-4">
-                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      All Brands (A-Z)
-                    </h3>
-                    <div className="grid grid-cols-4 gap-1 max-h-64 overflow-y-auto">
-                      {brands.slice(0, 40).map((brand) => (
-                        <Link
-                          key={brand.id}
-                          href={`/catalog?brand=${brand.id}`}
-                          onClick={() => setBrandsOpen(false)}
-                          className="rounded px-2 py-1 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 truncate"
-                        >
-                          {brand.name}
-                        </Link>
-                      ))}
-                    </div>
-                    <Link
-                      href="/catalog"
-                      onClick={() => setBrandsOpen(false)}
-                      className="mt-3 block text-center text-sm font-medium text-brand-600 hover:text-brand-700"
-                    >
-                      View all {brands.length} brands →
-                    </Link>
-                  </div>
-                </div>
-              )}
+            {/* Mobile: Search + Menu buttons */}
+            <div className="flex items-center gap-1 lg:hidden">
+              {/* Mobile Search Icon */}
+              <Link
+                href="/catalog"
+                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                <Search className="h-6 w-6" />
+              </Link>
+              
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
             </div>
           </div>
         </div>
+
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="border-t border-slate-100 py-4 lg:hidden">
             {/* Mobile Search */}
-            <form action="/catalog" method="GET" className="mb-4">
+            <form action="/catalog" method="GET" className="mb-4 px-4">
               <div className="relative">
                 <input
                   type="text"
@@ -697,41 +962,39 @@ export function Header() {
               </div>
             </form>
 
-            {/* Mobile Categories */}
-            <div className="space-y-1">
+            {/* Mobile Nav Items */}
+            <div className="space-y-1 px-4">
+              {/* Shop Section */}
+              <p className="py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Shop
+              </p>
               <Link
                 href="/catalog"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-lg px-4 py-3 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
               >
                 All Products
               </Link>
-              
-              <div className="border-t border-slate-100 pt-2 mt-2">
-                <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Categories
-                </p>
-                {mainCategories.map((cat) => (
-                  <Link
-                    key={cat.name}
-                    href={cat.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    {cat.name}
-                  </Link>
-                ))}
-              </div>
+              {mainCategories.map((cat) => (
+                <Link
+                  key={cat.name}
+                  href={cat.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  {cat.name}
+                </Link>
+              ))}
 
-              {/* Services Section */}
-              <div className="border-t border-slate-100 pt-2 mt-2">
-                <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-brand-500">
+              {/* Services Section - Prominent */}
+              <div className="border-t border-slate-100 pt-3 mt-3">
+                <p className="py-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
                   Services
                 </p>
                 <Link
                   href="/services/screen-printing"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                 >
                   <Layers className="h-4 w-4 text-brand-500" />
                   Screen Printing
@@ -739,7 +1002,7 @@ export function Header() {
                 <Link
                   href="/services/embroidery"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                 >
                   <Scissors className="h-4 w-4 text-indigo-500" />
                   Embroidery
@@ -747,7 +1010,7 @@ export function Header() {
                 <Link
                   href="/services/retail-finishing"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                 >
                   <Package className="h-4 w-4 text-amber-500" />
                   Retail Finishing
@@ -755,15 +1018,73 @@ export function Header() {
                 <Link
                   href="/services/rush"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg mx-4 my-2 px-3 py-2.5 text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100"
+                  className="flex items-center gap-3 rounded-lg my-2 px-3 py-2.5 text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100"
                 >
                   <Zap className="h-4 w-4 text-amber-500" />
                   Rush Turnaround
                 </Link>
               </div>
 
-              <div className="border-t border-slate-100 pt-2 mt-2">
-                <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {/* Quick Links */}
+              <div className="border-t border-slate-100 pt-3 mt-3">
+                <Link
+                  href="/pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                >
+                  Pricing Calculator
+                </Link>
+                <Link
+                  href="/contact"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                >
+                  Contact Us
+                </Link>
+              </div>
+
+              {/* Resources Section */}
+              <div className="border-t border-slate-100 pt-3 mt-3">
+                <p className="py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Resources
+                </p>
+                <Link
+                  href="/resources/screen-printing-guide"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <BookOpen className="h-4 w-4 text-brand-500" />
+                  Screen Printing Guide
+                </Link>
+                <Link
+                  href="/resources/embroidery-guide"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <BookOpen className="h-4 w-4 text-indigo-500" />
+                  Embroidery Guide
+                </Link>
+                <Link
+                  href="/faq"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <HelpCircle className="h-4 w-4 text-slate-400" />
+                  FAQ
+                </Link>
+                <Link
+                  href="/about"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <Users className="h-4 w-4 text-slate-400" />
+                  About Us
+                </Link>
+              </div>
+
+              {/* Popular Brands */}
+              <div className="border-t border-slate-100 pt-3 mt-3">
+                <p className="py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Popular Brands
                 </p>
                 {popularBrands.slice(0, 6).map((brand) => (
@@ -771,7 +1092,7 @@ export function Header() {
                     key={brand.id}
                     href={`/catalog?brand=${brand.id}`}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                   >
                     {brand.image && (
                       <Image
@@ -788,10 +1109,24 @@ export function Header() {
                 <Link
                   href="/catalog"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-2.5 text-sm font-medium text-brand-600"
+                  className="block px-3 py-2.5 text-sm font-medium text-brand-600"
                 >
                   View all brands →
                 </Link>
+              </div>
+
+              {/* Call CTA */}
+              <div className="border-t border-slate-100 pt-4 mt-4">
+                <a
+                  href="tel:+18559427636"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-[#070131] px-4 py-3 text-sm font-medium text-white hover:bg-[#0f0652]"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call (855) 942-7636
+                </a>
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Average wait: 10-30 seconds
+                </p>
               </div>
             </div>
           </div>

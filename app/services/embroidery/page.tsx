@@ -120,6 +120,9 @@ export default function EmbroideryPage() {
         icon={Scissors}
         gradient="from-indigo-500 to-purple-600"
         maxPrintSize="15.7&quot; x 16.5&quot;"
+        serviceSlug="embroidery"
+        samplePrice="Starting at $4.25/piece"
+        minimumOrder={50}
       />
 
       {/* Benefits Badges */}
@@ -249,6 +252,7 @@ export default function EmbroideryPage() {
       <ServiceCTA
         title="Ready for Premium Embroidery?"
         subtitle="Get a quote within 24 hours. 50 piece minimum."
+        serviceSlug="embroidery"
       />
     </div>
   );

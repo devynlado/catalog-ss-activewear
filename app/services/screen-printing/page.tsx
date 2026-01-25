@@ -160,6 +160,9 @@ export default function ScreenPrintingPage() {
         icon={Layers}
         gradient="from-brand-500 to-brand-700"
         maxPrintSize="Up to 17&quot; x 23&quot;"
+        serviceSlug="screen-printing"
+        samplePrice="Starting at $2.45/piece"
+        minimumOrder={50}
       />
 
       {/* Benefits Badges */}
@@ -290,6 +293,7 @@ export default function ScreenPrintingPage() {
       <ServiceCTA
         title="Ready to Start Your Screen Print Order?"
         subtitle="Get a quote within 24 hours. 50 piece minimum."
+        serviceSlug="screen-printing"
       />
     </div>
   );

@@ -1,9 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 
+// Service name mapping for pre-filling the message
+const serviceNames: Record<string, string> = {
+  'screen-printing': 'Screen Printing',
+  'embroidery': 'Embroidery',
+  'digital-screen-printing': 'Digital Screen Printing',
+  'jumbo-screen-printing': 'Jumbo Screen Printing',
+  'puff-screen-printing': 'Puff Screen Printing',
+  'simulated-process': 'Simulated Process Printing',
+  'retail-finishing': 'Retail Finishing',
+  'rush': 'Rush Turnaround',
+};
+
 export default function ContactPage() {
+  const searchParams = useSearchParams();
+  const serviceParam = searchParams.get('service');
+  
   const [formState, setFormState] = useState({
     name: '',
     email: '',
@@ -13,6 +29,16 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Pre-fill message if coming from a service page
+  useEffect(() => {
+    if (serviceParam && serviceNames[serviceParam]) {
+      setFormState(prev => ({
+        ...prev,
+        message: `I'm interested in ${serviceNames[serviceParam]} services.\n\n`,
+      }));
+    }
+  }, [serviceParam]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

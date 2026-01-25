@@ -199,13 +199,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const canAddToQuote = totalPieces > 0;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
+    <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
       {/* Left: Images */}
-      <div className="space-y-4">
-        {/* Main Image - container adapts to image dimensions */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200">
+      <div className="space-y-3 lg:space-y-4">
+        {/* Main Image - constrained height on mobile to show product info above fold */}
+        <div className="relative overflow-hidden rounded-xl lg:rounded-2xl border border-slate-200 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white">
           {hasDiscount && (
-            <Badge variant="error" className="absolute left-4 top-4 z-10">
+            <Badge variant="error" className="absolute left-3 top-3 lg:left-4 lg:top-4 z-10">
               Sale
             </Badge>
           )}
@@ -215,17 +215,17 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               alt={product.title}
               width={800}
               height={800}
-              className="w-full h-auto"
+              className="w-full h-auto max-h-[50vh] lg:max-h-none object-contain"
               priority
             />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center bg-slate-50 text-slate-300">
-              <ShoppingBag className="h-32 w-32" />
+              <ShoppingBag className="h-24 w-24 lg:h-32 lg:w-32" />
             </div>
           )}
         </div>
 
-        {/* Thumbnail Images - show flat and model images when available */}
+        {/* Thumbnail Images - horizontal scroll on mobile, wrap on desktop */}
         {activeColor && (
           activeColor.backImage || 
           activeColor.sideImage || 
@@ -233,13 +233,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           activeColor.onModelBackImage || 
           activeColor.onModelSideImage
         ) && (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2 lg:pb-0 lg:flex-wrap -mx-4 px-4 lg:mx-0 lg:px-0">
             {/* Flat product images */}
             {activeColor.frontImage && (
               <button 
                 onClick={() => setActiveView('front')}
                 className={cn(
-                  "overflow-hidden rounded-lg border-2 transition-all",
+                  "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'front' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-slate-200 hover:border-slate-400"
@@ -251,7 +251,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   alt="Front"
                   width={80}
                   height={80}
-                  className="h-20 w-auto"
+                  className="h-14 lg:h-20 w-auto"
                 />
               </button>
             )}
@@ -259,7 +259,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <button 
                 onClick={() => setActiveView('back')}
                 className={cn(
-                  "overflow-hidden rounded-lg border-2 transition-all",
+                  "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'back' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-slate-200 hover:border-slate-400"
@@ -271,7 +271,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   alt="Back"
                   width={80}
                   height={80}
-                  className="h-20 w-auto"
+                  className="h-14 lg:h-20 w-auto"
                 />
               </button>
             )}
@@ -279,7 +279,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <button 
                 onClick={() => setActiveView('side')}
                 className={cn(
-                  "overflow-hidden rounded-lg border-2 transition-all",
+                  "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'side' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-slate-200 hover:border-slate-400"
@@ -291,7 +291,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   alt="Side"
                   width={80}
                   height={80}
-                  className="h-20 w-auto"
+                  className="h-14 lg:h-20 w-auto"
                 />
               </button>
             )}
@@ -301,7 +301,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <button 
                 onClick={() => setActiveView('modelFront')}
                 className={cn(
-                  "overflow-hidden rounded-lg border-2 transition-all",
+                  "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'modelFront' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-slate-200 hover:border-slate-400"
@@ -313,7 +313,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   alt="Model Front"
                   width={80}
                   height={80}
-                  className="h-20 w-auto"
+                  className="h-14 lg:h-20 w-auto"
                 />
               </button>
             )}
@@ -321,7 +321,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <button 
                 onClick={() => setActiveView('modelBack')}
                 className={cn(
-                  "overflow-hidden rounded-lg border-2 transition-all",
+                  "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'modelBack' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-slate-200 hover:border-slate-400"
@@ -333,7 +333,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   alt="Model Back"
                   width={80}
                   height={80}
-                  className="h-20 w-auto"
+                  className="h-14 lg:h-20 w-auto"
                 />
               </button>
             )}
@@ -341,7 +341,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <button 
                 onClick={() => setActiveView('modelSide')}
                 className={cn(
-                  "overflow-hidden rounded-lg border-2 transition-all",
+                  "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'modelSide' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-slate-200 hover:border-slate-400"
@@ -353,7 +353,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   alt="Model Side"
                   width={80}
                   height={80}
-                  className="h-20 w-auto"
+                  className="h-14 lg:h-20 w-auto"
                 />
               </button>
             )}
@@ -365,33 +365,33 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       <div>
         {/* Header */}
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-brand-600">
+          <p className="text-xs lg:text-sm font-medium uppercase tracking-wide text-brand-600">
             {product.brandName}
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
+          <h1 className="mt-1 lg:mt-2 text-xl lg:text-3xl font-bold text-slate-900">
             {product.title || `${product.brandName} ${product.styleName}`}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-xs lg:text-sm text-slate-500">
             Style #{product.styleName}
           </p>
         </div>
 
         {/* Price */}
-        <div className="mt-4 flex items-baseline gap-3">
+        <div className="mt-2 lg:mt-4 flex items-baseline gap-2 lg:gap-3">
           {displayPrice > 0 ? (
             <>
-              <span className="text-3xl font-bold text-brand-600">
+              <span className="text-2xl lg:text-3xl font-bold text-brand-600">
                 {formatPrice(displayPrice)}
               </span>
               {hasDiscount && (
-                <span className="text-xl text-slate-400 line-through">
+                <span className="text-lg lg:text-xl text-slate-400 line-through">
                   {formatPrice(product.price)}
                 </span>
               )}
-              <span className="text-sm text-slate-500">per piece</span>
+              <span className="text-xs lg:text-sm text-slate-500">per piece</span>
             </>
           ) : (
-            <span className="text-xl font-semibold text-brand-600">
+            <span className="text-lg lg:text-xl font-semibold text-brand-600">
               Request Quote for Pricing
             </span>
           )}
@@ -409,11 +409,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         {/* Color Selection */}
         {product.colors && product.colors.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-sm font-semibold text-slate-900">
+          <div className="mt-4 lg:mt-6">
+            <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
               Select Colors ({product.colors.length} available)
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
               Click colors to add size rows below. Click again to remove.
             </p>
             <div className="mt-3">
@@ -433,12 +433,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         {/* Size Distribution Rows */}
         {selectedColors.length > 0 && (
-          <div className="mt-6 space-y-4">
+          <div className="mt-4 lg:mt-6 space-y-3 lg:space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">
+              <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
                 Enter Quantities by Size
               </h3>
-              <div className="flex items-center gap-1 text-xs text-slate-500">
+              <div className="hidden lg:flex items-center gap-1 text-xs text-slate-500">
                 <Info className="h-3.5 w-3.5" />
                 <span>Stock shown below each size</span>
               </div>
@@ -459,12 +459,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         {/* No colors selected prompt */}
         {selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
-          <div className="mt-6 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-            <ShoppingBag className="mx-auto h-10 w-10 text-slate-400" />
-            <p className="mt-3 text-sm font-medium text-slate-600">
+          <div className="mt-4 lg:mt-6 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 lg:p-8 text-center">
+            <ShoppingBag className="mx-auto h-8 w-8 lg:h-10 lg:w-10 text-slate-400" />
+            <p className="mt-2 lg:mt-3 text-sm font-medium text-slate-600">
               Select a color above to enter quantities
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 hidden lg:block">
               You can select multiple colors for a multi-color order
             </p>
           </div>
@@ -472,7 +472,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         {/* Order Summary & Add to Quote */}
         {selectedColors.length > 0 && (
-          <div className="mt-6 rounded-xl bg-brand-50 p-5">
+          <div className="mt-4 lg:mt-6 rounded-xl bg-brand-50 p-4 lg:p-5">
             {/* Per-color breakdown - only show when 2+ colors */}
             {colorSubtotals.length > 1 && (
               <div className="space-y-2 mb-3">
@@ -541,7 +541,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         )}
 
         {/* Specifications Accordion */}
-        <div className="mt-6">
+        <div className="mt-4 lg:mt-6">
           <SpecsAccordion styleId={product.styleId} />
         </div>
       </div>

@@ -175,7 +175,7 @@ export function RelatedProducts({
         {products.map((product) => (
           <Link
             key={product.id}
-            href={`/catalog/${product.id}`}
+            href={`/product/${product.styleId}`}
             className="group w-56 flex-shrink-0"
           >
             <div className="overflow-hidden rounded-xl border border-slate-200">

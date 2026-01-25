@@ -122,6 +122,8 @@ export default function RetailFinishingPage() {
         description="Transform decorated garments into retail-ready products. From fold and bag to custom woven labels, our finishing services add the professional touches that elevate your brand. Perfect for e-commerce, retail distribution, or premium merchandise drops."
         icon={Package}
         gradient="from-amber-500 to-orange-600"
+        serviceSlug="retail-finishing"
+        samplePrice="Starts at $1.00 at 100+ pieces"
       />
 
       {/* Benefits Badges */}
@@ -289,6 +291,7 @@ export default function RetailFinishingPage() {
         title="Ready for Retail-Ready Merchandise?"
         subtitle="Get a quote within 24 hours. Ask about finishing add-ons."
         showRushBanner={true}
+        serviceSlug="retail-finishing"
       />
     </div>
   );

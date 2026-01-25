@@ -120,6 +120,7 @@ export default function RushPage() {
         description="Tight deadline? We specialize in rush screen printing and embroidery services for clothing brands and businesses. From 48-hour emergency orders to quick-turn weekly drops, we've built our shop around speed without sacrificing quality. Your delivery is guaranteed."
         icon={Zap}
         gradient="from-amber-500 to-orange-600"
+        serviceSlug="rush"
       />
 
       {/* Benefits Badges */}

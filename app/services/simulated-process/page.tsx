@@ -114,6 +114,9 @@ export default function SimulatedProcessPage() {
         gradient="from-rose-500 to-pink-600"
         maxPrintSize="17&quot; x 23&quot;"
         backLink={{ href: '/services/screen-printing', label: 'Back to Screen Printing' }}
+        serviceSlug="simulated-process"
+        samplePrice="Starting at $3.35/piece"
+        minimumOrder={50}
       />
 
       {/* Benefits Badges */}
@@ -224,6 +227,7 @@ export default function SimulatedProcessPage() {
       <ServiceCTA
         title="Ready for Photorealistic Prints?"
         subtitle="Get a quote within 24 hours. 50 piece minimum."
+        serviceSlug="simulated-process"
       />
     </div>
   );

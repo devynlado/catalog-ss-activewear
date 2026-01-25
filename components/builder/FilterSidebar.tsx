@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown, X, Search, Leaf, Tag, Sparkles } from 'lucide-react';
+import { ChevronDown, X, Search, Leaf, Tag, Sparkles, Flame, TrendingUp } from 'lucide-react';
 import { Brand, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { classifyAllCategories, getAttributeGroupName, type ClassifiedCategory, type AttributeGroup } from '@/lib/category-taxonomy';
+import { classifyAllCategories, getAttributeGroupName, shouldShowAttributeGroup, MAIN_CATEGORIES, type ClassifiedCategory, type AttributeGroup } from '@/lib/category-taxonomy';
 
 interface FilterSidebarProps {
   showBrands?: boolean;
@@ -47,6 +47,15 @@ export function FilterSidebar({
     material: { title: 'Material', isOpen: false },
     feature: { title: 'Features', isOpen: false },
     weight: { title: 'Weight', isOpen: false },
+    // New attribute groups (Enhanced Filtering Plan)
+    treatment: { title: 'Treatment', isOpen: false },
+    pattern: { title: 'Pattern', isOpen: false },
+    zipper: { title: 'Zipper Style', isOpen: false },
+    structure: { title: 'Structure', isOpen: false },  // Headwear-specific
+    panel: { title: 'Panel Count', isOpen: false },     // Headwear-specific
+    closure: { title: 'Closure Type', isOpen: false },  // Headwear-specific
+    sustainable: { title: 'Sustainable', isOpen: false },
+    style: { title: 'Style', isOpen: false },
     brands: { title: 'Brands', isOpen: true },
     price: { title: 'Price Range', isOpen: false },
   });
@@ -70,13 +79,35 @@ export function FilterSidebar({
   ];
 
   // Attribute groups to show in sidebar (in display order)
-  const attributeGroupsToShow: AttributeGroup[] = ['gender', 'sleeve', 'fit', 'collar', 'material', 'feature', 'weight'];
+  // Organized by category: General -> Apparel-specific -> Headwear-specific -> Style options
+  const attributeGroupsToShow: AttributeGroup[] = [
+    // General attributes (shown for all categories)
+    'gender', 
+    'material',
+    'weight',
+    // Apparel-specific (hidden for headwear/bags/accessories)
+    'sleeve', 
+    'fit', 
+    'collar', 
+    // Zipper (shown for sweatshirts/jackets/outerwear)
+    'zipper',
+    // Headwear-specific (only shown when headwear selected)
+    'structure',
+    'panel',
+    'closure',
+    // Style options (shown for all)
+    'treatment',
+    'pattern',
+    'feature',
+    'sustainable',
+    'style',
+  ];
   
   // Groups that should be single-select (mutually exclusive options)
-  const singleSelectGroups: AttributeGroup[] = ['sleeve', 'fit', 'collar', 'gender'];
+  const singleSelectGroups: AttributeGroup[] = ['sleeve', 'fit', 'collar', 'gender', 'structure', 'panel'];
   
   // Groups that allow multi-select (additive options like features)
-  const multiSelectGroups: AttributeGroup[] = ['feature', 'material', 'weight'];
+  const multiSelectGroups: AttributeGroup[] = ['feature', 'material', 'weight', 'treatment', 'pattern', 'closure', 'sustainable', 'style', 'zipper'];
 
   // Classify categories using taxonomy
   const classifiedCategories = useMemo(() => {
@@ -104,6 +135,11 @@ export function FilterSidebar({
   const maxPrice = searchParams.get('maxPrice');
   const onSaleFilter = searchParams.get('onSale') === 'true';
   const sustainableFilter = searchParams.get('sustainable') === 'true';
+  const featuredFilter = searchParams.get('featured') === 'true';
+  const streetwearFilter = searchParams.get('streetwear') === 'true';
+  
+  // Get selected category ID for context-aware filtering
+  const selectedCategoryId = selectedCategory ? parseInt(selectedCategory, 10) : null;
 
   // Fetch filter options
   useEffect(() => {
@@ -220,7 +256,7 @@ export function FilterSidebar({
     return selectedAttributes.includes(categoryId.toString());
   };
 
-  const hasActiveFilters = selectedBrand || selectedCategory || selectedColorFamilies.length > 0 || selectedAttributes.length > 0 || minPrice || maxPrice || onSaleFilter || sustainableFilter;
+  const hasActiveFilters = selectedBrand || selectedCategory || selectedColorFamilies.length > 0 || selectedAttributes.length > 0 || minPrice || maxPrice || onSaleFilter || sustainableFilter || featuredFilter || streetwearFilter;
 
   return (
     <aside className={cn('w-full', className)}>
@@ -261,6 +297,44 @@ export function FilterSidebar({
             collapsible={collapsible}
           >
             <div className="space-y-2">
+              {/* Popular Products Toggle */}
+              <button
+                onClick={() => updateFilter('featured', featuredFilter ? null : 'true')}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                  featuredFilter
+                    ? 'bg-amber-50 font-medium text-amber-700'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                <Flame className={cn('h-4 w-4', featuredFilter ? 'text-amber-500' : 'text-slate-400')} />
+                <span>Popular Products</span>
+                {featuredFilter && (
+                  <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    Active
+                  </span>
+                )}
+              </button>
+
+              {/* Streetwear Essentials Toggle */}
+              <button
+                onClick={() => updateFilter('streetwear', streetwearFilter ? null : 'true')}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                  streetwearFilter
+                    ? 'bg-purple-50 font-medium text-purple-700'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                <TrendingUp className={cn('h-4 w-4', streetwearFilter ? 'text-purple-500' : 'text-slate-400')} />
+                <span>Streetwear Essentials</span>
+                {streetwearFilter && (
+                  <span className="ml-auto rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                    Active
+                  </span>
+                )}
+              </button>
+
               {/* On Sale Toggle */}
               <button
                 onClick={() => updateFilter('onSale', onSaleFilter ? null : 'true')}
@@ -310,25 +384,33 @@ export function FilterSidebar({
               collapsible={collapsible}
             >
               <div className="space-y-1">
-                {classifiedCategories.main.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() =>
-                      updateFilter(
-                        'category',
-                        selectedCategory === category.id.toString() ? null : category.id.toString()
-                      )
-                    }
-                    className={cn(
-                      'block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors',
-                      selectedCategory === category.id.toString()
-                        ? 'bg-brand-50 font-medium text-brand-700'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    )}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+                {classifiedCategories.main.map((category) => {
+                  const mainCat = MAIN_CATEGORIES[category.id];
+                  const isSelected = selectedCategory === category.id.toString();
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => {
+                        // Use slug-based navigation for main categories
+                        if (isSelected) {
+                          router.push('/catalog');
+                        } else if (mainCat?.slug) {
+                          router.push(`/catalog/${mainCat.slug}`);
+                        } else {
+                          updateFilter('category', category.id.toString());
+                        }
+                      }}
+                      className={cn(
+                        'block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                        isSelected
+                          ? 'bg-brand-50 font-medium text-brand-700'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      )}
+                    >
+                      {category.name}
+                    </button>
+                  );
+                })}
               </div>
             </FilterSection>
           )}
@@ -416,6 +498,11 @@ export function FilterSidebar({
 
           {/* Dynamic Attribute Filters from Taxonomy */}
           {classifiedCategories && attributeGroupsToShow.map((group) => {
+            // Context-aware filtering: only show relevant attribute groups
+            if (!shouldShowAttributeGroup(group, selectedCategoryId)) {
+              return null;
+            }
+            
             let attributes = classifiedCategories.attributes.get(group);
             if (!attributes || attributes.length === 0) return null;
             

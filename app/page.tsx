@@ -15,11 +15,11 @@ export default function HomePage() {
       {/* 1. Hero - Hook: Who we are */}
       <Hero />
       
-      {/* 2. Who We Service - Audience: We work with people like you */}
-      <WhoWeService />
-      
-      {/* 3. Turnaround Banner - Urgency: We're fast */}
+      {/* 2. Turnaround Banner - Urgency: We're fast */}
       <TurnaroundBanner />
+      
+      {/* 3. Who We Service - Audience: We work with people like you */}
+      <WhoWeService />
       
       {/* 3. How It Works - Reassurance: It's easy */}
       <HowItWorks />

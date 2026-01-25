@@ -155,6 +155,9 @@ export interface Product {
   isOnSale?: boolean;
   isSustainable?: boolean;
   isNew?: boolean;
+  // Popular products system
+  isPopular?: boolean;
+  popularTier?: 'bestseller' | 'staff-pick' | 'value' | 'streetwear';
 }
 
 export interface ProductColor {

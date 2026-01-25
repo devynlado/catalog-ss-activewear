@@ -3,14 +3,34 @@
 import { Fragment } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useQuoteStore } from '@/lib/quote-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
+// Quick category links for empty state
+const quickCategories = [
+  { name: 'T-Shirts', href: '/catalog?category=21' },
+  { name: 'Fleece', href: '/catalog?category=9' },
+  { name: 'Polos', href: '/catalog?category=52' },
+  { name: 'Headwear', href: '/catalog?category=11' },
+];
+
 export function QuoteDrawer() {
   const { items, isDrawerOpen, closeDrawer, removeItem, updateQuantity } = useQuoteStore();
+  const router = useRouter();
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  
+  const handleBrowseCatalog = () => {
+    closeDrawer();
+    router.push('/catalog');
+  };
+  
+  const handleCategoryClick = (href: string) => {
+    closeDrawer();
+    router.push(href);
+  };
 
   if (!isDrawerOpen) return null;
 
@@ -54,9 +74,28 @@ export function QuoteDrawer() {
               <p className="mt-2 text-sm text-slate-500">
                 Browse our catalog and add items to your quote list.
               </p>
-              <Button onClick={closeDrawer} className="mt-6">
+              <Button onClick={handleBrowseCatalog} className="mt-6">
                 Browse Catalog
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
+              
+              {/* Quick category links */}
+              <div className="mt-8 w-full">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-3">
+                  Quick Links
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {quickCategories.map((cat) => (
+                    <button
+                      key={cat.name}
+                      onClick={() => handleCategoryClick(cat.href)}
+                      className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:border-brand-500 hover:text-brand-600 transition-colors"
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

@@ -1127,6 +1127,123 @@ export async function getProductsByBrand(brandId: number): Promise<Product[]> {
 }
 
 /**
+ * Get products by a list of style numbers (efficient batch lookup)
+ * Used for fetching popular products directly
+ * @param styleNumbers - List of style numbers to search for (e.g., ['G500', '3001', '18500'])
+ * @param options - Optional filtering options
+ */
+export async function getProductsByStyleNumbers(
+  styleNumbers: string[],
+  options?: { categoryId?: number; limit?: number }
+): Promise<Product[]> {
+  if (styleNumbers.length === 0) return [];
+  
+  console.log(`[getProductsByStyleNumbers] Searching for ${styleNumbers.length} style numbers...`);
+  
+  try {
+    // Get all cached styles
+    const allStyles = await getCachedStyles();
+    
+    // Build a set of normalized style numbers for fast lookup
+    const styleSet = new Set(
+      styleNumbers.map(s => s.toUpperCase().replace(/[-\s]/g, ''))
+    );
+    
+    // Also include variations
+    for (const styleNum of styleNumbers) {
+      const upper = styleNum.toUpperCase();
+      styleSet.add(upper);
+      styleSet.add(upper.replace(/[-\s]/g, '')); // No dashes/spaces
+      // Add with/without prefix
+      if (/^[A-Z]/.test(upper)) {
+        styleSet.add(upper.replace(/^[A-Z]+[-]?/, '')); // Numbers only
+      }
+      if (/^\d+$/.test(upper)) {
+        styleSet.add('G' + upper); // Gildan style
+      }
+    }
+    
+    // Filter styles that match our style numbers
+    const matchingStyles = allStyles.filter(style => {
+      const styleName = (style.styleName || '').toUpperCase().replace(/[-\s]/g, '');
+      const uniqueName = (style.uniqueStyleName || '').toUpperCase().replace(/[-\s]/g, '');
+      
+      // Direct match
+      if (styleSet.has(styleName) || styleSet.has(uniqueName)) {
+        return true;
+      }
+      
+      // Check if styleName contains any of our target style numbers
+      for (const targetStyle of styleNumbers) {
+        const normalized = targetStyle.toUpperCase().replace(/[-\s]/g, '');
+        if (styleName.includes(normalized) || normalized.includes(styleName)) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+    
+    console.log(`[getProductsByStyleNumbers] Found ${matchingStyles.length} matching styles in cache`);
+    
+    // Apply category filter if specified
+    let filteredStyles = matchingStyles;
+    if (options?.categoryId) {
+      filteredStyles = matchingStyles.filter(style => {
+        const catIds = (style.categories || '').split(',').map(id => parseInt(id.trim(), 10));
+        return catIds.includes(options.categoryId!);
+      });
+      console.log(`[getProductsByStyleNumbers] After category filter: ${filteredStyles.length} styles`);
+    }
+    
+    // Limit results if specified
+    const limit = options?.limit || 100;
+    const stylesToFetch = filteredStyles.slice(0, limit);
+    
+    if (stylesToFetch.length === 0) {
+      return [];
+    }
+    
+    // Fetch SKU data for matching styles
+    const styleIds = stylesToFetch.map(s => s.styleID);
+    const productsMap = await fetchProductsForStyles(styleIds);
+    
+    // Build products with full data
+    const products: Product[] = [];
+    for (const style of stylesToFetch) {
+      const skuData = productsMap.get(style.styleID);
+      if (skuData && skuData.length > 0) {
+        try {
+          const product = transformSkuDataToProduct(skuData);
+          product.title = style.title || product.styleName;
+          product.description = style.description || '';
+          if (style.styleImage) {
+            product.imageUrl = buildImageUrl(style.styleImage);
+          }
+          product.isSustainable = style.sustainableStyle || false;
+          product.isNew = style.newStyle || false;
+          if (style.categories) {
+            const catIds = style.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+            product.categories = catIds.map(id => ({ id, name: '' }));
+          }
+          products.push(product);
+        } catch (e) {
+          products.push(transformProduct(style));
+        }
+      } else {
+        products.push(transformProduct(style));
+      }
+    }
+    
+    console.log(`[getProductsByStyleNumbers] Returning ${products.length} products`);
+    return products;
+  } catch (error) {
+    console.error('[getProductsByStyleNumbers] Error:', error);
+    return [];
+  }
+}
+
+/**
  * Transform SS Activewear product to our Product type
  */
 function transformProduct(ssProduct: SSProduct): Product {

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Plus, ShoppingBag, Leaf, Sparkles } from 'lucide-react';
+import { Plus, ShoppingBag, Leaf, Sparkles, Flame, Star, TrendingUp, BadgeDollarSign } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
@@ -78,7 +78,7 @@ export function ProductCard({
 
   return (
     <Link 
-      href={`/catalog/${product.id}`}
+      href={`/product/${product.styleId}`}
       className="group relative block overflow-hidden rounded-xl bg-white shadow-card transition-all hover:shadow-card-hover"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -102,6 +102,27 @@ export function ProductCard({
 
         {/* Product Badges */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+          {/* Popular Product Badge - tier-based styling */}
+          {product.isPopular && product.popularTier && (
+            <Badge 
+              variant={
+                product.popularTier === 'bestseller' ? 'warning' :
+                product.popularTier === 'staff-pick' ? 'default' :
+                product.popularTier === 'streetwear' ? 'info' :
+                'success'
+              }
+              className="flex items-center gap-1"
+            >
+              {product.popularTier === 'bestseller' && <Flame className="h-3 w-3" />}
+              {product.popularTier === 'staff-pick' && <Star className="h-3 w-3" />}
+              {product.popularTier === 'streetwear' && <TrendingUp className="h-3 w-3" />}
+              {product.popularTier === 'value' && <BadgeDollarSign className="h-3 w-3" />}
+              {product.popularTier === 'bestseller' && 'Best Seller'}
+              {product.popularTier === 'staff-pick' && 'Staff Pick'}
+              {product.popularTier === 'streetwear' && 'Trending'}
+              {product.popularTier === 'value' && 'Great Value'}
+            </Badge>
+          )}
           {hasDiscount && (
             <Badge variant="error">
               Sale
@@ -138,7 +159,7 @@ export function ProductCard({
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         {/* Color Swatches with expandable popup */}
         {showSwatches && product.colors && product.colors.length > 0 && (
           <div 

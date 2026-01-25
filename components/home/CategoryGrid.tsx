@@ -7,6 +7,7 @@ import { ArrowRight, Shirt, CloudSnow, Award, Cloudy, HardHat, ArrowDown, Shoppi
 const categories = [
   {
     id: 21,
+    slug: 't-shirts',
     name: 'T-Shirts',
     description: 'Classic tees in every style',
     icon: Shirt,
@@ -14,13 +15,15 @@ const categories = [
   },
   {
     id: 9,
-    name: 'Fleece',
+    slug: 'sweatshirts',
+    name: 'Sweatshirts',
     description: 'Hoodies & sweatshirts',
     icon: CloudSnow,
     color: 'bg-blue-500',
   },
   {
     id: 52,
+    slug: 'polos',
     name: 'Polos',
     description: 'Professional & casual',
     icon: Award,
@@ -28,34 +31,39 @@ const categories = [
   },
   {
     id: 15,
-    name: 'Outerwear',
+    slug: 'jackets',
+    name: 'Jackets',
     description: 'Jackets & vests',
     icon: Cloudy,
     color: 'bg-purple-500',
   },
   {
     id: 11,
+    slug: 'headwear',
     name: 'Headwear',
     description: 'Caps, beanies & more',
     icon: HardHat,
     color: 'bg-orange-500',
   },
   {
-    id: 3,
+    id: 384,
+    slug: 'bottoms',
     name: 'Bottoms',
     description: 'Pants & shorts',
     icon: ArrowDown,
     color: 'bg-teal-500',
   },
   {
-    id: 2,
+    id: 102,
+    slug: 'bags',
     name: 'Bags',
     description: 'Totes & backpacks',
     icon: ShoppingBag,
     color: 'bg-pink-500',
   },
   {
-    id: 27,
+    id: 53,
+    slug: 'accessories',
     name: 'Accessories',
     description: 'Towels, blankets & more',
     icon: Sparkles,
@@ -65,7 +73,7 @@ const categories = [
 
 export function CategoryGrid() {
   return (
-    <section className="bg-white py-20">
+    <section className="bg-white pt-10 pb-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center">
@@ -88,7 +96,7 @@ export function CategoryGrid() {
             return (
               <Link
                 key={category.id}
-                href={`/catalog?category=${category.id}`}
+                href={`/catalog/${category.slug}`}
                 className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-brand-300 hover:shadow-lg"
               >
                 <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl ${category.color} text-white`}>

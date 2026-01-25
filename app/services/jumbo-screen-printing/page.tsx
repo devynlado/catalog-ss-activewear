@@ -115,6 +115,9 @@ export default function JumboScreenPrintingPage() {
         gradient="from-emerald-500 to-teal-600"
         maxPrintSize="17&quot; x 23&quot;"
         backLink={{ href: '/services/screen-printing', label: 'Back to Screen Printing' }}
+        serviceSlug="jumbo-screen-printing"
+        samplePrice="Starting at $3.75/piece"
+        minimumOrder={50}
       />
 
       {/* Benefits Badges */}
@@ -202,6 +205,7 @@ export default function JumboScreenPrintingPage() {
       <ServiceCTA
         title="Ready to Go Jumbo?"
         subtitle="Get a quote within 24 hours. 50 piece minimum."
+        serviceSlug="jumbo-screen-printing"
       />
     </div>
   );

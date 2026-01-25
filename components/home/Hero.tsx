@@ -8,26 +8,26 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid min-h-[600px] items-center gap-12 py-16 lg:grid-cols-2 lg:py-24">
+        <div className="grid min-h-[500px] items-center gap-8 py-10 sm:min-h-[600px] sm:gap-12 sm:py-16 lg:grid-cols-2 lg:py-24">
           {/* Left Content */}
           <div className="max-w-xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-600">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-600 sm:mb-6 sm:px-4 sm:py-2 sm:text-sm">
               <span className="flex h-2 w-2 rounded-full bg-brand-500"></span>
               Southern California's #1 Decorator
             </div>
             
-            <h1 className="text-4xl font-bold tracking-tight text-navy-800 sm:text-5xl lg:text-6xl">
+            <h1 className="text-3xl font-bold tracking-tight text-navy-800 sm:text-5xl lg:text-6xl">
               Custom Apparel{' '}
               <span className="text-brand-500">Decoration</span>{' '}
               Experts
             </h1>
             
-            <p className="mt-6 text-lg leading-relaxed text-slate-600">
+            <p className="mt-4 text-base leading-relaxed text-slate-600 sm:mt-6 sm:text-lg">
               Screen printing, embroidery & premium blank apparel — delivered when you need it. 
               Starting at just 50 pieces (mix sizes, colors & styles!), build your quote in minutes.
             </p>
             
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4">
               <Link
                 href="/catalog"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:shadow-brand-500/30"
@@ -45,8 +45,8 @@ export function Hero() {
               </a>
             </div>
             
-            {/* Quick Stats */}
-            <div className="mt-12 flex gap-8 border-t border-slate-200 pt-8">
+            {/* Quick Stats - hidden on mobile for cleaner above-the-fold */}
+            <div className="mt-12 hidden gap-8 border-t border-slate-200 pt-8 sm:flex">
               <div>
                 <p className="text-3xl font-bold text-navy-800">15+</p>
                 <p className="text-sm text-slate-500">Years Experience</p>
@@ -56,8 +56,8 @@ export function Hero() {
                 <p className="text-sm text-slate-500">Google Rating</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-navy-800">48hr</p>
-                <p className="text-sm text-slate-500">Rush Available</p>
+                <p className="text-3xl font-bold text-navy-800">50pc</p>
+                <p className="text-sm text-slate-500">Min Order</p>
               </div>
             </div>
           </div>

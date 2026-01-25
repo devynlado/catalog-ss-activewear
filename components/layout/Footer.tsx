@@ -14,10 +14,10 @@ export function Footer() {
     <footer className="bg-navy-800 text-white">
       {/* Main Footer Content */}
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
           
           {/* Contact Info */}
-          <div>
+          <div className="lg:col-span-2">
             <div className="mb-6">
               <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-white font-bold text-lg">
@@ -39,48 +39,123 @@ export function Footer() {
                 (855) 942-7636
               </a>
               <a 
-                href="mailto:sales@garmentdecor.com" 
+                href="mailto:info@garmentdecor.com" 
                 className="flex items-center gap-3 text-sm text-slate-300 hover:text-brand-400 transition-colors"
               >
                 <Mail className="h-4 w-4 text-brand-500" />
-                sales@garmentdecor.com
+                info@garmentdecor.com
               </a>
               <div className="flex items-center gap-3 text-sm text-slate-300">
                 <MapPin className="h-4 w-4 text-brand-500" />
-                Dallas, TX
+                4778 W. Mission Blvd, Montclair CA 91762
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-300">
                 <Clock className="h-4 w-4 text-brand-500" />
-                Mon-Fri: 9am - 5pm CST
+                Mon-Fri: 9am - 5pm PST
               </div>
+            </div>
+            
+            {/* Social Links */}
+            <div className="mt-6 flex gap-3">
+              <a 
+                href="https://facebook.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
+                aria-label="Facebook"
+              >
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a 
+                href="https://instagram.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a 
+                href="https://twitter.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
+                aria-label="Twitter"
+              >
+                <Twitter className="h-4 w-4" />
+              </a>
+              <a 
+                href="https://linkedin.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-4 w-4" />
+              </a>
             </div>
           </div>
 
-          {/* Categories */}
+          {/* Services */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Categories
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-brand-400">
+              Services
             </h3>
             <ul className="space-y-2">
-              {mainCategories.map((cat) => (
-                <li key={cat.id}>
-                  <Link
-                    href={`/catalog?category=${cat.id}`}
-                    className="text-sm text-slate-300 hover:text-brand-400 transition-colors"
-                  >
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link href="/services/screen-printing" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Screen Printing
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/embroidery" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Embroidery
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/digital-screen-printing" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Digital Printing
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/retail-finishing" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Retail Finishing
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/rush" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Rush Orders
+                </Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Pricing Calculator
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Company Links */}
+          {/* Resources */}
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Company
+              Resources
             </h3>
             <ul className="space-y-2">
+              <li>
+                <Link href="/resources/screen-printing-guide" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Screen Printing Guide
+                </Link>
+              </li>
+              <li>
+                <Link href="/resources/embroidery-guide" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Embroidery Guide
+                </Link>
+              </li>
+              <li>
+                <Link href="/faq" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  FAQ
+                </Link>
+              </li>
               <li>
                 <Link href="/about" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
                   About Us
@@ -91,89 +166,57 @@ export function Footer() {
                   Contact Us
                 </Link>
               </li>
-              <li>
-                <Link href="/faq" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <Link href="/shipping" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
-                  Shipping Info
-                </Link>
-              </li>
-              <li>
-                <Link href="/returns" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
-                  Returns & Exchanges
-                </Link>
-              </li>
             </ul>
           </div>
 
-          {/* Social & Trust */}
+          {/* Shop Categories */}
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Connect With Us
+              Shop
             </h3>
-            <div className="flex gap-3">
-              <a 
-                href="https://facebook.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a 
-                href="https://instagram.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a 
-                href="https://twitter.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a 
-                href="https://linkedin.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-            </div>
-
-            {/* Trust Badges */}
-            <div className="mt-6">
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Secure Payment
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {/* Payment method badges - simplified icons */}
-                <div className="flex h-8 items-center justify-center rounded bg-white px-3 text-xs font-bold text-navy-800">
+            <ul className="space-y-2">
+              <li>
+                <Link href="/catalog" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  All Products
+                </Link>
+              </li>
+              {mainCategories.slice(0, 6).map((cat) => (
+                <li key={cat.id}>
+                  <Link
+                    href={`/catalog/${cat.slug}`}
+                    className="text-sm text-slate-300 hover:text-brand-400 transition-colors"
+                  >
+                    {cat.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        
+        {/* Trust Badges Row */}
+        <div className="mt-10 border-t border-navy-700 pt-8">
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <span>Secure Payment:</span>
+              <div className="flex gap-2">
+                <div className="flex h-7 items-center justify-center rounded bg-white px-2 text-xs font-bold text-navy-800">
                   VISA
                 </div>
-                <div className="flex h-8 items-center justify-center rounded bg-white px-3 text-xs font-bold text-navy-800">
+                <div className="flex h-7 items-center justify-center rounded bg-white px-2 text-xs font-bold text-navy-800">
                   MC
                 </div>
-                <div className="flex h-8 items-center justify-center rounded bg-white px-3 text-xs font-bold text-navy-800">
+                <div className="flex h-7 items-center justify-center rounded bg-white px-2 text-xs font-bold text-navy-800">
                   AMEX
                 </div>
-                <div className="flex h-8 items-center justify-center rounded bg-white px-3 text-xs font-bold text-navy-800">
+                <div className="flex h-7 items-center justify-center rounded bg-white px-2 text-xs font-bold text-navy-800">
                   PayPal
                 </div>
               </div>
             </div>
+            <p className="text-sm text-slate-400">
+              Free quotes • Fast production • Guaranteed delivery
+            </p>
           </div>
         </div>
       </div>

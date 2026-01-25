@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Product } from '@/lib/types';
 import { ProductCard } from './ProductCard';
 import { QuickViewModal } from './QuickViewModal';
@@ -25,6 +25,11 @@ interface ProductGridProps {
   searchQuery?: string;
   initialProducts?: Product[];
   showPagination?: boolean;
+  // Quick filters
+  featuredFilter?: boolean;
+  onSaleFilter?: boolean;
+  sustainableFilter?: boolean;
+  streetwearFilter?: boolean;
 }
 
 export function ProductGrid({
@@ -38,9 +43,15 @@ export function ProductGrid({
   searchQuery,
   initialProducts,
   showPagination = true,
+  // Quick filters
+  featuredFilter,
+  onSaleFilter,
+  sustainableFilter,
+  streetwearFilter,
 }: ProductGridProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
   const [products, setProducts] = useState<Product[]>(initialProducts || []);
@@ -105,6 +116,11 @@ export function ProductGrid({
         if (brandFilter) params.set('brand', brandFilter);
         if (colorFamilyFilter) params.set('colorFamily', colorFamilyFilter);
         if (attributeFilter) params.set('attr', attributeFilter);
+        // Quick filters
+        if (featuredFilter) params.set('featured', 'true');
+        if (onSaleFilter) params.set('onSale', 'true');
+        if (sustainableFilter) params.set('sustainable', 'true');
+        if (streetwearFilter) params.set('streetwear', 'true');
         params.set('page', currentPage.toString());
         params.set('pageSize', pageSize.toString());
 
@@ -132,22 +148,25 @@ export function ProductGrid({
     if (cacheJustReady) {
       setCacheJustReady(false);
     }
-  }, [categoryFilter, brandFilter, colorFamilyFilter, attributeFilter, searchQuery, pageSize, initialProducts, currentPage, cacheJustReady]);
+  }, [categoryFilter, brandFilter, colorFamilyFilter, attributeFilter, searchQuery, pageSize, initialProducts, currentPage, cacheJustReady, featuredFilter, onSaleFilter, sustainableFilter, streetwearFilter]);
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', page.toString());
-    router.push(`/catalog?${params.toString()}`);
+    // Preserve current pathname (slug URL) when changing pages
+    const queryString = params.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname);
     // Scroll to top of grid
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Grid columns: 2 on mobile, then scale up for larger screens
   const gridCols = {
-    2: 'sm:grid-cols-2',
-    3: 'sm:grid-cols-2 lg:grid-cols-3',
-    4: 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-    5: 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5',
-    6: 'sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6',
+    2: 'grid-cols-2',
+    3: 'grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+    5: 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-5',
+    6: 'grid-cols-2 lg:grid-cols-4 xl:grid-cols-6',
   };
 
   if (isLoading) {
@@ -189,15 +208,16 @@ export function ProductGrid({
         </div>
       )}
 
-      {/* Results count */}
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-slate-600">
-          Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalProducts)} of {totalProducts} products
+      {/* Results count - compact on mobile */}
+      <div className="mb-3 sm:mb-4">
+        <p className="text-xs sm:text-sm text-slate-500">
+          {totalProducts.toLocaleString()} products
+          <span className="hidden sm:inline"> · Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalProducts)}</span>
         </p>
       </div>
 
       {/* Product Grid */}
-      <div className={`grid gap-6 ${gridCols[columns as keyof typeof gridCols] || gridCols[4]}`}>
+      <div className={`grid gap-3 sm:gap-6 ${gridCols[columns as keyof typeof gridCols] || gridCols[4]}`}>
         {products.map((product) => (
           <ProductCard
             key={product.id}
