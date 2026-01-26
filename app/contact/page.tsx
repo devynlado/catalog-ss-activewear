@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 
@@ -16,7 +16,8 @@ const serviceNames: Record<string, string> = {
   'rush': 'Rush Turnaround',
 };
 
-export default function ContactPage() {
+// Inner component that uses useSearchParams
+function ContactForm() {
   const searchParams = useSearchParams();
   const serviceParam = searchParams.get('service');
   
@@ -333,5 +334,58 @@ export default function ContactPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+// Loading fallback for the form
+function ContactFormFallback() {
+  return (
+    <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+      <div className="animate-pulse">
+        <div className="h-6 w-48 bg-slate-200 rounded mb-4"></div>
+        <div className="h-4 w-64 bg-slate-200 rounded mb-6"></div>
+        <div className="space-y-4">
+          <div className="h-10 bg-slate-200 rounded"></div>
+          <div className="h-10 bg-slate-200 rounded"></div>
+          <div className="h-32 bg-slate-200 rounded"></div>
+          <div className="h-12 bg-slate-200 rounded"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main page component that wraps ContactForm in Suspense
+export default function ContactPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50">
+        <section className="bg-[#070131] py-16 sm:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                Let&apos;s Talk Custom Apparel
+              </h1>
+              <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
+                Whether you&apos;re a first-time buyer or a seasoned distributor, our team is here to help 
+                bring your vision to life. Reach out today.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section className="py-16 sm:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-12 lg:grid-cols-2">
+              <ContactFormFallback />
+              <div className="space-y-6">
+                <div className="h-64 bg-slate-100 rounded-xl animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    }>
+      <ContactForm />
+    </Suspense>
   );
 }

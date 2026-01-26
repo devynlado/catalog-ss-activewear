@@ -201,6 +201,7 @@ export interface Brand {
 
 export interface QuoteItem {
   id: string;
+  sku?: string;
   productId: string;
   styleId: number;
   styleName: string;

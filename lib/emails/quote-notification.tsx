@@ -14,7 +14,7 @@ interface QuoteNotificationProps {
   contact: {
     name: string;
     email: string;
-    phone: string;
+    phone?: string;
     company?: string;
   };
   items: QuoteItem[];
@@ -93,10 +93,12 @@ export function generateQuoteNotificationHtml(props: QuoteNotificationProps): st
                   <td style="padding: 8px 0; color: #64748b;">Email:</td>
                   <td style="padding: 8px 0;"><a href="mailto:${contact.email}" style="color: #2563eb;">${contact.email}</a></td>
                 </tr>
+                ${contact.phone ? `
                 <tr>
                   <td style="padding: 8px 0; color: #64748b;">Phone:</td>
                   <td style="padding: 8px 0;"><a href="tel:${contact.phone}" style="color: #2563eb;">${contact.phone}</a></td>
                 </tr>
+                ` : ''}
                 ${contact.company ? `
                 <tr>
                   <td style="padding: 8px 0; color: #64748b;">Company:</td>
@@ -193,7 +195,7 @@ CONTACT INFORMATION
 -------------------
 Name: ${contact.name}
 Email: ${contact.email}
-Phone: ${contact.phone}
+${contact.phone ? `Phone: ${contact.phone}` : ''}
 ${contact.company ? `Company: ${contact.company}` : ''}
 ${eventDate ? `Need By: ${new Date(eventDate).toLocaleDateString()}` : ''}
 
