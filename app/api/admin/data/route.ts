@@ -147,12 +147,15 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
+    // Use type assertion on the client to bypass strict table typing
+    const db = supabase as any;
+    
     if (table === 'quotes') {
-      await supabase.from('quotes').update({ status } as any).eq('id', id);
+      await db.from('quotes').update({ status }).eq('id', id);
     } else if (table === 'contacts') {
-      await supabase.from('contacts').update({ status } as any).eq('id', id);
+      await db.from('contacts').update({ status }).eq('id', id);
     } else if (table === 'abandoned_carts') {
-      await supabase.from('abandoned_carts').update({ recovered: status === 'recovered' } as any).eq('id', id);
+      await db.from('abandoned_carts').update({ recovered: status === 'recovered' }).eq('id', id);
     } else {
       return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
     }
