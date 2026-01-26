@@ -4,7 +4,6 @@ import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
-import { MobileQuoteBar } from '@/components/quote/MobileQuoteBar';
 import { ExitIntentPopup } from '@/components/quote/ExitIntentPopup';
 
 const dmSans = DM_Sans({
@@ -31,7 +30,6 @@ export default function RootLayout({
         </main>
         <Footer />
         <QuoteDrawer />
-        <MobileQuoteBar />
         <ExitIntentPopup />
       </body>
     </html>

@@ -1,9 +1,41 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Phone, MessageSquare, Clock, ArrowRight } from 'lucide-react';
+import { X, Phone, MessageSquare, Clock, ArrowRight, Mail } from 'lucide-react';
 import { useQuoteStore } from '@/lib/quote-store';
 import Link from 'next/link';
+
+// Helper function to check if business is currently open
+// Business hours: Monday-Friday, 8am-5pm PST
+function isBusinessOpen(): { isOpen: boolean; message: string } {
+  const now = new Date();
+  // Convert to PST
+  const pstTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const day = pstTime.getDay(); // 0 = Sunday, 6 = Saturday
+  const hour = pstTime.getHours();
+  
+  const isWeekday = day >= 1 && day <= 5;
+  const isDuringHours = hour >= 8 && hour < 17;
+  
+  if (isWeekday && isDuringHours) {
+    return { isOpen: true, message: "We're available now!" };
+  }
+  
+  // Calculate next open time
+  if (day === 0) { // Sunday
+    return { isOpen: false, message: "Opens Monday 8am PST" };
+  } else if (day === 6) { // Saturday
+    return { isOpen: false, message: "Opens Monday 8am PST" };
+  } else if (hour < 8) {
+    return { isOpen: false, message: "Opens today at 8am PST" };
+  } else {
+    // After hours on weekday
+    if (day === 5) { // Friday after hours
+      return { isOpen: false, message: "Opens Monday 8am PST" };
+    }
+    return { isOpen: false, message: "Opens tomorrow 8am PST" };
+  }
+}
 
 export function ExitIntentPopup() {
   const [isVisible, setIsVisible] = useState(false);
@@ -11,6 +43,7 @@ export function ExitIntentPopup() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [businessStatus, setBusinessStatus] = useState(() => isBusinessOpen());
   
   const { items } = useQuoteStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -134,9 +167,9 @@ export function ExitIntentPopup() {
         ) : (
           <>
             {/* Header */}
-            <div className="bg-gradient-to-r from-navy-800 to-navy-900 px-6 py-8 text-white text-center">
-              <h2 className="text-2xl font-bold mb-2">Wait! Don&apos;t Lose Your Quote</h2>
-              <p className="text-slate-300">
+            <div className="bg-gradient-to-r from-navy-800 to-navy-900 px-6 py-8 text-center">
+              <h2 className="text-2xl font-bold mb-2 text-white">Wait! Don&apos;t Lose Your Quote</h2>
+              <p className="text-white/80">
                 You have {itemCount} item{itemCount !== 1 ? 's' : ''} in your quote
               </p>
             </div>
@@ -157,20 +190,37 @@ export function ExitIntentPopup() {
 
               {/* Options */}
               <div className="space-y-4">
-                {/* Option 1: Call */}
-                <a
-                  href="tel:+18559427636"
-                  className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all group"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-white group-hover:bg-brand-600">
-                    <Phone className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900">Talk to an Expert</p>
-                    <p className="text-sm text-slate-500">(855) 942-7636 • Mon-Fri 8am-5pm PST</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-brand-500" />
-                </a>
+                {/* Option 1: Call (when open) or Contact (when closed) */}
+                {businessStatus.isOpen ? (
+                  <a
+                    href="tel:+18559427636"
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all group"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-white group-hover:bg-green-600">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-900">Talk to an Expert</p>
+                      <p className="text-sm text-slate-500">(855) 942-7636 • Available now</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-brand-500" />
+                  </a>
+                ) : (
+                  <Link
+                    href="/contact"
+                    onClick={handleClose}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-all group"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-white group-hover:bg-brand-600">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-900">Leave Us a Message</p>
+                      <p className="text-sm text-slate-500">We respond within 2hrs • {businessStatus.message}</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-brand-500" />
+                  </Link>
+                )}
 
                 {/* Option 2: Save Quote */}
                 <div className="p-4 rounded-xl border-2 border-slate-200">

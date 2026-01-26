@@ -237,27 +237,91 @@ export default function QuotePage() {
   if (submitStatus === 'success') {
     return (
       <div className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-2xl px-4 py-20 text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-            <Check className="h-10 w-10 text-green-600" />
-          </div>
-          <h1 className="mt-6 text-3xl font-bold text-slate-900">Quote Submitted!</h1>
-          <p className="mt-4 text-lg text-slate-600">
-            Thank you for your interest. We've received your quote request and will 
-            get back to you within 1-2 business days.
-          </p>
-          {quoteId && (
-            <p className="mt-4 text-sm text-slate-500">
-              Reference ID: <span className="font-medium">{quoteId}</span>
+        <div className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
+          {/* Success Card */}
+          <div className="rounded-2xl bg-white p-8 shadow-sm text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h1 className="mt-5 text-2xl font-bold text-slate-900">Quote Submitted!</h1>
+            <p className="mt-3 text-slate-600">
+              Thank you for your interest. We've received your quote request and will 
+              get back to you within 1-2 business days.
             </p>
-          )}
-          <div className="mt-8 flex justify-center gap-4">
-            <Link href="/catalog">
-              <Button variant="primary">Continue Shopping</Button>
-            </Link>
-            <Link href="/">
-              <Button variant="secondary">Back to Home</Button>
-            </Link>
+            {quoteId && (
+              <p className="mt-3 text-sm text-slate-500">
+                Reference ID: <span className="font-medium">{quoteId}</span>
+              </p>
+            )}
+          </div>
+
+          {/* What's Next Section */}
+          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">What would you like to do next?</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Link
+                href="/quote"
+                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-600 group-hover:bg-brand-500 group-hover:text-white transition-colors">
+                  <ShoppingBag className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-slate-900">Start Another Quote</p>
+                  <p className="text-sm text-slate-500">Have another project?</p>
+                </div>
+              </Link>
+              
+              <Link
+                href="/catalog"
+                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                  <Shirt className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-slate-900">Browse Products</p>
+                  <p className="text-sm text-slate-500">Explore our catalog</p>
+                </div>
+              </Link>
+              
+              <Link
+                href="/services/screen-printing"
+                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-slate-900">Our Services</p>
+                  <p className="text-sm text-slate-500">Screen printing, embroidery & more</p>
+                </div>
+              </Link>
+              
+              <Link
+                href="/resources/screen-printing-guide"
+                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                  <Mail className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-slate-900">Download Our Guide</p>
+                  <p className="text-sm text-slate-500">Free screen printing tips</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Help Banner */}
+          <div className="mt-6 rounded-xl bg-slate-100 p-4 text-center">
+            <p className="text-sm text-slate-600">
+              Questions? Call us at{' '}
+              <a href="tel:+18559427636" className="font-semibold text-brand-600 hover:text-brand-700">
+                (855) 942-7636
+              </a>
+              {' '}— we respond in under 2 hours on average.
+            </p>
           </div>
         </div>
       </div>

@@ -101,8 +101,10 @@ function ContactForm() {
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2">
-            {/* Contact Form */}
-            <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+            {/* Left Column: Form + What Happens Next */}
+            <div className="space-y-6">
+              {/* Contact Form */}
+              <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
               {isSubmitted ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -238,7 +240,42 @@ function ContactForm() {
               )}
             </div>
 
-            {/* Contact Info */}
+              {/* What Happens Next - fills space below form */}
+              <div className="rounded-xl bg-slate-50 p-6 ring-1 ring-slate-200">
+                <h3 className="font-semibold text-slate-900 mb-4">What Happens Next?</h3>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white text-sm font-semibold">
+                      1
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">Submit Your Message</p>
+                      <p className="text-sm text-slate-500">We receive it instantly</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white text-sm font-semibold">
+                      2
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">We Respond Fast</p>
+                      <p className="text-sm text-slate-500">Average response: 2 hours</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white text-sm font-semibold">
+                      3
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">Get Your Solution</p>
+                      <p className="text-sm text-slate-500">Quote, answers, or next steps</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Info - Right Column */}
             <div className="space-y-6">
               {/* Contact Cards */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -306,17 +343,17 @@ function ContactForm() {
                 </div>
               </div>
 
-              {/* Map Embed */}
+              {/* Map Embed - Regional view showing Southern California */}
               <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3305.5741671547997!2d-117.7033088!3d34.0585073!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c334e72ab19de5%3A0x70e78e78f96d29e9!2s4778%20W%20Mission%20Blvd%2C%20Montclair%2C%20CA%2091762!5e0!3m2!1sen!2sus!4v1705959600000!5m2!1sen!2sus"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d423286.27405770525!2d-118.69192113701154!3d34.02016130653294!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c334e72ab19de5%3A0x70e78e78f96d29e9!2s4778%20W%20Mission%20Blvd%2C%20Montclair%2C%20CA%2091762!5e0!3m2!1sen!2sus!4v1705959600000!5m2!1sen!2sus"
                   width="100%"
                   height="280"
                   style={{ border: 0 }}
                   allowFullScreen
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
-                  title="Garment Decor Location"
+                  title="Garment Decor Location - Southern California"
                   className="grayscale hover:grayscale-0 transition-all duration-300"
                 />
               </div>

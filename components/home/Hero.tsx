@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Phone, ArrowRight, Star } from 'lucide-react';
+import { ArrowRight, Star, TrendingUp, Clock } from 'lucide-react';
+import { PhoneButton } from '@/components/ui/PhoneButton';
 
 export function Hero() {
   return (
@@ -36,29 +37,42 @@ export function Hero() {
                 <ArrowRight className="h-5 w-5" />
               </Link>
               
-              <a
-                href="tel:+18559427636"
+              <PhoneButton 
                 className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-navy-800 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:bg-navy-800 hover:text-white"
-              >
-                <Phone className="h-5 w-5" />
-                (855) 942-7636
-              </a>
+              />
             </div>
             
             {/* Quick Stats - hidden on mobile for cleaner above-the-fold */}
-            <div className="mt-12 hidden gap-8 border-t border-slate-200 pt-8 sm:flex">
-              <div>
-                <p className="text-3xl font-bold text-navy-800">1M+</p>
-                <p className="text-sm text-slate-500">Shirts/Year</p>
+            <div className="mt-10 hidden gap-6 border-t border-slate-200 pt-6 sm:flex">
+              <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-navy-800">1M+</p>
+                  <p className="text-xs text-slate-500">Shirts/Year</p>
+                </div>
               </div>
-              <div className="flex items-baseline gap-1">
-                <p className="text-3xl font-bold text-navy-800">4.8</p>
-                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-                <p className="ml-1 text-sm text-slate-500">(185)</p>
+              <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                  <Star className="h-5 w-5 fill-current" />
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-xl font-bold text-navy-800">4.8</p>
+                    <p className="text-xs text-slate-500">(185)</p>
+                  </div>
+                  <p className="text-xs text-slate-500">Reviews</p>
+                </div>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-navy-800">50pc</p>
-                <p className="text-sm text-slate-500">Min Order</p>
+              <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-navy-800">2hr</p>
+                  <p className="text-xs text-slate-500">Avg Response</p>
+                </div>
               </div>
             </div>
           </div>

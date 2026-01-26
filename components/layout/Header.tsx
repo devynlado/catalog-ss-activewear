@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { cn } from '@/lib/utils';
 import { Brand } from '@/lib/types';
 import { getMainCategories } from '@/lib/category-taxonomy';
+import { PhoneButton } from '@/components/ui/PhoneButton';
 
 // Services menu configuration
 const servicesMenu = {
@@ -65,6 +66,38 @@ interface MegaMenuConfig {
 
 // Mega menu configuration using SEO-friendly slug URLs
 // Format: /catalog/{parent-slug}/{sub-slug}
+// Helper function to check if business is currently open
+// Business hours: Monday-Friday, 8am-5pm PST
+function isBusinessOpen(): { isOpen: boolean; message: string } {
+  const now = new Date();
+  // Convert to PST
+  const pstTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const day = pstTime.getDay(); // 0 = Sunday, 6 = Saturday
+  const hour = pstTime.getHours();
+  
+  const isWeekday = day >= 1 && day <= 5;
+  const isDuringHours = hour >= 8 && hour < 17;
+  
+  if (isWeekday && isDuringHours) {
+    return { isOpen: true, message: "We're Available Now! • 10-30 sec wait" };
+  }
+  
+  // Calculate next open time
+  if (day === 0) { // Sunday
+    return { isOpen: false, message: "Opens Monday at 8am PST" };
+  } else if (day === 6) { // Saturday
+    return { isOpen: false, message: "Opens Monday at 8am PST" };
+  } else if (hour < 8) {
+    return { isOpen: false, message: "Opens today at 8am PST" };
+  } else {
+    // After hours on weekday
+    if (day === 5) { // Friday after hours
+      return { isOpen: false, message: "Opens Monday at 8am PST" };
+    }
+    return { isOpen: false, message: "Opens tomorrow at 8am PST" };
+  }
+}
+
 const megaMenuConfig: MegaMenuConfig = {
   // T-Shirts (category 21)
   '21': [
@@ -299,6 +332,7 @@ export function Header() {
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [businessStatus, setBusinessStatus] = useState(() => isBusinessOpen());
   const shopRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
@@ -402,6 +436,26 @@ export function Header() {
     };
   }, []);
 
+  // Update business status every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBusinessStatus(isBusinessOpen());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
   // Fetch brands for dropdown
   useEffect(() => {
     const fetchBrands = async () => {
@@ -453,19 +507,35 @@ export function Header() {
       <div className="bg-[#070131] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-10 items-center justify-between text-xs">
-            {/* Left - Talk to Our Team */}
-            <a 
-              href="tel:+18559427636" 
+            {/* Left - Talk to Our Team with dynamic status */}
+            <PhoneButton 
               className="flex items-center gap-2 text-white hover:text-brand-300 transition-colors group"
+              showIcon={false}
             >
-              <div className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white">
-                <Phone className="h-3 w-3" />
+              <div className={cn(
+                "flex items-center justify-center h-6 w-6 rounded-full text-white",
+                businessStatus.isOpen ? "bg-green-500" : "bg-slate-500"
+              )}>
+                {businessStatus.isOpen ? (
+                  <Phone className="h-3 w-3" />
+                ) : (
+                  <Mail className="h-3 w-3" />
+                )}
               </div>
               <div className="flex flex-col leading-tight">
                 <span className="font-semibold text-white group-hover:text-brand-300">Talk to Our Team</span>
-                <span className="text-[10px] text-slate-400">(855) 942-7636 • 10-30 sec wait</span>
+                <span className={cn(
+                  "text-[10px]",
+                  businessStatus.isOpen ? "text-green-400" : "text-slate-400"
+                )}>
+                  {businessStatus.isOpen ? (
+                    <>(855) 942-7636 • {businessStatus.message}</>
+                  ) : (
+                    <>{businessStatus.message} • Leave a message</>
+                  )}
+                </span>
               </div>
-            </a>
+            </PhoneButton>
             
             {/* Center - Rating badge */}
             <div className="hidden items-center gap-1 md:flex">
@@ -932,7 +1002,7 @@ export function Header() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="border-t border-slate-100 py-4 lg:hidden">
+          <div className="border-t border-slate-100 py-4 lg:hidden max-h-[calc(100vh-8rem)] overflow-y-auto">
             {/* Mobile Search */}
             <form action="/catalog" method="GET" className="mb-4 px-4">
               <div className="relative">
@@ -1106,13 +1176,10 @@ export function Header() {
 
               {/* Call CTA */}
               <div className="border-t border-slate-100 pt-4 mt-4">
-                <a
-                  href="tel:+18559427636"
+                <PhoneButton
                   className="flex items-center justify-center gap-2 rounded-lg bg-[#070131] px-4 py-3 text-sm font-medium text-white hover:bg-[#0f0652]"
-                >
-                  <Phone className="h-4 w-4" />
-                  Call (855) 942-7636
-                </a>
+                  iconClassName="h-4 w-4"
+                />
                 <p className="mt-2 text-center text-xs text-slate-500">
                   Average wait: 10-30 seconds
                 </p>

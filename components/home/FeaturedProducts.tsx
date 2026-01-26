@@ -35,7 +35,7 @@ export function FeaturedProducts() {
   }, []);
 
   return (
-    <section className="bg-slate-50 py-20">
+    <section className="bg-slate-50 py-12 sm:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex items-end justify-between">
@@ -66,7 +66,7 @@ export function FeaturedProducts() {
               <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
             </div>
           ) : products.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
               {products.slice(0, 8).map((product) => (
                 <ProductCard
                   key={product.id}
