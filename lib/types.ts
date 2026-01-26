@@ -219,11 +219,17 @@ export interface QuoteSubmission {
   contact: {
     name: string;
     email: string;
-    phone: string;
-    company: string;
-    message: string;
+    phone?: string;
+    company?: string;
+    message?: string;
   };
-  submittedAt: Date;
+  decoration?: {
+    type: string;
+    description?: string;
+  };
+  finishing?: string[];
+  eventDate?: string;
+  submittedAt?: Date;
 }
 
 // Filter Types
