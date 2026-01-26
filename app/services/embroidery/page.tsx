@@ -12,8 +12,10 @@ import {
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
 
-// Metadata handled in layout
+// Get images for this service
+const serviceImages = getServiceImages('embroidery');
 
 const whyChooseReasons = [
   {
@@ -89,16 +91,13 @@ const tips = [
   },
 ];
 
-const portfolioItems = [
-  { title: 'Corporate Polo Logo - Left Chest', tags: ['Embroidery', 'Corporate'] },
-  { title: '3D Puff Cap Embroidery', tags: ['Embroidery', 'Headwear'] },
-  { title: 'Restaurant Staff Uniforms', tags: ['Embroidery', 'Hospitality'] },
-  { title: 'Team Jacket Back Logo', tags: ['Embroidery', 'Sports'] },
-  { title: 'Medical Scrubs - Name & Title', tags: ['Embroidery', 'Healthcare'] },
-  { title: 'Golf Tournament Polos', tags: ['Embroidery', 'Events'] },
-  { title: 'Executive Gift Bags', tags: ['Embroidery', 'Corporate'] },
-  { title: 'Streetwear Brand Caps', tags: ['Embroidery', 'Fashion'] },
-];
+// Build portfolio items from service images
+const portfolioItems = serviceImages?.gallery.map((img, index) => ({
+  title: img.alt,
+  tags: ['Embroidery', index % 2 === 0 ? 'Custom' : 'Headwear'],
+  image: img.src,
+  alt: img.alt,
+})) || [];
 
 const shopCategories = [
   { name: 'Polos', href: '/catalog?category=52' },
@@ -123,6 +122,7 @@ export default function EmbroideryPage() {
         serviceSlug="embroidery"
         samplePrice="Starting at $4.25/piece"
         minimumOrder={50}
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -140,6 +140,7 @@ export default function EmbroideryPage() {
           { title: 'Embroidery', description: 'Our multi-head machines stitch your design with precision and speed.' },
           { title: 'Finishing', description: 'Backing is trimmed, loose threads are removed, and items are steamed.' },
         ]}
+        image={serviceImages?.gallery[0]}
       />
 
       {/* Embroidery Types */}

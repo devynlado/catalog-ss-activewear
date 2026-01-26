@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Monitor, Zap, Palette, Droplets, Clock, DollarSign, Check, Cpu } from 'lucide-react';
 import {
   ServiceHero,
@@ -13,8 +14,10 @@ import {
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
 
-// Metadata handled in layout
+// Get images for this service
+const serviceImages = getServiceImages('digital-screen-printing');
 
 const whyChooseReasons = [
   {
@@ -84,16 +87,13 @@ const tips = [
   },
 ];
 
-const portfolioItems = [
-  { title: 'Full Color Event Merchandise', tags: ['Digital', 'Events'] },
-  { title: 'Photorealistic Band Portrait Tee', tags: ['Digital', 'Music'] },
-  { title: 'Gradient Streetwear Collection', tags: ['Digital', 'Streetwear'] },
-  { title: 'Multi-Color Festival Lineup Shirts', tags: ['Digital', 'Festivals'] },
-  { title: 'Detailed Illustration Print', tags: ['Digital', 'Art'] },
-  { title: 'CMYK Brand Campaign Tees', tags: ['Digital', 'Corporate'] },
-  { title: 'Photo Print Marketing Merch', tags: ['Digital', 'Marketing'] },
-  { title: 'Complex Design Tour Merch', tags: ['Digital', 'Music'] },
-];
+// Build portfolio items from service images
+const portfolioItems = serviceImages?.gallery.map((img, index) => ({
+  title: img.alt,
+  tags: ['Digital', index % 2 === 0 ? 'Full Color' : 'Custom'],
+  image: img.src,
+  alt: img.alt,
+})) || [];
 
 const shopCategories = [
   { name: 'T-Shirts', href: '/catalog?category=21' },
@@ -117,6 +117,7 @@ export default function DigitalScreenPrintingPage() {
         serviceSlug="digital-screen-printing"
         samplePrice="Starting at $5.50/piece"
         minimumOrder={50}
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -133,6 +134,7 @@ export default function DigitalScreenPrintingPage() {
           { title: 'Curing', description: 'Prints pass through a gas conveyor dryer for 2+ minutes to fully cure and bond with the fabric.' },
           { title: 'Quality Check', description: 'Every piece is inspected for color accuracy and print quality before packing.' },
         ]}
+        image={serviceImages?.gallery[0]}
       />
 
       {/* Technology Section */}
@@ -158,16 +160,26 @@ export default function DigitalScreenPrintingPage() {
               </p>
             </div>
             
-            {/* Placeholder for technology image */}
+            {/* Technology image */}
             <div className="relative">
-              <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center overflow-hidden border border-blue-200">
-                <div className="text-center p-8">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <Monitor className="w-10 h-10 text-blue-500" />
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-blue-200">
+                {serviceImages?.gallery[1] ? (
+                  <Image
+                    src={serviceImages.gallery[1].src}
+                    alt={serviceImages.gallery[1].alt}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                    <div className="text-center p-8">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Monitor className="w-10 h-10 text-blue-500" />
+                      </div>
+                      <p className="text-sm text-blue-600 font-medium">Digital Screen Printing Machine</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-blue-600 font-medium">Digital Screen Printing Machine</p>
-                  <p className="text-xs text-blue-500 mt-1">Image placeholder</p>
-                </div>
+                )}
               </div>
             </div>
           </div>

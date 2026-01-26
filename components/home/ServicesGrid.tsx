@@ -1,52 +1,50 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Layers, PenTool, Monitor, Maximize } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight } from 'lucide-react';
+import { getServiceImages } from '@/lib/service-images';
 
 const services = [
   {
     id: 'screen-printing',
+    slug: 'screen-printing',
     title: 'Screen Printing',
     specs: [
       'Up to 12 colors',
-      'Max print: 16" x 20"',
+      'Max print: 17" x 23"',
       'Plastisol, water-based & discharge inks',
     ],
-    icon: Layers,
-    color: 'from-orange-500 to-red-500',
   },
   {
     id: 'embroidery',
+    slug: 'embroidery',
     title: 'Embroidery',
     specs: [
       'Up to 15 colors per design',
-      'Max size: 14" x 14"',
+      'Max size: 15.7" x 16.5"',
       '3D puff & flat embroidery',
     ],
-    icon: PenTool,
-    color: 'from-blue-500 to-indigo-500',
   },
   {
-    id: 'digital-squeegee',
+    id: 'digital-screen-printing',
+    slug: 'digital-screen-printing',
     title: 'Digital Squeegee',
     specs: [
       'Unlimited colors',
       'Photo-quality prints',
       'Soft hand feel finish',
     ],
-    icon: Monitor,
-    color: 'from-purple-500 to-pink-500',
   },
   {
-    id: 'jumbo-prints',
+    id: 'jumbo-screen-printing',
+    slug: 'jumbo-screen-printing',
     title: 'Jumbo Prints',
     specs: [
-      'Oversized prints up to 18" x 24"',
+      'Oversized prints up to 17" x 23"',
       'All-over print capable',
       'Front, back & sleeve coverage',
     ],
-    icon: Maximize,
-    color: 'from-green-500 to-teal-500',
   },
 ];
 
@@ -68,18 +66,28 @@ export function ServicesGrid() {
         {/* Services Grid */}
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => {
-            const Icon = service.icon;
+            const serviceImages = getServiceImages(service.slug);
+            const heroImage = serviceImages?.hero;
+            
             return (
               <Link
                 key={service.id}
                 href={`/services/${service.id}`}
                 className="group relative overflow-hidden rounded-2xl bg-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl"
               >
-                {/* Image/Icon Area */}
-                <div className={`relative h-44 bg-gradient-to-br ${service.color}`}>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Icon className="h-16 w-16 text-white/80" />
-                  </div>
+                {/* Image Area */}
+                <div className="relative h-44 overflow-hidden">
+                  {heroImage ? (
+                    <Image
+                      src={heroImage.src}
+                      alt={heroImage.alt}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-700" />
+                  )}
                 </div>
 
                 {/* Content */}

@@ -12,8 +12,10 @@ import {
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
 
-// Metadata handled in layout
+// Get images for this service
+const serviceImages = getServiceImages('puff-printing');
 
 const whyChooseReasons = [
   {
@@ -71,16 +73,13 @@ const tips = [
   },
 ];
 
-const portfolioItems = [
-  { title: 'Streetwear Brand Logo - Puff Chest Print', tags: ['Puff', 'Streetwear'] },
-  { title: 'Vintage Collegiate Design - Back Print', tags: ['Puff', 'Fashion'] },
-  { title: 'Music Festival Merch - 3D Text', tags: ['Puff', 'Events'] },
-  { title: 'Skate Brand Collection - Puff Graphics', tags: ['Puff', 'Action Sports'] },
-  { title: 'Boutique Fashion Line - Mixed Puff/Flat', tags: ['Puff', 'Retail'] },
-  { title: 'Sports Team Logo - Raised Effect', tags: ['Puff', 'Sports'] },
-  { title: 'Record Label Merch - Puff Typography', tags: ['Puff', 'Music'] },
-  { title: 'Lifestyle Brand - Premium Puff Print', tags: ['Puff', 'Lifestyle'] },
-];
+// Build portfolio items from service images
+const portfolioItems = serviceImages?.gallery.map((img, index) => ({
+  title: img.alt,
+  tags: ['Puff', index % 2 === 0 ? '3D Effect' : 'Streetwear'],
+  image: img.src,
+  alt: img.alt,
+})) || [];
 
 const shopCategories = [
   { name: 'Cotton T-Shirts', href: '/catalog?category=21' },
@@ -104,6 +103,7 @@ export default function PuffScreenPrintingPage() {
         serviceSlug="puff-screen-printing"
         samplePrice="Starting at $3.35/piece"
         minimumOrder={50}
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -120,6 +120,7 @@ export default function PuffScreenPrintingPage() {
           { title: 'Printing', description: 'The puff ink is carefully applied to ensure even coverage across the design.' },
           { title: 'Heat Activation', description: 'Garments pass through our dryer where heat activates the puff, creating the 3D effect.' },
         ]}
+        image={serviceImages?.gallery[0]}
       />
 
       {/* What Makes Great Puff Design */}

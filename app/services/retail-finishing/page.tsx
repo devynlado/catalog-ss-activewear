@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Package, Tag, Scissors, Award, Barcode, ShoppingBag, Check, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -8,8 +9,10 @@ import {
   ServiceCTA,
   ShopBlanksSection,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
 
-// Metadata handled in layout
+// Get images for this service
+const serviceImages = getServiceImages('retail-finishing');
 
 const finishingServices = [
   {
@@ -124,6 +127,7 @@ export default function RetailFinishingPage() {
         gradient="from-amber-500 to-orange-600"
         serviceSlug="retail-finishing"
         samplePrice="Starts at $1.00 at 100+ pieces"
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -204,16 +208,26 @@ export default function RetailFinishingPage() {
               </div>
             </div>
             
-            {/* Placeholder for relabeling image */}
+            {/* Relabeling image */}
             <div className="relative">
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center overflow-hidden border border-amber-200">
-                <div className="text-center p-8">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
-                    <Tag className="w-10 h-10 text-amber-500" />
+              <div className="aspect-square rounded-2xl overflow-hidden border border-amber-200">
+                {serviceImages?.gallery[1] || serviceImages?.hero ? (
+                  <Image
+                    src={(serviceImages?.gallery[1] || serviceImages?.hero)!.src}
+                    alt={(serviceImages?.gallery[1] || serviceImages?.hero)!.alt}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                    <div className="text-center p-8">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
+                        <Tag className="w-10 h-10 text-amber-500" />
+                      </div>
+                      <p className="text-sm text-amber-600 font-medium">Relabeling Example</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-amber-600 font-medium">Relabeling Example</p>
-                  <p className="text-xs text-amber-500 mt-1">Image placeholder</p>
-                </div>
+                )}
               </div>
             </div>
           </div>

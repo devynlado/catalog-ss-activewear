@@ -14,6 +14,10 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: 'Garment Decor Catalog | Blank Apparel & Decoration Services',
   description: 'Browse our catalog of blank apparel. View colors, check inventory, and request quotes for your business.',
+  icons: {
+    icon: '/images/brand/favicon.svg',
+    apple: '/images/brand/logo-circle-dark.svg',
+  },
 };
 
 export default function RootLayout({

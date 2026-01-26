@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
 import { getMainCategories } from '@/lib/category-taxonomy';
 
@@ -19,12 +20,14 @@ export function Footer() {
           {/* Contact Info */}
           <div className="lg:col-span-2">
             <div className="mb-6">
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-white font-bold text-lg">
-                  GD
-                </div>
-                <span className="font-bold text-xl">Garment Decor</span>
-              </div>
+              <Link href="/" className="inline-block">
+                <Image
+                  src="/images/brand/logo-wordmark-white.svg"
+                  alt="Garment Decor"
+                  width={180}
+                  height={40}
+                />
+              </Link>
               <p className="mt-3 text-sm text-slate-300">
                 Your trusted source for blank apparel and decoration services.
               </p>

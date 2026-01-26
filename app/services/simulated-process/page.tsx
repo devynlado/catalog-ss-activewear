@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Palette, Music, Camera, Droplets, Award, Layers, Check, Sparkles } from 'lucide-react';
 import {
   ServiceHero,
@@ -13,8 +14,10 @@ import {
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
 
-// Metadata handled in layout
+// Get images for this service
+const serviceImages = getServiceImages('simulated-process');
 
 const whyChooseReasons = [
   {
@@ -84,16 +87,13 @@ const tips = [
   },
 ];
 
-const portfolioItems = [
-  { title: 'Tour Merch - Artist Portrait', tags: ['Simulated Process', 'Music'] },
-  { title: 'Album Art Full Back Print', tags: ['Simulated Process', 'Music'] },
-  { title: 'Vintage Band Tee Recreation', tags: ['Simulated Process', 'Vintage'] },
-  { title: 'Festival Lineup Poster Shirt', tags: ['Simulated Process', 'Events'] },
-  { title: 'Photorealistic Product Promo', tags: ['Simulated Process', 'Corporate'] },
-  { title: 'Complex Illustration Print', tags: ['Simulated Process', 'Art'] },
-  { title: 'Moody Gradient Design', tags: ['Simulated Process', 'Fashion'] },
-  { title: 'Sports Team Photo Tee', tags: ['Simulated Process', 'Sports'] },
-];
+// Build portfolio items from service images
+const portfolioItems = serviceImages?.gallery.map((img, index) => ({
+  title: img.alt,
+  tags: ['Simulated Process', index % 2 === 0 ? 'Photorealistic' : 'Custom'],
+  image: img.src,
+  alt: img.alt,
+})) || [];
 
 const shopCategories = [
   { name: 'T-Shirts', href: '/catalog?category=21' },
@@ -117,6 +117,7 @@ export default function SimulatedProcessPage() {
         serviceSlug="simulated-process"
         samplePrice="Starting at $3.35/piece"
         minimumOrder={50}
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -133,6 +134,7 @@ export default function SimulatedProcessPage() {
           { title: 'Print Sequence', description: 'Colors are printed in precise sequence, building up the image layer by layer.' },
           { title: 'Final Cure', description: 'The completed print is cured to bond all layers permanently to the fabric.' },
         ]}
+        image={serviceImages?.gallery[0]}
       />
 
       {/* Tour Merch Section */}
@@ -168,16 +170,26 @@ export default function SimulatedProcessPage() {
               </ul>
             </div>
             
-            {/* Placeholder for tour merch image */}
+            {/* Tour merch image */}
             <div className="relative">
-              <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center overflow-hidden border border-rose-200">
-                <div className="text-center p-8">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-rose-500/10 flex items-center justify-center">
-                    <Music className="w-10 h-10 text-rose-500" />
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-rose-200">
+                {serviceImages?.gallery[1] ? (
+                  <Image
+                    src={serviceImages.gallery[1].src}
+                    alt={serviceImages.gallery[1].alt}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center">
+                    <div className="text-center p-8">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-rose-500/10 flex items-center justify-center">
+                        <Music className="w-10 h-10 text-rose-500" />
+                      </div>
+                      <p className="text-sm text-rose-600 font-medium">Tour Merch Example</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-rose-600 font-medium">Tour Merch Example</p>
-                  <p className="text-xs text-rose-500 mt-1">Image placeholder</p>
-                </div>
+                )}
               </div>
             </div>
           </div>

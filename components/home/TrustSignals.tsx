@@ -1,6 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { Building2, Users, Heart } from 'lucide-react';
+import { warehouseImages } from '@/lib/service-images';
 
 export function TrustSignals() {
   return (
@@ -59,19 +61,23 @@ export function TrustSignals() {
             </div>
           </div>
 
-          {/* Image placeholder */}
+          {/* Facility Image */}
           <div className="relative">
-            <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 ring-1 ring-slate-200">
-              <div className="flex h-full items-center justify-center p-8 text-center">
-                <div>
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-500 text-white">
-                    <Building2 className="h-8 w-8" />
-                  </div>
-                  <p className="text-lg font-semibold text-brand-900">Montclair, California</p>
-                  <p className="mt-1 text-sm text-brand-700">
-                    Our 25,000 sq ft production facility
-                  </p>
-                </div>
+            <div className="aspect-[4/3] overflow-hidden rounded-2xl ring-1 ring-slate-200">
+              <Image
+                src={warehouseImages.facility.src}
+                alt={warehouseImages.facility.alt}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+              {/* Overlay with location info */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <p className="text-lg font-semibold">Montclair, California</p>
+                <p className="mt-1 text-sm text-white/80">
+                  Our 25,000 sq ft production facility
+                </p>
               </div>
             </div>
             

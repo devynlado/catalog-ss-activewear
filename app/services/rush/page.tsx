@@ -9,8 +9,10 @@ import {
   PortfolioGrid,
   ServiceCTA,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
 
-// Metadata handled in layout
+// Get images for this service
+const serviceImages = getServiceImages('rush');
 
 const turnaroundTiers = [
   {
@@ -99,16 +101,13 @@ const tips = [
   },
 ];
 
-const portfolioItems = [
-  { title: '48-Hour Event T-Shirts - 500 pieces', tags: ['Rush', 'Screen Printing'] },
-  { title: 'Last-Minute Tour Merch Drop', tags: ['Rush', 'Music'] },
-  { title: 'Emergency Corporate Event Polos', tags: ['Rush', 'Embroidery'] },
-  { title: 'Festival Vendor Shirts - 3 Day Turn', tags: ['Rush', 'Events'] },
-  { title: 'Sports Championship Gear', tags: ['Rush', 'Sports'] },
-  { title: 'Product Launch Promo Items', tags: ['Rush', 'Corporate'] },
-  { title: 'Wedding Party Emergency Order', tags: ['Rush', 'Special Events'] },
-  { title: 'Trade Show Booth Uniforms', tags: ['Rush', 'Corporate'] },
-];
+// Build portfolio items from service images
+const portfolioItems = serviceImages?.gallery.map((img, index) => ({
+  title: img.alt,
+  tags: ['Rush', index % 2 === 0 ? 'Fast Turn' : 'Custom'],
+  image: img.src,
+  alt: img.alt,
+})) || [];
 
 export default function RushPage() {
   return (
@@ -121,6 +120,7 @@ export default function RushPage() {
         icon={Zap}
         gradient="from-amber-500 to-orange-600"
         serviceSlug="rush"
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}

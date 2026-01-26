@@ -637,13 +637,24 @@ export function Header() {
           <div className="flex h-14 items-center justify-between">
             {/* Logo */}
             <div className="flex items-center">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-white font-bold text-lg">
-                  GD
-                </div>
-                <span className="hidden font-bold text-xl text-navy-800 sm:block">
-                  Garment Decor
-                </span>
+              <Link href="/" className="flex items-center py-2">
+                {/* Mobile: Circle logo icon */}
+                <Image
+                  src="/images/brand/logo-circle-dark.svg"
+                  alt="Garment Decor"
+                  width={36}
+                  height={36}
+                  className="sm:hidden"
+                />
+                {/* Desktop: Full wordmark */}
+                <Image
+                  src="/images/brand/logo-wordmark-dark.svg"
+                  alt="Garment Decor"
+                  width={160}
+                  height={36}
+                  className="hidden sm:block"
+                  priority
+                />
               </Link>
             </div>
 

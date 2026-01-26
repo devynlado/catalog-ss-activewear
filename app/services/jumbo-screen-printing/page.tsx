@@ -13,8 +13,10 @@ import {
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
 
-// Metadata handled in layout
+// Get images for this service
+const serviceImages = getServiceImages('jumbo-screen-printing');
 
 const whyChooseReasons = [
   {
@@ -84,16 +86,13 @@ const tips = [
   },
 ];
 
-const portfolioItems = [
-  { title: 'Streetwear Full Back Print', tags: ['Jumbo', 'Streetwear'] },
-  { title: 'Tour Merch Oversized Graphics', tags: ['Jumbo', 'Music'] },
-  { title: 'Festival Collection - Statement Tees', tags: ['Jumbo', 'Events'] },
-  { title: 'Skate Brand All-Over Print', tags: ['Jumbo', 'Action Sports'] },
-  { title: 'Fashion Label Lookbook Pieces', tags: ['Jumbo', 'Fashion'] },
-  { title: 'Album Release Merch - Full Coverage', tags: ['Jumbo', 'Music'] },
-  { title: 'Vintage Style Oversized Print', tags: ['Jumbo', 'Vintage'] },
-  { title: 'Artist Collaboration - Statement Piece', tags: ['Jumbo', 'Art'] },
-];
+// Build portfolio items from service images
+const portfolioItems = serviceImages?.gallery.map((img, index) => ({
+  title: img.alt,
+  tags: ['Jumbo', index % 2 === 0 ? 'Oversized' : 'Streetwear'],
+  image: img.src,
+  alt: img.alt,
+})) || [];
 
 const shopCategories = [
   { name: 'Heavyweight T-Shirts', href: '/catalog?category=21' },
@@ -118,6 +117,7 @@ export default function JumboScreenPrintingPage() {
         serviceSlug="jumbo-screen-printing"
         samplePrice="Starting at $3.75/piece"
         minimumOrder={50}
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -134,6 +134,7 @@ export default function JumboScreenPrintingPage() {
           { title: 'Controlled Printing', description: 'Even ink coverage across the entire print area for consistent results.' },
           { title: 'Full Cure', description: 'Extended time in our conveyor dryer ensures complete curing across the larger print area.' },
         ]}
+        image={serviceImages?.gallery[0]}
       />
 
       {/* Size Comparison */}

@@ -14,6 +14,10 @@ import {
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
+import { getServiceImages } from '@/lib/service-images';
+
+// Get images for this service
+const serviceImages = getServiceImages('screen-printing');
 
 // Metadata moved to layout or handled differently for client components
 
@@ -130,16 +134,13 @@ const tips = [
   },
 ];
 
-const portfolioItems = [
-  { title: 'Custom Band Merch - Full Color Back Print', tags: ['Screen Printing', 'Music'] },
-  { title: 'Corporate Uniforms - Left Chest Logo', tags: ['Screen Printing', 'Corporate'] },
-  { title: 'Streetwear Collection - Oversized Print', tags: ['Jumbo', 'Fashion'] },
-  { title: 'Event T-Shirts - Multi-Color Front', tags: ['Screen Printing', 'Events'] },
-  { title: 'Sports Team Jerseys - Numbers & Names', tags: ['Screen Printing', 'Sports'] },
-  { title: 'Restaurant Staff Shirts - Simple Logo', tags: ['Screen Printing', 'Food'] },
-  { title: 'Nonprofit Fundraiser Tees', tags: ['Screen Printing', 'Nonprofit'] },
-  { title: 'Retail Brand Launch Collection', tags: ['Screen Printing', 'Retail'] },
-];
+// Build portfolio items from service images
+const portfolioItems = serviceImages?.gallery.map((img, index) => ({
+  title: img.alt,
+  tags: ['Screen Printing', index % 2 === 0 ? 'Custom' : 'Streetwear'],
+  image: img.src,
+  alt: img.alt,
+})) || [];
 
 const shopCategories = [
   { name: 'T-Shirts', href: '/catalog?category=21' },
@@ -163,6 +164,7 @@ export default function ScreenPrintingPage() {
         serviceSlug="screen-printing"
         samplePrice="Starting at $2.45/piece"
         minimumOrder={50}
+        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -248,6 +250,7 @@ export default function ScreenPrintingPage() {
           { title: 'Production', description: 'Garments are loaded, printed, and flash-cured between colors for multi-color designs.' },
           { title: 'Final Cure', description: 'Prints pass through a conveyor dryer at 320-330°F to fully cure and ensure durability.' },
         ]}
+        image={serviceImages?.gallery[0]}
       />
 
       {/* Method Comparison Table */}
