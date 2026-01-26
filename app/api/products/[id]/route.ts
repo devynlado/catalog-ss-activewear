@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProductById } from '@/lib/ss-activewear';
+import { getProductById, getInventoryMatrix } from '@/lib/ss-activewear';
+import { getProductByStyleId, getCacheStats } from '@/lib/product-cache';
+
+/**
+ * Product Detail API - Hybrid Approach
+ * 
+ * 1. Try Supabase cache first (fast: ~100ms) - includes cached inventory
+ * 2. Optionally fetch real-time inventory from SS API (accurate but slower)
+ * 3. Fall back to SS API if cache miss
+ * 
+ * Query params:
+ * - liveInventory=true: Fetch real-time inventory from SS API
+ */
 
 export async function GET(
   request: NextRequest,
@@ -7,6 +19,8 @@ export async function GET(
 ) {
   try {
     const styleId = parseInt(params.id, 10);
+    const { searchParams } = new URL(request.url);
+    const liveInventory = searchParams.get('liveInventory') === 'true';
     
     if (isNaN(styleId)) {
       return NextResponse.json(
@@ -15,6 +29,64 @@ export async function GET(
       );
     }
 
+    // ========================================================================
+    // TRY SUPABASE CACHE FIRST (fast path)
+    // ========================================================================
+    try {
+      const stats = await getCacheStats();
+      
+      if (stats.totalProducts > 0) {
+        console.log(`[Product Detail] Using Supabase cache for style ${styleId}`);
+        
+        const cachedProduct = await getProductByStyleId(styleId);
+        
+        if (cachedProduct) {
+          // If live inventory requested, merge real-time qty from SS API
+          if (liveInventory) {
+            try {
+              console.log(`[Product Detail] Fetching live inventory for style ${styleId}`);
+              const liveInventoryData = await getInventoryMatrix(styleId);
+              
+              // Merge live inventory into cached product
+              if (liveInventoryData && liveInventoryData.length > 0) {
+                // Build inventory lookup map
+                const inventoryMap = new Map<string, number>();
+                for (const inv of liveInventoryData) {
+                  // Key: colorCode-sizeName
+                  const key = `${inv.colorCode}-${inv.sizeName}`;
+                  inventoryMap.set(key, (inventoryMap.get(key) || 0) + inv.qty);
+                }
+                
+                // Update quantities in cached product
+                for (const color of cachedProduct.colors) {
+                  for (const size of color.sizes) {
+                    const key = `${color.colorCode}-${size.name}`;
+                    const liveQty = inventoryMap.get(key);
+                    if (liveQty !== undefined) {
+                      size.qty = liveQty;
+                    }
+                  }
+                }
+              }
+            } catch (invError) {
+              console.warn(`[Product Detail] Live inventory fetch failed, using cached qty:`, invError);
+              // Continue with cached inventory - still better than failing
+            }
+          }
+          
+          return NextResponse.json(cachedProduct);
+        }
+      }
+    } catch (cacheError) {
+      console.warn('[Product Detail] Cache lookup failed:', cacheError);
+      // Fall through to SS API
+    }
+
+    // ========================================================================
+    // FALLBACK: SS ACTIVEWEAR API (slow path)
+    // ========================================================================
+    console.log(`[Product Detail] Cache miss, using SS API for style ${styleId}`);
+    
     const product = await getProductById(styleId);
 
     if (!product) {

@@ -1,7 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { 
+  getProductsFromCache, 
+  searchProductsFromCache, 
+  getPopularProducts,
+  getCacheStats 
+} from '@/lib/product-cache';
 import { getProducts, searchProducts, getProductsByStyleNumbers } from '@/lib/ss-activewear';
 import { Product } from '@/lib/types';
 import { POPULAR_PRODUCTS, ProductTier } from '@/lib/popular-products';
+
+// ============================================================================
+// CACHE STATUS CHECK
+// ============================================================================
+let cacheAvailable: boolean | null = null;
+
+async function isCacheAvailable(): Promise<boolean> {
+  if (cacheAvailable !== null) return cacheAvailable;
+  
+  try {
+    const stats = await getCacheStats();
+    cacheAvailable = stats.totalProducts > 0;
+    console.log(`[Products API] Cache available: ${cacheAvailable} (${stats.totalProducts} products)`);
+    return cacheAvailable;
+  } catch (error) {
+    console.log('[Products API] Cache check failed, using SS API fallback');
+    cacheAvailable = false;
+    return false;
+  }
+}
+
+// Reset cache status periodically (every 5 minutes)
+setInterval(() => {
+  cacheAvailable = null;
+}, 5 * 60 * 1000);
 
 // ============================================================================
 // STRICT MATCHING: Build map of brand+style combinations only
@@ -335,7 +366,6 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
     
-    
     // Quick filters
     const onSale = searchParams.get('onSale') === 'true';
     const sustainable = searchParams.get('sustainable') === 'true';
@@ -343,6 +373,62 @@ export async function GET(request: NextRequest) {
     const streetwear = searchParams.get('streetwear') === 'true'; // Streetwear tier only
     const hasQuickFilters = onSale || sustainable;
     const hasPopularFilters = featured || streetwear;
+
+    // ========================================================================
+    // TRY SUPABASE CACHE FIRST (fast path: ~100-200ms)
+    // ========================================================================
+    const useCache = await isCacheAvailable();
+    
+    if (useCache) {
+      console.log('[Products API] Using Supabase cache');
+      
+      try {
+        // Search query
+        if (search) {
+          const result = await searchProductsFromCache(search, {
+            page,
+            pageSize,
+            featured: hasPopularFilters,
+            sustainable,
+          });
+          return NextResponse.json(result);
+        }
+        
+        // No filters - show popular products
+        const noFilters = !brand && !category && !attr && !colorFamily && !style;
+        
+        if (noFilters || hasPopularFilters) {
+          const result = await getPopularProducts({
+            page,
+            pageSize,
+            streetwear,
+          });
+          return NextResponse.json(result);
+        }
+        
+        // With filters
+        const result = await getProductsFromCache({
+          brand: brand || undefined,
+          colorFamily: colorFamily || undefined,
+          sustainable,
+          featured: hasPopularFilters,
+          streetwear,
+          page,
+          pageSize,
+        });
+        return NextResponse.json(result);
+        
+      } catch (cacheError) {
+        console.error('[Products API] Cache error, falling back to SS API:', cacheError);
+        // Fall through to SS API fallback
+      }
+    }
+    
+    // ========================================================================
+    // FALLBACK: SS ACTIVEWEAR API (slow path: 5-15 seconds)
+    // Used when cache is empty or has errors
+    // ========================================================================
+    console.log('[Products API] Using SS API fallback');
 
     let allProducts;
 

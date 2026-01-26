@@ -1,11 +1,145 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { POPULAR_PRODUCTS } from '@/lib/popular-products';
+import { POPULAR_PRODUCTS, ProductCategory, ProductTier } from '@/lib/popular-products';
 import { 
   generateFeedRow, 
   generateCSV, 
   GMCFeedRow,
   ProductVariant 
 } from '@/lib/gmc-feed';
+import { createServerSupabaseClient } from '@/lib/supabase';
+
+// ============================================================================
+// FETCH FROM SUPABASE CACHE (fast)
+// ============================================================================
+async function fetchFromSupabase(): Promise<{
+  rows: GMCFeedRow[];
+  fromCache: boolean;
+}> {
+  const supabase = createServerSupabaseClient();
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
+  
+  // Check if we have cached data
+  const { count } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
+    .eq('is_popular', true);
+  
+  if (!count || count === 0) {
+    return { rows: [], fromCache: false };
+  }
+  
+  // Fetch all popular products with their SKUs
+  const { data: products, error } = await supabase
+    .from('products')
+    .select(`
+      style_id,
+      style_name,
+      brand_name,
+      title_raw,
+      title_optimized,
+      description_raw,
+      description_optimized,
+      primary_image_url,
+      popular_tier,
+      base_category,
+      product_type,
+      google_category_id,
+      google_category_name,
+      material,
+      gender,
+      age_group,
+      product_skus (
+        sku,
+        color_name,
+        color_code,
+        size_name,
+        cogs,
+        retail_price,
+        sale_price,
+        auto_min_price,
+        gtin,
+        piece_weight,
+        qty,
+        availability
+      )
+    `)
+    .eq('is_active', true)
+    .eq('is_popular', true);
+  
+  if (error || !products) {
+    console.error('[GMC Feed] Supabase query error:', error);
+    return { rows: [], fromCache: false };
+  }
+  
+  // Build a map of style_id -> category from POPULAR_PRODUCTS
+  const categoryMap = new Map<number, ProductCategory>();
+  const styleIdMap = new Map<string, number>();
+  
+  // First, build a lookup of styleName -> styleId from products
+  for (const p of products) {
+    styleIdMap.set(p.style_name.toLowerCase(), p.style_id);
+  }
+  
+  // Then map popular products to their categories
+  for (const pop of POPULAR_PRODUCTS) {
+    // Try to find matching product by style name
+    const matchingProduct = products.find(p => 
+      p.style_name.toLowerCase().includes(pop.styleNumber.toLowerCase()) ||
+      pop.styleNumber.toLowerCase().includes(p.style_name.toLowerCase().split(' ')[0])
+    );
+    if (matchingProduct) {
+      categoryMap.set(matchingProduct.style_id, pop.category);
+    }
+  }
+  
+  // Generate GMC rows from cached data
+  const feedRows: GMCFeedRow[] = [];
+  
+  for (const product of products) {
+    const skus = product.product_skus || [];
+    const category = categoryMap.get(product.style_id) || 't-shirts' as ProductCategory;
+    const tier = (product.popular_tier || 'value') as ProductTier;
+    
+    for (const sku of skus) {
+      const variant: ProductVariant = {
+        sku: sku.sku,
+        styleId: product.style_id,
+        styleName: product.title_optimized || product.title_raw || product.style_name,
+        brandName: product.brand_name,
+        colorName: sku.color_name,
+        colorCode: sku.color_code,
+        sizeName: sku.size_name,
+        customerPrice: sku.cogs || 0,  // COGS for pricing calculation
+        gtin: sku.gtin || '',
+        pieceWeight: sku.piece_weight || 0,
+        material: product.material || '',
+        colorSwatchImage: '',
+        styleImage: product.primary_image_url || '',
+      };
+      
+      const row = generateFeedRow(variant, category, tier, baseUrl);
+      
+      // Override with cached values
+      row.availability = sku.availability === 'in_stock' ? 'in_stock' : 'out_of_stock';
+      row.price = sku.retail_price ? `${sku.retail_price.toFixed(2)} USD` : row.price;
+      if (sku.sale_price) {
+        row.sale_price = `${sku.sale_price.toFixed(2)} USD`;
+      }
+      row.cost_of_goods_sold = sku.cogs ? `${sku.cogs.toFixed(2)} USD` : '';
+      row.auto_pricing_min_price = sku.auto_min_price ? `${sku.auto_min_price.toFixed(2)} USD` : '';
+      
+      feedRows.push(row);
+    }
+  }
+  
+  console.log(`[GMC Feed] Generated ${feedRows.length} rows from Supabase cache`);
+  return { rows: feedRows, fromCache: true };
+}
+
+// ============================================================================
+// FETCH FROM SS API (slow fallback)
+// ============================================================================
 
 // SS Activewear API credentials
 const SS_USERNAME = process.env.SS_USERNAME;
@@ -122,35 +256,62 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'csv';
     const limit = parseInt(searchParams.get('limit') || '0') || undefined;
+    const forceRefresh = searchParams.get('refresh') === 'true';
     
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
     
-    // Get style numbers from popular products
-    let styleNumbers = [...new Set(POPULAR_PRODUCTS.map(p => p.styleNumber))];
+    let feedRows: GMCFeedRow[] = [];
+    let source = 'ss_api';
     
-    if (limit) {
-      styleNumbers = styleNumbers.slice(0, limit);
+    // ========================================================================
+    // TRY SUPABASE CACHE FIRST (fast: ~1-2 seconds vs 30-60 seconds)
+    // ========================================================================
+    if (!forceRefresh) {
+      try {
+        const cached = await fetchFromSupabase();
+        if (cached.fromCache && cached.rows.length > 0) {
+          feedRows = cached.rows;
+          source = 'supabase_cache';
+          console.log(`[GMC Feed] Using Supabase cache (${feedRows.length} rows)`);
+        }
+      } catch (cacheError) {
+        console.warn('[GMC Feed] Cache fetch failed:', cacheError);
+        // Fall through to SS API
+      }
     }
     
-    // Fetch product data from SS Activewear
-    const productsMap = await fetchSSProducts(styleNumbers);
-    
-    // Generate feed rows
-    const feedRows: GMCFeedRow[] = [];
-    
-    for (const product of POPULAR_PRODUCTS) {
-      const ssProduct = productsMap.get(product.styleNumber);
+    // ========================================================================
+    // FALLBACK: SS API (slow)
+    // ========================================================================
+    if (feedRows.length === 0) {
+      console.log('[GMC Feed] Using SS API fallback');
+      source = 'ss_api';
       
-      if (ssProduct && ssProduct.variants.length > 0) {
-        // Create a row for each variant (color/size combination)
-        for (const variant of ssProduct.variants) {
-          const row = generateFeedRow(
-            variant,
-            product.category,
-            product.tier,
-            baseUrl
-          );
-          feedRows.push(row);
+      // Get style numbers from popular products
+      let styleNumbers = [...new Set(POPULAR_PRODUCTS.map(p => p.styleNumber))];
+      
+      if (limit) {
+        styleNumbers = styleNumbers.slice(0, limit);
+      }
+      
+      // Fetch product data from SS Activewear
+      const productsMap = await fetchSSProducts(styleNumbers);
+      
+      // Generate feed rows
+      for (const product of POPULAR_PRODUCTS) {
+        const ssProduct = productsMap.get(product.styleNumber);
+        
+        if (ssProduct && ssProduct.variants.length > 0) {
+          // Create a row for each variant (color/size combination)
+          for (const variant of ssProduct.variants) {
+            const row = generateFeedRow(
+              variant,
+              product.category,
+              product.tier,
+              baseUrl
+            );
+            feedRows.push(row);
+          }
         }
       }
     }
@@ -161,6 +322,7 @@ export async function GET(request: NextRequest) {
     if (format === 'json') {
       return NextResponse.json({
         count: finalRows.length,
+        source,
         products: finalRows,
       });
     }
@@ -173,6 +335,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': 'attachment; filename="garment-decor-gmc-feed.csv"',
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'X-Feed-Source': source,
       },
     });
   } catch (error) {

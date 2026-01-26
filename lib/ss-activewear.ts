@@ -1245,9 +1245,13 @@ export async function getProductsByStyleNumbers(
 
 /**
  * Transform SS Activewear product to our Product type
+ * Applies retail markup (1.40x) to all COGS prices
  */
+const RETAIL_MARKUP = 1.40;
+
 function transformProduct(ssProduct: SSProduct): Product {
   // Handle color variants if available
+  // Apply retail markup to COGS prices
   const colors: ProductColor[] = ssProduct.styles?.map(style => ({
     colorName: style.colorName,
     colorCode: style.colorCode,
@@ -1256,14 +1260,25 @@ function transformProduct(ssProduct: SSProduct): Product {
     frontImage: style.colorFrontImage ? buildImageUrl(style.colorFrontImage) : buildImageUrl(ssProduct.styleImage),
     backImage: style.colorBackImage ? buildImageUrl(style.colorBackImage) : '',
     sideImage: style.colorSideImage ? buildImageUrl(style.colorSideImage) : (style.colorDirectSideImage ? buildImageUrl(style.colorDirectSideImage) : ''),
-    sizes: style.sizes?.map(size => ({
-      name: size.sizeName,
-      code: size.sizeCode,
-      price: size.piecePrice || size.customerPrice || 0,
-      salePrice: size.salePrice,
-      qty: size.qty || 0,
-      gtin: size.gtin || '',
-    })) || [],
+    sizes: style.sizes?.map(size => {
+      const cogs = size.piecePrice || size.customerPrice || 0;
+      const retailPrice = Math.round(cogs * RETAIL_MARKUP * 100) / 100;
+      
+      // Only set sale price if genuinely on sale (sale COGS < regular COGS)
+      let saleRetailPrice: number | null = null;
+      if (size.salePrice && size.salePrice > 0 && size.salePrice < cogs) {
+        saleRetailPrice = Math.round(size.salePrice * RETAIL_MARKUP * 100) / 100;
+      }
+      
+      return {
+        name: size.sizeName,
+        code: size.sizeCode,
+        price: retailPrice,
+        salePrice: saleRetailPrice,
+        qty: size.qty || 0,
+        gtin: size.gtin || '',
+      };
+    }) || [],
   })) || [];
 
   // Parse category IDs from comma-separated string
@@ -1271,8 +1286,16 @@ function transformProduct(ssProduct: SSProduct): Product {
     ? ssProduct.categories.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id))
     : [];
   
-  const price = ssProduct.ourPrice || ssProduct.basePrice || 0;
-  const salePrice = ssProduct.salePrice || null;
+  // Calculate min prices from all sizes
+  const allSizes = colors.flatMap(c => c.sizes);
+  const retailPrices = allSizes.map(s => s.price).filter(p => p > 0);
+  const salePrices = allSizes.map(s => s.salePrice).filter((p): p is number => p !== null && p > 0);
+  
+  const minRetailPrice = retailPrices.length > 0 ? Math.min(...retailPrices) : 0;
+  const minSalePrice = salePrices.length > 0 ? Math.min(...salePrices) : null;
+  
+  // Product is on sale if there's a genuine sale price
+  const isOnSale = minSalePrice !== null && minSalePrice < minRetailPrice;
   
   return {
     id: ssProduct.styleID.toString(),
@@ -1282,14 +1305,14 @@ function transformProduct(ssProduct: SSProduct): Product {
     brandId: ssProduct.brandID || 0,
     title: ssProduct.title || ssProduct.styleName,
     description: ssProduct.description || '',
-    basePrice: ssProduct.basePrice || 0,
-    price,
-    salePrice,
+    basePrice: minRetailPrice,
+    price: minRetailPrice,
+    salePrice: isOnSale ? minSalePrice : null,
     imageUrl: buildImageUrl(ssProduct.styleImage),
     categories: categoryIds.map(id => ({ id, name: ssProduct.baseCategory || '' })),
     colors,
     // Product flags
-    isOnSale: salePrice !== null && salePrice > 0 && salePrice < price,
+    isOnSale,
     isSustainable: ssProduct.sustainableStyle || false,
     isNew: ssProduct.newStyle || false,
   };

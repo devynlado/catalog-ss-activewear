@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { getProductById } from '@/lib/ss-activewear';
+import { getProductByStyleId, getCacheStats } from '@/lib/product-cache';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductBreadcrumbs } from '@/components/catalog/ProductBreadcrumbs';
 import { CompanionProducts } from '@/components/builder/CompanionProducts';
@@ -13,11 +14,34 @@ interface ProductPageProps {
   };
 }
 
+/**
+ * Helper to get product - tries cache first, then SS API fallback
+ */
+async function getProduct(styleId: number) {
+  // Try Supabase cache first (fast path)
+  try {
+    const stats = await getCacheStats();
+    if (stats.totalProducts > 0) {
+      const cachedProduct = await getProductByStyleId(styleId);
+      if (cachedProduct) {
+        console.log(`[Product Page] Using cache for style ${styleId}`);
+        return cachedProduct;
+      }
+    }
+  } catch (e) {
+    console.warn('[Product Page] Cache lookup failed:', e);
+  }
+  
+  // Fall back to SS API
+  console.log(`[Product Page] Cache miss, using SS API for style ${styleId}`);
+  return getProductById(styleId);
+}
+
 export async function generateMetadata({ params }: ProductPageProps) {
   const styleId = parseInt(params.styleId, 10);
   if (isNaN(styleId)) return { title: 'Product Not Found' };
 
-  const product = await getProductById(styleId);
+  const product = await getProduct(styleId);
   if (!product) return { title: 'Product Not Found' };
 
   return {
@@ -33,7 +57,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  const product = await getProductById(styleId);
+  const product = await getProduct(styleId);
 
   if (!product) {
     notFound();
