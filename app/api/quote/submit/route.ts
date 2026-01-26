@@ -127,7 +127,8 @@ export async function POST(request: NextRequest) {
 
     // Save to Supabase
     try {
-      const supabase = createServerSupabaseClient();
+      // Cast to any to bypass strict Supabase table typing
+      const supabase = createServerSupabaseClient() as any;
       await supabase.from('quotes').insert({
         quote_id: quoteId,
         customer_name: body.contact.name,

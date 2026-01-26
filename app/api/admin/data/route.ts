@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = createServerSupabaseClient();
+    // Cast to any to bypass strict Supabase table typing
+    const supabase = createServerSupabaseClient() as any;
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'summary';
 
@@ -145,17 +146,15 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient();
-
-    // Use type assertion on the client to bypass strict table typing
-    const db = supabase as any;
+    // Cast to any to bypass strict Supabase table typing
+    const supabase = createServerSupabaseClient() as any;
     
     if (table === 'quotes') {
-      await db.from('quotes').update({ status }).eq('id', id);
+      await supabase.from('quotes').update({ status }).eq('id', id);
     } else if (table === 'contacts') {
-      await db.from('contacts').update({ status }).eq('id', id);
+      await supabase.from('contacts').update({ status }).eq('id', id);
     } else if (table === 'abandoned_carts') {
-      await db.from('abandoned_carts').update({ recovered: status === 'recovered' }).eq('id', id);
+      await supabase.from('abandoned_carts').update({ recovered: status === 'recovered' }).eq('id', id);
     } else {
       return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
     }

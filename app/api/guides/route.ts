@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
     // Try to save to Supabase
     try {
       const { createServerSupabaseClient } = await import('@/lib/supabase');
-      const supabase = createServerSupabaseClient();
+      // Cast to any to bypass strict Supabase table typing
+      const supabase = createServerSupabaseClient() as any;
       
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: existing } = await supabase

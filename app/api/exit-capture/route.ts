@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient();
+    // Cast to any to bypass strict Supabase table typing
+    const supabase = createServerSupabaseClient() as any;
 
     // Check if we already captured this email today (prevent duplicates)
     const today = new Date();

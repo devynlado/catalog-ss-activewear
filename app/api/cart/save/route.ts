@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient();
+    // Cast to any to bypass strict Supabase table typing
+    const supabase = createServerSupabaseClient() as any;
 
     // Check if we already have this email's cart saved recently (within 1 hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
