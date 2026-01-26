@@ -35,11 +35,25 @@ export default function ScreenPrintingGuidePage() {
 
     setIsSubmitting(true);
     
-    // Simulate API call - in production, this would save to your email list
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSubmitting(false);
-    setIsUnlocked(true);
+    try {
+      const response = await fetch('/api/guides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, guide: 'screen-printing' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send guide');
+      }
+
+      setIsUnlocked(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const guideContent = [

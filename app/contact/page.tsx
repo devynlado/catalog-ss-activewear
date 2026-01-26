@@ -40,15 +40,36 @@ export default function ContactPage() {
     }
   }, [serviceParam]);
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitError(null);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formState,
+          service: serviceParam ? serviceNames[serviceParam] : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send message');
+      }
+
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -187,6 +208,12 @@ export default function ContactPage() {
                         placeholder="Tell us about your project, questions, or how we can assist you..."
                       />
                     </div>
+
+                    {submitError && (
+                      <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                        {submitError}
+                      </div>
+                    )}
 
                     <button
                       type="submit"

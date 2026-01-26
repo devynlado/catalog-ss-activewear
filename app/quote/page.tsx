@@ -14,7 +14,14 @@ import {
   AlertCircle,
   Bookmark,
   X,
-  Mail
+  Mail,
+  Clock,
+  Star,
+  Shield,
+  Phone,
+  Sparkles,
+  Shirt,
+  type LucideIcon
 } from 'lucide-react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { formatPrice, cn } from '@/lib/utils';
@@ -257,9 +264,42 @@ export default function QuotePage() {
     );
   }
 
+  // Calculate progress step based on state
+  const getProgressStep = () => {
+    if (items.length === 0) return 1;
+    if (decorationType === 'none' && !formData.name) return 2;
+    if (!formData.name || !formData.email || !formData.phone) return 3;
+    return 4;
+  };
+  const progressStep = getProgressStep();
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
+      {/* Trust Signals Banner */}
+      <div className="bg-navy-800 text-white py-2.5">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-brand-400" />
+              <span><strong>2hr</strong> avg response</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-brand-400" />
+              <span><strong>1M+</strong> shirts/year</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+              <span><strong>4.8</strong> stars (185 reviews)</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5">
+              <Shield className="h-4 w-4 text-green-400" />
+              <span>Sample before production</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Header with Progress Indicator */}
       <div className="bg-white border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <Link href="/catalog" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
@@ -270,23 +310,122 @@ export default function QuotePage() {
           <p className="mt-2 text-slate-600">
             Review your items and submit your quote request
           </p>
+
+          {/* Progress Indicator */}
+          {items.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between">
+                {[
+                  { step: 1, label: 'Select Items', icon: ShoppingBag },
+                  { step: 2, label: 'Choose Services', icon: Sparkles },
+                  { step: 3, label: 'Contact Info', icon: Mail },
+                  { step: 4, label: 'Review', icon: Check },
+                ].map((item, index) => (
+                  <div key={item.step} className="flex items-center">
+                    <div className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
+                      progressStep >= item.step
+                        ? 'bg-brand-500 text-white'
+                        : 'bg-slate-200 text-slate-500'
+                    )}>
+                      {progressStep > item.step ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <item.icon className="h-4 w-4" />
+                      )}
+                    </div>
+                    <span className={cn(
+                      'ml-2 text-sm font-medium hidden sm:block',
+                      progressStep >= item.step ? 'text-slate-900' : 'text-slate-400'
+                    )}>
+                      {item.label}
+                    </span>
+                    {index < 3 && (
+                      <div className={cn(
+                        'mx-2 sm:mx-4 h-0.5 w-8 sm:w-16',
+                        progressStep > item.step ? 'bg-brand-500' : 'bg-slate-200'
+                      )} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {items.length === 0 ? (
-          // Empty State
-          <div className="rounded-xl bg-white p-12 text-center shadow-sm">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
-              <ShoppingBag className="h-10 w-10 text-slate-400" />
+          // Enhanced Empty State
+          <div className="space-y-8">
+            {/* Main empty state card */}
+            <div className="rounded-xl bg-white p-8 sm:p-12 text-center shadow-sm">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-50">
+                <ShoppingBag className="h-10 w-10 text-brand-500" />
+              </div>
+              <h2 className="mt-6 text-2xl font-bold text-slate-900">Start Building Your Quote</h2>
+              <p className="mt-3 text-slate-600 max-w-md mx-auto">
+                Browse our catalog of 5,000+ blank apparel options. Add items, choose your decoration method, and we&apos;ll send you a detailed quote within 2 hours.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/catalog">
+                  <Button size="lg">
+                    <ShoppingBag className="mr-2 h-5 w-5" />
+                    Browse Catalog
+                  </Button>
+                </Link>
+                <a
+                  href="tel:+18559427636"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-slate-200 px-6 py-3 text-base font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <Phone className="h-5 w-5" />
+                  (855) 942-7636
+                </a>
+              </div>
             </div>
-            <h2 className="mt-6 text-xl font-semibold text-slate-900">Your quote is empty</h2>
-            <p className="mt-2 text-slate-600">
-              Browse our catalog and add items to your quote list
-            </p>
-            <Link href="/catalog" className="mt-6 inline-block">
-              <Button>Browse Catalog</Button>
-            </Link>
+
+            {/* Quick Start Categories */}
+            <div className="rounded-xl bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Browse by Category</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { name: 'T-Shirts', href: '/catalog/t-shirts', color: 'bg-orange-100 text-orange-600' },
+                  { name: 'Hoodies', href: '/catalog/sweatshirts', color: 'bg-blue-100 text-blue-600' },
+                  { name: 'Hats', href: '/catalog/headwear', color: 'bg-green-100 text-green-600' },
+                  { name: 'Polos', href: '/catalog/polos', color: 'bg-purple-100 text-purple-600' },
+                ].map((category) => (
+                  <Link
+                    key={category.name}
+                    href={category.href}
+                    className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+                  >
+                    <div className={`w-12 h-12 rounded-full ${category.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                      <Shirt className="h-6 w-6" />
+                    </div>
+                    <span className="font-medium text-slate-900">{category.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Help Banner */}
+            <div className="rounded-xl bg-gradient-to-r from-navy-800 to-navy-900 p-6 text-white">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Not sure where to start?</h3>
+                  <p className="text-slate-300 text-sm mt-1">
+                    Our team has helped 25,000+ customers find the perfect products. Let us help you too.
+                  </p>
+                </div>
+                <a
+                  href="tel:+18559427636"
+                  className="flex-shrink-0 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 font-semibold text-white hover:bg-brand-600 transition-colors"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call Now
+                </a>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="lg:grid lg:grid-cols-3 lg:gap-8">
