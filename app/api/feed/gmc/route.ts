@@ -8,6 +8,40 @@ import {
 } from '@/lib/gmc-feed';
 import { createServerSupabaseClient } from '@/lib/supabase';
 
+// Type for cached product from Supabase
+interface CachedProduct {
+  style_id: number;
+  style_name: string;
+  brand_name: string;
+  title_raw: string | null;
+  title_optimized: string | null;
+  description_raw: string | null;
+  description_optimized: string | null;
+  primary_image_url: string | null;
+  popular_tier: string | null;
+  base_category: string | null;
+  product_type: string | null;
+  google_category_id: number | null;
+  google_category_name: string | null;
+  material: string | null;
+  gender: string | null;
+  age_group: string | null;
+  product_skus: Array<{
+    sku: string;
+    color_name: string;
+    color_code: string;
+    size_name: string;
+    cogs: number;
+    retail_price: number;
+    sale_price: number | null;
+    auto_min_price: number;
+    gtin: string | null;
+    piece_weight: number;
+    qty: number;
+    availability: string;
+  }>;
+}
+
 // ============================================================================
 // FETCH FROM SUPABASE CACHE (fast)
 // ============================================================================
@@ -30,7 +64,7 @@ async function fetchFromSupabase(): Promise<{
   }
   
   // Fetch all popular products with their SKUs
-  const { data: products, error } = await supabase
+  const { data, error } = await supabase
     .from('products')
     .select(`
       style_id,
@@ -67,10 +101,13 @@ async function fetchFromSupabase(): Promise<{
     .eq('is_active', true)
     .eq('is_popular', true);
   
-  if (error || !products) {
+  if (error || !data) {
     console.error('[GMC Feed] Supabase query error:', error);
     return { rows: [], fromCache: false };
   }
+  
+  // Cast to typed array
+  const products = data as CachedProduct[];
   
   // Build a map of style_id -> category from POPULAR_PRODUCTS
   const categoryMap = new Map<number, ProductCategory>();
