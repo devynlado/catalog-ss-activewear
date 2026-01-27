@@ -45,25 +45,20 @@ export async function GET(
           if (liveInventory) {
             try {
               console.log(`[Product Detail] Fetching live inventory for style ${styleId}`);
-              const liveInventoryData = await getInventoryMatrix(styleId);
+              const liveInventoryMatrix = await getInventoryMatrix(styleId);
               
               // Merge live inventory into cached product
-              if (liveInventoryData && liveInventoryData.length > 0) {
-                // Build inventory lookup map
-                const inventoryMap = new Map<string, number>();
-                for (const inv of liveInventoryData) {
-                  // Key: colorCode-sizeName
-                  const key = `${inv.colorCode}-${inv.sizeName}`;
-                  inventoryMap.set(key, (inventoryMap.get(key) || 0) + inv.qty);
-                }
-                
+              // liveInventoryMatrix is Map<colorCode, Map<sizeName, qty>>
+              if (liveInventoryMatrix && liveInventoryMatrix.size > 0) {
                 // Update quantities in cached product
                 for (const color of cachedProduct.colors) {
-                  for (const size of color.sizes) {
-                    const key = `${color.colorCode}-${size.name}`;
-                    const liveQty = inventoryMap.get(key);
-                    if (liveQty !== undefined) {
-                      size.qty = liveQty;
+                  const colorInventory = liveInventoryMatrix.get(color.colorCode);
+                  if (colorInventory) {
+                    for (const size of color.sizes) {
+                      const liveQty = colorInventory.get(size.name);
+                      if (liveQty !== undefined) {
+                        size.qty = liveQty;
+                      }
                     }
                   }
                 }
