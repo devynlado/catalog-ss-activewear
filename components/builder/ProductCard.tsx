@@ -71,6 +71,7 @@ export function ProductCard({
   };
   const displayPrice = product.salePrice || product.price;
   const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const discountPercent = hasDiscount ? Math.round((1 - product.salePrice! / product.price) * 100) : 0;
   const hasPrice = displayPrice > 0;
   
   // Use title if available, otherwise fall back to styleName
@@ -80,8 +81,8 @@ export function ProductCard({
 
   return (
     <Link 
-      href={`/product/${product.styleId}`}
-      className="group relative block overflow-hidden rounded-xl bg-white shadow-card transition-all hover:shadow-card-hover"
+      href={`/product/${product.slug}`}
+      className="group relative block rounded-xl bg-white shadow-card transition-all hover:shadow-card-hover"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -102,47 +103,58 @@ export function ProductCard({
           </div>
         )}
 
-        {/* Product Badges */}
-        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-          {/* Popular Product Badge - tier-based styling */}
-          {product.isPopular && product.popularTier && (
-            <Badge 
-              variant={
-                product.popularTier === 'bestseller' ? 'warning' :
-                product.popularTier === 'staff-pick' ? 'default' :
-                product.popularTier === 'streetwear' ? 'info' :
-                'success'
-              }
-              className="flex items-center gap-1"
-            >
-              {product.popularTier === 'bestseller' && <Flame className="h-3 w-3" />}
-              {product.popularTier === 'staff-pick' && <Star className="h-3 w-3" />}
-              {product.popularTier === 'streetwear' && <TrendingUp className="h-3 w-3" />}
-              {product.popularTier === 'value' && <BadgeDollarSign className="h-3 w-3" />}
-              {product.popularTier === 'bestseller' && 'Best Seller'}
-              {product.popularTier === 'staff-pick' && 'Staff Pick'}
-              {product.popularTier === 'streetwear' && 'Trending'}
-              {product.popularTier === 'value' && 'Great Value'}
-            </Badge>
-          )}
-          {hasDiscount && (
-            <Badge variant="error">
-              Sale
-            </Badge>
-          )}
-          {product.isSustainable && (
-            <Badge variant="success" className="flex items-center gap-1">
-              <Leaf className="h-3 w-3" />
-              Eco
-            </Badge>
-          )}
-          {product.isNew && (
-            <Badge variant="info" className="flex items-center gap-1">
-              <Sparkles className="h-3 w-3" />
-              New
-            </Badge>
-          )}
-        </div>
+        {/* Hero Badge - Only ONE badge on image, priority: Sale > Best Seller > Staff Pick > Trending > New */}
+        {(() => {
+          // Determine the single hero badge to show (highest priority wins)
+          if (hasDiscount) {
+            return (
+              <div className="absolute left-3 top-3">
+                <Badge variant="error">Sale</Badge>
+              </div>
+            );
+          }
+          if (product.isPopular && product.popularTier === 'bestseller') {
+            return (
+              <div className="absolute left-3 top-3">
+                <Badge variant="warning" className="flex items-center gap-1">
+                  <Flame className="h-3 w-3" />
+                  Best Seller
+                </Badge>
+              </div>
+            );
+          }
+          if (product.isPopular && product.popularTier === 'staff-pick') {
+            return (
+              <div className="absolute left-3 top-3">
+                <Badge variant="default" className="flex items-center gap-1">
+                  <Star className="h-3 w-3" />
+                  Staff Pick
+                </Badge>
+              </div>
+            );
+          }
+          if (product.isPopular && product.popularTier === 'streetwear') {
+            return (
+              <div className="absolute left-3 top-3">
+                <Badge variant="info" className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Trending
+                </Badge>
+              </div>
+            );
+          }
+          if (product.isNew) {
+            return (
+              <div className="absolute left-3 top-3">
+                <Badge variant="info" className="flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  New
+                </Badge>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         {/* Quick Add Button - Subtle "+" in corner */}
         {onQuickView && (
@@ -168,8 +180,8 @@ export function ProductCard({
             className="relative mb-3"
             onMouseLeave={() => setShowAllColors(false)}
           >
-            {/* Collapsed view - show first few swatches + count */}
-            <div className="flex items-center gap-1">
+            {/* Collapsed view - show swatches + count */}
+            <div className="flex items-center gap-1.5 pr-16">
               {product.colors.slice(0, maxSwatches).map((color) => (
                 <button
                   key={color.colorCode}
@@ -212,13 +224,33 @@ export function ProductCard({
                 </button>
               )}
             </div>
+            {/* Attribute badges - absolutely positioned to not affect layout */}
+            {(product.isSustainable || (product.isPopular && product.popularTier === 'value')) && (
+              <div className="absolute right-0 top-0 flex flex-col items-end gap-1">
+                {product.isPopular && product.popularTier === 'value' && (
+                  <Badge variant="success" className="flex items-center gap-1">
+                    <BadgeDollarSign className="h-3 w-3" />
+                    Value
+                  </Badge>
+                )}
+                {product.isSustainable && (
+                  <Badge variant="success" className="flex items-center gap-1">
+                    <Leaf className="h-3 w-3" />
+                    Eco
+                  </Badge>
+                )}
+              </div>
+            )}
 
             {/* Expanded popup - show all colors */}
             {showAllColors && product.colors.length > maxSwatches && (
-              <div 
-                className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <>
+                {/* Invisible bridge to maintain hover when moving to popup */}
+                <div className="absolute left-0 top-full z-40 h-3 w-48" />
+                <div 
+                  className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                  onClick={(e) => e.stopPropagation()}
+                >
                 <p className="mb-2 text-xs font-medium text-slate-500">
                   {product.colors.length} Colors Available
                 </p>
@@ -254,6 +286,7 @@ export function ProductCard({
                   ))}
                 </div>
               </div>
+              </>
             )}
           </div>
         )}
@@ -285,9 +318,14 @@ export function ProductCard({
                   {formatPrice(displayPrice)}
                 </span>
                 {hasDiscount && (
-                  <span className="text-sm text-slate-400 line-through">
-                    {formatPrice(product.price)}
-                  </span>
+                  <>
+                    <span className="text-sm text-slate-400 line-through">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      · Save {discountPercent}%
+                    </span>
+                  </>
                 )}
               </>
             ) : (

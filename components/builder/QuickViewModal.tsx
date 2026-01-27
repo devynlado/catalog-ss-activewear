@@ -345,7 +345,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
             {/* View Full Details Link */}
             <Link
-              href={`/product/${product.styleId}`}
+              href={`/product/${product.slug}`}
               onClick={handleClose}
               className="mt-2 lg:mt-3 flex items-center justify-center gap-2 text-xs lg:text-sm text-brand-600 hover:text-brand-700 pb-2"
             >

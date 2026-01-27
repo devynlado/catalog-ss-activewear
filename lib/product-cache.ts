@@ -200,6 +200,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
     .select(`
       style_id,
       style_name,
+      slug,
       brand_id,
       brand_name,
       title_raw,
@@ -216,6 +217,9 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
       is_active,
       color_count,
       base_price,
+      min_retail_price,
+      min_sale_price,
+      is_on_sale,
       product_colors (
         id,
         color_name,
@@ -438,6 +442,7 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
     .select(`
       style_id,
       style_name,
+      slug,
       brand_id,
       brand_name,
       title_raw,
@@ -481,6 +486,70 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
       )
     `)
     .eq('style_id', styleId)
+    .single();
+  
+  if (error || !data) {
+    return null;
+  }
+  
+  return transformProductWithSkus(data);
+}
+
+/**
+ * Get a single product by slug (SEO-friendly URL)
+ */
+export async function getProductBySlug(slug: string): Promise<Product | null> {
+  const supabase = createServerSupabaseClient();
+  
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      style_id,
+      style_name,
+      slug,
+      brand_id,
+      brand_name,
+      title_raw,
+      title_optimized,
+      description_raw,
+      description_optimized,
+      base_category,
+      product_type,
+      primary_image_url,
+      is_sustainable,
+      is_new,
+      is_popular,
+      popular_tier,
+      is_active,
+      color_count,
+      base_price,
+      product_colors (
+        id,
+        color_name,
+        color_code,
+        color_family,
+        swatch_image,
+        front_image,
+        back_image,
+        side_image,
+        on_model_front,
+        on_model_back,
+        on_model_side,
+        availability,
+        product_skus (
+          sku,
+          size_name,
+          size_code,
+          size_order,
+          retail_price,
+          sale_price,
+          gtin,
+          qty,
+          availability
+        )
+      )
+    `)
+    .eq('slug', slug)
     .single();
   
   if (error || !data) {
@@ -576,21 +645,29 @@ function transformProduct(row: any): Product {
   const title = row.title_optimized || row.title_raw || row.style_name;
   const description = row.description_optimized || row.description_raw || '';
   
+  // Generate slug if not in database
+  const slug = row.slug || `${row.brand_name}-${row.style_name}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+  
+  // Use min_retail_price for display, fall back to base_price for backward compatibility
+  const price = row.min_retail_price || row.base_price || 0;
+  const salePrice = row.is_on_sale ? row.min_sale_price : null;
+  
   return {
     id: String(row.style_id),
     styleId: row.style_id,
     styleName: row.style_name,
+    slug,
     brandName: row.brand_name,
     brandId: row.brand_id || 0,
     title,
     description,
     basePrice: row.base_price || 0,
-    price: row.base_price || 0,
-    salePrice: null,
+    price,
+    salePrice,
     imageUrl: row.primary_image_url || '',
     categories: [],
     colors,
-    isOnSale: false,
+    isOnSale: row.is_on_sale || false,
     isSustainable: row.is_sustainable || false,
     isNew: row.is_new || false,
     isPopular: row.is_popular || false,
@@ -598,14 +675,55 @@ function transformProduct(row: any): Product {
   };
 }
 
+// Canonical apparel size order for fallback sorting
+const SIZE_ORDER: Record<string, number> = {
+  // Youth sizes (sort first)
+  'YXS': 1, 'YS': 2, 'YM': 3, 'YL': 4, 'YXL': 5,
+  
+  // Adult letter sizes
+  'XXS': 10, 'XS': 11, 'S': 12, 'SM': 12,
+  'M': 13, 'MD': 13, 'MED': 13,
+  'L': 14, 'LG': 14,
+  'XL': 15,
+  '2XL': 16, 'XXL': 16, '2X': 16,
+  '3XL': 17, '3X': 17,
+  '4XL': 18, '4X': 18,
+  '5XL': 19, '5X': 19,
+  '6XL': 20, '6X': 20,
+  
+  // One size
+  'OS': 50, 'OSFA': 50, 'ONE SIZE': 50,
+};
+
+function getSizeOrder(sku: { size_order?: string; size_name: string }): number {
+  // 1. Try SS API size_order first (most reliable - numeric sort value)
+  if (sku.size_order) {
+    const parsed = parseInt(sku.size_order, 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  
+  // 2. Try canonical letter/youth size map
+  const normalized = sku.size_name.toUpperCase().trim();
+  if (SIZE_ORDER[normalized] !== undefined) {
+    return SIZE_ORDER[normalized];
+  }
+  
+  // 3. Try numeric sort (for pants: 28, 30, 32...)
+  const numeric = parseFloat(normalized);
+  if (!isNaN(numeric)) {
+    return 100 + numeric;  // Offset so 30 -> 130, 32 -> 132
+  }
+  
+  // 4. Unknown - sort at end
+  return 999;
+}
+
 function transformProductWithSkus(row: any): Product {
   const colors: ProductColor[] = (row.product_colors || []).map((c: any) => {
     const sizes: ProductSize[] = (c.product_skus || [])
       .sort((a: any, b: any) => {
-        // Sort by size_order
-        const orderA = parseInt(a.size_order) || 999;
-        const orderB = parseInt(b.size_order) || 999;
-        return orderA - orderB;
+        // Use comprehensive size ordering
+        return getSizeOrder(a) - getSizeOrder(b);
       })
       .map((s: any) => ({
         name: s.size_name,
@@ -647,10 +765,14 @@ function transformProductWithSkus(row: any): Product {
   // Product is on sale if there's a sale price lower than the retail price
   const isOnSale = minSalePrice !== null && minSalePrice < minRetailPrice;
   
+  // Generate slug if not in database
+  const slug = row.slug || `${row.brand_name}-${row.style_name}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+  
   return {
     id: String(row.style_id),
     styleId: row.style_id,
     styleName: row.style_name,
+    slug,
     brandName: row.brand_name,
     brandId: row.brand_id || 0,
     title,

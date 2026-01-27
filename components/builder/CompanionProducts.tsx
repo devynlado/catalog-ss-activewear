@@ -150,7 +150,7 @@ export function CompanionProducts({ styleId, className }: CompanionProductsProps
         {companions.map((product) => (
           <Link
             key={product.styleId}
-            href={`/product/${product.styleId}`}
+            href={`/product/${product.slug}`}
             className="flex-shrink-0 w-[260px] snap-start group"
           >
             <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">

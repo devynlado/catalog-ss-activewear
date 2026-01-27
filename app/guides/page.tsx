@@ -3,8 +3,8 @@ import { Suspense } from 'react';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { GuidesClient } from '@/components/guides/GuidesClient';
 
-// Force dynamic rendering - this page needs Supabase at runtime
-export const dynamic = 'force-dynamic';
+// Cache for 5 minutes (300 seconds) instead of force-dynamic
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'Product Guides | Garment Decor',
@@ -33,83 +33,87 @@ interface CategoryResult {
   slug: string | null;
 }
 
-interface ProductCategoryResult {
+interface ProductCategoryWithProduct {
+  category_id: number;
   style_id: number;
-}
-
-interface ProductResult {
-  style_id: number;
-  style_name: string;
-  primary_image_url: string | null;
+  products: {
+    style_id: number;
+    style_name: string;
+    primary_image_url: string | null;
+  } | null;
 }
 
 async function getGuides(): Promise<Guide[]> {
   const supabase = createServerSupabaseClient();
   
-  const { data, error } = await supabase
+  // Query 1: Get all guide categories
+  const { data: categories, error } = await supabase
     .from('categories')
     .select('id, name, slug')
     .eq('type', 'guide')
     .eq('is_active', true)
     .order('name');
   
-  if (error || !data) {
+  if (error || !categories || categories.length === 0) {
     console.error('Error fetching guides:', error);
     return [];
   }
   
-  const categories = data as CategoryResult[];
+  const categoryIds = (categories as CategoryResult[]).map(c => c.id);
   
-  // Get product counts and top products for each guide
-  const guidesWithData: Guide[] = [];
+  // Query 2: Get ALL product links for ALL guides in one query (with product details)
+  const { data: allProductLinks } = await supabase
+    .from('product_categories')
+    .select(`
+      category_id,
+      style_id,
+      products:style_id (
+        style_id,
+        style_name,
+        primary_image_url
+      )
+    `)
+    .in('category_id', categoryIds);
   
-  for (const guide of categories) {
-    // Get count
-    const { count } = await supabase
-      .from('product_categories')
-      .select('*', { count: 'exact', head: true })
-      .eq('category_id', guide.id);
+  // Process results: build count map and top products map
+  const countMap = new Map<number, number>();
+  const productMap = new Map<number, GuideProduct[]>();
+  
+  if (allProductLinks) {
+    const links = allProductLinks as ProductCategoryWithProduct[];
     
-    // Get top 3 products for preview
-    const { data: productLinks } = await supabase
-      .from('product_categories')
-      .select('style_id')
-      .eq('category_id', guide.id)
-      .limit(3);
-    
-    let topProducts: GuideProduct[] = [];
-    
-    const links = productLinks as ProductCategoryResult[] | null;
-    if (links && links.length > 0) {
-      const styleIds = links.map(p => p.style_id);
-      const { data: products } = await supabase
-        .from('products')
-        .select('style_id, style_name, primary_image_url')
-        .in('style_id', styleIds)
-        .limit(3);
+    // Group by category
+    links.forEach(link => {
+      // Count
+      countMap.set(link.category_id, (countMap.get(link.category_id) || 0) + 1);
       
-      const productResults = products as ProductResult[] | null;
-      if (productResults) {
-        topProducts = productResults.map(p => ({
-          id: p.style_id,
-          name: p.style_name,
-          style_number: p.style_name,
-          image_url: p.primary_image_url || undefined,
-        }));
+      // Top products (limit to 3 per category)
+      if (link.products) {
+        const existing = productMap.get(link.category_id) || [];
+        if (existing.length < 3) {
+          existing.push({
+            id: link.products.style_id,
+            name: link.products.style_name,
+            style_number: link.products.style_name,
+            image_url: link.products.primary_image_url || undefined,
+          });
+          productMap.set(link.category_id, existing);
+        }
       }
-    }
-    
-    guidesWithData.push({
-      id: guide.id,
-      name: guide.name,
-      slug: guide.slug || '',
-      productCount: count || 0,
-      topProducts,
     });
   }
   
+  // Build final guides array
+  const guides: Guide[] = (categories as CategoryResult[]).map(cat => ({
+    id: cat.id,
+    name: cat.name,
+    slug: cat.slug || '',
+    productCount: countMap.get(cat.id) || 0,
+    topProducts: productMap.get(cat.id) || [],
+  }));
+  
   // Sort by product count (most products first) and filter out empty guides
-  return guidesWithData
+  return guides
     .filter(g => g.productCount && g.productCount > 0)
     .sort((a, b) => (b.productCount || 0) - (a.productCount || 0));
 }

@@ -23,8 +23,9 @@ const MAX_PARALLEL_BATCHES = 2;
 const REQUEST_TIMEOUT = 45000; // 45 seconds
 
 // Pricing multipliers
-const RETAIL_MARKUP = 1.40;      // 40% markup for retail price
-const AUTO_MIN_MARKUP = 1.12;   // 12% markup for auto-pricing floor
+const MARKET_MARKUP = 1.40;     // 40% markup on SS prices to match competitor pricing (JiffyShirts, AllDayShirts)
+const RETAIL_MARKUP = 1.40;      // Fallback only - used if SS piecePrice unavailable
+const AUTO_MIN_MARKUP = 1.12;   // 12% markup on COGS for Google auto-pricing floor
 
 // Google category mappings
 const GOOGLE_CATEGORY_MAP: Record<ProductCategory, { id: number; name: string }> = {
@@ -42,6 +43,18 @@ const GOOGLE_CATEGORY_MAP: Record<ProductCategory, { id: number; name: string }>
   'youth': { id: 212, name: 'Apparel & Accessories > Clothing > Shirts & Tops' },
   'womens': { id: 212, name: 'Apparel & Accessories > Clothing > Shirts & Tops' },
 };
+
+// Generate URL slug from brand name and style name
+// e.g., "GILDAN" + "5000" -> "gildan-5000"
+function generateSlug(brandName: string, styleName: string): string {
+  const combined = `${brandName}-${styleName}`;
+  return combined
+    .toLowerCase()
+    .replace(/[^a-z0-9\-\s]/g, '') // Remove special chars
+    .replace(/\s+/g, '-')          // Replace spaces with hyphens
+    .replace(/-+/g, '-')           // Collapse multiple hyphens
+    .replace(/^-|-$/g, '');        // Trim leading/trailing hyphens
+}
 
 const PRODUCT_TYPE_MAP: Record<ProductCategory, string> = {
   't-shirts': 'T-Shirts > Core T-Shirts',
@@ -210,6 +223,54 @@ async function logSyncFailed(logId: number, errorMessage: string): Promise<void>
 }
 
 // ============================================================================
+// CHECKPOINT FUNCTIONS (for resume capability)
+// ============================================================================
+
+async function updateSyncCheckpoint(
+  logId: number, 
+  batchIndex: number, 
+  totalBatches: number
+): Promise<void> {
+  if (logId < 0) return;
+  
+  const supabase = createServerSupabaseClient();
+  
+  await (supabase as any)
+    .from('sync_logs')
+    .update({
+      checkpoint_batch: batchIndex,
+      total_batches: totalBatches,
+    })
+    .eq('id', logId);
+}
+
+async function getSyncCheckpoint(logId: number): Promise<{ batchIndex: number; totalBatches: number } | null> {
+  const supabase = createServerSupabaseClient();
+  
+  const { data, error } = await (supabase as any)
+    .from('sync_logs')
+    .select('checkpoint_batch, total_batches, status')
+    .eq('id', logId)
+    .single();
+  
+  if (error || !data) {
+    console.error('[Sync] Failed to get checkpoint:', error);
+    return null;
+  }
+  
+  // Only allow resume for incomplete syncs
+  if (data.status === 'completed') {
+    console.log('[Sync] Sync already completed, starting fresh');
+    return null;
+  }
+  
+  return {
+    batchIndex: data.checkpoint_batch || 0,
+    totalBatches: data.total_batches || 0,
+  };
+}
+
+// ============================================================================
 // POPULAR PRODUCTS LOOKUP
 // ============================================================================
 
@@ -344,7 +405,25 @@ export async function syncPopularProducts(): Promise<SyncResult> {
             const googleCategory = GOOGLE_CATEGORY_MAP[popular.category] || GOOGLE_CATEGORY_MAP['t-shirts'];
             const productType = PRODUCT_TYPE_MAP[popular.category] || 'T-Shirts > Core T-Shirts';
             
-            // Get min COGS from SKUs, then calculate retail price for display
+            // Calculate min prices from all SKUs for catalog display
+            // Apply MARKET_MARKUP to piecePrice and salePrice to match competitor pricing
+            const skuPrices = skus.map(s => {
+              const basePiece = s.piecePrice || Math.round((s.customerPrice || 0) * RETAIL_MARKUP * 100) / 100;
+              const retailPrice = Math.round(basePiece * MARKET_MARKUP * 100) / 100;
+              const salePrice = (s.salePrice && s.salePrice > 0 && s.salePrice < s.piecePrice) 
+                ? Math.round(s.salePrice * MARKET_MARKUP * 100) / 100 
+                : null;
+              return { retailPrice, salePrice };
+            });
+            
+            const retailPrices = skuPrices.map(p => p.retailPrice).filter(p => p > 0);
+            const salePrices = skuPrices.map(p => p.salePrice).filter((p): p is number => p !== null && p > 0);
+            
+            const minRetailPrice = retailPrices.length > 0 ? Math.min(...retailPrices) : null;
+            const minSalePrice = salePrices.length > 0 ? Math.min(...salePrices) : null;
+            const isOnSale = minSalePrice !== null && minSalePrice < (minRetailPrice || Infinity);
+            
+            // Legacy base price calculation (keeping for backward compatibility)
             const minCogs = Math.min(...skus.map(s => s.customerPrice || s.piecePrice || 0).filter(p => p > 0));
             const baseRetailPrice = Math.round(minCogs * RETAIL_MARKUP * 100) / 100;
             
@@ -352,6 +431,7 @@ export async function syncPopularProducts(): Promise<SyncResult> {
             allProducts.push({
               style_id: style.styleID,
               style_name: style.styleName,
+              slug: generateSlug(style.brandName, style.styleName),
               brand_id: style.brandID || parseInt(skus[0]?.brandID) || 0,
               brand_name: style.brandName,
               title_raw: style.title || style.styleName,
@@ -371,6 +451,9 @@ export async function syncPopularProducts(): Promise<SyncResult> {
               is_active: true,
               color_count: new Set(skus.map(s => s.colorCode)).size,
               base_price: baseRetailPrice,
+              min_retail_price: minRetailPrice,
+              min_sale_price: minSalePrice,
+              is_on_sale: isOnSale,
               last_full_sync: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             });
@@ -408,16 +491,21 @@ export async function syncPopularProducts(): Promise<SyncResult> {
               
               // Collect SKUs
               for (const sku of colorSkus) {
+                // COGS = your wholesale cost (for margin tracking / Google Merchant)
                 const cogs = sku.customerPrice || sku.piecePrice || 0;
-                const retailPrice = Math.round(cogs * RETAIL_MARKUP * 100) / 100;
                 
+                // Retail price = SS piecePrice with MARKET_MARKUP to match competitor pricing
+                const basePiece = sku.piecePrice || Math.round(cogs * RETAIL_MARKUP * 100) / 100;
+                const retailPrice = Math.round(basePiece * MARKET_MARKUP * 100) / 100;
+                
+                // Sale price = SS salePrice with MARKET_MARKUP (when item is on sale)
                 let salePrice: number | null = null;
-                let autoMinPrice = Math.round(cogs * AUTO_MIN_MARKUP * 100) / 100;
-                
-                if (sku.salePrice && sku.salePrice > 0 && sku.salePrice < cogs) {
-                  salePrice = Math.round(sku.salePrice * RETAIL_MARKUP * 100) / 100;
-                  autoMinPrice = Math.round(sku.salePrice * AUTO_MIN_MARKUP * 100) / 100;
+                if (sku.salePrice && sku.salePrice > 0 && sku.salePrice < sku.piecePrice) {
+                  salePrice = Math.round(sku.salePrice * MARKET_MARKUP * 100) / 100;
                 }
+                
+                // Auto-min price for Google auto-pricing (floor based on your cost)
+                const autoMinPrice = Math.round(cogs * AUTO_MIN_MARKUP * 100) / 100;
                 
                 allSkus.push({
                   sku: sku.sku,
@@ -650,18 +738,38 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
  * Full catalog sync
  * Syncs all ~5,000 products from SS Activewear
  * Run weekly to catch new products and updates
+ * 
+ * @param resumeFromLogId - Optional: Resume from a previous interrupted sync using its log ID
  */
-export async function syncFullCatalog(): Promise<SyncResult> {
+export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncResult & { logId: number }> {
   const startTime = Date.now();
-  const logId = await logSyncStart('full');
+  
+  // Handle resume: use existing log ID or create new one
+  let logId: number;
+  let startBatchIndex = 0;
+  
+  if (resumeFromLogId) {
+    const checkpoint = await getSyncCheckpoint(resumeFromLogId);
+    if (checkpoint) {
+      logId = resumeFromLogId;
+      startBatchIndex = checkpoint.batchIndex;
+      console.log(`[Sync] Resuming full catalog sync from batch ${startBatchIndex}...`);
+    } else {
+      // Checkpoint not found or sync already completed, start fresh
+      logId = await logSyncStart('full');
+      console.log('[Sync] Starting fresh full catalog sync (resume ID invalid)...');
+    }
+  } else {
+    logId = await logSyncStart('full');
+    console.log('[Sync] Starting full catalog sync...');
+  }
+  
   const errors: string[] = [];
   
   let productsProcessed = 0;
   let colorsProcessed = 0;
   let skusProcessed = 0;
   let categoriesLinked = 0;
-  
-  console.log('[Sync] Starting full catalog sync...');
   
   try {
     const supabase = createServerSupabaseClient();
@@ -679,7 +787,10 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       batches.push(allStyles.slice(i, i + BATCH_SIZE));
     }
     
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex += MAX_PARALLEL_BATCHES) {
+    const totalBatches = batches.length;
+    
+    // Start from checkpoint if resuming
+    for (let batchIndex = startBatchIndex; batchIndex < batches.length; batchIndex += MAX_PARALLEL_BATCHES) {
       const batchGroup = batches.slice(batchIndex, batchIndex + MAX_PARALLEL_BATCHES);
       
       // Collect all data for batch upserts
@@ -740,7 +851,25 @@ export async function syncFullCatalog(): Promise<SyncResult> {
               productType = PRODUCT_TYPE_MAP[popular.category] || productType;
             }
             
-            // Get min COGS from SKUs, then calculate retail price for display
+            // Calculate min prices from all SKUs for catalog display
+            // Apply MARKET_MARKUP to piecePrice and salePrice to match competitor pricing
+            const skuPrices = skus.map(s => {
+              const basePiece = s.piecePrice || Math.round((s.customerPrice || 0) * RETAIL_MARKUP * 100) / 100;
+              const retailPrice = Math.round(basePiece * MARKET_MARKUP * 100) / 100;
+              const salePrice = (s.salePrice && s.salePrice > 0 && s.salePrice < s.piecePrice) 
+                ? Math.round(s.salePrice * MARKET_MARKUP * 100) / 100 
+                : null;
+              return { retailPrice, salePrice };
+            });
+            
+            const retailPrices = skuPrices.map(p => p.retailPrice).filter(p => p > 0);
+            const salePrices = skuPrices.map(p => p.salePrice).filter((p): p is number => p !== null && p > 0);
+            
+            const minRetailPrice = retailPrices.length > 0 ? Math.min(...retailPrices) : null;
+            const minSalePrice = salePrices.length > 0 ? Math.min(...salePrices) : null;
+            const isOnSale = minSalePrice !== null && minSalePrice < (minRetailPrice || Infinity);
+            
+            // Legacy base price calculation (keeping for backward compatibility)
             const minCogs = Math.min(...skus.map(s => s.customerPrice || s.piecePrice || 0).filter(p => p > 0));
             const baseRetailPrice = Math.round(minCogs * RETAIL_MARKUP * 100) / 100;
             
@@ -748,6 +877,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
             allProducts.push({
               style_id: style.styleID,
               style_name: style.styleName,
+              slug: generateSlug(style.brandName, style.styleName),
               brand_id: style.brandID || parseInt(skus[0]?.brandID) || 0,
               brand_name: style.brandName,
               title_raw: style.title || style.styleName,
@@ -767,6 +897,9 @@ export async function syncFullCatalog(): Promise<SyncResult> {
               is_active: true,
               color_count: new Set(skus.map(s => s.colorCode)).size,
               base_price: baseRetailPrice,
+              min_retail_price: minRetailPrice,
+              min_sale_price: minSalePrice,
+              is_on_sale: isOnSale,
               last_full_sync: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             });
@@ -803,16 +936,21 @@ export async function syncFullCatalog(): Promise<SyncResult> {
               });
               
               for (const sku of colorSkus) {
+                // COGS = your wholesale cost (for margin tracking / Google Merchant)
                 const cogs = sku.customerPrice || sku.piecePrice || 0;
-                const retailPrice = Math.round(cogs * RETAIL_MARKUP * 100) / 100;
                 
+                // Retail price = SS piecePrice with MARKET_MARKUP to match competitor pricing
+                const basePiece = sku.piecePrice || Math.round(cogs * RETAIL_MARKUP * 100) / 100;
+                const retailPrice = Math.round(basePiece * MARKET_MARKUP * 100) / 100;
+                
+                // Sale price = SS salePrice with MARKET_MARKUP (when item is on sale)
                 let salePrice: number | null = null;
-                let autoMinPrice = Math.round(cogs * AUTO_MIN_MARKUP * 100) / 100;
-                
-                if (sku.salePrice && sku.salePrice > 0 && sku.salePrice < cogs) {
-                  salePrice = Math.round(sku.salePrice * RETAIL_MARKUP * 100) / 100;
-                  autoMinPrice = Math.round(sku.salePrice * AUTO_MIN_MARKUP * 100) / 100;
+                if (sku.salePrice && sku.salePrice > 0 && sku.salePrice < sku.piecePrice) {
+                  salePrice = Math.round(sku.salePrice * MARKET_MARKUP * 100) / 100;
                 }
+                
+                // Auto-min price for Google auto-pricing (floor based on your cost)
+                const autoMinPrice = Math.round(cogs * AUTO_MIN_MARKUP * 100) / 100;
                 
                 allSkus.push({
                   sku: sku.sku,
@@ -887,6 +1025,9 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       
       const progress = Math.min((batchIndex + MAX_PARALLEL_BATCHES) * BATCH_SIZE, allStyles.length);
       console.log(`[Sync] Progress: ${progress}/${allStyles.length} styles (${productsProcessed} products, ${categoriesLinked} category links)`);
+      
+      // Save checkpoint for resume capability
+      await updateSyncCheckpoint(logId, batchIndex + MAX_PARALLEL_BATCHES, totalBatches);
     }
     
     // Mark discontinued products (products in DB but not in SS API)
@@ -924,6 +1065,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       categoriesLinked,
       errors,
       duration,
+      logId,
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -935,6 +1077,105 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       productsProcessed,
       colorsProcessed,
       skusProcessed,
+      categoriesLinked: 0,
+      errors: [errMsg],
+      duration: Date.now() - startTime,
+      logId,
+    };
+  }
+}
+
+/**
+ * Category-only sync
+ * Re-links all products to categories without fetching SKU data
+ * Fast operation (~2-3 min) for when you restructure categories
+ */
+export async function syncCategoriesOnly(): Promise<SyncResult> {
+  const startTime = Date.now();
+  const logId = await logSyncStart('categories');
+  const errors: string[] = [];
+  
+  let productsProcessed = 0;
+  let categoriesLinked = 0;
+  
+  console.log('[Sync] Starting category-only sync...');
+  
+  try {
+    const supabase = createServerSupabaseClient();
+    
+    // Fetch all styles (lightweight - no SKU data needed)
+    const allStyles = await fetchAllStyles();
+    console.log(`[Sync] Processing categories for ${allStyles.length} styles`);
+    
+    // Process in batches
+    const CATEGORY_BATCH_SIZE = 100; // Larger batches since no SKU fetching
+    const batches: SSProduct[][] = [];
+    for (let i = 0; i < allStyles.length; i += CATEGORY_BATCH_SIZE) {
+      batches.push(allStyles.slice(i, i + CATEGORY_BATCH_SIZE));
+    }
+    
+    for (const batch of batches) {
+      const allProductCategories: { style_id: number; category_id: number }[] = [];
+      
+      for (const style of batch) {
+        // Parse category IDs from comma-separated string
+        if (style.categories) {
+          const categoryIds = style.categories
+            .split(',')
+            .map(id => parseInt(id.trim(), 10))
+            .filter(id => !isNaN(id) && id > 0);
+          
+          for (const categoryId of categoryIds) {
+            allProductCategories.push({
+              style_id: style.styleID,
+              category_id: categoryId,
+            });
+          }
+        }
+        productsProcessed++;
+      }
+      
+      // Batch upsert to product_categories junction table
+      if (allProductCategories.length > 0) {
+        const { error: catError } = await (supabase as any)
+          .from('product_categories')
+          .upsert(allProductCategories, { onConflict: 'style_id,category_id' });
+        
+        if (catError) {
+          console.warn(`[Sync] Some product_categories failed:`, catError.message);
+        }
+        categoriesLinked += allProductCategories.length;
+      }
+      
+      console.log(`[Sync] Category progress: ${productsProcessed}/${allStyles.length} styles`);
+    }
+    
+    await logSyncComplete(logId, { products: productsProcessed, colors: 0, skus: 0 });
+    
+    const duration = Date.now() - startTime;
+    console.log(`[Sync] Category-only sync complete in ${Math.round(duration / 1000)}s`);
+    console.log(`[Sync] Products: ${productsProcessed}, Category Links: ${categoriesLinked}`);
+    
+    return {
+      success: errors.length === 0,
+      syncType: 'full', // Using 'full' since SyncResult type expects specific values
+      productsProcessed,
+      colorsProcessed: 0,
+      skusProcessed: 0,
+      categoriesLinked,
+      errors,
+      duration,
+    };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    await logSyncFailed(logId, errMsg);
+    
+    return {
+      success: false,
+      syncType: 'full',
+      productsProcessed,
+      colorsProcessed: 0,
+      skusProcessed: 0,
       categoriesLinked: 0,
       errors: [errMsg],
       duration: Date.now() - startTime,

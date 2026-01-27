@@ -199,8 +199,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const canAddToQuote = totalPieces > 0;
 
   return (
-    <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
-      {/* Left: Images */}
+    <div className="grid gap-6 lg:gap-8 lg:grid-cols-[45fr_55fr]">
+      {/* Left: Images (45%) */}
       <div className="space-y-3 lg:space-y-4">
         {/* Main Image - constrained height on mobile to show product info above fold */}
         <div className="relative overflow-hidden rounded-xl lg:rounded-2xl border border-slate-200 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white">

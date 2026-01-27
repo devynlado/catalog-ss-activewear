@@ -3,13 +3,15 @@ import {
   syncPopularProducts, 
   syncInventoryOnly, 
   syncFullCatalog,
+  syncCategoriesOnly,
   getLatestSyncStatus 
 } from '@/lib/product-sync';
 
 /**
  * Product Sync API
  * 
- * POST /api/sync?type=popular|inventory|full
+ * POST /api/sync?type=popular|inventory|full|categories
+ * POST /api/sync?type=full&resume=<logId>  (resume interrupted sync)
  * Protected with API key for security
  * 
  * GET /api/sync
@@ -59,18 +61,29 @@ export async function POST(request: NextRequest) {
   
   const { searchParams } = new URL(request.url);
   const syncType = searchParams.get('type') || 'inventory';
+  const resumeId = searchParams.get('resume');
   
-  console.log(`[Sync API] Starting ${syncType} sync...`);
+  if (resumeId) {
+    console.log(`[Sync API] Resuming ${syncType} sync from log ID ${resumeId}...`);
+  } else {
+    console.log(`[Sync API] Starting ${syncType} sync...`);
+  }
   
   try {
     let result;
+    let logId: number | undefined;
     
     switch (syncType) {
       case 'popular':
         result = await syncPopularProducts();
         break;
       case 'full':
-        result = await syncFullCatalog();
+        const fullResult = await syncFullCatalog(resumeId ? parseInt(resumeId, 10) : undefined);
+        result = fullResult;
+        logId = fullResult.logId;
+        break;
+      case 'categories':
+        result = await syncCategoriesOnly();
         break;
       case 'inventory':
       default:
@@ -78,28 +91,31 @@ export async function POST(request: NextRequest) {
         break;
     }
     
+    // Build response with optional logId for resume capability
+    const responseStats: Record<string, unknown> = {
+      productsProcessed: result.productsProcessed,
+      colorsProcessed: result.colorsProcessed,
+      skusProcessed: result.skusProcessed,
+      duration: `${Math.round(result.duration / 1000)}s`,
+    };
+    
+    // Include logId for full sync so user can resume if needed
+    if (logId !== undefined) {
+      responseStats.logId = logId;
+    }
+    
     if (result.success) {
       return NextResponse.json({
         success: true,
         message: `${syncType} sync completed successfully`,
-        stats: {
-          productsProcessed: result.productsProcessed,
-          colorsProcessed: result.colorsProcessed,
-          skusProcessed: result.skusProcessed,
-          duration: `${Math.round(result.duration / 1000)}s`,
-        },
+        stats: responseStats,
       });
     } else {
       return NextResponse.json({
         success: false,
         message: `${syncType} sync completed with errors`,
         errors: result.errors,
-        stats: {
-          productsProcessed: result.productsProcessed,
-          colorsProcessed: result.colorsProcessed,
-          skusProcessed: result.skusProcessed,
-          duration: `${Math.round(result.duration / 1000)}s`,
-        },
+        stats: responseStats,
       }, { status: 207 }); // 207 Multi-Status for partial success
     }
   } catch (error) {

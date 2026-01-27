@@ -479,8 +479,24 @@ export async function GET(request: NextRequest) {
         }
         
         // With filters - use categoryIds for multi-category filtering
+        // Detect if brand is numeric ID or string name
+        let brandIdFilter: number | undefined;
+        let brandNameFilter: string | undefined;
+        
+        if (brand) {
+          const parsed = parseInt(brand, 10);
+          if (!isNaN(parsed) && brand === parsed.toString()) {
+            // Numeric ID (e.g., "35" from breadcrumb)
+            brandIdFilter = parsed;
+          } else {
+            // Brand name string (e.g., "GILDAN")
+            brandNameFilter = brand;
+          }
+        }
+        
         const result = await getProductsFromCache({
-          brand: brand || undefined,
+          brand: brandNameFilter,
+          brandId: brandIdFilter,
           categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
           colorFamily: colorFamily || undefined,
           sustainable,

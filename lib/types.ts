@@ -143,6 +143,7 @@ export interface Product {
   styleName: string;
   brandName: string;
   brandId: number;
+  slug: string; // SEO-friendly URL slug (e.g., "gildan-5000")
   title: string;
   description: string;
   basePrice: number;

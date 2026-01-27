@@ -70,10 +70,10 @@ export function ProductBreadcrumbs({
           </>
         )}
 
-        {/* Brand */}
+        {/* Brand - use brand name for SEO-friendly URL */}
         <li>
           <Link
-            href={`/catalog?brand=${brandId}`}
+            href={`/catalog?brand=${encodeURIComponent(brandName)}`}
             className="text-slate-500 hover:text-slate-900 transition-colors"
           >
             {brandName}

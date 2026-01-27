@@ -160,6 +160,7 @@ export interface Database {
         Row: {
           style_id: number;
           style_name: string;
+          slug: string | null;
           brand_id: number | null;
           brand_name: string;
           title_raw: string | null;
@@ -181,6 +182,9 @@ export interface Database {
           is_active: boolean;
           color_count: number;
           base_price: number | null;
+          min_retail_price: number | null;
+          min_sale_price: number | null;
+          is_on_sale: boolean;
           last_full_sync: string | null;
           created_at: string;
           updated_at: string;
@@ -188,6 +192,7 @@ export interface Database {
         Insert: {
           style_id: number;
           style_name: string;
+          slug?: string | null;
           brand_id?: number | null;
           brand_name: string;
           title_raw?: string | null;
@@ -209,6 +214,9 @@ export interface Database {
           is_active?: boolean;
           color_count?: number;
           base_price?: number | null;
+          min_retail_price?: number | null;
+          min_sale_price?: number | null;
+          is_on_sale?: boolean;
           last_full_sync?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -216,6 +224,7 @@ export interface Database {
         Update: {
           style_id?: number;
           style_name?: string;
+          slug?: string | null;
           brand_id?: number | null;
           brand_name?: string;
           title_raw?: string | null;
@@ -237,6 +246,9 @@ export interface Database {
           is_active?: boolean;
           color_count?: number;
           base_price?: number | null;
+          min_retail_price?: number | null;
+          min_sale_price?: number | null;
+          is_on_sale?: boolean;
           last_full_sync?: string | null;
           created_at?: string;
           updated_at?: string;

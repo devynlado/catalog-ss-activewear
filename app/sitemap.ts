@@ -1,8 +1,20 @@
 import { MetadataRoute } from 'next';
 import { POPULAR_PRODUCTS } from '@/lib/popular-products';
 
-// Get unique style numbers from popular products for product pages
-const popularStyleNumbers = [...new Set(POPULAR_PRODUCTS.map(p => p.styleNumber))];
+// Generate slug from brand and style number (matches product-sync.ts logic)
+function generateSlug(brand: string, styleNumber: string): string {
+  return `${brand}-${styleNumber}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\-\s]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// Get unique product slugs from popular products for product pages
+const popularProductSlugs = [...new Set(
+  POPULAR_PRODUCTS.map(p => generateSlug(p.brand, p.styleNumber))
+)];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
@@ -146,9 +158,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   ];
 
-  // Product pages (popular products only)
-  const productPages: MetadataRoute.Sitemap = popularStyleNumbers.map(styleNumber => ({
-    url: `${baseUrl}/product/${styleNumber}`,
+  // Product pages (popular products only) - using SEO-friendly slugs
+  const productPages: MetadataRoute.Sitemap = popularProductSlugs.map(slug => ({
+    url: `${baseUrl}/product/${slug}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.6,
