@@ -3,6 +3,9 @@ import { Suspense } from 'react';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { GuidesClient } from '@/components/guides/GuidesClient';
 
+// Force dynamic rendering - this page needs Supabase at runtime
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Product Guides | Garment Decor',
   description: 'Browse our curated product guides and collections. Find the perfect blanks for screen printing and embroidery.',
