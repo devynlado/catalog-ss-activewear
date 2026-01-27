@@ -104,7 +104,8 @@ async function getStyleIdsByCategoryIds(categoryIds: number[]): Promise<number[]
   const supabase = createServerSupabaseClient();
   
   // Use the database function for efficient multi-category filtering
-  const { data, error } = await supabase
+  // Cast to any to avoid RPC type issues
+  const { data, error } = await (supabase as any)
     .rpc('get_products_by_categories', { category_ids: categoryIds });
   
   if (error) {
@@ -115,11 +116,12 @@ async function getStyleIdsByCategoryIds(categoryIds: number[]): Promise<number[]
       .select('style_id, category_id')
       .in('category_id', categoryIds);
     
-    if (!pcData) return [];
+    const rows = pcData as Array<{ style_id: number; category_id: number }> | null;
+    if (!rows) return [];
     
     // Group by style_id and filter those that have ALL category IDs
     const styleCountMap = new Map<number, Set<number>>();
-    for (const row of pcData) {
+    for (const row of rows) {
       if (!styleCountMap.has(row.style_id)) {
         styleCountMap.set(row.style_id, new Set());
       }
@@ -510,12 +512,14 @@ export async function getCacheStats(): Promise<{
     supabase.from('sync_logs').select('completed_at').eq('status', 'completed').order('completed_at', { ascending: false }).limit(1).single(),
   ]);
   
+  const syncData = syncLog.data as { completed_at: string } | null;
+  
   return {
     totalProducts: products.count || 0,
     popularProducts: popular.count || 0,
     totalColors: colors.count || 0,
     totalSkus: skus.count || 0,
-    lastSync: syncLog.data?.completed_at || null,
+    lastSync: syncData?.completed_at || null,
   };
 }
 

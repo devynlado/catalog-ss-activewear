@@ -23,6 +23,23 @@ interface Guide {
   topProducts?: GuideProduct[];
 }
 
+// Types for Supabase query results
+interface CategoryResult {
+  id: number;
+  name: string;
+  slug: string | null;
+}
+
+interface ProductCategoryResult {
+  style_id: number;
+}
+
+interface ProductResult {
+  style_id: number;
+  style_name: string;
+  primary_image_url: string | null;
+}
+
 async function getGuides(): Promise<Guide[]> {
   const supabase = createServerSupabaseClient();
   
@@ -38,10 +55,12 @@ async function getGuides(): Promise<Guide[]> {
     return [];
   }
   
+  const categories = data as CategoryResult[];
+  
   // Get product counts and top products for each guide
   const guidesWithData: Guide[] = [];
   
-  for (const guide of data) {
+  for (const guide of categories) {
     // Get count
     const { count } = await supabase
       .from('product_categories')
@@ -51,25 +70,27 @@ async function getGuides(): Promise<Guide[]> {
     // Get top 3 products for preview
     const { data: productLinks } = await supabase
       .from('product_categories')
-      .select('product_id')
+      .select('style_id')
       .eq('category_id', guide.id)
       .limit(3);
     
     let topProducts: GuideProduct[] = [];
     
-    if (productLinks && productLinks.length > 0) {
-      const productIds = productLinks.map(p => p.product_id);
+    const links = productLinks as ProductCategoryResult[] | null;
+    if (links && links.length > 0) {
+      const styleIds = links.map(p => p.style_id);
       const { data: products } = await supabase
         .from('products')
-        .select('id, name, style_number, primary_image_url')
-        .in('id', productIds)
+        .select('style_id, style_name, primary_image_url')
+        .in('style_id', styleIds)
         .limit(3);
       
-      if (products) {
-        topProducts = products.map(p => ({
-          id: p.id,
-          name: p.name,
-          style_number: p.style_number,
+      const productResults = products as ProductResult[] | null;
+      if (productResults) {
+        topProducts = productResults.map(p => ({
+          id: p.style_id,
+          name: p.style_name,
+          style_number: p.style_name,
           image_url: p.primary_image_url || undefined,
         }));
       }

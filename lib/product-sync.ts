@@ -153,7 +153,7 @@ async function fetchSkuData(styleIds: number[]): Promise<SSProductSku[]> {
 async function logSyncStart(syncType: string): Promise<number> {
   const supabase = createServerSupabaseClient();
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('sync_logs')
     .insert({
       sync_type: syncType,
@@ -171,7 +171,7 @@ async function logSyncStart(syncType: string): Promise<number> {
     return -1;
   }
   
-  return data.id;
+  return data?.id || -1;
 }
 
 async function logSyncComplete(
@@ -182,7 +182,7 @@ async function logSyncComplete(
   
   const supabase = createServerSupabaseClient();
   
-  await supabase
+  await (supabase as any)
     .from('sync_logs')
     .update({
       status: 'completed',
@@ -199,7 +199,7 @@ async function logSyncFailed(logId: number, errorMessage: string): Promise<void>
   
   const supabase = createServerSupabaseClient();
   
-  await supabase
+  await (supabase as any)
     .from('sync_logs')
     .update({
       status: 'failed',
@@ -451,11 +451,11 @@ export async function syncPopularProducts(): Promise<SyncResult> {
       // Batch upsert all collected data (much faster!)
       try {
         if (allProducts.length > 0) {
-          await supabase.from('products').upsert(allProducts, { onConflict: 'style_id' });
+          await (supabase as any).from('products').upsert(allProducts, { onConflict: 'style_id' });
           productsProcessed += allProducts.length;
         }
         if (allColors.length > 0) {
-          await supabase.from('product_colors').upsert(allColors, { onConflict: 'id' });
+          await (supabase as any).from('product_colors').upsert(allColors, { onConflict: 'id' });
           colorsProcessed += allColors.length;
         }
         if (allSkus.length > 0) {
@@ -463,7 +463,7 @@ export async function syncPopularProducts(): Promise<SyncResult> {
           const SKU_BATCH_SIZE = 1000;
           for (let i = 0; i < allSkus.length; i += SKU_BATCH_SIZE) {
             const skuBatch = allSkus.slice(i, i + SKU_BATCH_SIZE);
-            await supabase.from('product_skus').upsert(skuBatch, { onConflict: 'sku' });
+            await (supabase as any).from('product_skus').upsert(skuBatch, { onConflict: 'sku' });
           }
           skusProcessed += allSkus.length;
         }
@@ -535,7 +535,8 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       throw new Error(`Failed to fetch active products: ${fetchError.message}`);
     }
     
-    if (!activeProducts || activeProducts.length === 0) {
+    const products = activeProducts as Array<{ style_id: number }> | null;
+    if (!products || products.length === 0) {
       console.log('[Sync] No active products to sync inventory for');
       return {
         success: true,
@@ -549,7 +550,7 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       };
     }
     
-    const styleIds = activeProducts.map(p => p.style_id);
+    const styleIds = products.map(p => p.style_id);
     console.log(`[Sync] Syncing inventory for ${styleIds.length} products`);
     
     // Process in batches
@@ -567,7 +568,7 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
           
           // Batch update inventory
           for (const sku of skuData) {
-            const { error } = await supabase
+            const { error } = await (supabase as any)
               .from('product_skus')
               .update({
                 qty: sku.qty || 0,
@@ -594,7 +595,7 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
           }
           
           for (const [colorId, hasStock] of colorAvailability) {
-            await supabase
+            await (supabase as any)
               .from('product_colors')
               .update({
                 availability: hasStock ? 'in_stock' : 'out_of_stock',
@@ -845,11 +846,11 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       // Batch upsert all collected data (much faster!)
       try {
         if (allProducts.length > 0) {
-          await supabase.from('products').upsert(allProducts, { onConflict: 'style_id' });
+          await (supabase as any).from('products').upsert(allProducts, { onConflict: 'style_id' });
           productsProcessed += allProducts.length;
         }
         if (allColors.length > 0) {
-          await supabase.from('product_colors').upsert(allColors, { onConflict: 'id' });
+          await (supabase as any).from('product_colors').upsert(allColors, { onConflict: 'id' });
           colorsProcessed += allColors.length;
         }
         if (allSkus.length > 0) {
@@ -857,7 +858,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
           const SKU_BATCH_SIZE = 1000;
           for (let i = 0; i < allSkus.length; i += SKU_BATCH_SIZE) {
             const skuBatch = allSkus.slice(i, i + SKU_BATCH_SIZE);
-            await supabase.from('product_skus').upsert(skuBatch, { onConflict: 'sku' });
+            await (supabase as any).from('product_skus').upsert(skuBatch, { onConflict: 'sku' });
           }
           skusProcessed += allSkus.length;
         }
@@ -867,7 +868,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
           const CATEGORY_BATCH_SIZE = 1000;
           for (let i = 0; i < allProductCategories.length; i += CATEGORY_BATCH_SIZE) {
             const categoryBatch = allProductCategories.slice(i, i + CATEGORY_BATCH_SIZE);
-            const { error: catError } = await supabase
+            const { error: catError } = await (supabase as any)
               .from('product_categories')
               .upsert(categoryBatch, { onConflict: 'style_id,category_id' });
             
@@ -895,10 +896,11 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       .select('style_id')
       .eq('is_active', true);
     
-    if (existingProducts) {
-      for (const product of existingProducts) {
+    const existingList = existingProducts as Array<{ style_id: number }> | null;
+    if (existingList) {
+      for (const product of existingList) {
         if (!syncedStyleIds.has(product.style_id)) {
-          await supabase
+          await (supabase as any)
             .from('products')
             .update({ is_active: false, updated_at: new Date().toISOString() })
             .eq('style_id', product.style_id);
