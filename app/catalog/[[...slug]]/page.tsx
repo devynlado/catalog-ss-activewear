@@ -6,7 +6,7 @@ import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 import { ActiveFilters } from '@/components/catalog/ActiveFilters';
 import { MobileFilters } from '@/components/catalog/MobileFilters';
 import { resolveSlugPath, getRouteTitle, CATALOG_ROUTES } from '@/lib/catalog-routes';
-import { getCategoryDisplayName } from '@/lib/category-taxonomy';
+import { getCategoryDisplayName, parseCategoryParam, getCategoryParamDisplayName } from '@/lib/category-taxonomy';
 
 interface CatalogPageProps {
   params: {
@@ -66,7 +66,7 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
   // Try to resolve the slug path to a route
   const route = resolveSlugPath(params.slug || []);
   
-  // Get category filter - from slug route or legacy query param
+  // Get category filter - from slug route or query param
   let categoryFilter: string | undefined;
   let pageTitle: string;
   
@@ -75,10 +75,21 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
     categoryFilter = route.categoryIds.join(',');
     pageTitle = getRouteTitle(route);
   } else if (searchParams.category) {
-    // Legacy query param: use getCategoryDisplayName for title
-    categoryFilter = searchParams.category;
-    const categoryInfo = getCategoryDisplayName(searchParams.category);
-    pageTitle = categoryInfo?.name || 'Products';
+    // Check if it's the new slug format (contains + or letters) or legacy ID format (only numbers and commas)
+    const categoryParam = searchParams.category;
+    const isSlugFormat = /[a-zA-Z]/.test(categoryParam) || categoryParam.includes('+');
+    
+    if (isSlugFormat) {
+      // New slug format: "t-shirts+cotton+short-sleeve"
+      const categoryIds = parseCategoryParam(categoryParam);
+      categoryFilter = categoryIds.length > 0 ? categoryIds.join(',') : undefined;
+      pageTitle = getCategoryParamDisplayName(categoryParam);
+    } else {
+      // Legacy ID format: "21,57"
+      categoryFilter = categoryParam;
+      const categoryInfo = getCategoryDisplayName(categoryParam);
+      pageTitle = categoryInfo?.name || 'Products';
+    }
   } else {
     // No filter: show curated popular products
     pageTitle = 'All Products';

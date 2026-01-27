@@ -598,3 +598,167 @@ export function getCategoryName(categories: Category[], id: number): string {
   
   return category.name;
 }
+
+// ============================================
+// SLUG <-> ID CONVERSION UTILITIES
+// For URL handling: /catalog?category=t-shirts+cotton+short-sleeve
+// ============================================
+
+// Build slug-to-ID lookup map (computed once at module load)
+const SLUG_TO_ID_MAP = new Map<string, number>();
+const ID_TO_SLUG_MAP = new Map<number, string>();
+
+// Populate from MAIN_CATEGORIES
+for (const [idStr, data] of Object.entries(MAIN_CATEGORIES)) {
+  const id = parseInt(idStr, 10);
+  SLUG_TO_ID_MAP.set(data.slug, id);
+  ID_TO_SLUG_MAP.set(id, data.slug);
+}
+
+// Populate from SUB_CATEGORIES
+for (const [idStr, data] of Object.entries(SUB_CATEGORIES)) {
+  const id = parseInt(idStr, 10);
+  SLUG_TO_ID_MAP.set(data.slug, id);
+  ID_TO_SLUG_MAP.set(id, data.slug);
+}
+
+/**
+ * Convert a slug to category ID
+ * @param slug - URL-friendly category name (e.g., "t-shirts", "short-sleeve", "cotton")
+ * @returns Category ID or null if not found
+ */
+export function slugToId(slug: string): number | null {
+  const normalized = slug.toLowerCase().trim();
+  return SLUG_TO_ID_MAP.get(normalized) ?? null;
+}
+
+/**
+ * Convert a category ID to slug
+ * @param id - Category ID
+ * @returns URL-friendly slug or null if not found
+ */
+export function idToSlug(id: number): string | null {
+  return ID_TO_SLUG_MAP.get(id) ?? null;
+}
+
+/**
+ * Convert array of slugs to array of IDs
+ * Filters out any slugs that don't map to valid IDs
+ */
+export function slugsToIds(slugs: string[]): number[] {
+  return slugs
+    .map(slug => slugToId(slug))
+    .filter((id): id is number => id !== null);
+}
+
+/**
+ * Convert array of IDs to array of slugs
+ * Filters out any IDs that don't map to valid slugs
+ */
+export function idsToSlugs(ids: number[]): string[] {
+  return ids
+    .map(id => idToSlug(id))
+    .filter((slug): slug is string => slug !== null);
+}
+
+/**
+ * Parse a category URL parameter into category IDs
+ * Handles the format: "t-shirts+cotton+short-sleeve"
+ * 
+ * @param param - Category parameter string (e.g., "t-shirts+cotton+short-sleeve")
+ * @returns Array of category IDs
+ * 
+ * @example
+ * parseCategoryParam("t-shirts+cotton+short-sleeve")
+ * // Returns [21, 71, 57]
+ */
+export function parseCategoryParam(param: string | null | undefined): number[] {
+  if (!param) return [];
+  
+  // Split by + and convert each slug to ID
+  const slugs = param.split('+').map(s => s.trim().toLowerCase()).filter(Boolean);
+  return slugsToIds(slugs);
+}
+
+/**
+ * Build a category URL parameter from category IDs
+ * @param ids - Array of category IDs
+ * @returns URL parameter string (e.g., "t-shirts+cotton+short-sleeve")
+ * 
+ * @example
+ * buildCategoryParam([21, 71, 57])
+ * // Returns "t-shirts+cotton+short-sleeve"
+ */
+export function buildCategoryParam(ids: number[]): string {
+  return idsToSlugs(ids).join('+');
+}
+
+/**
+ * Add a category to an existing URL parameter
+ * Returns the new parameter string with the category added
+ */
+export function addCategoryToParam(currentParam: string | null, categoryId: number): string {
+  const currentIds = parseCategoryParam(currentParam);
+  if (!currentIds.includes(categoryId)) {
+    currentIds.push(categoryId);
+  }
+  return buildCategoryParam(currentIds);
+}
+
+/**
+ * Remove a category from an existing URL parameter
+ * Returns the new parameter string with the category removed
+ */
+export function removeCategoryFromParam(currentParam: string | null, categoryId: number): string {
+  const currentIds = parseCategoryParam(currentParam);
+  const filteredIds = currentIds.filter(id => id !== categoryId);
+  return buildCategoryParam(filteredIds);
+}
+
+/**
+ * Toggle a category in an existing URL parameter
+ * Adds if not present, removes if present
+ */
+export function toggleCategoryInParam(currentParam: string | null, categoryId: number): string {
+  const currentIds = parseCategoryParam(currentParam);
+  if (currentIds.includes(categoryId)) {
+    return buildCategoryParam(currentIds.filter(id => id !== categoryId));
+  } else {
+    return buildCategoryParam([...currentIds, categoryId]);
+  }
+}
+
+/**
+ * Get the display name for a category param (for page titles, breadcrumbs)
+ * Returns a formatted string like "Cotton Short Sleeve T-Shirts"
+ */
+export function getCategoryParamDisplayName(param: string | null | undefined): string {
+  if (!param) return 'All Products';
+  
+  const ids = parseCategoryParam(param);
+  if (ids.length === 0) return 'All Products';
+  
+  // Find main category and attributes
+  let mainCategoryName: string | null = null;
+  const attributeNames: string[] = [];
+  
+  for (const id of ids) {
+    if (MAIN_CATEGORIES[id]) {
+      mainCategoryName = MAIN_CATEGORIES[id].name;
+    } else if (SUB_CATEGORIES[id]) {
+      const sub = SUB_CATEGORIES[id];
+      attributeNames.push(sub.name);
+    }
+  }
+  
+  // Build display name: "Cotton Short Sleeve T-Shirts"
+  if (mainCategoryName) {
+    if (attributeNames.length > 0) {
+      return `${attributeNames.join(' ')} ${mainCategoryName}`;
+    }
+    return mainCategoryName;
+  }
+  
+  // No main category, just attributes
+  return attributeNames.join(' ') || 'Products';
+}

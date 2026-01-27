@@ -392,6 +392,82 @@ export interface Database {
           completed_at?: string | null;
         };
       };
+      // Category System Tables
+      categories: {
+        Row: {
+          id: number;
+          name: string;
+          type: 'main' | 'subcategory' | 'attribute' | 'guide';
+          attribute_group: string | null;
+          parent_id: number | null;
+          slug: string | null;
+          display_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: number;
+          name: string;
+          type: 'main' | 'subcategory' | 'attribute' | 'guide';
+          attribute_group?: string | null;
+          parent_id?: number | null;
+          slug?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          name?: string;
+          type?: 'main' | 'subcategory' | 'attribute' | 'guide';
+          attribute_group?: string | null;
+          parent_id?: number | null;
+          slug?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      attribute_groups: {
+        Row: {
+          id: string;
+          display_name: string;
+          display_order: number;
+          applies_to: number[] | null;
+          is_active: boolean;
+        };
+        Insert: {
+          id: string;
+          display_name: string;
+          display_order?: number;
+          applies_to?: number[] | null;
+          is_active?: boolean;
+        };
+        Update: {
+          id?: string;
+          display_name?: string;
+          display_order?: number;
+          applies_to?: number[] | null;
+          is_active?: boolean;
+        };
+      };
+      product_categories: {
+        Row: {
+          style_id: number;
+          category_id: number;
+        };
+        Insert: {
+          style_id: number;
+          category_id: number;
+        };
+        Update: {
+          style_id?: number;
+          category_id?: number;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -418,3 +494,11 @@ export type ProductSkuRow = Database['public']['Tables']['product_skus']['Row'];
 export type ProductSkuInsert = Database['public']['Tables']['product_skus']['Insert'];
 export type SyncLog = Database['public']['Tables']['sync_logs']['Row'];
 export type SyncLogInsert = Database['public']['Tables']['sync_logs']['Insert'];
+
+// Category System type aliases
+export type CategoryRow = Database['public']['Tables']['categories']['Row'];
+export type CategoryInsert = Database['public']['Tables']['categories']['Insert'];
+export type AttributeGroupRow = Database['public']['Tables']['attribute_groups']['Row'];
+export type AttributeGroupInsert = Database['public']['Tables']['attribute_groups']['Insert'];
+export type ProductCategoryRow = Database['public']['Tables']['product_categories']['Row'];
+export type ProductCategoryInsert = Database['public']['Tables']['product_categories']['Insert'];

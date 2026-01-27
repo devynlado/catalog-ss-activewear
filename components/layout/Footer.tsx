@@ -183,7 +183,7 @@ export function Footer() {
                   All Products
                 </Link>
               </li>
-              {mainCategories.slice(0, 6).map((cat) => (
+              {mainCategories.slice(0, 5).map((cat) => (
                 <li key={cat.id}>
                   <Link
                     href={`/catalog/${cat.slug}`}
@@ -193,6 +193,11 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link href="/guides" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Product Guides
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

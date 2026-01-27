@@ -69,6 +69,7 @@ export interface SyncResult {
   productsProcessed: number;
   colorsProcessed: number;
   skusProcessed: number;
+  categoriesLinked: number;
   errors: string[];
   duration: number;
 }
@@ -487,6 +488,7 @@ export async function syncPopularProducts(): Promise<SyncResult> {
       productsProcessed,
       colorsProcessed,
       skusProcessed,
+      categoriesLinked: 0, // Popular sync doesn't link categories yet
       errors,
       duration,
     };
@@ -500,6 +502,7 @@ export async function syncPopularProducts(): Promise<SyncResult> {
       productsProcessed,
       colorsProcessed,
       skusProcessed,
+      categoriesLinked: 0,
       errors: [errMsg],
       duration: Date.now() - startTime,
     };
@@ -540,6 +543,7 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
         productsProcessed: 0,
         colorsProcessed: 0,
         skusProcessed: 0,
+        categoriesLinked: 0,
         errors: [],
         duration: Date.now() - startTime,
       };
@@ -620,6 +624,7 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       productsProcessed: 0,
       colorsProcessed: 0,
       skusProcessed,
+      categoriesLinked: 0,
       errors,
       duration,
     };
@@ -633,6 +638,7 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       productsProcessed: 0,
       colorsProcessed: 0,
       skusProcessed,
+      categoriesLinked: 0,
       errors: [errMsg],
       duration: Date.now() - startTime,
     };
@@ -652,6 +658,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
   let productsProcessed = 0;
   let colorsProcessed = 0;
   let skusProcessed = 0;
+  let categoriesLinked = 0;
   
   console.log('[Sync] Starting full catalog sync...');
   
@@ -678,6 +685,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       const allProducts: any[] = [];
       const allColors: any[] = [];
       const allSkus: any[] = [];
+      const allProductCategories: { style_id: number; category_id: number }[] = [];
       
       await Promise.all(batchGroup.map(async (batch) => {
         const styleIds = batch.map(s => s.styleID);
@@ -703,6 +711,21 @@ export async function syncFullCatalog(): Promise<SyncResult> {
             }
             
             syncedStyleIds.add(style.styleID);
+            
+            // Parse and collect category IDs for product_categories junction table
+            if (style.categories) {
+              const categoryIds = style.categories
+                .split(',')
+                .map(id => parseInt(id.trim(), 10))
+                .filter(id => !isNaN(id) && id > 0);
+              
+              for (const categoryId of categoryIds) {
+                allProductCategories.push({
+                  style_id: style.styleID,
+                  category_id: categoryId,
+                });
+              }
+            }
             
             // Check if this is a popular product
             const popular = findPopularProduct(style.brandName, style.styleName);
@@ -838,6 +861,23 @@ export async function syncFullCatalog(): Promise<SyncResult> {
           }
           skusProcessed += allSkus.length;
         }
+        
+        // Upsert product_categories junction table
+        if (allProductCategories.length > 0) {
+          const CATEGORY_BATCH_SIZE = 1000;
+          for (let i = 0; i < allProductCategories.length; i += CATEGORY_BATCH_SIZE) {
+            const categoryBatch = allProductCategories.slice(i, i + CATEGORY_BATCH_SIZE);
+            const { error: catError } = await supabase
+              .from('product_categories')
+              .upsert(categoryBatch, { onConflict: 'style_id,category_id' });
+            
+            if (catError) {
+              // Some category IDs might not exist in categories table, log but continue
+              console.warn(`[Sync] Some product_categories failed:`, catError.message);
+            }
+          }
+          categoriesLinked += allProductCategories.length;
+        }
       } catch (upsertError) {
         const errMsg = upsertError instanceof Error ? upsertError.message : 'Unknown error';
         errors.push(`Batch upsert error: ${errMsg}`);
@@ -845,7 +885,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       }
       
       const progress = Math.min((batchIndex + MAX_PARALLEL_BATCHES) * BATCH_SIZE, allStyles.length);
-      console.log(`[Sync] Progress: ${progress}/${allStyles.length} styles (${productsProcessed} products, ${skusProcessed} SKUs)`);
+      console.log(`[Sync] Progress: ${progress}/${allStyles.length} styles (${productsProcessed} products, ${categoriesLinked} category links)`);
     }
     
     // Mark discontinued products (products in DB but not in SS API)
@@ -871,7 +911,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
     
     const duration = Date.now() - startTime;
     console.log(`[Sync] Full catalog sync complete in ${Math.round(duration / 1000)}s`);
-    console.log(`[Sync] Products: ${productsProcessed}, Colors: ${colorsProcessed}, SKUs: ${skusProcessed}`);
+    console.log(`[Sync] Products: ${productsProcessed}, Colors: ${colorsProcessed}, SKUs: ${skusProcessed}, Category Links: ${categoriesLinked}`);
     
     return {
       success: errors.length === 0,
@@ -879,6 +919,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       productsProcessed,
       colorsProcessed,
       skusProcessed,
+      categoriesLinked,
       errors,
       duration,
     };
@@ -892,6 +933,7 @@ export async function syncFullCatalog(): Promise<SyncResult> {
       productsProcessed,
       colorsProcessed,
       skusProcessed,
+      categoriesLinked: 0,
       errors: [errMsg],
       duration: Date.now() - startTime,
     };

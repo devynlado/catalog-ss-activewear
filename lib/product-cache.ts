@@ -17,7 +17,8 @@ export interface ProductQueryOptions {
   search?: string;
   brand?: string;
   brandId?: number;
-  category?: string;
+  category?: string;         // Legacy: single category ID
+  categoryIds?: number[];    // New: array of category IDs for multi-filter (AND logic)
   colorFamily?: string;
   onSale?: boolean;
   sustainable?: boolean;
@@ -94,6 +95,51 @@ function getBrandTier(brandName: string): number {
 // ============================================================================
 
 /**
+ * Get style IDs that match ALL specified category IDs (AND logic)
+ * Uses the product_categories junction table for efficient filtering
+ */
+async function getStyleIdsByCategoryIds(categoryIds: number[]): Promise<number[]> {
+  if (categoryIds.length === 0) return [];
+  
+  const supabase = createServerSupabaseClient();
+  
+  // Use the database function for efficient multi-category filtering
+  const { data, error } = await supabase
+    .rpc('get_products_by_categories', { category_ids: categoryIds });
+  
+  if (error) {
+    console.error('[ProductCache] Category filter error:', error);
+    // Fallback: do client-side filtering by querying product_categories directly
+    const { data: pcData } = await supabase
+      .from('product_categories')
+      .select('style_id, category_id')
+      .in('category_id', categoryIds);
+    
+    if (!pcData) return [];
+    
+    // Group by style_id and filter those that have ALL category IDs
+    const styleCountMap = new Map<number, Set<number>>();
+    for (const row of pcData) {
+      if (!styleCountMap.has(row.style_id)) {
+        styleCountMap.set(row.style_id, new Set());
+      }
+      styleCountMap.get(row.style_id)!.add(row.category_id);
+    }
+    
+    // Return style_ids that have ALL requested categories
+    const matchingStyles: number[] = [];
+    for (const [styleId, cats] of styleCountMap) {
+      if (categoryIds.every(catId => cats.has(catId))) {
+        matchingStyles.push(styleId);
+      }
+    }
+    return matchingStyles;
+  }
+  
+  return (data || []).map((row: { style_id: number }) => row.style_id);
+}
+
+/**
  * Get products from Supabase cache with filters
  */
 export async function getProductsFromCache(options: ProductQueryOptions = {}): Promise<ProductQueryResult> {
@@ -102,6 +148,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
     brand,
     brandId,
     category,
+    categoryIds,
     colorFamily,
     onSale,
     sustainable,
@@ -113,6 +160,32 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
   } = options;
   
   const supabase = createServerSupabaseClient();
+  
+  // Parse category IDs from both legacy and new format
+  let allCategoryIds: number[] = categoryIds || [];
+  if (category) {
+    // Legacy format: comma-separated IDs
+    const parsedIds = category.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+    allCategoryIds = [...new Set([...allCategoryIds, ...parsedIds])];
+  }
+  
+  // If category filter specified, get matching style_ids first
+  let categoryFilteredStyleIds: number[] | null = null;
+  if (allCategoryIds.length > 0) {
+    categoryFilteredStyleIds = await getStyleIdsByCategoryIds(allCategoryIds);
+    console.log(`[ProductCache] Category filter [${allCategoryIds.join(',')}] matched ${categoryFilteredStyleIds.length} products`);
+    
+    // If no matches, return empty result
+    if (categoryFilteredStyleIds.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      };
+    }
+  }
   
   // Build base query
   let query = supabase
@@ -153,7 +226,12 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
     `, { count: 'exact' })
     .eq('is_active', true);
   
-  // Apply filters
+  // Apply category filter (must be first to limit results)
+  if (categoryFilteredStyleIds && categoryFilteredStyleIds.length > 0) {
+    query = query.in('style_id', categoryFilteredStyleIds);
+  }
+  
+  // Apply other filters
   if (search) {
     // Use full-text search
     query = query.textSearch('title_raw', search, { type: 'websearch' });

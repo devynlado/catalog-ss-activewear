@@ -556,7 +556,10 @@ export function Header() {
                 onMouseEnter={handleResourcesEnter}
                 onMouseLeave={handleResourcesLeave}
               >
-                <button className="flex items-center gap-1 text-slate-300 hover:text-white transition-colors">
+                <button 
+                  onClick={() => setResourcesOpen(!resourcesOpen)}
+                  className="flex items-center gap-1 text-slate-300 hover:text-white transition-colors"
+                >
                   Resources
                   <ChevronDown className={cn('h-3 w-3 transition-transform', resourcesOpen && 'rotate-180')} />
                 </button>
@@ -587,6 +590,19 @@ export function Header() {
                       <div>
                         <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Embroidery Guide</span>
                         <span className="text-xs text-slate-500">Digitizing tips</span>
+                      </div>
+                    </Link>
+                    <Link
+                      href="/guides"
+                      onClick={() => setResourcesOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-emerald-50 active:bg-emerald-100 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                        <BookOpen className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-emerald-600 group-hover:text-emerald-700">Product Guides</span>
+                        <span className="text-xs text-slate-500">Browse curated collections</span>
                       </div>
                     </Link>
                     <div className="my-2 border-t border-slate-100" />
@@ -635,24 +651,15 @@ export function Header() {
       <nav className="border-b border-slate-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between">
-            {/* Logo */}
+            {/* Logo - Full wordmark on all screen sizes */}
             <div className="flex items-center">
               <Link href="/" className="flex items-center py-2">
-                {/* Mobile: Circle logo icon */}
-                <Image
-                  src="/images/brand/logo-circle-dark.svg"
-                  alt="Garment Decor"
-                  width={36}
-                  height={36}
-                  className="sm:hidden"
-                />
-                {/* Desktop: Full wordmark */}
                 <Image
                   src="/images/brand/logo-wordmark-dark.svg"
                   alt="Garment Decor"
                   width={160}
                   height={36}
-                  className="hidden sm:block"
+                  className="h-8 w-auto sm:h-9"
                   priority
                 />
               </Link>
@@ -1133,6 +1140,14 @@ export function Header() {
                 >
                   <BookOpen className="h-4 w-4 text-indigo-500" />
                   Embroidery Guide
+                </Link>
+                <Link
+                  href="/guides"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <BookOpen className="h-4 w-4 text-emerald-500" />
+                  Product Guides
                 </Link>
                 <Link
                   href="/faq"

@@ -4,6 +4,7 @@ import { TurnaroundBanner } from '@/components/home/TurnaroundBanner';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { FeaturedProducts } from '@/components/home/FeaturedProducts';
+import { ProductGuidesPromo } from '@/components/home/ProductGuidesPromo';
 import { ServicesGrid } from '@/components/home/ServicesGrid';
 import { BuiltForScale } from '@/components/home/BuiltForScale';
 import { TrustSignals } from '@/components/home/TrustSignals';
@@ -30,16 +31,19 @@ export default function HomePage() {
       {/* 5. Featured Products - Help: Not sure? Try these */}
       <FeaturedProducts />
       
-      {/* 6. Services - Context: Here's what we'll do */}
+      {/* 6. Product Guides - Discovery: Browse curated collections */}
+      <ProductGuidesPromo />
+      
+      {/* 7. Services - Context: Here's what we'll do */}
       <ServicesGrid />
       
-      {/* 7. Built for Scale - Credibility: We can handle it */}
+      {/* 8. Built for Scale - Credibility: We can handle it */}
       <BuiltForScale />
       
-      {/* 8. Trust Signals - Proof: Others trust us */}
+      {/* 9. Trust Signals - Proof: Others trust us */}
       <TrustSignals />
       
-      {/* 9. Final CTA - Close: Let's do this */}
+      {/* 10. Final CTA - Close: Let's do this */}
       <FinalCTA />
     </div>
   );

@@ -6,7 +6,19 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown, X, Search, Leaf, Tag, Sparkles, Flame, TrendingUp } from 'lucide-react';
 import { Brand, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { classifyAllCategories, getAttributeGroupName, shouldShowAttributeGroup, MAIN_CATEGORIES, type ClassifiedCategory, type AttributeGroup } from '@/lib/category-taxonomy';
+import { 
+  classifyAllCategories, 
+  getAttributeGroupName, 
+  shouldShowAttributeGroup, 
+  MAIN_CATEGORIES, 
+  SUB_CATEGORIES,
+  idToSlug,
+  parseCategoryParam,
+  buildCategoryParam,
+  toggleCategoryInParam,
+  type ClassifiedCategory, 
+  type AttributeGroup 
+} from '@/lib/category-taxonomy';
 
 interface FilterSidebarProps {
   showBrands?: boolean;
@@ -128,7 +140,7 @@ export function FilterSidebar({
 
   // Get current filter values from URL
   const selectedBrand = searchParams.get('brand');
-  const selectedCategory = searchParams.get('category');
+  const categoryParam = searchParams.get('category');
   const selectedColorFamilies = searchParams.get('colorFamily')?.split(',').filter(Boolean) || [];
   const selectedAttributes = searchParams.get('attr')?.split(',').filter(Boolean) || []; // Category IDs for attribute filters
   const minPrice = searchParams.get('minPrice');
@@ -138,8 +150,15 @@ export function FilterSidebar({
   const featuredFilter = searchParams.get('featured') === 'true';
   const streetwearFilter = searchParams.get('streetwear') === 'true';
   
-  // Get selected category ID for context-aware filtering
-  const selectedCategoryId = selectedCategory ? parseInt(selectedCategory, 10) : null;
+  // Parse category param (supports both slug format "t-shirts+cotton" and legacy ID format "21,57")
+  const selectedCategoryIds = parseCategoryParam(categoryParam);
+  
+  // Get the main category ID for context-aware filtering (first main category in selection)
+  const selectedCategoryId = selectedCategoryIds.find(id => MAIN_CATEGORIES[id]) ?? 
+                              (selectedCategoryIds.length > 0 ? selectedCategoryIds[0] : null);
+  
+  // Check if a category is selected
+  const isCategorySelected = (categoryId: number) => selectedCategoryIds.includes(categoryId);
 
   // Fetch filter options
   useEffect(() => {
@@ -218,45 +237,54 @@ export function FilterSidebar({
     router.push(`/catalog?${params.toString()}`);
   };
 
-  // Toggle attribute category selection
+  // Toggle attribute category selection using slug-based URLs
+  // Attributes are combined with main category: "t-shirts+cotton+short-sleeve"
   // Single-select groups: clicking a new option replaces the old one
   // Multi-select groups: clicking adds/removes from selection
   const toggleAttribute = (categoryId: number, group: AttributeGroup) => {
     const params = new URLSearchParams(searchParams.toString());
-    const current = new Set(selectedAttributes);
-    const idStr = categoryId.toString();
     
     const isSingleSelect = singleSelectGroups.includes(group);
     
-    if (current.has(idStr)) {
+    // Get current selection
+    let currentIds = [...selectedCategoryIds];
+    
+    if (currentIds.includes(categoryId)) {
       // Clicking already selected item - deselect it
-      current.delete(idStr);
+      currentIds = currentIds.filter(id => id !== categoryId);
     } else {
       if (isSingleSelect && classifiedCategories) {
         // For single-select: remove any other selections from the same group
         const groupAttributes = classifiedCategories.attributes.get(group) || [];
-        const groupIds = new Set(groupAttributes.map(a => a.id.toString()));
-        groupIds.forEach(id => current.delete(id));
+        const groupIds = new Set(groupAttributes.map(a => a.id));
+        currentIds = currentIds.filter(id => !groupIds.has(id));
       }
-      current.add(idStr);
+      currentIds.push(categoryId);
     }
     
-    if (current.size > 0) {
-      params.set('attr', Array.from(current).join(','));
+    // Build new URL param using slugs
+    const newParam = buildCategoryParam(currentIds);
+    
+    if (newParam) {
+      params.set('category', newParam);
     } else {
-      params.delete('attr');
+      params.delete('category');
     }
     
+    // Remove legacy attr param since we're combining everything into category
+    params.delete('attr');
     params.delete('page');
-    router.push(`/catalog?${params.toString()}`);
+    
+    const queryString = params.toString();
+    router.push(queryString ? `/catalog?${queryString}` : '/catalog');
   };
 
-  // Check if an attribute category is selected
+  // Check if an attribute category is selected (now part of the unified category param)
   const isAttributeSelected = (categoryId: number) => {
-    return selectedAttributes.includes(categoryId.toString());
+    return selectedCategoryIds.includes(categoryId);
   };
 
-  const hasActiveFilters = selectedBrand || selectedCategory || selectedColorFamilies.length > 0 || selectedAttributes.length > 0 || minPrice || maxPrice || onSaleFilter || sustainableFilter || featuredFilter || streetwearFilter;
+  const hasActiveFilters = selectedBrand || selectedCategoryIds.length > 0 || selectedColorFamilies.length > 0 || selectedAttributes.length > 0 || minPrice || maxPrice || onSaleFilter || sustainableFilter || featuredFilter || streetwearFilter;
 
   return (
     <aside className={cn('w-full', className)}>
@@ -385,20 +413,24 @@ export function FilterSidebar({
             >
               <div className="space-y-1">
                 {classifiedCategories.main.map((category) => {
-                  const mainCat = MAIN_CATEGORIES[category.id];
-                  const isSelected = selectedCategory === category.id.toString();
+                  const isSelected = isCategorySelected(category.id);
                   return (
                     <button
                       key={category.id}
                       onClick={() => {
-                        // Use slug-based navigation for main categories
-                        if (isSelected) {
-                          router.push('/catalog');
-                        } else if (mainCat?.slug) {
-                          router.push(`/catalog/${mainCat.slug}`);
+                        // Toggle category using slug-based URL
+                        const newParam = toggleCategoryInParam(categoryParam, category.id);
+                        const params = new URLSearchParams(searchParams.toString());
+                        
+                        if (newParam) {
+                          params.set('category', newParam);
                         } else {
-                          updateFilter('category', category.id.toString());
+                          params.delete('category');
                         }
+                        params.delete('page');
+                        
+                        const queryString = params.toString();
+                        router.push(queryString ? `/catalog?${queryString}` : '/catalog');
                       }}
                       className={cn(
                         'block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors',
@@ -422,7 +454,7 @@ export function FilterSidebar({
             onToggle={() => toggleSection('colorFamily')}
             collapsible={collapsible}
           >
-            {!selectedCategory ? (
+            {selectedCategoryIds.length === 0 ? (
               <p className="text-sm text-slate-500 italic">
                 Select a category first to filter by color
               </p>

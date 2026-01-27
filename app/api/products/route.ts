@@ -8,6 +8,7 @@ import {
 import { getProducts, searchProducts, getProductsByStyleNumbers } from '@/lib/ss-activewear';
 import { Product } from '@/lib/types';
 import { POPULAR_PRODUCTS, ProductTier } from '@/lib/popular-products';
+import { parseCategoryParam } from '@/lib/category-taxonomy';
 
 // ============================================================================
 // CACHE STATUS CHECK
@@ -33,6 +34,7 @@ async function isCacheAvailable(): Promise<boolean> {
 setInterval(() => {
   cacheAvailable = null;
 }, 5 * 60 * 1000);
+
 
 // ============================================================================
 // STRICT MATCHING: Build map of brand+style combinations only
@@ -359,10 +361,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const brand = searchParams.get('brand');
-    const category = searchParams.get('category');
+    const categoryParam = searchParams.get('category');
     const style = searchParams.get('style');
     const colorFamily = searchParams.get('colorFamily');
-    const attr = searchParams.get('attr'); // Attribute category IDs
+    const attr = searchParams.get('attr'); // Legacy attribute category IDs
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
     
@@ -373,7 +375,28 @@ export async function GET(request: NextRequest) {
     const streetwear = searchParams.get('streetwear') === 'true'; // Streetwear tier only
     const hasQuickFilters = onSale || sustainable;
     const hasPopularFilters = featured || streetwear;
-
+    
+    // Parse category parameter (supports slug format "t-shirts+cotton" and legacy ID format "21,57")
+    let categoryIds: number[] = [];
+    if (categoryParam) {
+      const isSlugFormat = /[a-zA-Z]/.test(categoryParam) || categoryParam.includes('+');
+      if (isSlugFormat) {
+        categoryIds = parseCategoryParam(categoryParam);
+      } else {
+        // Legacy ID format
+        categoryIds = categoryParam.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+      }
+    }
+    
+    // Also include legacy attr param if provided
+    if (attr) {
+      const attrIds = attr.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+      categoryIds = [...new Set([...categoryIds, ...attrIds])];
+    }
+    
+    // For backwards compatibility, build legacy category string
+    const category = categoryIds.length > 0 ? categoryIds.join(',') : null;
+    
     // ========================================================================
     // TRY SUPABASE CACHE FIRST (fast path: ~100-200ms)
     // ========================================================================
@@ -395,7 +418,7 @@ export async function GET(request: NextRequest) {
         }
         
         // No filters - show popular products
-        const noFilters = !brand && !category && !attr && !colorFamily && !style;
+        const noFilters = !brand && categoryIds.length === 0 && !colorFamily && !style;
         
         if (noFilters || hasPopularFilters) {
           const result = await getPopularProducts({
@@ -406,9 +429,10 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(result);
         }
         
-        // With filters
+        // With filters - use categoryIds for multi-category filtering
         const result = await getProductsFromCache({
           brand: brand || undefined,
+          categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
           colorFamily: colorFamily || undefined,
           sustainable,
           featured: hasPopularFilters,
@@ -470,8 +494,8 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // Combine main category with attribute categories for filtering
-    const allCategoryIds = [category, attr].filter(Boolean).join(',') || undefined;
+    // Use combined categoryIds for filtering (already parsed above)
+    const allCategoryIds = categoryIds.length > 0 ? categoryIds.join(',') : undefined;
     
     // SPECIAL CASE: Featured/Popular Products filter
     // When this filter is active, we use efficient batch lookup for popular style numbers
@@ -580,7 +604,7 @@ export async function GET(request: NextRequest) {
     // Normal pagination - ALWAYS apply smart sorting
     // SPECIAL CASE: When no filters applied, ONLY show curated popular products
     // This gives customers a curated shopping experience instead of overwhelming them
-    const noFilters = !brand && !category && !attr && !colorFamily && !style;
+    const noFilters = !brand && categoryIds.length === 0 && !colorFamily && !style;
     
     if (noFilters) {
       console.log(`[API] No filters - showing ONLY curated popular products`);
