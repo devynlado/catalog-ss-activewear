@@ -10,21 +10,46 @@ import { Product } from '@/lib/types';
 import { POPULAR_PRODUCTS, ProductTier } from '@/lib/popular-products';
 import { parseCategoryParam } from '@/lib/category-taxonomy';
 
+// #region agent log
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7242/ingest/f9783fbf-d606-40ca-affb-413522dae600';
+function debugLog(location: string, message: string, data: Record<string, any>, hypothesisId: string) {
+  fetch(DEBUG_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location, message, data, hypothesisId, timestamp: Date.now(), sessionId: 'debug-session' }) }).catch(() => {});
+}
+// #endregion
+
 // ============================================================================
 // CACHE STATUS CHECK
 // ============================================================================
 let cacheAvailable: boolean | null = null;
 
 async function isCacheAvailable(): Promise<boolean> {
+  // #region agent log
+  const startTime = Date.now();
+  const wasCached = cacheAvailable !== null;
+  debugLog('route.ts:isCacheAvailable', 'Cache check started', { wasCached, cacheAvailable }, 'A');
+  // #endregion
+  
   if (cacheAvailable !== null) return cacheAvailable;
   
   try {
+    // #region agent log
+    const statsStart = Date.now();
+    // #endregion
     const stats = await getCacheStats();
+    // #region agent log
+    debugLog('route.ts:isCacheAvailable', 'getCacheStats completed', { durationMs: Date.now() - statsStart, totalProducts: stats.totalProducts }, 'A');
+    // #endregion
     cacheAvailable = stats.totalProducts > 0;
     console.log(`[Products API] Cache available: ${cacheAvailable} (${stats.totalProducts} products)`);
+    // #region agent log
+    debugLog('route.ts:isCacheAvailable', 'Cache check completed', { durationMs: Date.now() - startTime, cacheAvailable }, 'A');
+    // #endregion
     return cacheAvailable;
   } catch (error) {
     console.log('[Products API] Cache check failed, using SS API fallback');
+    // #region agent log
+    debugLog('route.ts:isCacheAvailable', 'Cache check FAILED', { durationMs: Date.now() - startTime, error: String(error) }, 'C');
+    // #endregion
     cacheAvailable = false;
     return false;
   }
@@ -357,6 +382,12 @@ function applyProductFilters(products: Product[], filters: { onSale?: boolean; s
 }
 
 export async function GET(request: NextRequest) {
+  // #region agent log
+  const requestStartTime = Date.now();
+  debugLog('route.ts:GET', 'Request started', { url: request.url }, 'A');
+  console.log(`[PERF] Request started at ${new Date().toISOString()}`);
+  // #endregion
+  
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -400,12 +431,24 @@ export async function GET(request: NextRequest) {
     // ========================================================================
     // TRY SUPABASE CACHE FIRST (fast path: ~100-200ms)
     // ========================================================================
+    // #region agent log
+    const cacheCheckStart = Date.now();
+    // #endregion
     const useCache = await isCacheAvailable();
+    // #region agent log
+    const cacheCheckDuration = Date.now() - cacheCheckStart;
+    debugLog('route.ts:GET', 'Cache availability checked', { useCache, durationMs: cacheCheckDuration }, 'A');
+    console.log(`[PERF] Cache check took ${cacheCheckDuration}ms, useCache=${useCache}`);
+    // #endregion
     
     if (useCache) {
       console.log('[Products API] Using Supabase cache');
       
       try {
+        // #region agent log
+        const cacheQueryStart = Date.now();
+        // #endregion
+        
         // Search query
         if (search) {
           const result = await searchProductsFromCache(search, {
@@ -414,6 +457,9 @@ export async function GET(request: NextRequest) {
             featured: hasPopularFilters,
             sustainable,
           });
+          // #region agent log
+          debugLog('route.ts:GET', 'Cache search completed', { durationMs: Date.now() - cacheQueryStart, totalRequestMs: Date.now() - requestStartTime, resultCount: result.total }, 'D');
+          // #endregion
           return NextResponse.json(result);
         }
         
@@ -426,6 +472,9 @@ export async function GET(request: NextRequest) {
             pageSize,
             streetwear,
           });
+          // #region agent log
+          debugLog('route.ts:GET', 'Popular products fetched from cache', { durationMs: Date.now() - cacheQueryStart, totalRequestMs: Date.now() - requestStartTime, resultCount: result.total }, 'D');
+          // #endregion
           return NextResponse.json(result);
         }
         
@@ -453,6 +502,11 @@ export async function GET(request: NextRequest) {
     // Used when cache is empty or has errors
     // ========================================================================
     console.log('[Products API] Using SS API fallback');
+    // #region agent log
+    debugLog('route.ts:GET', 'SS API FALLBACK TRIGGERED - this is the slow path!', { timeElapsedMs: Date.now() - requestStartTime, search, brand, categoryIds }, 'C');
+    const ssApiStart = Date.now();
+    console.log(`[PERF] ⚠️ SS API FALLBACK at ${Date.now() - requestStartTime}ms - THIS IS THE SLOW PATH!`);
+    // #endregion
 
     let allProducts;
 

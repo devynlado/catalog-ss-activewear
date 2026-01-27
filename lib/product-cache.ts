@@ -145,6 +145,11 @@ async function getStyleIdsByCategoryIds(categoryIds: number[]): Promise<number[]
  * Get products from Supabase cache with filters
  */
 export async function getProductsFromCache(options: ProductQueryOptions = {}): Promise<ProductQueryResult> {
+  // #region agent log
+  const startTime = Date.now();
+  debugLogCache('product-cache.ts:getProductsFromCache', 'Query started', { options: JSON.stringify(options) }, 'D');
+  // #endregion
+  
   const {
     search,
     brand,
@@ -295,6 +300,12 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
   
   const total = count || filteredProducts.length;
   const totalPages = Math.ceil(total / pageSize);
+  
+  // #region agent log
+  const queryDuration = Date.now() - startTime;
+  debugLogCache('product-cache.ts:getProductsFromCache', 'Query completed', { durationMs: queryDuration, total, resultCount: filteredProducts.length }, 'D');
+  console.log(`[PERF] getProductsFromCache completed in ${queryDuration}ms (${filteredProducts.length} products returned)`);
+  // #endregion
   
   return {
     data: filteredProducts,
@@ -492,6 +503,13 @@ export async function getProductsByBrand(
   });
 }
 
+// #region agent log
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7242/ingest/f9783fbf-d606-40ca-affb-413522dae600';
+function debugLogCache(location: string, message: string, data: Record<string, any>, hypothesisId: string) {
+  fetch(DEBUG_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location, message, data, hypothesisId, timestamp: Date.now(), sessionId: 'debug-session' }) }).catch(() => {});
+}
+// #endregion
+
 /**
  * Get cache stats (for monitoring)
  */
@@ -502,6 +520,12 @@ export async function getCacheStats(): Promise<{
   totalSkus: number;
   lastSync: string | null;
 }> {
+  // #region agent log
+  const startTime = Date.now();
+  debugLogCache('product-cache.ts:getCacheStats', 'Starting cache stats query (5 parallel Supabase queries)', {}, 'A');
+  console.log(`[PERF] getCacheStats starting (5 parallel Supabase count queries)`);
+  // #endregion
+  
   const supabase = createServerSupabaseClient();
   
   const [products, popular, colors, skus, syncLog] = await Promise.all([
@@ -511,6 +535,12 @@ export async function getCacheStats(): Promise<{
     supabase.from('product_skus').select('*', { count: 'exact', head: true }),
     supabase.from('sync_logs').select('completed_at').eq('status', 'completed').order('completed_at', { ascending: false }).limit(1).single(),
   ]);
+  
+  // #region agent log
+  const duration = Date.now() - startTime;
+  debugLogCache('product-cache.ts:getCacheStats', 'Cache stats query completed', { durationMs: duration, totalProducts: products.count }, 'A');
+  console.log(`[PERF] getCacheStats completed in ${duration}ms (${products.count} products found)`);
+  // #endregion
   
   const syncData = syncLog.data as { completed_at: string } | null;
   
