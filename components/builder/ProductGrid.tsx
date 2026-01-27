@@ -7,7 +7,7 @@ import { ProductCard } from './ProductCard';
 import { QuickViewModal } from './QuickViewModal';
 import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 import { Pagination } from '@/components/ui/Pagination';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 
 interface CacheStatus {
   status: 'idle' | 'loading' | 'ready' | 'error';
@@ -190,10 +190,19 @@ export function ProductGrid({
   if (products.length === 0) {
     return (
       <div className="rounded-xl bg-slate-50 p-12 text-center">
-        <p className="text-lg font-medium text-slate-600">No products found</p>
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+          <Search className="h-8 w-8 text-slate-400" />
+        </div>
+        <p className="text-lg font-medium text-slate-900">No products match your filters</p>
         <p className="mt-2 text-sm text-slate-500">
-          Try adjusting your filters or search query
+          Try adjusting or clearing some filters to see more results
         </p>
+        <button
+          onClick={() => router.push('/catalog')}
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors"
+        >
+          Clear all filters
+        </button>
       </div>
     );
   }

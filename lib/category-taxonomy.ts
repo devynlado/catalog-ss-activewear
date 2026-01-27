@@ -729,6 +729,36 @@ export function toggleCategoryInParam(currentParam: string | null, categoryId: n
 }
 
 /**
+ * Select a main category with REPLACE behavior (not toggle/combine)
+ * - Clicking a new main category REPLACES any existing main category
+ * - Clicking the already-selected main category deselects it
+ * - Preserves sub-category/attribute selections that are valid for the new category
+ */
+export function selectMainCategory(currentParam: string | null, newCategoryId: number): string {
+  const currentIds = parseCategoryParam(currentParam);
+  
+  // If clicking the already-selected main category, deselect it (return to "no category")
+  if (currentIds.includes(newCategoryId) && MAIN_CATEGORIES[newCategoryId]) {
+    return buildCategoryParam(currentIds.filter(id => id !== newCategoryId));
+  }
+  
+  // Remove any existing main categories, keep only sub-categories/attributes
+  const attributesOnly = currentIds.filter(id => !MAIN_CATEGORIES[id]);
+  
+  // Filter out attributes that don't apply to the new category
+  // Check if the attribute's parent matches or if it's a general attribute
+  const validAttributes = attributesOnly.filter(attrId => {
+    const subCat = SUB_CATEGORIES[attrId];
+    if (!subCat) return false;
+    
+    // Keep if: no specific parent (general attribute) or parent matches new category
+    return subCat.parentId === 0 || subCat.parentId === newCategoryId;
+  });
+  
+  return buildCategoryParam([newCategoryId, ...validAttributes]);
+}
+
+/**
  * Get the display name for a category param (for page titles, breadcrumbs)
  * Returns a formatted string like "Cotton Short Sleeve T-Shirts"
  */

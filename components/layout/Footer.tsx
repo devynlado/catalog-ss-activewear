@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Linkedin } from 'lucide-react';
 import { getMainCategories } from '@/lib/category-taxonomy';
 
 // Get main categories for footer links
@@ -61,7 +61,7 @@ export function Footer() {
             {/* Social Links */}
             <div className="mt-6 flex gap-3">
               <a 
-                href="https://facebook.com" 
+                href="https://facebook.com/garmentdecor" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
@@ -70,7 +70,7 @@ export function Footer() {
                 <Facebook className="h-4 w-4" />
               </a>
               <a 
-                href="https://instagram.com" 
+                href="https://instagram.com/garmentdecor" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
@@ -79,16 +79,7 @@ export function Footer() {
                 <Instagram className="h-4 w-4" />
               </a>
               <a 
-                href="https://twitter.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-4 w-4" />
-              </a>
-              <a 
-                href="https://linkedin.com" 
+                href="https://www.linkedin.com/company/garmentdecor/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-slate-300 hover:bg-brand-500 hover:text-white transition-colors"

@@ -15,6 +15,7 @@ import {
   idToSlug,
   parseCategoryParam,
   buildCategoryParam,
+  selectMainCategory,
   toggleCategoryInParam,
   type ClassifiedCategory, 
   type AttributeGroup 
@@ -159,6 +160,37 @@ export function FilterSidebar({
   
   // Check if a category is selected
   const isCategorySelected = (categoryId: number) => selectedCategoryIds.includes(categoryId);
+  
+  // ============================================================================
+  // FILTER LOCKING LOGIC
+  // Determines which filters are available based on current state
+  // ============================================================================
+  const hasSearch = !!searchParams.get('search');
+  const hasMainCategory = selectedCategoryId !== null;
+  const hasBrandOnly = !!selectedBrand && !hasMainCategory && !hasSearch;
+  
+  // Filters are locked (show "Select a category" message) when:
+  // - No main category selected AND no search query AND not in brand-only mode
+  const filtersLocked = !hasMainCategory && !hasSearch;
+  
+  // Universal filters that show even in brand-only mode (no category)
+  const universalAttributeGroups: AttributeGroup[] = ['material', 'weight'];
+  
+  // Determine if an attribute group should be visible
+  const isAttributeGroupVisible = (group: AttributeGroup): boolean => {
+    // If we have a category or search, use the normal shouldShowAttributeGroup logic
+    if (hasMainCategory || hasSearch) {
+      return shouldShowAttributeGroup(group, selectedCategoryId);
+    }
+    
+    // Brand-only mode: show only universal attributes
+    if (hasBrandOnly) {
+      return universalAttributeGroups.includes(group);
+    }
+    
+    // No context at all: hide all attribute groups
+    return false;
+  };
 
   // Fetch filter options
   useEffect(() => {
@@ -403,7 +435,7 @@ export function FilterSidebar({
             </div>
           </FilterSection>
 
-          {/* Main Categories (from taxonomy) */}
+          {/* Main Categories (from taxonomy) - SINGLE SELECT */}
           {showCategories && classifiedCategories && classifiedCategories.main.length > 0 && (
             <FilterSection
               title={sections.categories.title}
@@ -418,14 +450,16 @@ export function FilterSidebar({
                     <button
                       key={category.id}
                       onClick={() => {
-                        // Toggle category using slug-based URL
-                        const newParam = toggleCategoryInParam(categoryParam, category.id);
+                        // Single-select: REPLACE main category, don't combine
+                        const newParam = selectMainCategory(categoryParam, category.id);
                         const params = new URLSearchParams(searchParams.toString());
                         
                         if (newParam) {
                           params.set('category', newParam);
                         } else {
                           params.delete('category');
+                          // Also clear color filters when no category
+                          params.delete('colorFamily');
                         }
                         params.delete('page');
                         
@@ -433,12 +467,23 @@ export function FilterSidebar({
                         router.push(queryString ? `/catalog?${queryString}` : '/catalog');
                       }}
                       className={cn(
-                        'block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                        'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors',
                         isSelected
                           ? 'bg-brand-50 font-medium text-brand-700'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       )}
                     >
+                      {/* Radio-style indicator */}
+                      <span className={cn(
+                        'flex h-4 w-4 items-center justify-center rounded-full border-2',
+                        isSelected
+                          ? 'border-brand-600 bg-brand-600'
+                          : 'border-slate-300'
+                      )}>
+                        {isSelected && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                        )}
+                      </span>
                       {category.name}
                     </button>
                   );
@@ -447,16 +492,16 @@ export function FilterSidebar({
             </FilterSection>
           )}
 
-          {/* Color Family Filter (multi-select) - requires category to be selected */}
+          {/* Color Family Filter (multi-select) - requires category, search, or brand */}
           <FilterSection
             title={sections.colorFamily.title}
             isOpen={sections.colorFamily.isOpen}
             onToggle={() => toggleSection('colorFamily')}
             collapsible={collapsible}
           >
-            {selectedCategoryIds.length === 0 ? (
+            {filtersLocked && !hasBrandOnly ? (
               <p className="text-sm text-slate-500 italic">
-                Select a category first to filter by color
+                Select a category to filter by color
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -531,7 +576,8 @@ export function FilterSidebar({
           {/* Dynamic Attribute Filters from Taxonomy */}
           {classifiedCategories && attributeGroupsToShow.map((group) => {
             // Context-aware filtering: only show relevant attribute groups
-            if (!shouldShowAttributeGroup(group, selectedCategoryId)) {
+            // Uses new isAttributeGroupVisible which handles category-first logic
+            if (!isAttributeGroupVisible(group)) {
               return null;
             }
             

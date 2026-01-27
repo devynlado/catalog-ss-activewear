@@ -49,16 +49,17 @@ export function ProductCard({
   const [showAllColors, setShowAllColors] = useState(false);
 
   // Image priority:
-  // 1. styleImage (product.imageUrl) - primary, usually model shots
-  // 2. colorOnModelFrontImage - fallback, model wearing selected color
-  // 3. colorFrontImage (flat image) - final fallback
+  // 1. Selected color's model image (if user clicked a swatch)
+  // 2. Selected color's flat image (fallback)
+  // 3. Product's default styleImage (initial state)
   const getImageUrl = () => {
-    // Try styleImage first (usually model shots)
+    // Prioritize selected color's images when available
+    if (selectedColor) {
+      if (selectedColor.onModelFrontImage) return selectedColor.onModelFrontImage;
+      if (selectedColor.frontImage) return selectedColor.frontImage;
+    }
+    // Fall back to product's default image
     if (product.imageUrl) return product.imageUrl;
-    // Fall back to model image for selected color
-    if (selectedColor?.onModelFrontImage) return selectedColor.onModelFrontImage;
-    // Final fallback to flat product image
-    if (selectedColor?.frontImage) return selectedColor.frontImage;
     return '';
   };
   const imageUrl = getImageUrl();

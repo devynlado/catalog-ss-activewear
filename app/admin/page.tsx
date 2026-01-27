@@ -133,7 +133,18 @@ export default function AdminDashboard() {
       const result = await res.json();
       
       if (type === 'summary') {
-        setSummary(result);
+        // Validate the summary shape before setting
+        if (result && result.quotes && result.contacts) {
+          setSummary(result);
+        } else {
+          // Set default values if data is malformed
+          setSummary({
+            quotes: { total: 0, today: 0, new: 0 },
+            contacts: { total: 0, today: 0, new: 0 },
+            abandoned: { total: 0 },
+            exitCaptures: { total: 0 },
+          });
+        }
       } else if (result.data) {
         if (type === 'quotes') setQuotes(result.data);
         if (type === 'contacts') setContacts(result.data);
