@@ -11,6 +11,21 @@ export interface DecorationDetails {
   stitchCount?: StitchCount;    // For embroidery
 }
 
+// Simplified cart item for recovery (from exit capture)
+interface RecoveryCartItem {
+  sku?: string;
+  styleName: string;
+  brandName: string;
+  colorName: string;
+  colorCode?: string;
+  sizeName: string;
+  quantity: number;
+  unitPrice: number;
+  productId?: string;
+  styleId?: number;
+  imageUrl?: string;
+}
+
 interface QuoteStore {
   items: QuoteItem[];
   isDrawerOpen: boolean;
@@ -30,6 +45,7 @@ interface QuoteStore {
   closeDrawer: () => void;
   toggleDrawer: () => void;
   clearJustAdded: () => void;
+  restoreFromSaved: (savedItems: RecoveryCartItem[]) => void;
   
   // Decoration actions
   setDecorationType: (type: DecorationType) => void;
@@ -119,6 +135,38 @@ export const useQuoteStore = create<QuoteStore>()(
       
       clearQuote: () => {
         set({ items: [] });
+      },
+      
+      restoreFromSaved: (savedItems) => {
+        // Convert recovery items to QuoteItems and add to existing items
+        const restoredItems: QuoteItem[] = savedItems.map((item, index) => ({
+          id: `restored-${item.sku || item.styleName}-${item.colorName}-${item.sizeName}-${Date.now()}-${index}`,
+          sku: item.sku,
+          productId: item.productId || item.sku || `${item.brandName}-${item.styleName}`,
+          styleId: item.styleId || 0,
+          styleName: item.styleName,
+          brandName: item.brandName,
+          colorName: item.colorName,
+          colorCode: item.colorCode || item.colorName.toLowerCase().replace(/\s+/g, '-'),
+          sizeName: item.sizeName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          imageUrl: item.imageUrl || '',
+          addedAt: new Date(),
+        }));
+        
+        set((state) => ({
+          items: [...state.items, ...restoredItems],
+          isDrawerOpen: true,
+          justAdded: true,
+        }));
+        
+        // Clear justAdded after animation
+        setTimeout(() => {
+          set({ justAdded: false });
+        }, 1000);
+        
+        console.log(`[Quote Store] Restored ${restoredItems.length} items from saved quote`);
       },
       
       openDrawer: () => set({ isDrawerOpen: true }),

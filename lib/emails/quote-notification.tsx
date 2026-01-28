@@ -1,4 +1,18 @@
-// Email template for internal team notification when a quote is submitted
+/**
+ * Email template for internal team notification when a quote is submitted
+ * Uses shared components for consistent styling
+ */
+
+import {
+  emailWrapper,
+  emailHeaderInternal,
+  emailFooterInternal,
+  emailCard,
+  EMAIL_COLORS,
+  EMAIL_FONTS,
+  EMAIL_SUBJECT_LINES,
+  formatPrice,
+} from './components';
 
 interface QuoteItem {
   styleName: string;
@@ -29,202 +43,177 @@ interface QuoteNotificationProps {
   totalItems: number;
 }
 
+/**
+ * Get subject line for internal quote notification
+ */
+export function getQuoteNotificationSubject(quoteId: string, total: number): string {
+  return EMAIL_SUBJECT_LINES.quoteNotification(quoteId, total);
+}
+
 export function generateQuoteNotificationHtml(props: QuoteNotificationProps): string {
   const { quoteId, contact, items, decoration, finishing, eventDate, message, subtotal, totalItems } = props;
   
   const itemRows = items.map(item => `
     <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
-        <strong>${item.brandName}</strong><br/>
-        ${item.styleName}<br/>
-        <span style="color: #64748b;">${item.colorName} / ${item.sizeName}</span>
+      <td style="padding: 12px; border-bottom: 1px solid ${EMAIL_COLORS.border};">
+        <strong style="color: ${EMAIL_COLORS.textDark}; font-family: ${EMAIL_FONTS.stack};">${item.brandName}</strong><br/>
+        <span style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; font-family: ${EMAIL_FONTS.stack};">${item.styleName}</span><br/>
+        <span style="color: ${EMAIL_COLORS.textMuted}; font-size: 13px; font-family: ${EMAIL_FONTS.stack};">${item.colorName} / ${item.sizeName}</span>
       </td>
-      <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">${item.quantity}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: right;">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
+      <td style="padding: 12px; border-bottom: 1px solid ${EMAIL_COLORS.border}; text-align: center; color: ${EMAIL_COLORS.textBody}; font-family: ${EMAIL_FONTS.stack};">${item.quantity}</td>
+      <td style="padding: 12px; border-bottom: 1px solid ${EMAIL_COLORS.border}; text-align: right; color: ${EMAIL_COLORS.textDark}; font-weight: 600; font-family: ${EMAIL_FONTS.stack};">${formatPrice(item.unitPrice * item.quantity)}</td>
     </tr>
   `).join('');
 
   const decorationInfo = decoration && decoration.type !== 'none' ? `
     <tr>
-      <td style="padding: 8px 0; color: #64748b;">Decoration:</td>
-      <td style="padding: 8px 0;"><strong>${decoration.type}</strong>${decoration.description ? `<br/><span style="color: #64748b;">${decoration.description}</span>` : ''}</td>
+      <td style="padding: 8px 0; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Decoration:</td>
+      <td style="padding: 8px 0; font-family: ${EMAIL_FONTS.stack};"><strong>${decoration.type}</strong>${decoration.description ? `<br/><span style="color: ${EMAIL_COLORS.textMuted};">${decoration.description}</span>` : ''}</td>
     </tr>
   ` : '';
 
   const finishingInfo = finishing && finishing.length > 0 ? `
     <tr>
-      <td style="padding: 8px 0; color: #64748b;">Finishing:</td>
-      <td style="padding: 8px 0;"><strong>${finishing.join(', ')}</strong></td>
+      <td style="padding: 8px 0; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Finishing:</td>
+      <td style="padding: 8px 0; font-family: ${EMAIL_FONTS.stack};"><strong>${finishing.join(', ')}</strong></td>
     </tr>
   ` : '';
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Quote Request - ${quoteId}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f1f5f9; padding: 40px 20px;">
+  const content = `
+    ${emailHeaderInternal('🎉 New Quote Request!', `Quote ID: ${quoteId}`)}
+    
+    <!-- Quick Summary -->
     <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-          
-          <!-- Header -->
+      <td style="padding: 24px 32px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${EMAIL_COLORS.successBg}; border: 1px solid #bbf7d0; border-radius: 8px;">
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">🎉 New Quote Request!</h1>
-              <p style="margin: 8px 0 0; color: #94a3b8; font-size: 14px;">Quote ID: ${quoteId}</p>
+            <td style="padding: 16px; text-align: center;">
+              <p style="margin: 0; color: ${EMAIL_COLORS.success}; font-size: 14px; font-family: ${EMAIL_FONTS.stack};">ESTIMATED VALUE</p>
+              <p style="margin: 4px 0 0; color: ${EMAIL_COLORS.success}; font-size: 28px; font-weight: 700; font-family: ${EMAIL_FONTS.stack};">${formatPrice(subtotal)}</p>
+              <p style="margin: 4px 0 0; color: ${EMAIL_COLORS.textMuted}; font-size: 14px; font-family: ${EMAIL_FONTS.stack};">${totalItems} items</p>
             </td>
           </tr>
-          
-          <!-- Contact Info -->
-          <tr>
-            <td style="padding: 32px;">
-              <h2 style="margin: 0 0 16px; color: #0f172a; font-size: 18px; font-weight: 600;">Contact Information</h2>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 100px;">Name:</td>
-                  <td style="padding: 8px 0;"><strong>${contact.name}</strong></td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Email:</td>
-                  <td style="padding: 8px 0;"><a href="mailto:${contact.email}" style="color: #2563eb;">${contact.email}</a></td>
-                </tr>
-                ${contact.phone ? `
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Phone:</td>
-                  <td style="padding: 8px 0;"><a href="tel:${contact.phone}" style="color: #2563eb;">${contact.phone}</a></td>
-                </tr>
-                ` : ''}
-                ${contact.company ? `
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Company:</td>
-                  <td style="padding: 8px 0;"><strong>${contact.company}</strong></td>
-                </tr>
-                ` : ''}
-                ${eventDate ? `
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Need By:</td>
-                  <td style="padding: 8px 0;"><strong style="color: #dc2626;">${new Date(eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></td>
-                </tr>
-                ` : ''}
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Items -->
-          <tr>
-            <td style="padding: 0 32px 32px;">
-              <h2 style="margin: 0 0 16px; color: #0f172a; font-size: 18px; font-weight: 600;">Quote Items (${totalItems} total)</h2>
-              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <tr style="background-color: #f8fafc;">
-                  <th style="padding: 12px; text-align: left; font-weight: 600; color: #475569;">Product</th>
-                  <th style="padding: 12px; text-align: center; font-weight: 600; color: #475569;">Qty</th>
-                  <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Line Total</th>
-                </tr>
-                ${itemRows}
-                <tr style="background-color: #f8fafc;">
-                  <td colspan="2" style="padding: 12px; font-weight: 600;">Estimated Subtotal</td>
-                  <td style="padding: 12px; text-align: right; font-weight: 700; font-size: 18px; color: #0f172a;">$${subtotal.toFixed(2)}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Services -->
-          ${(decorationInfo || finishingInfo) ? `
-          <tr>
-            <td style="padding: 0 32px 32px;">
-              <h2 style="margin: 0 0 16px; color: #0f172a; font-size: 18px; font-weight: 600;">Services Requested</h2>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                ${decorationInfo}
-                ${finishingInfo}
-              </table>
-            </td>
-          </tr>
-          ` : ''}
-          
-          <!-- Message -->
-          ${message ? `
-          <tr>
-            <td style="padding: 0 32px 32px;">
-              <h2 style="margin: 0 0 16px; color: #0f172a; font-size: 18px; font-weight: 600;">Additional Notes</h2>
-              <p style="margin: 0; padding: 16px; background-color: #f8fafc; border-radius: 8px; color: #475569; line-height: 1.6;">${message}</p>
-            </td>
-          </tr>
-          ` : ''}
-          
-          <!-- CTA -->
-          <tr>
-            <td style="padding: 0 32px 32px; text-align: center;">
-              <a href="mailto:${contact.email}?subject=Re: Quote ${quoteId}" style="display: inline-block; padding: 14px 32px; background-color: #2563eb; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 8px;">Reply to Customer</a>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 32px; background-color: #f8fafc; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0; color: #64748b; font-size: 12px;">This quote was submitted via garmentdecor.com</p>
-            </td>
-          </tr>
-          
         </table>
       </td>
     </tr>
-  </table>
-</body>
-</html>
+    
+    <!-- Customer Info -->
+    <tr>
+      <td style="padding: 0 32px 24px;">
+        <h2 style="margin: 0 0 16px; color: ${EMAIL_COLORS.textDark}; font-size: 18px; font-weight: 600; font-family: ${EMAIL_FONTS.stack};">Customer Information</h2>
+        ${emailCard(`
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding: 8px 0; color: ${EMAIL_COLORS.textMuted}; width: 100px; font-family: ${EMAIL_FONTS.stack};">Name:</td>
+              <td style="padding: 8px 0; font-family: ${EMAIL_FONTS.stack};"><strong>${contact.name}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Email:</td>
+              <td style="padding: 8px 0; font-family: ${EMAIL_FONTS.stack};"><a href="mailto:${contact.email}" style="color: ${EMAIL_COLORS.info};">${contact.email}</a></td>
+            </tr>
+            ${contact.phone ? `
+            <tr>
+              <td style="padding: 8px 0; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Phone:</td>
+              <td style="padding: 8px 0; font-family: ${EMAIL_FONTS.stack};"><a href="tel:${contact.phone}" style="color: ${EMAIL_COLORS.info};">${contact.phone}</a></td>
+            </tr>
+            ` : ''}
+            ${contact.company ? `
+            <tr>
+              <td style="padding: 8px 0; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Company:</td>
+              <td style="padding: 8px 0; font-family: ${EMAIL_FONTS.stack};"><strong>${contact.company}</strong></td>
+            </tr>
+            ` : ''}
+            ${decorationInfo}
+            ${finishingInfo}
+            ${eventDate ? `
+            <tr>
+              <td style="padding: 8px 0; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Event Date:</td>
+              <td style="padding: 8px 0; font-family: ${EMAIL_FONTS.stack};"><strong style="color: ${EMAIL_COLORS.warning};">${eventDate}</strong></td>
+            </tr>
+            ` : ''}
+          </table>
+        `)}
+      </td>
+    </tr>
+    
+    ${message ? `
+    <!-- Message -->
+    <tr>
+      <td style="padding: 0 32px 24px;">
+        <h2 style="margin: 0 0 16px; color: ${EMAIL_COLORS.textDark}; font-size: 18px; font-weight: 600; font-family: ${EMAIL_FONTS.stack};">Customer Message</h2>
+        <div style="padding: 16px; background-color: #fafaf9; border-radius: 8px; border: 1px solid ${EMAIL_COLORS.border};">
+          <p style="margin: 0; color: ${EMAIL_COLORS.textBody}; line-height: 1.6; white-space: pre-wrap; font-family: ${EMAIL_FONTS.stack};">${message}</p>
+        </div>
+      </td>
+    </tr>
+    ` : ''}
+    
+    <!-- Items Table -->
+    <tr>
+      <td style="padding: 0 32px 24px;">
+        <h2 style="margin: 0 0 16px; color: ${EMAIL_COLORS.textDark}; font-size: 18px; font-weight: 600; font-family: ${EMAIL_FONTS.stack};">Quote Items</h2>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid ${EMAIL_COLORS.border}; border-radius: 8px; overflow: hidden;">
+          <tr style="background-color: #fafaf9;">
+            <th style="padding: 12px; text-align: left; font-weight: 600; color: ${EMAIL_COLORS.textMuted}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-family: ${EMAIL_FONTS.stack};">Product</th>
+            <th style="padding: 12px; text-align: center; font-weight: 600; color: ${EMAIL_COLORS.textMuted}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-family: ${EMAIL_FONTS.stack};">Qty</th>
+            <th style="padding: 12px; text-align: right; font-weight: 600; color: ${EMAIL_COLORS.textMuted}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-family: ${EMAIL_FONTS.stack};">Line Total</th>
+          </tr>
+          ${itemRows}
+          <tr style="background-color: #fafaf9;">
+            <td colspan="2" style="padding: 12px; font-weight: 600; color: ${EMAIL_COLORS.textDark}; font-family: ${EMAIL_FONTS.stack};">Subtotal (blanks only)</td>
+            <td style="padding: 12px; text-align: right; font-weight: 700; font-size: 18px; color: ${EMAIL_COLORS.textDark}; font-family: ${EMAIL_FONTS.stack};">${formatPrice(subtotal)}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    
+    <!-- Action Buttons -->
+    <tr>
+      <td style="padding: 0 32px 32px; text-align: center;">
+        <a href="mailto:${contact.email}?subject=Re: Quote ${quoteId}" style="display: inline-block; padding: 14px 32px; background-color: ${EMAIL_COLORS.primary}; color: white; text-decoration: none; font-weight: 600; border-radius: 8px; margin-right: 12px; font-family: ${EMAIL_FONTS.stack};">Reply to Customer</a>
+        ${contact.phone ? `<a href="tel:${contact.phone}" style="display: inline-block; padding: 14px 32px; background-color: ${EMAIL_COLORS.secondary}; color: white; text-decoration: none; font-weight: 600; border-radius: 8px; font-family: ${EMAIL_FONTS.stack};">Call Customer</a>` : ''}
+      </td>
+    </tr>
+    
+    ${emailFooterInternal()}
   `;
+  
+  return emailWrapper(content);
 }
 
 export function generateQuoteNotificationText(props: QuoteNotificationProps): string {
   const { quoteId, contact, items, decoration, finishing, eventDate, message, subtotal, totalItems } = props;
   
   const itemsList = items.map(item => 
-    `- ${item.brandName} ${item.styleName} (${item.colorName}/${item.sizeName}) x${item.quantity} = $${(item.unitPrice * item.quantity).toFixed(2)}`
+    `- ${item.brandName} ${item.styleName} (${item.colorName}/${item.sizeName}) x${item.quantity} = ${formatPrice(item.unitPrice * item.quantity)}`
   ).join('\n');
 
   return `
-NEW QUOTE REQUEST - ${quoteId}
-================================
+[INTERNAL] NEW QUOTE REQUEST - ${quoteId}
+==========================================
 
-CONTACT INFORMATION
--------------------
+ESTIMATED VALUE: ${formatPrice(subtotal)} (${totalItems} items)
+
+CUSTOMER INFORMATION
+--------------------
 Name: ${contact.name}
 Email: ${contact.email}
 ${contact.phone ? `Phone: ${contact.phone}` : ''}
 ${contact.company ? `Company: ${contact.company}` : ''}
-${eventDate ? `Need By: ${new Date(eventDate).toLocaleDateString()}` : ''}
+${decoration && decoration.type !== 'none' ? `Decoration: ${decoration.type}${decoration.description ? ` - ${decoration.description}` : ''}` : ''}
+${finishing && finishing.length > 0 ? `Finishing: ${finishing.join(', ')}` : ''}
+${eventDate ? `Event Date: ${eventDate}` : ''}
 
-QUOTE ITEMS (${totalItems} total)
----------------------------------
+${message ? `CUSTOMER MESSAGE:\n${message}\n` : ''}
+
+QUOTE ITEMS
+-----------
 ${itemsList}
 
-Estimated Subtotal: $${subtotal.toFixed(2)}
-
-${decoration && decoration.type !== 'none' ? `
-DECORATION
-----------
-Type: ${decoration.type}
-${decoration.description ? `Description: ${decoration.description}` : ''}
-` : ''}
-
-${finishing && finishing.length > 0 ? `
-FINISHING SERVICES
-------------------
-${finishing.join(', ')}
-` : ''}
-
-${message ? `
-ADDITIONAL NOTES
-----------------
-${message}
-` : ''}
+Subtotal (blanks only): ${formatPrice(subtotal)}
 
 ---
-Reply to: ${contact.email}
+Reply to customer: mailto:${contact.email}?subject=Re: Quote ${quoteId}
+${contact.phone ? `Call customer: ${contact.phone}` : ''}
   `.trim();
 }

@@ -138,6 +138,12 @@ export interface Database {
           email: string;
           page_url: string | null;
           cart_items: Json | null;
+          recovery_token: string | null;
+          expires_at: string | null;
+          email_sent_at: string | null;
+          email_opened_at: string | null;
+          recovered_at: string | null;
+          reminder_sent_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -145,6 +151,12 @@ export interface Database {
           email: string;
           page_url?: string | null;
           cart_items?: Json | null;
+          recovery_token?: string | null;
+          expires_at?: string | null;
+          email_sent_at?: string | null;
+          email_opened_at?: string | null;
+          recovered_at?: string | null;
+          reminder_sent_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -152,6 +164,12 @@ export interface Database {
           email?: string;
           page_url?: string | null;
           cart_items?: Json | null;
+          recovery_token?: string | null;
+          expires_at?: string | null;
+          email_sent_at?: string | null;
+          email_opened_at?: string | null;
+          recovered_at?: string | null;
+          reminder_sent_at?: string | null;
           created_at?: string;
         };
       };

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shirt, CloudSnow, Award, Cloudy, HardHat, ArrowDown, ShoppingBag, Sparkles } from 'lucide-react';
+import { ArrowRight, Shirt, Snowflake, UserRound, ShieldCheck, HardHat, PersonStanding, ShoppingBag, Sparkles } from 'lucide-react';
 
 const categories = [
   {
@@ -18,7 +18,7 @@ const categories = [
     slug: 'sweatshirts',
     name: 'Sweatshirts',
     description: 'Hoodies & sweatshirts',
-    icon: CloudSnow,
+    icon: Snowflake,
     color: 'from-blue-500 to-blue-600',
   },
   {
@@ -26,7 +26,7 @@ const categories = [
     slug: 'polos',
     name: 'Polos',
     description: 'Professional & casual',
-    icon: Award,
+    icon: UserRound,
     color: 'from-green-500 to-green-600',
   },
   {
@@ -34,7 +34,7 @@ const categories = [
     slug: 'jackets',
     name: 'Jackets',
     description: 'Jackets & vests',
-    icon: Cloudy,
+    icon: ShieldCheck,
     color: 'from-purple-500 to-purple-600',
   },
   {
@@ -50,7 +50,7 @@ const categories = [
     slug: 'bottoms',
     name: 'Bottoms',
     description: 'Pants & shorts',
-    icon: ArrowDown,
+    icon: PersonStanding,
     color: 'from-teal-500 to-teal-600',
   },
   {
