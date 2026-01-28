@@ -4,6 +4,7 @@ import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
+import { MobileQuoteBar } from '@/components/quote/MobileQuoteBar';
 import { ExitIntentPopup } from '@/components/quote/ExitIntentPopup';
 import { OrganizationJsonLd } from '@/components/seo/JsonLd';
 
@@ -90,11 +91,12 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans text-text">
         <Header />
-        <main>
+        <main className="pb-14 lg:pb-0">
           {children}
         </main>
         <Footer />
         <QuoteDrawer />
+        <MobileQuoteBar />
         <ExitIntentPopup />
       </body>
     </html>

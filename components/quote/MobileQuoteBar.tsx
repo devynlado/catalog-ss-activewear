@@ -1,16 +1,21 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ShoppingBag, ArrowRight, Phone } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Phone, Plus } from 'lucide-react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { formatPrice, cn } from '@/lib/utils';
 
 export function MobileQuoteBar() {
   const { items, openDrawer, justAdded, getItemCount, getSubtotal } = useQuoteStore();
+  const pathname = usePathname();
   
   const itemCount = getItemCount();
   const subtotal = getSubtotal();
   const hasItems = items.length > 0;
+  
+  // Check if we're on catalog-related pages
+  const isOnCatalog = pathname?.startsWith('/catalog') || pathname?.startsWith('/product');
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden">
@@ -41,8 +46,16 @@ export function MobileQuoteBar() {
             <ArrowRight className="h-5 w-5" />
           </div>
         </button>
+      ) : isOnCatalog ? (
+        // State: Empty quote on catalog pages - show guiding message
+        <div className="flex items-center justify-center gap-2 bg-stone-50 border-t border-stone-200 px-4 py-3 shadow-lg">
+          <Plus className="h-4 w-4 text-brand-500" />
+          <p className="text-sm text-slate-600">
+            Tap <span className="font-semibold text-brand-600">"Add to Quote"</span> on any product to start
+          </p>
+        </div>
       ) : (
-        // State: Empty quote - show Call + Get Quote CTAs
+        // State: Empty quote on other pages - show Call + Get Quote CTAs
         <div className="flex bg-white border-t border-stone-200 shadow-lg">
           <a
             href="tel:+18559427636"
@@ -56,7 +69,7 @@ export function MobileQuoteBar() {
             className="flex flex-1 items-center justify-center gap-2 px-4 py-3 bg-brand-500 text-white hover:bg-brand-600 transition-colors"
           >
             <ShoppingBag className="h-5 w-5" />
-            <span className="font-semibold">Get Quote</span>
+            <span className="font-semibold">Start Quote</span>
           </Link>
         </div>
       )}
