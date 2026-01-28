@@ -125,7 +125,7 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
           <p className="mt-1 text-sm text-slate-600 sm:mt-2 sm:text-base">
             {route || searchParams.category
               ? `Add ${pageTitle.toLowerCase()} to your quote`
-              : 'Browse products below and tap "Add to Quote" to get started.'
+              : 'Browse products and add your favorites to your quote'
             }
           </p>
           <p className="mt-1 hidden text-sm text-brand-600 font-medium sm:block">
