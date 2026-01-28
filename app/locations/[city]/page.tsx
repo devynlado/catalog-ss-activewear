@@ -303,7 +303,7 @@ export default function LocationPage({ params }: { params: { city: string } }) {
       </section>
 
       {/* Trust Stats Bar */}
-      <section className="border-b border-slate-200 bg-slate-50">
+      <section className="border-b border-stone-200 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16">
             <div className="text-center">
@@ -338,7 +338,7 @@ export default function LocationPage({ params }: { params: { city: string } }) {
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {location.targetAudience.map((audience) => (
-              <div key={audience.name} className="rounded-xl bg-slate-50 p-6 text-center hover:bg-slate-100 transition-colors">
+              <div key={audience.name} className="rounded-xl bg-stone-50 p-6 text-center hover:bg-stone-100 transition-colors">
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-brand-600">
                   <audience.icon className="h-7 w-7" />
                 </div>
@@ -351,7 +351,7 @@ export default function LocationPage({ params }: { params: { city: string } }) {
       </section>
 
       {/* Full Services Grid with Specs */}
-      <section className="py-16 sm:py-20 bg-slate-50">
+      <section className="py-16 sm:py-20 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Our Decoration Services</h2>
@@ -422,7 +422,7 @@ export default function LocationPage({ params }: { params: { city: string } }) {
               <div key={item.step} className="text-center relative">
                 {/* Connector line */}
                 {index < arr.length - 1 && (
-                  <div className="hidden sm:block absolute top-6 left-1/2 w-full h-0.5 bg-slate-200" />
+                  <div className="hidden sm:block absolute top-6 left-1/2 w-full h-0.5 bg-stone-200" />
                 )}
                 <div className="relative mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-white font-bold z-10">
                   {item.step}
@@ -496,7 +496,7 @@ export default function LocationPage({ params }: { params: { city: string } }) {
           </div>
           <div className="space-y-4">
             {location.faq.map((item, index) => (
-              <details key={index} className="group rounded-xl border border-slate-200 bg-white">
+              <details key={index} className="group rounded-xl border border-stone-200 bg-white">
                 <summary className="flex cursor-pointer items-center justify-between p-6 font-semibold text-slate-900">
                   {item.question}
                   <span className="ml-4 shrink-0 text-brand-500 group-open:rotate-180 transition-transform">
@@ -524,7 +524,7 @@ export default function LocationPage({ params }: { params: { city: string } }) {
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/quote"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-brand-600 shadow-lg transition-all hover:bg-slate-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-brand-600 shadow-lg transition-all hover:bg-stone-50"
             >
               Request a Quote
             </Link>

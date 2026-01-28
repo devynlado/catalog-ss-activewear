@@ -502,9 +502,16 @@ export function Header() {
   ).slice(0, 8);
 
   return (
-    <header className="sticky top-0 z-40 bg-white shadow-sm">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm shadow-stone-200/50">
       {/* ============== TIER 1: UTILITY BAR ============== */}
-      <div className="bg-[#070131] text-white">
+      <div className="relative bg-gradient-to-r from-[#070131] via-[#0a0142] to-[#070131] text-white overflow-hidden">
+        {/* Grain texture */}
+        <div 
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-10 items-center justify-between text-xs">
             {/* Left - Talk to Our Team with dynamic status */}
@@ -514,7 +521,7 @@ export function Header() {
             >
               <div className={cn(
                 "flex items-center justify-center h-6 w-6 rounded-full text-white",
-                businessStatus.isOpen ? "bg-green-500" : "bg-slate-500"
+                businessStatus.isOpen ? "bg-green-500" : "bg-stone-500"
               )}>
                 {businessStatus.isOpen ? (
                   <Phone className="h-3 w-3" />
@@ -526,7 +533,7 @@ export function Header() {
                 <span className="font-semibold text-white group-hover:text-brand-300">Talk to Our Team</span>
                 <span className={cn(
                   "text-[10px]",
-                  businessStatus.isOpen ? "text-green-400" : "text-slate-400"
+                  businessStatus.isOpen ? "text-green-400" : "text-stone-400"
                 )}>
                   {businessStatus.isOpen ? (
                     <>(855) 942-7636 • {businessStatus.message}</>
@@ -544,7 +551,7 @@ export function Header() {
                   <Star key={i} className={cn("h-3 w-3", i <= 4 ? "text-yellow-400 fill-yellow-400" : "text-yellow-400 fill-yellow-400/50")} />
                 ))}
               </div>
-              <span className="text-slate-300 ml-1">4.8 stars on Google</span>
+              <span className="text-stone-300 ml-1">4.8 stars on Google</span>
             </div>
             
             {/* Right - Resources dropdown + Rush promo */}
@@ -558,18 +565,18 @@ export function Header() {
               >
                 <button 
                   onClick={() => setResourcesOpen(!resourcesOpen)}
-                  className="flex items-center gap-1 text-slate-300 hover:text-white transition-colors"
+                  className="flex items-center gap-1 text-stone-300 hover:text-white transition-colors"
                 >
                   Resources
                   <ChevronDown className={cn('h-3 w-3 transition-transform', resourcesOpen && 'rotate-180')} />
                 </button>
                 
                 {resourcesOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg bg-white p-3 shadow-xl ring-1 ring-slate-200">
+                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg bg-white p-3 shadow-xl ring-1 ring-stone-200">
                     <Link
                       href="/resources/screen-printing-guide"
                       onClick={() => setResourcesOpen(false)}
-                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-slate-50 group"
+                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-stone-50 group"
                     >
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
                         <BookOpen className="h-4 w-4" />
@@ -582,7 +589,7 @@ export function Header() {
                     <Link
                       href="/resources/embroidery-guide"
                       onClick={() => setResourcesOpen(false)}
-                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-slate-50 group"
+                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-stone-50 group"
                     >
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
                         <BookOpen className="h-4 w-4" />
@@ -605,11 +612,11 @@ export function Header() {
                         <span className="text-xs text-slate-500">Browse curated collections</span>
                       </div>
                     </Link>
-                    <div className="my-2 border-t border-slate-100" />
+                    <div className="my-2 border-t border-stone-100" />
                     <Link
                       href="/faq"
                       onClick={() => setResourcesOpen(false)}
-                      className="flex items-center gap-3 rounded-lg p-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      className="flex items-center gap-3 rounded-lg p-2 text-sm text-slate-600 hover:bg-stone-50 hover:text-slate-900"
                     >
                       <HelpCircle className="h-4 w-4" />
                       FAQ
@@ -617,7 +624,7 @@ export function Header() {
                     <Link
                       href="/about"
                       onClick={() => setResourcesOpen(false)}
-                      className="flex items-center gap-3 rounded-lg p-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      className="flex items-center gap-3 rounded-lg p-2 text-sm text-slate-600 hover:bg-stone-50 hover:text-slate-900"
                     >
                       <Users className="h-4 w-4" />
                       About Us
@@ -638,7 +645,7 @@ export function Header() {
               {/* Search icon for mobile */}
               <Link
                 href="/catalog"
-                className="text-slate-300 hover:text-white transition-colors lg:hidden"
+                className="text-stone-300 hover:text-white transition-colors lg:hidden"
               >
                 <Search className="h-4 w-4" />
               </Link>
@@ -648,7 +655,7 @@ export function Header() {
       </div>
 
       {/* ============== TIER 2: MAIN NAVIGATION ============== */}
-      <nav className="border-b border-slate-100">
+      <nav className="border-b border-stone-100/80 bg-white/80 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between">
             {/* Logo - Full wordmark on all screen sizes */}
@@ -678,8 +685,8 @@ export function Header() {
                   className={cn(
                     'flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                     shopOpen
-                      ? 'bg-slate-100 text-slate-900'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-stone-100 text-slate-900'
+                      : 'text-slate-700 hover:bg-stone-50 hover:text-slate-900'
                   )}
                 >
                   Shop
@@ -687,7 +694,7 @@ export function Header() {
                 </button>
 
                 {shopOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-1 w-[800px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                  <div className="absolute left-0 top-full z-50 mt-1 w-[800px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-stone-200">
                     <div className="grid grid-cols-12 gap-6">
                       {/* Categories Column */}
                       <div className="col-span-3">
@@ -712,12 +719,12 @@ export function Header() {
                                 onClick={() => setShopOpen(false)}
                                 onMouseEnter={() => handleMegaMenuEnter(hasMegaMenu ? cat.categoryId : null)}
                                 className={cn(
-                                  'flex items-center justify-between rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900',
-                                  activeMegaMenu === cat.categoryId && 'bg-slate-50 text-slate-900'
+                                  'flex items-center justify-between rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50 hover:text-slate-900',
+                                  activeMegaMenu === cat.categoryId && 'bg-stone-50 text-slate-900'
                                 )}
                               >
                                 {cat.name}
-                                {hasMegaMenu && <ChevronRight className="h-4 w-4 text-slate-400" />}
+                                {hasMegaMenu && <ChevronRight className="h-4 w-4 text-stone-400" />}
                               </Link>
                             );
                           })}
@@ -725,7 +732,7 @@ export function Header() {
                       </div>
                       
                       {/* Subcategory Panel (shows when hovering category) */}
-                      <div className="col-span-6 border-l border-slate-100 pl-6">
+                      <div className="col-span-6 border-l border-stone-100 pl-6">
                         {activeMegaMenu && megaMenuConfig[activeMegaMenu] ? (
                           <>
                             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -734,7 +741,7 @@ export function Header() {
                             <div className="grid grid-cols-2 gap-4">
                               {megaMenuConfig[activeMegaMenu].map((group) => (
                                 <div key={group.title}>
-                                  <h4 className="mb-2 text-xs font-medium text-slate-400">
+                                  <h4 className="mb-2 text-xs font-medium text-stone-400">
                                     {group.title}
                                   </h4>
                                   <ul className="space-y-1">
@@ -743,7 +750,7 @@ export function Header() {
                                         <Link
                                           href={item.href}
                                           onClick={() => setShopOpen(false)}
-                                          className="block rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                          className="block rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-stone-50 hover:text-slate-900"
                                         >
                                           {item.name}
                                         </Link>
@@ -772,7 +779,7 @@ export function Header() {
                       </div>
                       
                       {/* Brands Column */}
-                      <div className="col-span-3 border-l border-slate-100 pl-6">
+                      <div className="col-span-3 border-l border-stone-100 pl-6">
                         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                           Popular Brands
                         </h3>
@@ -782,7 +789,7 @@ export function Header() {
                               key={brand.id}
                               href={`/catalog?brand=${brand.id}`}
                               onClick={() => setShopOpen(false)}
-                              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-stone-50 hover:text-slate-900"
                             >
                               {brand.image && (
                                 <Image
@@ -830,10 +837,10 @@ export function Header() {
                 </button>
 
                 {servicesOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-1 w-[480px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                  <div className="absolute left-0 top-full z-50 mt-1 w-[480px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-stone-200">
                     <div className="grid grid-cols-2 gap-4">
                       {/* Screen Printing Hub */}
-                      <div className="col-span-2 rounded-lg bg-slate-50 p-4">
+                      <div className="col-span-2 rounded-lg bg-stone-50 p-4">
                         <Link
                           href={servicesMenu.screenPrinting.href}
                           onClick={() => setServicesOpen(false)}
@@ -848,7 +855,7 @@ export function Header() {
                             </h3>
                             <p className="text-xs text-slate-500">{servicesMenu.screenPrinting.description}</p>
                           </div>
-                          <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-brand-500" />
+                          <ChevronRight className="h-5 w-5 text-stone-400 group-hover:text-brand-500" />
                         </Link>
                         <div className="mt-3 grid grid-cols-2 gap-2">
                           {servicesMenu.screenPrinting.subItems.map((item) => {
@@ -860,7 +867,7 @@ export function Header() {
                                 onClick={() => setServicesOpen(false)}
                                 className="flex items-center gap-2 rounded-md p-2 text-sm text-slate-600 hover:bg-white hover:text-slate-900"
                               >
-                                <Icon className="h-4 w-4 text-slate-400" />
+                                <Icon className="h-4 w-4 text-stone-400" />
                                 {item.name}
                               </Link>
                             );
@@ -872,7 +879,7 @@ export function Header() {
                       <Link
                         href={servicesMenu.embroidery.href}
                         onClick={() => setServicesOpen(false)}
-                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
+                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-stone-50 group"
                       >
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
                           <Scissors className="h-5 w-5" />
@@ -889,7 +896,7 @@ export function Header() {
                       <Link
                         href={servicesMenu.finishing.href}
                         onClick={() => setServicesOpen(false)}
-                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-slate-50 group"
+                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-stone-50 group"
                       >
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
                           <Package className="h-5 w-5" />
@@ -930,8 +937,8 @@ export function Header() {
                 className={cn(
                   'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                   pathname === '/pricing'
-                    ? 'bg-slate-100 text-slate-900'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-stone-100 text-slate-900'
+                    : 'text-slate-700 hover:bg-stone-50 hover:text-slate-900'
                 )}
               >
                 Pricing
@@ -943,8 +950,8 @@ export function Header() {
                 className={cn(
                   'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                   pathname === '/contact'
-                    ? 'bg-slate-100 text-slate-900'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-stone-100 text-slate-900'
+                    : 'text-slate-700 hover:bg-stone-50 hover:text-slate-900'
                 )}
               >
                 Contact
@@ -958,7 +965,7 @@ export function Header() {
                   type="text"
                   name="search"
                   placeholder="Search by style # or keyword..."
-                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full rounded-full border border-stone-200 bg-stone-50 py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
                 <button
                   type="submit"
@@ -997,7 +1004,7 @@ export function Header() {
               {/* Mobile Search Icon */}
               <Link
                 href="/catalog"
-                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg p-2 text-slate-600 hover:bg-stone-100 hover:text-slate-900"
               >
                 <Search className="h-6 w-6" />
               </Link>
@@ -1005,7 +1012,7 @@ export function Header() {
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg p-2 text-slate-600 hover:bg-stone-100 hover:text-slate-900"
               >
                 {mobileMenuOpen ? (
                   <X className="h-6 w-6" />
@@ -1020,7 +1027,7 @@ export function Header() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="border-t border-slate-100 py-4 lg:hidden max-h-[calc(100vh-8rem)] overflow-y-auto">
+          <div className="border-t border-stone-100 py-4 lg:hidden max-h-[calc(100vh-8rem)] overflow-y-auto">
             {/* Mobile Search */}
             <form action="/catalog" method="GET" className="mb-4 px-4">
               <div className="relative">
@@ -1028,7 +1035,7 @@ export function Header() {
                   type="text"
                   name="search"
                   placeholder="Search products..."
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-4 pr-12 text-sm"
+                  className="w-full rounded-lg border border-stone-200 bg-stone-50 py-3 pl-4 pr-12 text-sm"
                 />
                 <button
                   type="submit"
@@ -1048,7 +1055,7 @@ export function Header() {
               <Link
                 href="/catalog"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
               >
                 All Products
               </Link>
@@ -1057,21 +1064,21 @@ export function Header() {
                   key={cat.name}
                   href={cat.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
                 >
                   {cat.name}
                 </Link>
               ))}
 
               {/* Services Section - Prominent */}
-              <div className="border-t border-slate-100 pt-3 mt-3">
+              <div className="border-t border-stone-100 pt-3 mt-3">
                 <p className="py-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
                   Services
                 </p>
                 <Link
                   href="/services/screen-printing"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
                   <Layers className="h-4 w-4 text-brand-500" />
                   Screen Printing
@@ -1079,7 +1086,7 @@ export function Header() {
                 <Link
                   href="/services/embroidery"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
                   <Scissors className="h-4 w-4 text-indigo-500" />
                   Embroidery
@@ -1087,7 +1094,7 @@ export function Header() {
                 <Link
                   href="/services/retail-finishing"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
                   <Package className="h-4 w-4 text-amber-500" />
                   Retail Finishing
@@ -1103,32 +1110,32 @@ export function Header() {
               </div>
 
               {/* Quick Links */}
-              <div className="border-t border-slate-100 pt-3 mt-3">
+              <div className="border-t border-stone-100 pt-3 mt-3">
                 <Link
                   href="/pricing"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
                 >
                   Pricing Calculator
                 </Link>
                 <Link
                   href="/contact"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
                 >
                   Contact Us
                 </Link>
               </div>
 
               {/* Resources Section */}
-              <div className="border-t border-slate-100 pt-3 mt-3">
+              <div className="border-t border-stone-100 pt-3 mt-3">
                 <p className="py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Resources
                 </p>
                 <Link
                   href="/resources/screen-printing-guide"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
                   <BookOpen className="h-4 w-4 text-brand-500" />
                   Screen Printing Guide
@@ -1136,7 +1143,7 @@ export function Header() {
                 <Link
                   href="/resources/embroidery-guide"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
                   <BookOpen className="h-4 w-4 text-indigo-500" />
                   Embroidery Guide
@@ -1144,7 +1151,7 @@ export function Header() {
                 <Link
                   href="/guides"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
                   <BookOpen className="h-4 w-4 text-emerald-500" />
                   Product Guides
@@ -1152,23 +1159,23 @@ export function Header() {
                 <Link
                   href="/faq"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
-                  <HelpCircle className="h-4 w-4 text-slate-400" />
+                  <HelpCircle className="h-4 w-4 text-stone-400" />
                   FAQ
                 </Link>
                 <Link
                   href="/about"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
                 >
-                  <Users className="h-4 w-4 text-slate-400" />
+                  <Users className="h-4 w-4 text-stone-400" />
                   About Us
                 </Link>
               </div>
 
               {/* Popular Brands */}
-              <div className="border-t border-slate-100 pt-3 mt-3">
+              <div className="border-t border-stone-100 pt-3 mt-3">
                 <p className="py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Popular Brands
                 </p>
@@ -1177,7 +1184,7 @@ export function Header() {
                     key={brand.id}
                     href={`/catalog?brand=${brand.id}`}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
                   >
                     {brand.image && (
                       <Image
@@ -1201,7 +1208,7 @@ export function Header() {
               </div>
 
               {/* Call CTA */}
-              <div className="border-t border-slate-100 pt-4 mt-4">
+              <div className="border-t border-stone-100 pt-4 mt-4">
                 <PhoneButton
                   className="flex items-center justify-center gap-2 rounded-lg bg-[#070131] px-4 py-3 text-sm font-medium text-white hover:bg-[#0f0652]"
                   iconClassName="h-4 w-4"

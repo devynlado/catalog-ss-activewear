@@ -207,7 +207,7 @@ function GuideCard({
         {/* Product preview on hover */}
         {guide.topProducts && guide.topProducts.length > 0 && (
           <div className={cn(
-            'mt-4 pt-4 border-t border-slate-100 transition-all duration-200',
+            'mt-4 pt-4 border-t border-stone-100 transition-all duration-200',
             isHovered ? 'opacity-100 max-h-24' : 'opacity-0 max-h-0 overflow-hidden'
           )}>
             <p className="text-xs font-medium text-slate-500 mb-2">Top products:</p>
@@ -215,7 +215,7 @@ function GuideCard({
               {guide.topProducts.slice(0, 3).map((product) => (
                 <div 
                   key={product.id}
-                  className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 rounded px-2 py-1"
+                  className="flex items-center gap-1.5 text-xs text-slate-600 bg-stone-50 rounded px-2 py-1"
                 >
                   {product.image_url ? (
                     <Image 
@@ -442,7 +442,7 @@ export function GuidesClient({ guides }: GuidesClientProps) {
   }, [guides]);
   
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Header with Search and Filters */}
       <div className="bg-white border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -467,7 +467,7 @@ export function GuidesClient({ guides }: GuidesClientProps) {
               placeholder="Search guides by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-12 pr-10 text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
+              className="w-full rounded-xl border border-slate-200 bg-stone-50 py-3 pl-12 pr-10 text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
             />
             {searchQuery && (
               <button
@@ -495,7 +495,7 @@ export function GuidesClient({ guides }: GuidesClientProps) {
                       'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0',
                       isActive
                         ? 'bg-brand-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                        : 'bg-slate-100 text-slate-600 hover:bg-stone-200 hover:text-slate-900'
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -503,7 +503,7 @@ export function GuidesClient({ guides }: GuidesClientProps) {
                     {filter.id !== 'all' && count > 0 && (
                       <span className={cn(
                         'ml-1 text-xs rounded-full px-1.5 py-0.5',
-                        isActive ? 'bg-white/20' : 'bg-slate-200'
+                        isActive ? 'bg-white/20' : 'bg-stone-200'
                       )}>
                         {count}
                       </span>

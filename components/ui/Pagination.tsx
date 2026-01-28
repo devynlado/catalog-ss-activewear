@@ -70,7 +70,7 @@ export function Pagination({
           'flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
           currentPage === 1
             ? 'cursor-not-allowed text-slate-300'
-            : 'text-slate-700 hover:bg-slate-100'
+            : 'text-slate-700 hover:bg-stone-100'
         )}
         aria-label="Previous page"
       >
@@ -96,7 +96,7 @@ export function Pagination({
                 'min-w-[40px] rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 currentPage === page
                   ? 'bg-brand-600 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
+                  : 'text-slate-700 hover:bg-stone-100'
               )}
               aria-current={currentPage === page ? 'page' : undefined}
             >
@@ -114,7 +114,7 @@ export function Pagination({
           'flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
           currentPage === totalPages
             ? 'cursor-not-allowed text-slate-300'
-            : 'text-slate-700 hover:bg-slate-100'
+            : 'text-slate-700 hover:bg-stone-100'
         )}
         aria-label="Next page"
       >
@@ -146,7 +146,7 @@ export function LoadMore({
       <button
         onClick={onLoadMore}
         disabled={loading}
-        className="rounded-lg bg-slate-100 px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+        className="rounded-lg bg-stone-100 px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
       >
         {loading ? 'Loading...' : 'Load More Products'}
       </button>

@@ -58,7 +58,7 @@ export function SpecsAccordion({ styleId, className }: SpecsAccordionProps) {
       {/* Accordion Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-stone-50 transition-colors"
         aria-expanded={isOpen}
       >
         <div className="flex items-center gap-3">
@@ -101,7 +101,7 @@ export function SpecsAccordion({ styleId, className }: SpecsAccordionProps) {
                 // Table layout for size-based specs
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
+                    <tr className="border-b border-stone-200 bg-stone-50">
                       <th className="px-4 py-3 text-left font-medium text-slate-600 min-w-[180px]">
                         Specification
                       </th>
@@ -121,7 +121,7 @@ export function SpecsAccordion({ styleId, className }: SpecsAccordionProps) {
                         key={spec.specName}
                         className={cn(
                           'border-b border-slate-100',
-                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
+                          index % 2 === 0 ? 'bg-white' : 'bg-stone-50/50'
                         )}
                       >
                         <td className="px-4 py-3 font-medium text-slate-700">

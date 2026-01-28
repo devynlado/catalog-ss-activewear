@@ -152,7 +152,7 @@ const shopCategories = [
 
 export default function ScreenPrintingPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <ServiceHero
         title="Screen Printing"
@@ -164,7 +164,6 @@ export default function ScreenPrintingPage() {
         serviceSlug="screen-printing"
         samplePrice="Starting at $2.45/piece"
         minimumOrder={50}
-        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -193,7 +192,7 @@ export default function ScreenPrintingPage() {
                   className={`relative rounded-2xl bg-white border-2 p-6 transition-all ${
                     isCurrentPage 
                       ? 'border-brand-500 shadow-lg shadow-brand-500/10' 
-                      : 'border-slate-100 hover:border-slate-200 hover:shadow-md'
+                      : 'border-stone-100 hover:border-stone-200 hover:shadow-md'
                   }`}
                 >
                   {isCurrentPage && (

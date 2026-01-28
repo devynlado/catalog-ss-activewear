@@ -43,10 +43,10 @@ export function MobileQuoteBar() {
         </button>
       ) : (
         // State: Empty quote - show Call + Get Quote CTAs
-        <div className="flex bg-white border-t border-slate-200 shadow-lg">
+        <div className="flex bg-white border-t border-stone-200 shadow-lg">
           <a
             href="tel:+18559427636"
-            className="flex flex-1 items-center justify-center gap-2 px-4 py-3 text-slate-700 hover:bg-slate-50 transition-colors border-r border-slate-200"
+            className="flex flex-1 items-center justify-center gap-2 px-4 py-3 text-slate-700 hover:bg-stone-50 transition-colors border-r border-stone-200"
           >
             <Phone className="h-5 w-5 text-green-600" />
             <span className="font-semibold">Call Us</span>

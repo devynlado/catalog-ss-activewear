@@ -104,7 +104,7 @@ const shopCategories = [
 
 export default function JumboScreenPrintingPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <ServiceHero
         title="Jumbo Screen Printing"
@@ -117,7 +117,6 @@ export default function JumboScreenPrintingPage() {
         serviceSlug="jumbo-screen-printing"
         samplePrice="Starting at $3.75/piece"
         minimumOrder={50}
-        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -163,7 +162,7 @@ export default function JumboScreenPrintingPage() {
               { title: 'Festivals & Events', description: 'Eye-catching designs for large-scale events' },
               { title: 'Fashion Labels', description: 'Runway-ready pieces with maximum visual impact' },
             ].map((item, index) => (
-              <div key={index} className="bg-slate-50 rounded-xl p-6 text-center">
+              <div key={index} className="bg-stone-50 rounded-xl p-6 text-center">
                 <h3 className="font-bold text-navy-800 mb-2">{item.title}</h3>
                 <p className="text-sm text-slate-600">{item.description}</p>
               </div>

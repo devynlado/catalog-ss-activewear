@@ -96,13 +96,23 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50">
       {/* Header Section */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:py-6 sm:px-6 lg:px-8">
+      <div className="relative bg-gradient-to-r from-white via-stone-50/50 to-white border-b border-stone-200 overflow-hidden">
+        {/* Grain texture */}
+        <div 
+          className="pointer-events-none absolute inset-0 opacity-[0.012]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        {/* Decorative orb */}
+        <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-brand-500/5 blur-3xl" />
+        
+        <div className="relative mx-auto max-w-7xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center gap-2 sm:block">
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">{pageTitle}</h1>
-            <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 sm:hidden">
+            <h1 className="text-2xl font-bold text-navy-800 sm:text-3xl">{pageTitle}</h1>
+            <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 sm:hidden">
               50pc min
             </span>
           </div>
@@ -112,14 +122,14 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
               : 'Our curated selection of bestsellers and staff picks — pricing within 24hrs'
             }
           </p>
-          <p className="mt-1 hidden text-sm text-brand-600 sm:block">
+          <p className="mt-1 hidden text-sm text-brand-600 font-medium sm:block">
             Mix sizes, colors & styles across products — 50 piece minimum
           </p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
           {/* Sidebar Filters */}
           <aside className="hidden lg:block">

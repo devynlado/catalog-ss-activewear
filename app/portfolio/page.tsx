@@ -64,7 +64,7 @@ export default function PortfolioPage() {
       </section>
 
       {/* Stats Bar */}
-      <section className="border-b border-slate-200 bg-slate-50">
+      <section className="border-b border-stone-200 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16">
             <div className="text-center">
@@ -98,7 +98,7 @@ export default function PortfolioPage() {
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   index === 0
                     ? 'bg-navy-800 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-stone-100 text-slate-600 hover:bg-stone-200'
                 }`}
               >
                 {category}
@@ -112,9 +112,9 @@ export default function PortfolioPage() {
               <Link
                 key={project.slug}
                 href={`/portfolio/${project.slug}`}
-                className="group rounded-2xl bg-white overflow-hidden shadow-sm ring-1 ring-slate-200 hover:shadow-lg hover:ring-brand-200 transition-all"
+                className="group rounded-2xl bg-white overflow-hidden shadow-sm ring-1 ring-stone-200 hover:shadow-lg hover:ring-brand-200 transition-all"
               >
-                <div className="relative aspect-[4/3] bg-slate-100">
+                <div className="relative aspect-[4/3] bg-stone-100">
                   <Image
                     src={project.image}
                     alt={project.title}
@@ -154,7 +154,7 @@ export default function PortfolioPage() {
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/quote"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-brand-600 shadow-lg transition-all hover:bg-slate-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-brand-600 shadow-lg transition-all hover:bg-stone-50"
             >
               Request a Quote
             </Link>

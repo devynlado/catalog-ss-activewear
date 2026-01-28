@@ -92,7 +92,7 @@ export function InventoryMatrix({
   const stockStyles = {
     high: 'bg-green-50 text-green-700 hover:bg-green-100',
     low: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
-    out: 'bg-slate-100 text-slate-400',
+    out: 'bg-stone-100 text-slate-400',
   };
 
   if (isLoading) {
@@ -146,7 +146,7 @@ export function InventoryMatrix({
                     />
                   ) : (
                     <span
-                      className="h-5 w-5 rounded-full border border-slate-200"
+                      className="h-5 w-5 rounded-full border border-stone-200"
                       style={{
                         backgroundColor: color.colorCode.startsWith('#')
                           ? color.colorCode
@@ -223,7 +223,7 @@ export function InventoryMatrix({
           <span className="text-slate-600">Low Stock (1-{lowStockThreshold})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded bg-slate-100" />
+          <span className="h-3 w-3 rounded bg-stone-100" />
           <span className="text-slate-600">Out of Stock</span>
         </div>
       </div>

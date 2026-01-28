@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { ShieldCheck, Zap, Clock, Calendar, Phone } from 'lucide-react';
 
 // Calculate business days from today
@@ -33,13 +34,40 @@ export function TurnaroundBanner() {
   const standardDate = addBusinessDays(7);
 
   return (
-    <section className="bg-navy-800 py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center gap-8 lg:flex-row lg:justify-between">
+    <section className="relative overflow-hidden bg-gradient-to-r from-navy-800 via-navy-800 to-navy-700 py-12">
+      {/* Soft edge transitions */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/10 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-stone-50/10 to-transparent" />
+      {/* Grain texture */}
+      <div 
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      {/* Decorative gradient orbs */}
+      <div className="pointer-events-none absolute -left-32 top-0 h-64 w-64 rounded-full bg-brand-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-32 bottom-0 h-64 w-64 rounded-full bg-brand-500/5 blur-3xl" />
+      
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div 
+          className="flex flex-col items-center gap-8 lg:flex-row lg:justify-between"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
           
           {/* Guarantee Badge */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-500">
+          <motion.div 
+            className="flex items-center gap-4"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/30">
               <ShieldCheck className="h-7 w-7 text-white" />
             </div>
             <div>
@@ -50,13 +78,19 @@ export function TurnaroundBanner() {
                 Expedited Service
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Delivery Options */}
-          <div className="flex flex-wrap items-center justify-center gap-6 lg:gap-10">
+          <motion.div 
+            className="flex flex-wrap items-center justify-center gap-6 lg:gap-8"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
             
             {/* Rush Delivery */}
-            <div className="text-center">
+            <div className="text-center rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-6 py-4">
               <div className="flex items-center justify-center gap-2 text-brand-400">
                 <Zap className="h-4 w-4" />
                 <span className="text-xs font-semibold uppercase tracking-wider">Rush Order</span>
@@ -74,10 +108,10 @@ export function TurnaroundBanner() {
             </div>
 
             {/* Divider */}
-            <div className="hidden h-12 w-px bg-white/20 lg:block" />
+            <div className="hidden h-16 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent lg:block" />
 
             {/* Standard Delivery */}
-            <div className="text-center">
+            <div className="text-center rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-6 py-4">
               <div className="flex items-center justify-center gap-2 text-slate-400">
                 <Clock className="h-4 w-4" />
                 <span className="text-xs font-semibold uppercase tracking-wider">Standard</span>
@@ -91,24 +125,24 @@ export function TurnaroundBanner() {
             </div>
 
             {/* Divider */}
-            <div className="hidden h-12 w-px bg-white/20 lg:block" />
+            <div className="hidden h-16 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent lg:block" />
 
             {/* Custom Deadline */}
-            <div className="text-center">
+            <div className="text-center rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-6 py-4">
               <div className="flex items-center justify-center gap-2 text-slate-400">
                 <Calendar className="h-4 w-4" />
                 <span className="text-xs font-semibold uppercase tracking-wider">Have a Deadline?</span>
               </div>
               <p className="mt-1 text-lg font-semibold text-white">
-                We'll guarantee it
+                We&apos;ll guarantee it
               </p>
               <p className="mt-1 text-xs text-slate-400">
                 Tell us your event date
               </p>
             </div>
-          </div>
+          </motion.div>
 
-        </div>
+        </motion.div>
       </div>
     </section>
   );

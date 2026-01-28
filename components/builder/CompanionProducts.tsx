@@ -118,7 +118,7 @@ export function CompanionProducts({ styleId, className }: CompanionProductsProps
                 'p-2 rounded-full border transition-colors',
                 canScrollLeft
                   ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+                  : 'border-stone-200 text-slate-300 cursor-not-allowed'
               )}
               aria-label="Scroll left"
             >
@@ -131,7 +131,7 @@ export function CompanionProducts({ styleId, className }: CompanionProductsProps
                 'p-2 rounded-full border transition-colors',
                 canScrollRight
                   ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+                  : 'border-stone-200 text-slate-300 cursor-not-allowed'
               )}
               aria-label="Scroll right"
             >
@@ -153,7 +153,7 @@ export function CompanionProducts({ styleId, className }: CompanionProductsProps
             href={`/product/${product.slug}`}
             className="flex-shrink-0 w-[260px] snap-start group"
           >
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:shadow-md hover:border-stone-200 transition-all">
               {/* Image */}
               <div className="overflow-hidden">
                 {product.imageUrl ? (
@@ -165,7 +165,7 @@ export function CompanionProducts({ styleId, className }: CompanionProductsProps
                     className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="flex aspect-square w-full items-center justify-center bg-slate-50 text-slate-300">
+                  <div className="flex aspect-square w-full items-center justify-center bg-stone-50 text-slate-300">
                     <Shirt className="h-16 w-16" />
                   </div>
                 )}

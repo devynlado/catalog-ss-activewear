@@ -142,7 +142,7 @@ export default function EmbroideryGuidePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <section className="bg-gradient-to-br from-indigo-600 to-purple-700 py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -199,7 +199,7 @@ export default function EmbroideryGuidePage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@company.com"
-                        className="w-full rounded-lg border border-slate-300 pl-12 pr-4 py-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+                        className="w-full rounded-lg border border-stone-300 pl-12 pr-4 py-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
                       />
                     </div>
                     {error && (
@@ -231,7 +231,7 @@ export default function EmbroideryGuidePage() {
                 </p>
 
                 {/* Preview of what's inside */}
-                <div className="mt-6 pt-6 border-t border-slate-200">
+                <div className="mt-6 pt-6 border-t border-stone-200">
                   <p className="text-sm font-medium text-slate-700 mb-3">What's inside:</p>
                   <ul className="space-y-2">
                     {['Artwork preparation checklist', 'Size & placement guide', 'Garment selection tips', 'Common mistakes to avoid', 'Cost-saving strategies'].map((item, i) => (
@@ -334,7 +334,7 @@ export default function EmbroideryGuidePage() {
 
               <div className="space-y-4">
                 {commonMistakes.map((item, index) => (
-                  <div key={index} className="bg-slate-50 rounded-xl p-6">
+                  <div key={index} className="bg-stone-50 rounded-xl p-6">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
                         <span className="text-red-600 font-bold text-sm">{index + 1}</span>

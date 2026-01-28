@@ -144,7 +144,7 @@ export function RelatedProducts({
                 'p-2 rounded-full border transition-colors',
                 canScrollLeft
                   ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+                  : 'border-stone-200 text-slate-300 cursor-not-allowed'
               )}
               aria-label="Scroll left"
             >
@@ -157,7 +157,7 @@ export function RelatedProducts({
                 'p-2 rounded-full border transition-colors',
                 canScrollRight
                   ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+                  : 'border-stone-200 text-slate-300 cursor-not-allowed'
               )}
               aria-label="Scroll right"
             >
@@ -178,7 +178,7 @@ export function RelatedProducts({
             href={`/product/${product.slug}`}
             className="group w-56 flex-shrink-0"
           >
-            <div className="overflow-hidden rounded-xl border border-slate-200">
+            <div className="overflow-hidden rounded-xl border border-stone-200">
               {product.imageUrl ? (
                 <Image
                   src={product.imageUrl}
@@ -188,7 +188,7 @@ export function RelatedProducts({
                   className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
-                <div className="flex aspect-square w-full items-center justify-center bg-slate-50 text-slate-300">
+                <div className="flex aspect-square w-full items-center justify-center bg-stone-50 text-slate-300">
                   <ShoppingBag className="h-12 w-12" />
                 </div>
               )}
@@ -200,7 +200,7 @@ export function RelatedProducts({
                 {product.colors.slice(0, 4).map((color) => (
                   <span
                     key={color.colorCode}
-                    className="h-3 w-3 rounded-full border border-slate-200"
+                    className="h-3 w-3 rounded-full border border-stone-200"
                     style={{ 
                       backgroundImage: color.swatchImage ? `url(${color.swatchImage})` : undefined,
                       backgroundSize: 'cover',

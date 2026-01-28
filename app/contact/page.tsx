@@ -81,7 +81,7 @@ function ContactForm() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero Section */}
       <section className="bg-[#070131] py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -104,7 +104,7 @@ function ContactForm() {
             {/* Left Column: Form + What Happens Next */}
             <div className="space-y-6">
               {/* Contact Form */}
-              <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+              <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-stone-200">
               {isSubmitted ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -144,7 +144,7 @@ function ContactForm() {
                           required
                           value={formState.name}
                           onChange={handleChange}
-                          className="mt-1 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          className="mt-1 block w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                           placeholder="John Smith"
                         />
                       </div>
@@ -159,7 +159,7 @@ function ContactForm() {
                           required
                           value={formState.email}
                           onChange={handleChange}
-                          className="mt-1 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          className="mt-1 block w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                           placeholder="john@company.com"
                         />
                       </div>
@@ -176,7 +176,7 @@ function ContactForm() {
                           name="phone"
                           value={formState.phone}
                           onChange={handleChange}
-                          className="mt-1 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          className="mt-1 block w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                           placeholder="(555) 123-4567"
                         />
                       </div>
@@ -190,7 +190,7 @@ function ContactForm() {
                           name="company"
                           value={formState.company}
                           onChange={handleChange}
-                          className="mt-1 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          className="mt-1 block w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                           placeholder="Your Company"
                         />
                       </div>
@@ -207,7 +207,7 @@ function ContactForm() {
                         rows={5}
                         value={formState.message}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        className="mt-1 block w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                         placeholder="Tell us about your project, questions, or how we can assist you..."
                       />
                     </div>
@@ -241,7 +241,7 @@ function ContactForm() {
             </div>
 
               {/* What Happens Next - fills space below form */}
-              <div className="rounded-xl bg-slate-50 p-6 ring-1 ring-slate-200">
+              <div className="rounded-xl bg-stone-50 p-6 ring-1 ring-stone-200">
                 <h3 className="font-semibold text-slate-900 mb-4">What Happens Next?</h3>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
@@ -282,7 +282,7 @@ function ContactForm() {
                 {/* Phone */}
                 <a
                   href="tel:+18559427636"
-                  className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 transition-all hover:shadow-md hover:ring-brand-200"
+                  className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition-all hover:shadow-md hover:ring-brand-200"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                     <Phone className="h-5 w-5" />
@@ -297,7 +297,7 @@ function ContactForm() {
                 {/* Email */}
                 <a
                   href="mailto:sales@garmentdecor.com"
-                  className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 transition-all hover:shadow-md hover:ring-brand-200"
+                  className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition-all hover:shadow-md hover:ring-brand-200"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                     <Mail className="h-5 w-5" />
@@ -314,7 +314,7 @@ function ContactForm() {
                   href="https://maps.google.com/?q=4778+W+Mission+Blvd+Montclair+CA+91762"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 transition-all hover:shadow-md hover:ring-brand-200"
+                  className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition-all hover:shadow-md hover:ring-brand-200"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                     <MapPin className="h-5 w-5" />
@@ -329,7 +329,7 @@ function ContactForm() {
                 </a>
 
                 {/* Hours */}
-                <div className="flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                <div className="flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
                     <Clock className="h-5 w-5" />
                   </div>
@@ -344,7 +344,7 @@ function ContactForm() {
               </div>
 
               {/* Map Embed - Regional view showing Southern California */}
-              <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+              <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-200">
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d423286.27405770525!2d-118.69192113701154!3d34.02016130653294!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c334e72ab19de5%3A0x70e78e78f96d29e9!2s4778%20W%20Mission%20Blvd%2C%20Montclair%2C%20CA%2091762!5e0!3m2!1sen!2sus!4v1705959600000!5m2!1sen!2sus"
                   width="100%"
@@ -377,15 +377,15 @@ function ContactForm() {
 // Loading fallback for the form
 function ContactFormFallback() {
   return (
-    <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+    <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-stone-200">
       <div className="animate-pulse">
-        <div className="h-6 w-48 bg-slate-200 rounded mb-4"></div>
-        <div className="h-4 w-64 bg-slate-200 rounded mb-6"></div>
+        <div className="h-6 w-48 bg-stone-200 rounded mb-4"></div>
+        <div className="h-4 w-64 bg-stone-200 rounded mb-6"></div>
         <div className="space-y-4">
-          <div className="h-10 bg-slate-200 rounded"></div>
-          <div className="h-10 bg-slate-200 rounded"></div>
-          <div className="h-32 bg-slate-200 rounded"></div>
-          <div className="h-12 bg-slate-200 rounded"></div>
+          <div className="h-10 bg-stone-200 rounded"></div>
+          <div className="h-10 bg-stone-200 rounded"></div>
+          <div className="h-32 bg-stone-200 rounded"></div>
+          <div className="h-12 bg-stone-200 rounded"></div>
         </div>
       </div>
     </div>
@@ -396,7 +396,7 @@ function ContactFormFallback() {
 export default function ContactPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-stone-50">
         <section className="bg-[#070131] py-16 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center">
@@ -415,7 +415,7 @@ export default function ContactPage() {
             <div className="grid gap-12 lg:grid-cols-2">
               <ContactFormFallback />
               <div className="space-y-6">
-                <div className="h-64 bg-slate-100 rounded-xl animate-pulse"></div>
+                <div className="h-64 bg-stone-100 rounded-xl animate-pulse"></div>
               </div>
             </div>
           </div>

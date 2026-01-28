@@ -45,7 +45,7 @@ export function QuoteDrawer() {
       {/* Drawer */}
       <div className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
           <div className="flex items-center gap-3">
             <ShoppingBag className="h-5 w-5 text-brand-600" />
             <h2 className="text-lg font-semibold text-slate-900">Quote List</h2>
@@ -55,7 +55,7 @@ export function QuoteDrawer() {
           </div>
           <button
             onClick={closeDrawer}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1 text-slate-400 hover:bg-stone-100 hover:text-slate-600"
           >
             <X className="h-5 w-5" />
           </button>
@@ -65,7 +65,7 @@ export function QuoteDrawer() {
         <div className="flex-1 overflow-y-auto p-6">
           {items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
-              <div className="rounded-full bg-slate-100 p-4">
+              <div className="rounded-full bg-stone-100 p-4">
                 <ShoppingBag className="h-8 w-8 text-slate-400" />
               </div>
               <h3 className="mt-4 text-lg font-medium text-slate-900">
@@ -89,7 +89,7 @@ export function QuoteDrawer() {
                     <button
                       key={cat.name}
                       onClick={() => handleCategoryClick(cat.href)}
-                      className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:border-brand-500 hover:text-brand-600 transition-colors"
+                      className="rounded-full border border-stone-200 px-3 py-1.5 text-sm text-slate-600 hover:border-brand-500 hover:text-brand-600 transition-colors"
                     >
                       {cat.name}
                     </button>
@@ -102,10 +102,10 @@ export function QuoteDrawer() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex gap-4 rounded-lg border border-slate-100 bg-white p-4"
+                  className="flex gap-4 rounded-lg border border-stone-100 bg-white p-4"
                 >
                   {/* Image */}
-                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
                     {item.imageUrl ? (
                       <Image
                         src={item.imageUrl}
@@ -144,7 +144,7 @@ export function QuoteDrawer() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="rounded-md border border-slate-200 p-1 hover:bg-slate-50"
+                        className="rounded-md border border-stone-200 p-1 hover:bg-slate-50"
                       >
                         <Minus className="h-3 w-3" />
                       </button>
@@ -153,7 +153,7 @@ export function QuoteDrawer() {
                       </span>
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="rounded-md border border-slate-200 p-1 hover:bg-slate-50"
+                        className="rounded-md border border-stone-200 p-1 hover:bg-slate-50"
                       >
                         <Plus className="h-3 w-3" />
                       </button>
@@ -167,7 +167,7 @@ export function QuoteDrawer() {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t border-slate-100 p-6">
+          <div className="border-t border-stone-100 p-6">
             <div className="mb-4 flex items-center justify-between">
               <span className="text-sm text-slate-600">Estimated Subtotal</span>
               <span className="text-lg font-semibold text-slate-900">

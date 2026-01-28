@@ -283,7 +283,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
       {/* Tabs */}
-      <div className="border-b border-slate-200 bg-slate-50">
+      <div className="border-b border-stone-200 bg-stone-50">
         <div className="flex overflow-x-auto">
           {tabs.map(tab => (
             <button
@@ -293,7 +293,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                 'flex-1 min-w-[120px] px-4 py-4 text-sm font-medium whitespace-nowrap transition-colors',
                 activeTab === tab.id
                   ? 'bg-white text-brand-600 border-b-2 border-brand-500'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-stone-100'
               )}
             >
               {tab.label}
@@ -314,7 +314,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                   <select
                     value={spQuantity}
                     onChange={(e) => setSpQuantity(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   >
                     {quantityOptions.map(opt => (
                       <option key={opt} value={opt}>{opt} pieces</option>
@@ -333,7 +333,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                           'w-10 h-10 rounded-lg text-sm font-medium transition-colors',
                           spColors === num
                             ? 'bg-brand-500 text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
                         )}
                       >
                         {num}
@@ -353,7 +353,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                           'px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
                           spLocations.includes(loc.id)
                             ? 'bg-brand-500 text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
                         )}
                       >
                         {spLocations.includes(loc.id) && <Check className="h-4 w-4" />}
@@ -369,7 +369,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                       type="checkbox"
                       checked={spIsDark}
                       onChange={(e) => setSpIsDark(e.target.checked)}
-                      className="rounded border-slate-300 text-brand-500 focus:ring-brand-500"
+                      className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
                     />
                     <span className="text-sm text-slate-700">Dark Garment (+1 color)</span>
                   </label>
@@ -378,7 +378,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                       type="checkbox"
                       checked={spIsFleece}
                       onChange={(e) => setSpIsFleece(e.target.checked)}
-                      className="rounded border-slate-300 text-brand-500 focus:ring-brand-500"
+                      className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
                     />
                     <span className="text-sm text-slate-700">Fleece (+$1.00)</span>
                   </label>
@@ -394,7 +394,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                   <select
                     value={embQuantity}
                     onChange={(e) => setEmbQuantity(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   >
                     {embQuantityOptions.map(opt => (
                       <option key={opt} value={opt}>{opt} pieces</option>
@@ -413,7 +413,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                           'w-full px-4 py-3 rounded-lg text-left transition-colors',
                           embStitches === opt.value
                             ? 'bg-brand-50 border-2 border-brand-500'
-                            : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'
+                            : 'bg-stone-50 border-2 border-transparent hover:bg-stone-100'
                         )}
                       >
                         <span className="font-medium text-slate-900">{opt.label}</span>
@@ -434,7 +434,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                           'flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors',
                           embLocations === num
                             ? 'bg-brand-500 text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
                         )}
                       >
                         {num}
@@ -453,7 +453,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                   <select
                     value={digQuantity}
                     onChange={(e) => setDigQuantity(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   >
                     {quantityOptions.map(opt => (
                       <option key={opt} value={opt}>{opt} pieces</option>
@@ -478,7 +478,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                     type="checkbox"
                     checked={digIsFleece}
                     onChange={(e) => setDigIsFleece(e.target.checked)}
-                    className="rounded border-slate-300 text-brand-500 focus:ring-brand-500"
+                    className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
                   />
                   <span className="text-sm text-slate-700">Fleece Garment (+$1.00)</span>
                 </label>
@@ -493,7 +493,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                   <select
                     value={jumboQuantity}
                     onChange={(e) => setJumboQuantity(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   >
                     {quantityOptions.map(opt => (
                       <option key={opt} value={opt}>{opt} pieces</option>
@@ -512,7 +512,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                           'w-10 h-10 rounded-lg text-sm font-medium transition-colors',
                           jumboColors === num
                             ? 'bg-brand-500 text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
                         )}
                       >
                         {num}
@@ -532,7 +532,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                           'px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
                           jumboLocations.includes(loc.id)
                             ? 'bg-brand-500 text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
                         )}
                       >
                         {jumboLocations.includes(loc.id) && <Check className="h-4 w-4" />}
@@ -547,7 +547,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                     type="checkbox"
                     checked={jumboIsDark}
                     onChange={(e) => setJumboIsDark(e.target.checked)}
-                    className="rounded border-slate-300 text-brand-500 focus:ring-brand-500"
+                    className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
                   />
                   <span className="text-sm text-slate-700">Dark Garment (+1 color for underbase)</span>
                 </label>
@@ -564,7 +564,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                     value={finQuantity}
                     onChange={(e) => setFinQuantity(Math.max(50, parseInt(e.target.value) || 50))}
                     min={50}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   />
                   <p className="text-xs text-slate-500 mt-1">Minimum 50 pieces</p>
                 </div>
@@ -580,7 +580,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                           'w-full px-4 py-3 rounded-lg text-left transition-colors flex items-center justify-between',
                           finServices.includes(opt.id)
                             ? 'bg-brand-50 border-2 border-brand-500'
-                            : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'
+                            : 'bg-stone-50 border-2 border-transparent hover:bg-stone-100'
                         )}
                       >
                         <div className="flex items-center gap-2">
@@ -597,14 +597,14 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
           </div>
 
           {/* Results Section */}
-          <div className="bg-slate-50 rounded-xl p-6">
+          <div className="bg-stone-50 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-6">
               <Calculator className="h-5 w-5 text-brand-500" />
               <h3 className="text-lg font-semibold text-slate-900">Your Estimate</h3>
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center pb-4 border-b border-slate-200">
+              <div className="flex justify-between items-center pb-4 border-b border-stone-200">
                 <span className="text-slate-600">Price per piece</span>
                 <span className="text-2xl font-bold text-slate-900">
                   ${calculation.pricePerPiece.toFixed(2)}
@@ -623,7 +623,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
                 <span className="font-medium text-slate-900">${calculation.subtotal.toFixed(2)}</span>
               </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+              <div className="flex justify-between items-center pt-4 border-t border-stone-200">
                 <span className="font-semibold text-slate-900">Estimated Total</span>
                 <span className="text-2xl font-bold text-brand-600">${calculation.total.toFixed(2)}</span>
               </div>
@@ -645,7 +645,7 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
               </Link>
               <a
                 href="tel:+18559427636"
-                className="flex items-center justify-center gap-2 w-full bg-white text-slate-700 px-6 py-3 rounded-lg font-semibold border border-slate-200 hover:bg-slate-50 transition-colors"
+                className="flex items-center justify-center gap-2 w-full bg-white text-slate-700 px-6 py-3 rounded-lg font-semibold border border-stone-200 hover:bg-stone-50 transition-colors"
               >
                 Call (855) 942-7636
               </a>

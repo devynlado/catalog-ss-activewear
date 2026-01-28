@@ -189,7 +189,7 @@ export function ProductGrid({
 
   if (products.length === 0) {
     return (
-      <div className="rounded-xl bg-slate-50 p-12 text-center">
+      <div className="rounded-xl bg-stone-50 p-12 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
           <Search className="h-8 w-8 text-slate-400" />
         </div>

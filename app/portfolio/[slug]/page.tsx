@@ -383,7 +383,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
       </section>
 
       {/* Quick Stats Bar */}
-      <section className="bg-slate-50 border-b border-slate-200">
+      <section className="bg-stone-50 border-b border-stone-200">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16">
             {project.quantity && (
@@ -434,7 +434,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
                 <h2 className="text-2xl font-bold text-slate-900 mb-6">Project Highlights</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {project.highlights.map((highlight, index) => (
-                    <div key={index} className="flex items-start gap-3 p-4 rounded-lg bg-slate-50">
+                    <div key={index} className="flex items-start gap-3 p-4 rounded-lg bg-stone-50">
                       <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
                       <span className="text-slate-700">{highlight}</span>
                     </div>
@@ -447,7 +447,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
                 <h2 className="text-2xl font-bold text-slate-900 mb-6">Our Production Process</h2>
                 <div className="relative">
                   {/* Timeline line */}
-                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200 hidden sm:block" />
+                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-stone-200 hidden sm:block" />
                   
                   <div className="space-y-6">
                     {processSteps.map((step, index) => (
@@ -468,8 +468,8 @@ export default async function PortfolioProjectPage({ params }: Props) {
               {/* Equipment Used */}
               <div className="mt-12">
                 <h2 className="text-2xl font-bold text-slate-900 mb-6">Equipment Used</h2>
-                <div className="rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <div className="rounded-xl border border-stone-200 overflow-hidden">
+                  <div className="bg-stone-50 px-6 py-4 border-b border-stone-200">
                     <div className="flex items-center gap-2">
                       <Settings className="h-5 w-5 text-brand-500" />
                       <span className="font-semibold text-slate-900">Professional-Grade Production</span>
@@ -511,7 +511,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
             <div className="lg:col-span-1">
               <div className="sticky top-8 space-y-6">
                 {/* Product Card */}
-                <div className="rounded-xl border border-slate-200 overflow-hidden">
+                <div className="rounded-xl border border-stone-200 overflow-hidden">
                   <div className="bg-slate-900 px-6 py-4">
                     <h3 className="font-semibold text-white">Product Used</h3>
                   </div>
@@ -578,7 +578,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
                 </div>
 
                 {/* Related Service */}
-                <div className="rounded-xl border border-slate-200 p-6">
+                <div className="rounded-xl border border-stone-200 p-6">
                   <h3 className="font-semibold text-slate-900 mb-2">Learn About This Service</h3>
                   <p className="text-sm text-slate-600 mb-4">
                     Explore our {project.relatedService.toLowerCase()} capabilities.
@@ -598,7 +598,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
       </section>
 
       {/* Related Projects */}
-      <section className="py-12 sm:py-16 bg-slate-50">
+      <section className="py-12 sm:py-16 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-8">More Projects</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -608,7 +608,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
                 href={`/portfolio/${related.slug}`}
                 className="group rounded-xl bg-white overflow-hidden shadow-sm hover:shadow-lg transition-all"
               >
-                <div className="relative aspect-[4/3] bg-slate-100">
+                <div className="relative aspect-[4/3] bg-stone-100">
                   <Image
                     src={related.images[0]}
                     alt={related.title}
@@ -657,7 +657,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/quote"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-8 py-4 text-base font-semibold text-brand-600 shadow-lg transition-all hover:bg-slate-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-8 py-4 text-base font-semibold text-brand-600 shadow-lg transition-all hover:bg-stone-50"
             >
               Get Your Free Quote
               <ArrowRight className="h-5 w-5" />

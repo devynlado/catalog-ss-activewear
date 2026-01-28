@@ -245,7 +245,7 @@ function FilterTag({
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
         variant === 'primary'
           ? 'bg-brand-50 text-brand-700'
-          : 'bg-slate-100 text-slate-700'
+          : 'bg-stone-100 text-slate-700'
       }`}
     >
       {label}

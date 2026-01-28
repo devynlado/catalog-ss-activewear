@@ -82,12 +82,12 @@ export function ProductCard({
   return (
     <Link 
       href={`/product/${product.slug}`}
-      className="group relative block rounded-xl bg-white shadow-card transition-all hover:shadow-card-hover"
+      className="group relative block rounded-2xl bg-white/80 backdrop-blur-sm border border-stone-200 shadow-sm transition-all hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-1"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container - 4:5 aspect ratio, white background to blend with product images */}
-      <div className="relative aspect-[4/5] overflow-hidden bg-white">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-t-2xl bg-white">
         {imageUrl && !imageError ? (
           <Image
             src={imageUrl}
@@ -98,7 +98,7 @@ export function ProductCard({
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-slate-50 text-slate-300">
+          <div className="flex h-full w-full items-center justify-center bg-stone-50 text-stone-300">
             <ShoppingBag className="h-16 w-16" />
           </div>
         )}
@@ -194,7 +194,7 @@ export function ProductCard({
                     'relative h-5 w-5 rounded-full border-2 transition-all',
                     selectedColor?.colorCode === color.colorCode
                       ? 'border-brand-500 ring-1 ring-brand-200'
-                      : 'border-slate-200 hover:border-slate-400'
+                      : 'border-stone-200 hover:border-stone-400'
                   )}
                   title={color.colorName}
                 >
@@ -248,7 +248,7 @@ export function ProductCard({
                 {/* Invisible bridge to maintain hover when moving to popup */}
                 <div className="absolute left-0 top-full z-40 h-3 w-48" />
                 <div 
-                  className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                  className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-stone-200 bg-white p-3 shadow-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
                 <p className="mb-2 text-xs font-medium text-slate-500">
@@ -268,7 +268,7 @@ export function ProductCard({
                         'relative h-6 w-6 rounded-full border-2 transition-all',
                         selectedColor?.colorCode === color.colorCode
                           ? 'border-brand-500 ring-2 ring-brand-200'
-                          : 'border-slate-200 hover:border-slate-400 hover:scale-110'
+                          : 'border-stone-200 hover:border-stone-400 hover:scale-110'
                       )}
                       title={color.colorName}
                     >

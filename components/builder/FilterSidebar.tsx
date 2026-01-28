@@ -340,9 +340,9 @@ export function FilterSidebar({
             <div key={i} className="animate-pulse">
               <div className="h-6 w-24 rounded bg-slate-200" />
               <div className="mt-3 space-y-2">
-                <div className="h-4 w-full rounded bg-slate-100" />
-                <div className="h-4 w-3/4 rounded bg-slate-100" />
-                <div className="h-4 w-1/2 rounded bg-slate-100" />
+                <div className="h-4 w-full rounded bg-stone-100" />
+                <div className="h-4 w-3/4 rounded bg-stone-100" />
+                <div className="h-4 w-1/2 rounded bg-stone-100" />
               </div>
             </div>
           ))}
@@ -364,7 +364,7 @@ export function FilterSidebar({
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
                   featuredFilter
                     ? 'bg-amber-50 font-medium text-amber-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                 )}
               >
                 <Flame className={cn('h-4 w-4', featuredFilter ? 'text-amber-500' : 'text-slate-400')} />
@@ -383,7 +383,7 @@ export function FilterSidebar({
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
                   streetwearFilter
                     ? 'bg-purple-50 font-medium text-purple-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                 )}
               >
                 <TrendingUp className={cn('h-4 w-4', streetwearFilter ? 'text-purple-500' : 'text-slate-400')} />
@@ -402,7 +402,7 @@ export function FilterSidebar({
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
                   onSaleFilter
                     ? 'bg-red-50 font-medium text-red-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                 )}
               >
                 <Tag className={cn('h-4 w-4', onSaleFilter ? 'text-red-500' : 'text-slate-400')} />
@@ -421,7 +421,7 @@ export function FilterSidebar({
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
                   sustainableFilter
                     ? 'bg-green-50 font-medium text-green-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                 )}
               >
                 <Leaf className={cn('h-4 w-4', sustainableFilter ? 'text-green-500' : 'text-slate-400')} />
@@ -470,7 +470,7 @@ export function FilterSidebar({
                         'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors',
                         isSelected
                           ? 'bg-brand-50 font-medium text-brand-700'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                       )}
                     >
                       {/* Radio-style indicator */}
@@ -478,7 +478,7 @@ export function FilterSidebar({
                         'flex h-4 w-4 items-center justify-center rounded-full border-2',
                         isSelected
                           ? 'border-brand-600 bg-brand-600'
-                          : 'border-slate-300'
+                          : 'border-stone-300'
                       )}>
                         {isSelected && (
                           <span className="h-1.5 w-1.5 rounded-full bg-white" />
@@ -517,8 +517,8 @@ export function FilterSidebar({
                         'group relative flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all',
                         isSelected
                           ? 'border-brand-500 ring-2 ring-brand-200'
-                          : 'border-slate-200 hover:border-slate-400',
-                        color.value === 'White' && 'border-slate-300'
+                          : 'border-stone-200 hover:border-slate-400',
+                        color.value === 'White' && 'border-stone-300'
                       )}
                     >
                       <span
@@ -645,7 +645,7 @@ export function FilterSidebar({
                           'block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors',
                           isAttributeSelected(attr.id)
                             ? 'bg-brand-50 font-medium text-brand-700'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                         )}
                       >
                         {attr.name}
@@ -705,7 +705,7 @@ export function FilterSidebar({
                     placeholder="Search brands..."
                     value={brandSearch}
                     onChange={(e) => setBrandSearch(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    className="w-full rounded-lg border border-stone-200 py-2 pl-8 pr-3 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                   />
                   {brandSearch && (
                     <button
@@ -735,7 +735,7 @@ export function FilterSidebar({
                           'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors',
                           selectedBrand === brand.id.toString()
                             ? 'bg-brand-50 font-medium text-brand-700'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                         )}
                       >
                         {brand.image && (
@@ -780,14 +780,14 @@ export function FilterSidebar({
                     placeholder="Min"
                     value={minPrice || ''}
                     onChange={(e) => updateFilter('minPrice', e.target.value || null)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                   />
                   <input
                     type="number"
                     placeholder="Max"
                     value={maxPrice || ''}
                     onChange={(e) => updateFilter('maxPrice', e.target.value || null)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -808,7 +808,7 @@ export function FilterSidebar({
                         params.delete('page');
                         router.push(`/catalog?${params.toString()}`);
                       }}
-                      className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:border-brand-500 hover:text-brand-600"
+                      className="rounded-full border border-stone-200 px-3 py-1 text-xs text-slate-600 hover:border-brand-500 hover:text-brand-600"
                     >
                       {range.label}
                     </button>
@@ -919,7 +919,7 @@ function MaterialExpander({
                   'block w-full rounded-lg px-3 py-1.5 text-left text-xs transition-colors',
                   isAttributeSelected(attr.id)
                     ? 'bg-brand-50 font-medium text-brand-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-600 hover:bg-stone-50 hover:text-slate-900'
                 )}
               >
                 {attr.name.split(' - ')[1] || attr.name}

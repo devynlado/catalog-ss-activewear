@@ -117,7 +117,7 @@ const shopCategories = [
 
 export default function RetailFinishingPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <ServiceHero
         title="Retail Finishing"
@@ -127,7 +127,6 @@ export default function RetailFinishingPage() {
         gradient="from-amber-500 to-orange-600"
         serviceSlug="retail-finishing"
         samplePrice="Starts at $1.00 at 100+ pieces"
-        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -149,7 +148,7 @@ export default function RetailFinishingPage() {
               return (
                 <div
                   key={index}
-                  className="bg-slate-50 rounded-2xl p-6 hover:shadow-md transition-shadow"
+                  className="bg-stone-50 rounded-2xl p-6 hover:shadow-md transition-shadow"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-100 text-brand-600 mb-4">
                     <Icon className="h-7 w-7" />
@@ -173,7 +172,7 @@ export default function RetailFinishingPage() {
       </section>
 
       {/* Relabeling Deep Dive */}
-      <section className="py-16 lg:py-20 bg-slate-50">
+      <section className="py-16 lg:py-20 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2 items-center">
             <div>

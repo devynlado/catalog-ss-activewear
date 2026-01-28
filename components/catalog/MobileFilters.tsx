@@ -28,7 +28,7 @@ export function MobileFilters() {
         </button>
         
         {isOpen && (
-          <div className="border-t border-slate-100 p-4">
+          <div className="border-t border-stone-100 p-4">
             <FilterSidebar
               showBrands={true}
               showCategories={true}

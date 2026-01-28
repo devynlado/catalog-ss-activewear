@@ -176,10 +176,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50">
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 py-2 sm:py-4 sm:px-6 lg:px-8">
+      <div className="relative bg-gradient-to-r from-white via-stone-50/30 to-white border-b border-stone-200 overflow-hidden">
+        {/* Subtle grain */}
+        <div 
+          className="pointer-events-none absolute inset-0 opacity-[0.01]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        <div className="relative mx-auto max-w-7xl px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <ProductBreadcrumbs
             brandName={product.brandName}
             brandId={product.brandId}
@@ -190,22 +197,33 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </div>
 
       {/* Product Content */}
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
         <Suspense fallback={<ProductDetailSkeleton />}>
           <ProductDetailClient product={product} />
         </Suspense>
       </div>
 
       {/* Companion Products (Complete the Look) */}
-      <div className="bg-white border-t border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative bg-white border-t border-stone-200 overflow-hidden">
+        {/* Decorative orb */}
+        <div className="pointer-events-none absolute -left-32 top-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-brand-500/5 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <CompanionProducts styleId={product.styleId} />
         </div>
       </div>
 
       {/* Similar Products Section (using comparableGroup) */}
-      <div className="bg-slate-50 border-t border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="relative bg-gradient-to-b from-stone-50 to-stone-100/50 border-t border-stone-200 overflow-hidden">
+        {/* Grain texture */}
+        <div 
+          className="pointer-events-none absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        {/* Decorative orb */}
+        <div className="pointer-events-none absolute -right-32 bottom-0 h-64 w-64 rounded-full bg-navy-800/5 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <RelatedProducts
             styleId={product.styleId}
             brandId={product.brandId}

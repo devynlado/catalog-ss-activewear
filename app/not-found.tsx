@@ -8,7 +8,7 @@ export default function NotFound() {
       <div className="relative">
         <span className="text-[150px] font-bold text-slate-100">404</span>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="rounded-full bg-slate-50 p-8">
+          <div className="rounded-full bg-stone-50 p-8">
             <Search className="h-16 w-16 text-slate-400" />
           </div>
         </div>

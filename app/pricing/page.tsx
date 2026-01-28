@@ -26,7 +26,7 @@ function PricingContent() {
   const defaultService = serviceParam ? serviceMapping[serviceParam] || 'screen-printing' : 'screen-printing';
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <section className="bg-gradient-to-br from-brand-600 to-brand-800 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -105,7 +105,7 @@ function PricingContent() {
       </section>
 
       {/* Extra Costs Reference */}
-      <section className="py-12 lg:py-16 bg-slate-50">
+      <section className="py-12 lg:py-16 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-slate-900">Additional Options & Fees</h2>
@@ -219,7 +219,7 @@ function PricingContent() {
 export default function PricingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-brand-500 border-t-transparent rounded-full mx-auto"></div>
           <p className="mt-4 text-slate-600">Loading pricing calculator...</p>

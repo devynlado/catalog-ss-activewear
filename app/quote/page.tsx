@@ -236,7 +236,7 @@ export default function QuotePage() {
   // Success State
   if (submitStatus === 'success') {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-stone-50">
         <div className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
           {/* Success Card */}
           <div className="rounded-2xl bg-white p-8 shadow-sm text-center">
@@ -261,7 +261,7 @@ export default function QuotePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Link
                 href="/quote"
-                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+                className="flex items-center gap-3 p-4 rounded-xl border border-stone-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-600 group-hover:bg-brand-500 group-hover:text-white transition-colors">
                   <ShoppingBag className="h-5 w-5" />
@@ -274,7 +274,7 @@ export default function QuotePage() {
               
               <Link
                 href="/catalog"
-                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+                className="flex items-center gap-3 p-4 rounded-xl border border-stone-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                   <Shirt className="h-5 w-5" />
@@ -287,7 +287,7 @@ export default function QuotePage() {
               
               <Link
                 href="/services/screen-printing"
-                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+                className="flex items-center gap-3 p-4 rounded-xl border border-stone-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-colors">
                   <Sparkles className="h-5 w-5" />
@@ -300,7 +300,7 @@ export default function QuotePage() {
               
               <Link
                 href="/resources/screen-printing-guide"
-                className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+                className="flex items-center gap-3 p-4 rounded-xl border border-stone-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                   <Mail className="h-5 w-5" />
@@ -314,7 +314,7 @@ export default function QuotePage() {
           </div>
 
           {/* Help Banner */}
-          <div className="mt-6 rounded-xl bg-slate-100 p-4 text-center">
+          <div className="mt-6 rounded-xl bg-stone-100 p-4 text-center">
             <p className="text-sm text-slate-600">
               Questions? Call us at{' '}
               <a href="tel:+18559427636" className="font-semibold text-brand-600 hover:text-brand-700">
@@ -338,7 +338,7 @@ export default function QuotePage() {
   const progressStep = getProgressStep();
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Trust Signals Banner */}
       <div className="bg-navy-800 text-white py-2.5">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -364,7 +364,7 @@ export default function QuotePage() {
       </div>
 
       {/* Header with Progress Indicator */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-stone-200">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <Link href="/catalog" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
             <ChevronLeft className="h-4 w-4" />
@@ -390,7 +390,7 @@ export default function QuotePage() {
                       'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
                       progressStep >= item.step
                         ? 'bg-brand-500 text-white'
-                        : 'bg-slate-200 text-slate-500'
+                        : 'bg-stone-200 text-slate-500'
                     )}>
                       {progressStep > item.step ? (
                         <Check className="h-4 w-4" />
@@ -407,7 +407,7 @@ export default function QuotePage() {
                     {index < 3 && (
                       <div className={cn(
                         'mx-2 sm:mx-4 h-0.5 w-8 sm:w-16',
-                        progressStep > item.step ? 'bg-brand-500' : 'bg-slate-200'
+                        progressStep > item.step ? 'bg-brand-500' : 'bg-stone-200'
                       )} />
                     )}
                   </div>
@@ -440,7 +440,7 @@ export default function QuotePage() {
                 </Link>
                 <a
                   href="tel:+18559427636"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-slate-200 px-6 py-3 text-base font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-stone-200 px-6 py-3 text-base font-semibold text-slate-700 transition-all hover:border-stone-300 hover:bg-stone-50"
                 >
                   <Phone className="h-5 w-5" />
                   (855) 942-7636
@@ -461,7 +461,7 @@ export default function QuotePage() {
                   <Link
                     key={category.name}
                     href={category.href}
-                    className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+                    className="flex flex-col items-center p-4 rounded-lg border border-stone-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
                   >
                     <div className={`w-12 h-12 rounded-full ${category.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                       <Shirt className="h-6 w-6" />
@@ -496,7 +496,7 @@ export default function QuotePage() {
             {/* Quote Items */}
             <div className="lg:col-span-2">
               <div className="rounded-xl bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-6 py-4">
+                <div className="border-b border-stone-100 px-6 py-4">
                   <h2 className="text-lg font-semibold text-slate-900">
                     Quote Items ({totalItems})
                   </h2>
@@ -505,7 +505,7 @@ export default function QuotePage() {
                   {items.map((item) => (
                     <div key={item.id} className="flex gap-4 p-6">
                       {/* Image */}
-                      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
                         {item.imageUrl ? (
                           <Image
                             src={item.imageUrl}
@@ -546,7 +546,7 @@ export default function QuotePage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="rounded-md border border-slate-200 p-1 hover:bg-slate-50"
+                            className="rounded-md border border-stone-200 p-1 hover:bg-stone-50"
                           >
                             <Minus className="h-3 w-3" />
                           </button>
@@ -555,7 +555,7 @@ export default function QuotePage() {
                           </span>
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="rounded-md border border-slate-200 p-1 hover:bg-slate-50"
+                            className="rounded-md border border-stone-200 p-1 hover:bg-stone-50"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
@@ -572,7 +572,7 @@ export default function QuotePage() {
 
               {/* Decoration Services */}
               <div className="mt-8 rounded-xl bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-6 py-4">
+                <div className="border-b border-stone-100 px-6 py-4">
                   <h2 className="text-lg font-semibold text-slate-900">
                     Decoration Services
                   </h2>
@@ -591,11 +591,11 @@ export default function QuotePage() {
                           'relative flex flex-col items-center rounded-xl border-2 p-4 text-center transition-all',
                           decorationType === option.id
                             ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200'
-                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                            : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
                         )}
                       >
                         {/* Image placeholder */}
-                        <div className="mb-3 h-16 w-16 overflow-hidden rounded-lg bg-slate-100">
+                        <div className="mb-3 h-16 w-16 overflow-hidden rounded-lg bg-stone-100">
                           {option.image ? (
                             <Image
                               src={option.image}
@@ -636,7 +636,7 @@ export default function QuotePage() {
                         value={designDescription}
                         onChange={(e) => setDesignDescription(e.target.value)}
                         rows={2}
-                        className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                        className="w-full rounded-lg border border-stone-200 px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                         placeholder="Describe placement (front, back, sleeve), number of colors, and size. We'll request artwork in our response."
                       />
                     </div>
@@ -646,7 +646,7 @@ export default function QuotePage() {
 
               {/* Finishing Services */}
               <div className="mt-8 rounded-xl bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-6 py-4">
+                <div className="border-b border-stone-100 px-6 py-4">
                   <h2 className="text-lg font-semibold text-slate-900">
                     Finishing Services
                   </h2>
@@ -673,11 +673,11 @@ export default function QuotePage() {
                             'relative flex flex-col items-center rounded-xl border-2 p-4 text-center transition-all',
                             isSelected
                               ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200'
-                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                              : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
                           )}
                         >
                           {/* Image placeholder */}
-                          <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">
+                          <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-stone-100 text-slate-400">
                             <ShoppingBag className="h-6 w-6" />
                           </div>
                           <span className="text-sm font-medium text-slate-900">
@@ -688,7 +688,7 @@ export default function QuotePage() {
                             'mt-2 flex h-5 w-5 items-center justify-center rounded border-2 transition-colors',
                             isSelected
                               ? 'border-brand-500 bg-brand-500'
-                              : 'border-slate-300 bg-white'
+                              : 'border-stone-300 bg-white'
                           )}>
                             {isSelected && <Check className="h-3 w-3 text-white" />}
                           </div>
@@ -790,7 +790,7 @@ export default function QuotePage() {
                         value={formData.eventDate}
                         onChange={handleInputChange}
                         min={new Date().toISOString().split('T')[0]}
-                        className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                        className="w-full rounded-lg border border-stone-200 px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                       />
                       <p className="mt-1 text-xs text-slate-500">
                         Have a deadline? Let us know and we'll prioritize your quote.
@@ -805,7 +805,7 @@ export default function QuotePage() {
                         value={formData.message}
                         onChange={handleInputChange}
                         rows={3}
-                        className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                        className="w-full rounded-lg border border-stone-200 px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                         placeholder="Any special requirements or questions..."
                       />
                     </div>
@@ -832,7 +832,7 @@ export default function QuotePage() {
                   <button
                     type="button"
                     onClick={() => setShowSaveModal(true)}
-                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-stone-50 hover:text-slate-900 transition-colors"
                   >
                     <Bookmark className="h-4 w-4" />
                     Save Quote for Later
@@ -898,7 +898,7 @@ export default function QuotePage() {
                       setShowSaveModal(false);
                       setSaveError('');
                     }}
-                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
                   >
                     <X className="h-5 w-5 text-slate-400" />
                   </button>
@@ -920,7 +920,7 @@ export default function QuotePage() {
                           setSaveError('');
                         }}
                         placeholder="you@company.com"
-                        className="w-full rounded-lg border border-slate-300 pl-12 pr-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+                        className="w-full rounded-lg border border-stone-300 pl-12 pr-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
                       />
                     </div>
                     {saveError && (
@@ -928,7 +928,7 @@ export default function QuotePage() {
                     )}
                   </div>
 
-                  <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="bg-stone-50 rounded-lg p-4">
                     <p className="text-sm text-slate-600">
                       <strong className="text-slate-900">What we'll save:</strong>
                     </p>

@@ -63,9 +63,9 @@ export function SizeDistributionRow({
   }, 0);
 
   return (
-    <div className="rounded-xl border-2 border-slate-200 bg-white overflow-hidden">
+    <div className="rounded-xl border-2 border-stone-200 bg-white overflow-hidden">
       {/* Header with color info */}
-      <div className="flex items-center justify-between bg-slate-50 px-4 py-3 border-b border-slate-200">
+      <div className="flex items-center justify-between bg-stone-50 px-4 py-3 border-b border-stone-200">
         <div className="flex items-center gap-3">
           {/* Color swatch */}
           {color.swatchImage ? (
@@ -121,7 +121,7 @@ export function SizeDistributionRow({
                 key={size.code}
                 className={cn(
                   'flex flex-col items-center min-w-[70px] p-2 rounded-lg transition-colors',
-                  isOutOfStock ? 'bg-slate-50' : indicator.bgColor
+                  isOutOfStock ? 'bg-stone-50' : indicator.bgColor
                 )}
               >
                 {/* Size label */}
@@ -141,7 +141,7 @@ export function SizeDistributionRow({
                   className={cn(
                     'w-14 h-10 text-center text-sm font-semibold rounded-md border-2 transition-colors',
                     isOutOfStock
-                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                      ? 'bg-slate-100 border-stone-200 text-slate-400 cursor-not-allowed'
                       : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
                   )}
                 />
@@ -177,7 +177,7 @@ export function SizeDistributionRow({
                 key={size.code}
                 className={cn(
                   'flex flex-col items-center p-3 rounded-lg transition-colors',
-                  isOutOfStock ? 'bg-slate-50' : indicator.bgColor
+                  isOutOfStock ? 'bg-stone-50' : indicator.bgColor
                 )}
               >
                 {/* Size label */}
@@ -197,7 +197,7 @@ export function SizeDistributionRow({
                   className={cn(
                     'w-full h-11 text-center text-base font-semibold rounded-md border-2 transition-colors',
                     isOutOfStock
-                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                      ? 'bg-slate-100 border-stone-200 text-slate-400 cursor-not-allowed'
                       : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
                   )}
                 />

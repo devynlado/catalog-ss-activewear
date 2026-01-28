@@ -172,7 +172,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-4 lg:p-6">
         {/* Left: Image - smaller on mobile */}
         <div className="lg:w-2/5 flex-shrink-0">
-          <div className="relative aspect-[4/3] lg:aspect-square overflow-hidden rounded-xl bg-slate-50">
+          <div className="relative aspect-[4/3] lg:aspect-square overflow-hidden rounded-xl bg-stone-50">
             {imageUrl ? (
               <Image
                 src={imageUrl}
@@ -263,7 +263,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
             {/* No colors selected prompt */}
             {selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
-              <div className="mt-4 lg:mt-5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 lg:p-6 text-center">
+              <div className="mt-4 lg:mt-5 rounded-xl border-2 border-dashed border-slate-300 bg-stone-50 p-4 lg:p-6 text-center">
                 <ShoppingBag className="mx-auto h-6 w-6 lg:h-8 lg:w-8 text-slate-400" />
                 <p className="mt-2 text-sm font-medium text-slate-600">
                   Select a color above to enter quantities
@@ -276,7 +276,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
           </div>
 
           {/* Footer: Order Summary & Add to Quote - Fixed */}
-          <div className="flex-shrink-0 mt-3 lg:mt-4 pt-3 lg:pt-4 border-t border-slate-200">
+          <div className="flex-shrink-0 mt-3 lg:mt-4 pt-3 lg:pt-4 border-t border-stone-200">
             {/* Order Summary */}
             {selectedColors.length > 0 && grandTotal > 0 && (
               <div className="rounded-lg bg-brand-50 p-3 lg:p-4 mb-3 lg:mb-4">

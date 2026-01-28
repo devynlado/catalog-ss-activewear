@@ -640,7 +640,7 @@ const faqCategories: FAQCategory[] = [
 
 function FAQAccordionItem({ item, isOpen, onToggle }: { item: FAQItem; isOpen: boolean; onToggle: () => void }) {
   return (
-    <div className="border-b border-slate-200 last:border-b-0">
+    <div className="border-b border-stone-200 last:border-b-0">
       <button
         onClick={onToggle}
         className="flex w-full items-center justify-between py-4 text-left"
@@ -682,7 +682,7 @@ function FAQCategorySection({ category }: { category: FAQCategory }) {
 
   return (
     <div className="self-start rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="border-b border-slate-200 px-6 py-4">
+      <div className="border-b border-stone-200 px-6 py-4">
         <h2 className="text-lg font-semibold text-slate-900">{category.title}</h2>
       </div>
       <div className="px-6">
@@ -719,7 +719,7 @@ export default function FAQPage() {
     : faqCategories;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero Section */}
       <section className="bg-[#070131] py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -752,7 +752,7 @@ export default function FAQPage() {
               placeholder="Search questions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white py-4 pl-12 pr-4 text-sm shadow-lg placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-xl border border-stone-200 bg-white py-4 pl-12 pr-4 text-sm shadow-lg placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
         </div>
@@ -791,7 +791,7 @@ export default function FAQPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="border-t border-slate-200 bg-white py-12">
+      <section className="border-t border-stone-200 bg-white py-12">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-xl font-semibold text-slate-900">Still have questions?</h2>
           <p className="mt-2 text-slate-600">
@@ -806,7 +806,7 @@ export default function FAQPage() {
             </Link>
             <a
               href="tel:+18559427636"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-stone-50"
             >
               Call (855) 942-7636
             </a>

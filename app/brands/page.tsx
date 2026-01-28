@@ -53,9 +53,9 @@ export default function BrandsPage() {
   const sortedLetters = Object.keys(groupedBrands).sort();
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
-      <section className="bg-white border-b border-slate-100">
+      <section className="bg-white border-b border-stone-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <h1 className="text-3xl font-bold text-navy-800 sm:text-4xl">
             Shop by Brand
@@ -74,7 +74,7 @@ export default function BrandsPage() {
                 placeholder="Search brands..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                className="w-full rounded-lg border border-stone-200 bg-white py-3 pl-12 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
             </div>
           </div>
@@ -88,8 +88,8 @@ export default function BrandsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {Array.from({ length: 24 }).map((_, i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="aspect-square rounded-xl bg-slate-200" />
-                  <div className="mt-2 h-4 w-3/4 rounded bg-slate-200" />
+                  <div className="aspect-square rounded-xl bg-stone-200" />
+                  <div className="mt-2 h-4 w-3/4 rounded bg-stone-200" />
                 </div>
               ))}
             </div>
@@ -107,7 +107,7 @@ export default function BrandsPage() {
             <div className="space-y-12">
               {sortedLetters.map((letter) => (
                 <div key={letter}>
-                  <h2 className="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-slate-200">
+                  <h2 className="text-lg font-bold text-navy-800 mb-4 pb-2 border-b border-stone-200">
                     {letter}
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -115,9 +115,9 @@ export default function BrandsPage() {
                       <Link
                         key={brand.id}
                         href={`/catalog?brand=${brand.id}`}
-                        className="group flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-brand-500 hover:shadow-lg hover:shadow-brand-500/10"
+                        className="group flex flex-col items-center rounded-xl border border-stone-200 bg-white p-4 transition-all hover:border-brand-500 hover:shadow-lg hover:shadow-brand-500/10"
                       >
-                        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-slate-50">
+                        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-stone-50">
                           {brand.image ? (
                             <Image
                               src={brand.image.startsWith('http') ? brand.image : `https://www.ssactivewear.com/${brand.image}`}
@@ -149,7 +149,7 @@ export default function BrandsPage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-white border-t border-slate-100 py-12">
+      <section className="bg-white border-t border-stone-100 py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold text-navy-800">Can't find what you're looking for?</h2>
           <p className="mt-2 text-slate-600">
@@ -165,7 +165,7 @@ export default function BrandsPage() {
             </Link>
             <Link
               href="/catalog"
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-slate-200 px-6 py-3 font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-stone-200 px-6 py-3 font-semibold text-slate-700 hover:border-stone-300 hover:bg-stone-50 transition-colors"
             >
               Browse All Products
             </Link>

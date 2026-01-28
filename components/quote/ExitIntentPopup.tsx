@@ -146,7 +146,7 @@ export function ExitIntentPopup() {
         {/* Close button */}
         <button
           onClick={handleClose}
-          className="absolute right-4 top-4 p-2 rounded-full hover:bg-slate-100 transition-colors z-10"
+          className="absolute right-4 top-4 p-2 rounded-full hover:bg-stone-100 transition-colors z-10"
         >
           <X className="h-5 w-5 text-slate-400" />
         </button>
@@ -177,7 +177,7 @@ export function ExitIntentPopup() {
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Quick Stats */}
-              <div className="flex items-center justify-center gap-6 py-3 border-b border-slate-100">
+              <div className="flex items-center justify-center gap-6 py-3 border-b border-stone-100">
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-brand-500" />
                   <span>2hr avg response</span>
@@ -231,7 +231,7 @@ export function ExitIntentPopup() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+                      className="flex-1 rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
                       required
                     />
                     <button
@@ -249,7 +249,7 @@ export function ExitIntentPopup() {
                 <Link
                   href="/quote"
                   onClick={handleClose}
-                  className="flex items-center justify-center gap-2 p-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors"
+                  className="flex items-center justify-center gap-2 p-3 rounded-lg bg-stone-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors"
                 >
                   Continue Building Quote
                 </Link>

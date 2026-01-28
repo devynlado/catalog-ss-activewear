@@ -110,7 +110,7 @@ const shopCategories = [
 
 export default function EmbroideryPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <ServiceHero
         title="Custom Embroidery"
@@ -122,7 +122,6 @@ export default function EmbroideryPage() {
         serviceSlug="embroidery"
         samplePrice="Starting at $4.25/piece"
         minimumOrder={50}
-        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -153,7 +152,7 @@ export default function EmbroideryPage() {
           
           <div className="grid gap-8 md:grid-cols-2">
             {/* Flat Embroidery */}
-            <div className="bg-slate-50 rounded-2xl p-8">
+            <div className="bg-stone-50 rounded-2xl p-8">
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
                   <Scissors className="h-6 w-6" />
@@ -174,7 +173,7 @@ export default function EmbroideryPage() {
             </div>
             
             {/* 3D Puff Embroidery */}
-            <div className="bg-slate-50 rounded-2xl p-8">
+            <div className="bg-stone-50 rounded-2xl p-8">
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
                   <Box className="h-6 w-6" />
@@ -198,7 +197,7 @@ export default function EmbroideryPage() {
       </section>
 
       {/* Backing Types */}
-      <section className="py-16 lg:py-20 bg-slate-50">
+      <section className="py-16 lg:py-20 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-navy-800">Backing Types</h2>

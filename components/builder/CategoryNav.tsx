@@ -49,7 +49,7 @@ export function CategoryNav({
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className="h-10 w-24 animate-pulse rounded-full bg-slate-200"
+            className="h-10 w-24 animate-pulse rounded-full bg-stone-200"
           />
         ))}
       </div>
@@ -67,15 +67,15 @@ export function CategoryNav({
   const itemStyles = {
     horizontal: cn(
       'inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-colors',
-      'border border-slate-200 hover:border-brand-500 hover:text-brand-600'
+      'border border-stone-200 hover:border-brand-500 hover:text-brand-600'
     ),
     vertical: cn(
       'flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-colors',
-      'hover:bg-slate-50'
+      'hover:bg-stone-50'
     ),
     grid: cn(
       'flex items-center justify-center rounded-xl p-4 text-center text-sm font-medium transition-colors',
-      'border border-slate-200 hover:border-brand-500 hover:text-brand-600'
+      'border border-stone-200 hover:border-brand-500 hover:text-brand-600'
     ),
   };
 

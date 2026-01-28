@@ -104,7 +104,7 @@ const shopCategories = [
 
 export default function SimulatedProcessPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <ServiceHero
         title="Simulated Process Printing"
@@ -117,7 +117,6 @@ export default function SimulatedProcessPage() {
         serviceSlug="simulated-process"
         samplePrice="Starting at $3.35/piece"
         minimumOrder={50}
-        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}

@@ -182,7 +182,7 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
       </div>
     );
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
           <h1 className="text-2xl font-bold text-slate-900 mb-6 text-center">Admin Dashboard</h1>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+                className="w-full rounded-lg border border-stone-300 px-4 py-2.5 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
                 placeholder="Enter admin password"
                 required
               />
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-stone-100">
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -229,14 +229,14 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => loadData(activeTab)}
-              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
               title="Refresh"
             >
               <RefreshCw className={`h-5 w-5 text-slate-600 ${dataLoading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-slate-700 transition-colors"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
                 activeTab === tab.id
                   ? 'bg-brand-500 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-50'
+                  : 'bg-white text-slate-600 hover:bg-stone-50'
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-stone-50 border-b border-stone-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Quote ID</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Customer</th>
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {quotes.map((quote) => (
-                    <tr key={quote.id} className="hover:bg-slate-50">
+                    <tr key={quote.id} className="hover:bg-stone-50">
                       <td className="px-4 py-3 font-mono text-sm">{quote.quote_id}</td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-900">{quote.customer_name}</p>
@@ -362,7 +362,7 @@ export default function AdminDashboard() {
                             quote.status === 'contacted' ? 'bg-blue-50 border-blue-200 text-blue-700' :
                             quote.status === 'quoted' ? 'bg-purple-50 border-purple-200 text-purple-700' :
                             quote.status === 'converted' ? 'bg-green-50 border-green-200 text-green-700' :
-                            'bg-slate-50 border-slate-200 text-slate-700'
+                            'bg-stone-50 border-stone-200 text-slate-700'
                           }`}
                         >
                           <option value="new">New</option>
@@ -374,7 +374,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-500">{formatDate(quote.created_at)}</td>
                       <td className="px-4 py-3">
-                        <button className="p-1 rounded hover:bg-slate-100" title="View Details">
+                        <button className="p-1 rounded hover:bg-stone-100" title="View Details">
                           <Eye className="h-4 w-4 text-slate-400" />
                         </button>
                       </td>
@@ -398,7 +398,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-stone-50 border-b border-stone-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Contact</th>
@@ -410,7 +410,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {contacts.map((contact) => (
-                    <tr key={contact.id} className="hover:bg-slate-50">
+                    <tr key={contact.id} className="hover:bg-stone-50">
                       <td className="px-4 py-3 font-medium text-slate-900">{contact.name}</td>
                       <td className="px-4 py-3">
                         <p className="text-sm">{contact.email}</p>
@@ -454,7 +454,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-stone-50 border-b border-stone-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Email</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Items</th>
@@ -465,7 +465,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {abandoned.map((cart) => (
-                    <tr key={cart.id} className="hover:bg-slate-50">
+                    <tr key={cart.id} className="hover:bg-stone-50">
                       <td className="px-4 py-3 font-medium text-slate-900">{cart.email}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">
                         {Array.isArray(cart.items) ? cart.items.length : 0} items
@@ -512,7 +512,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-stone-50 border-b border-stone-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Email</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Page</th>
@@ -521,7 +521,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {exitCaptures.map((capture) => (
-                    <tr key={capture.id} className="hover:bg-slate-50">
+                    <tr key={capture.id} className="hover:bg-stone-50">
                       <td className="px-4 py-3 font-medium text-slate-900">{capture.email}</td>
                       <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">
                         {capture.page_url || '-'}

@@ -121,22 +121,22 @@ async function getGuides(): Promise<Guide[]> {
 // Loading fallback
 function GuidesLoading() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-stone-50">
+      <div className="bg-white border-b border-stone-200">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="animate-pulse">
-            <div className="h-12 w-12 bg-slate-200 rounded-xl mb-4" />
-            <div className="h-8 w-48 bg-slate-200 rounded mb-2" />
-            <div className="h-4 w-64 bg-slate-200 rounded" />
+            <div className="h-12 w-12 bg-stone-200 rounded-xl mb-4" />
+            <div className="h-8 w-48 bg-stone-200 rounded mb-2" />
+            <div className="h-4 w-64 bg-stone-200 rounded" />
           </div>
         </div>
       </div>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-6">
-              <div className="h-5 w-3/4 bg-slate-200 rounded mb-2" />
-              <div className="h-4 w-1/4 bg-slate-200 rounded" />
+            <div key={i} className="animate-pulse rounded-xl border border-stone-200 bg-white p-6">
+              <div className="h-5 w-3/4 bg-stone-200 rounded mb-2" />
+              <div className="h-4 w-1/4 bg-stone-200 rounded" />
             </div>
           ))}
         </div>

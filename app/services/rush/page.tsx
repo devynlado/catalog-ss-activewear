@@ -20,7 +20,7 @@ const turnaroundTiers = [
     timeframe: '10 Business Days',
     description: 'Our standard production time from final artwork approval and receipt of all blank garments.',
     icon: Clock,
-    color: 'bg-slate-100 border-slate-200 text-slate-700',
+    color: 'bg-stone-100 border-stone-200 text-slate-700',
     iconColor: 'text-slate-500',
     features: ['No rush fees', 'Full production capacity', 'All services available'],
   },
@@ -111,7 +111,7 @@ const portfolioItems = serviceImages?.gallery.map((img, index) => ({
 
 export default function RushPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <ServiceHero
         title="Rush Turnaround"
@@ -120,7 +120,6 @@ export default function RushPage() {
         icon={Zap}
         gradient="from-amber-500 to-orange-600"
         serviceSlug="rush"
-        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -186,7 +185,7 @@ export default function RushPage() {
       </section>
 
       {/* Rush Requirements */}
-      <section className="py-16 lg:py-20 bg-slate-50">
+      <section className="py-16 lg:py-20 bg-stone-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-navy-800">Rush Order Requirements</h2>
@@ -245,7 +244,7 @@ export default function RushPage() {
               <Link
                 key={index}
                 href={service.href}
-                className="group inline-flex items-center gap-3 rounded-full bg-slate-100 px-6 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-brand-500 hover:text-white"
+                className="group inline-flex items-center gap-3 rounded-full bg-stone-100 px-6 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-brand-500 hover:text-white"
               >
                 <Zap className="h-4 w-4 text-amber-500 group-hover:text-white" />
                 {service.name}

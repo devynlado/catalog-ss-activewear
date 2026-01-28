@@ -166,7 +166,7 @@ export default function ScreenPrintingGuidePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <section className="bg-gradient-to-br from-brand-600 to-brand-800 py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -223,7 +223,7 @@ export default function ScreenPrintingGuidePage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@company.com"
-                        className="w-full rounded-lg border border-slate-300 pl-12 pr-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+                        className="w-full rounded-lg border border-stone-300 pl-12 pr-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
                       />
                     </div>
                     {error && (
@@ -255,7 +255,7 @@ export default function ScreenPrintingGuidePage() {
                 </p>
 
                 {/* Preview of what's inside */}
-                <div className="mt-6 pt-6 border-t border-slate-200">
+                <div className="mt-6 pt-6 border-t border-stone-200">
                   <p className="text-sm font-medium text-slate-700 mb-3">What's inside:</p>
                   <ul className="space-y-2">
                     {['Artwork preparation checklist', 'Color optimization tips', 'Size & placement guide', 'Ink types explained', 'Pricing breakdown example'].map((item, i) => (
@@ -335,7 +335,7 @@ export default function ScreenPrintingGuidePage() {
                           )}
 
                           {section.placements && (
-                            <div className="bg-slate-50 rounded-lg p-4">
+                            <div className="bg-stone-50 rounded-lg p-4">
                               <p className="text-sm font-medium text-slate-900 mb-3">Common placements:</p>
                               <div className="grid grid-cols-2 gap-2">
                                 {section.placements.map((p, i) => (
@@ -385,7 +385,7 @@ export default function ScreenPrintingGuidePage() {
 
               <div className="space-y-4">
                 {inkTypes.map((ink, index) => (
-                  <div key={index} className="bg-slate-50 rounded-xl p-6">
+                  <div key={index} className="bg-stone-50 rounded-xl p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <h3 className="font-bold text-slate-900">{ink.name}</h3>
@@ -402,7 +402,7 @@ export default function ScreenPrintingGuidePage() {
           </section>
 
           {/* Common Mistakes Section */}
-          <section className="py-16 lg:py-20 bg-slate-50">
+          <section className="py-16 lg:py-20 bg-stone-50">
             <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-12">
                 <h2 className="text-3xl font-bold text-slate-900">5 Common Mistakes to Avoid</h2>

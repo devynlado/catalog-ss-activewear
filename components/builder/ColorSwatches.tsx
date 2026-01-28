@@ -93,7 +93,7 @@ export function ColorSwatches({
             placeholder="Search colors..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-9 py-2 text-sm rounded-lg border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+            className="w-full pl-9 pr-9 py-2 text-sm rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -131,7 +131,7 @@ export function ColorSwatches({
                   sizes[swatchSize],
                   isSelected
                     ? 'border-brand-500 ring-2 ring-brand-200'
-                    : 'border-slate-200 hover:border-slate-400 hover:scale-110'
+                    : 'border-stone-200 hover:border-stone-400 hover:scale-110'
                 )}
                 aria-label={multiSelect ? `Toggle ${color.colorName}` : `Select ${color.colorName}`}
               >

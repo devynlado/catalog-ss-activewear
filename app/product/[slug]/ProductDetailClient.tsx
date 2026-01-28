@@ -203,7 +203,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       {/* Left: Images (45%) */}
       <div className="space-y-3 lg:space-y-4">
         {/* Main Image - constrained height on mobile to show product info above fold */}
-        <div className="relative overflow-hidden rounded-xl lg:rounded-2xl border border-slate-200 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white">
+        <div className="relative overflow-hidden rounded-xl lg:rounded-2xl border border-stone-200 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white">
           {hasDiscount && (
             <Badge variant="error" className="absolute left-3 top-3 lg:left-4 lg:top-4 z-10">
               Sale
@@ -219,7 +219,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               priority
             />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center bg-slate-50 text-slate-300">
+            <div className="flex aspect-square w-full items-center justify-center bg-stone-50 text-slate-300">
               <ShoppingBag className="h-24 w-24 lg:h-32 lg:w-32" />
             </div>
           )}
@@ -242,7 +242,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'front' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
-                    : "border-slate-200 hover:border-slate-400"
+                    : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Front view"
               >
@@ -262,7 +262,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'back' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
-                    : "border-slate-200 hover:border-slate-400"
+                    : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Back view"
               >
@@ -282,7 +282,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'side' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
-                    : "border-slate-200 hover:border-slate-400"
+                    : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Side view"
               >
@@ -304,7 +304,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'modelFront' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
-                    : "border-slate-200 hover:border-slate-400"
+                    : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Model front view"
               >
@@ -324,7 +324,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'modelBack' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
-                    : "border-slate-200 hover:border-slate-400"
+                    : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Model back view"
               >
@@ -344,7 +344,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                   activeView === 'modelSide' 
                     ? "border-brand-500 ring-2 ring-brand-200" 
-                    : "border-slate-200 hover:border-slate-400"
+                    : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Model side view"
               >
@@ -459,7 +459,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         {/* No colors selected prompt */}
         {selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
-          <div className="mt-4 lg:mt-6 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 lg:p-8 text-center">
+          <div className="mt-4 lg:mt-6 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-4 lg:p-8 text-center">
             <ShoppingBag className="mx-auto h-8 w-8 lg:h-10 lg:w-10 text-slate-400" />
             <p className="mt-2 lg:mt-3 text-sm font-medium text-slate-600">
               Select a color above to enter quantities

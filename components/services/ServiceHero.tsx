@@ -118,7 +118,7 @@ export function ServiceHero({
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link
               href={serviceSlug ? `/contact?service=${serviceSlug}` : '/contact'}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3.5 text-base font-semibold text-slate-900 transition-all hover:bg-slate-100"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-navy-800 shadow-lg transition-all hover:bg-stone-50 hover:shadow-xl hover:-translate-y-0.5"
             >
               Request a Quote
               <ArrowRight className="h-5 w-5" />

@@ -61,9 +61,9 @@ export default async function GuidePage({ params }: GuidePageProps) {
   }
   
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-stone-200">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           <Link 

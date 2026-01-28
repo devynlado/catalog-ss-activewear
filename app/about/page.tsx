@@ -5,7 +5,7 @@ import { Users, Users2, Star, TrendingUp, Building2, Heart, ArrowRight } from 'l
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero Section */}
       <section className="bg-[#070131] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -26,19 +26,19 @@ export default function AboutPage() {
       <section className="relative -mt-12">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
-            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-slate-200">
+            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-stone-200">
               <div className="text-3xl font-bold text-brand-500 sm:text-4xl">10,000+</div>
               <div className="mt-1 text-sm font-medium text-slate-600">Businesses Served</div>
             </div>
-            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-slate-200">
+            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-stone-200">
               <div className="text-3xl font-bold text-brand-500 sm:text-4xl">Millions</div>
               <div className="mt-1 text-sm font-medium text-slate-600">of Units Printed</div>
             </div>
-            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-slate-200">
+            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-stone-200">
               <div className="text-3xl font-bold text-brand-500 sm:text-4xl">50 States</div>
               <div className="mt-1 text-sm font-medium text-slate-600">Clients Nationwide</div>
             </div>
-            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-slate-200">
+            <div className="rounded-xl bg-white p-6 text-center shadow-lg ring-1 ring-stone-200">
               <div className="text-3xl font-bold text-brand-500 sm:text-4xl">100%</div>
               <div className="mt-1 text-sm font-medium text-slate-600">Family Owned</div>
             </div>
@@ -91,7 +91,7 @@ export default function AboutPage() {
       </section>
 
       {/* Values Section */}
-      <section className="border-y border-slate-200 bg-white py-20 sm:py-28">
+      <section className="border-y border-stone-200 bg-white py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-600">
@@ -108,7 +108,7 @@ export default function AboutPage() {
 
           <div className="mt-16 grid gap-8 md:grid-cols-3">
             {/* Partner */}
-            <div className="group rounded-2xl bg-slate-50 p-8 transition-all hover:bg-brand-50 hover:ring-2 hover:ring-brand-200">
+            <div className="group rounded-2xl bg-stone-50 p-8 transition-all hover:bg-brand-50 hover:ring-2 hover:ring-brand-200">
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                 <Users2 className="h-7 w-7" />
               </div>
@@ -120,7 +120,7 @@ export default function AboutPage() {
             </div>
 
             {/* Custom */}
-            <div className="group rounded-2xl bg-slate-50 p-8 transition-all hover:bg-brand-50 hover:ring-2 hover:ring-brand-200">
+            <div className="group rounded-2xl bg-stone-50 p-8 transition-all hover:bg-brand-50 hover:ring-2 hover:ring-brand-200">
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                 <Star className="h-7 w-7" />
               </div>
@@ -132,7 +132,7 @@ export default function AboutPage() {
             </div>
 
             {/* Scale */}
-            <div className="group rounded-2xl bg-slate-50 p-8 transition-all hover:bg-brand-50 hover:ring-2 hover:ring-brand-200">
+            <div className="group rounded-2xl bg-stone-50 p-8 transition-all hover:bg-brand-50 hover:ring-2 hover:ring-brand-200">
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                 <TrendingUp className="h-7 w-7" />
               </div>
@@ -204,7 +204,7 @@ export default function AboutPage() {
 
             {/* Image placeholder */}
             <div className="relative">
-              <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 ring-1 ring-slate-200">
+              <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 ring-1 ring-stone-200">
                 <div className="flex h-full items-center justify-center p-8 text-center">
                   <div>
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-500 text-white">
@@ -219,7 +219,7 @@ export default function AboutPage() {
               </div>
               
               {/* Floating badge */}
-              <div className="absolute -bottom-4 -right-4 rounded-xl bg-white px-6 py-4 shadow-lg ring-1 ring-slate-200">
+              <div className="absolute -bottom-4 -right-4 rounded-xl bg-white px-6 py-4 shadow-lg ring-1 ring-stone-200">
                 <p className="text-sm font-medium text-slate-600">Established</p>
                 <p className="text-2xl font-bold text-brand-600">2011</p>
               </div>
@@ -229,7 +229,7 @@ export default function AboutPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="border-t border-slate-200 bg-[#070131] py-16 sm:py-20">
+      <section className="border-t border-stone-200 bg-[#070131] py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-white sm:text-3xl">

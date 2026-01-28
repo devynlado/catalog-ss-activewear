@@ -104,7 +104,7 @@ const shopCategories = [
 
 export default function DigitalScreenPrintingPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Hero */}
       <ServiceHero
         title="Digital Screen Printing"
@@ -117,7 +117,6 @@ export default function DigitalScreenPrintingPage() {
         serviceSlug="digital-screen-printing"
         samplePrice="Starting at $5.50/piece"
         minimumOrder={50}
-        heroImage={serviceImages?.hero}
       />
 
       {/* Benefits Badges */}
@@ -217,7 +216,7 @@ export default function DigitalScreenPrintingPage() {
               { label: 'Cure Time', value: '2 min 30 sec' },
               { label: 'Production Speed', value: '400/hour' },
             ].map((spec, index) => (
-              <div key={index} className="bg-slate-50 rounded-xl p-6 text-center">
+              <div key={index} className="bg-stone-50 rounded-xl p-6 text-center">
                 <p className="text-sm text-slate-500 uppercase tracking-wider">{spec.label}</p>
                 <p className="mt-2 text-2xl font-bold text-navy-800">{spec.value}</p>
               </div>

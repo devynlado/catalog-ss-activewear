@@ -265,7 +265,7 @@ export function SearchBar({
           placeholder={placeholder}
           autoFocus={autoFocus}
           className={cn(
-            'w-full rounded-xl border border-slate-200 bg-white py-3 pl-12 pr-12',
+            'w-full rounded-xl border border-stone-200 bg-white py-3 pl-12 pr-12',
             'text-sm placeholder:text-slate-400',
             'focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20',
             'transition-colors'
@@ -287,7 +287,7 @@ export function SearchBar({
       {showSuggestions && showDropdown && hasAnySuggestions && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-96 overflow-y-auto rounded-xl border border-slate-200 bg-white py-2 shadow-lg"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-96 overflow-y-auto rounded-xl border border-stone-200 bg-white py-2 shadow-lg"
         >
           {query.length === 0 && (
             <p className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -307,7 +307,7 @@ export function SearchBar({
                 <button
                   key={`style-${suggestion.value}`}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-stone-50"
                 >
                   {getSuggestionIcon(suggestion.type)}
                   <span className="font-medium">{suggestion.label}</span>
@@ -331,7 +331,7 @@ export function SearchBar({
                 <button
                   key={`brand-${suggestion.value}`}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-stone-50"
                 >
                   {getSuggestionIcon(suggestion.type)}
                   <span className="font-medium">{suggestion.label}</span>
@@ -355,7 +355,7 @@ export function SearchBar({
                 <button
                   key={`category-${suggestion.value}`}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-stone-50"
                 >
                   {getSuggestionIcon(suggestion.type)}
                   <span className="font-medium">{suggestion.label}</span>
@@ -379,7 +379,7 @@ export function SearchBar({
                 <button
                   key={`color-${suggestion.value}`}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-stone-50"
                 >
                   {getSuggestionIcon(suggestion.type)}
                   <span className="font-medium">{suggestion.label}</span>
