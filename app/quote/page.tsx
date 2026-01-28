@@ -455,45 +455,55 @@ export default function QuotePage() {
           </p>
 
           {/* Progress Indicator */}
-          {items.length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between">
-                {[
-                  { step: 1, label: 'Select Items', icon: ShoppingBag },
-                  { step: 2, label: 'Choose Services', icon: Sparkles },
-                  { step: 3, label: 'Contact Info', icon: Mail },
-                  { step: 4, label: 'Review', icon: Check },
-                ].map((item, index) => (
-                  <div key={item.step} className="flex items-center">
-                    <div className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
-                      progressStep >= item.step
-                        ? 'bg-brand-500 text-white'
-                        : 'bg-stone-200 text-slate-500'
-                    )}>
-                      {progressStep > item.step ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <item.icon className="h-4 w-4" />
+          {items.length > 0 && (() => {
+            const steps = [
+              { step: 1, label: 'Select Items', icon: ShoppingBag },
+              { step: 2, label: 'Choose Services', icon: Sparkles },
+              { step: 3, label: 'Contact Info', icon: Mail },
+              { step: 4, label: 'Review', icon: Check },
+            ];
+            const currentStepLabel = steps.find(s => s.step === progressStep)?.label || 'Review';
+            
+            return (
+              <div className="mt-6">
+                {/* Mobile: Show current step text */}
+                <p className="mb-3 text-center text-sm font-medium text-brand-600 sm:hidden">
+                  Step {progressStep} of 4: {currentStepLabel}
+                </p>
+                
+                <div className="flex items-center justify-between">
+                  {steps.map((item, index) => (
+                    <div key={item.step} className="flex items-center">
+                      <div className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
+                        progressStep >= item.step
+                          ? 'bg-brand-500 text-white'
+                          : 'bg-stone-200 text-slate-500'
+                      )}>
+                        {progressStep > item.step ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <item.icon className="h-4 w-4" />
+                        )}
+                      </div>
+                      <span className={cn(
+                        'ml-2 text-sm font-medium hidden sm:block',
+                        progressStep >= item.step ? 'text-slate-900' : 'text-slate-400'
+                      )}>
+                        {item.label}
+                      </span>
+                      {index < 3 && (
+                        <div className={cn(
+                          'mx-2 sm:mx-4 h-0.5 w-8 sm:w-16',
+                          progressStep > item.step ? 'bg-brand-500' : 'bg-stone-200'
+                        )} />
                       )}
                     </div>
-                    <span className={cn(
-                      'ml-2 text-sm font-medium hidden sm:block',
-                      progressStep >= item.step ? 'text-slate-900' : 'text-slate-400'
-                    )}>
-                      {item.label}
-                    </span>
-                    {index < 3 && (
-                      <div className={cn(
-                        'mx-2 sm:mx-4 h-0.5 w-8 sm:w-16',
-                        progressStep > item.step ? 'bg-brand-500' : 'bg-stone-200'
-                      )} />
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 
