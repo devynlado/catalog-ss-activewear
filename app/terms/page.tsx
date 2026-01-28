@@ -174,8 +174,8 @@ export default function TermsPage() {
             </p>
             <div className="mt-3 rounded-lg bg-white p-4 border border-stone-200">
               <p className="font-medium text-navy-800">Garment Decor</p>
-              <p className="mt-1">4950 Arrow Hwy Suite 4</p>
-              <p>Montclair, CA 91763</p>
+              <p className="mt-1">4778 W. Mission Blvd</p>
+              <p>Montclair, CA 91762</p>
               <p className="mt-2">
                 Email: <a href="mailto:legal@garmentdecor.com" className="text-brand-500 hover:underline">legal@garmentdecor.com</a>
               </p>
