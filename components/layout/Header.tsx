@@ -327,6 +327,7 @@ const megaMenuConfig: MegaMenuConfig = {
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
@@ -337,6 +338,7 @@ export function Header() {
   const servicesRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
   const megaMenuRef = useRef<HTMLDivElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const megaMenuCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const servicesCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const shopCloseTimer = useRef<NodeJS.Timeout | null>(null);
@@ -344,6 +346,20 @@ export function Header() {
   const pathname = usePathname();
   const { items, openDrawer, justAdded } = useQuoteStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Auto-focus mobile search input when opened
+  useEffect(() => {
+    if (mobileSearchOpen && mobileSearchInputRef.current) {
+      mobileSearchInputRef.current.focus();
+    }
+  }, [mobileSearchOpen]);
+
+  // Close mobile search when menu opens
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      setMobileSearchOpen(false);
+    }
+  }, [mobileMenuOpen]);
 
   // Shop menu hover handlers with 300ms close delay
   const handleShopEnter = () => {
@@ -1002,16 +1018,31 @@ export function Header() {
             {/* Mobile: Search + Menu buttons */}
             <div className="flex items-center gap-1 lg:hidden">
               {/* Mobile Search Icon */}
-              <Link
-                href="/catalog"
-                className="rounded-lg p-2 text-slate-600 hover:bg-stone-100 hover:text-slate-900"
+              <button
+                onClick={() => {
+                  setMobileSearchOpen(!mobileSearchOpen);
+                  setMobileMenuOpen(false);
+                }}
+                className={cn(
+                  "rounded-lg p-2 transition-colors",
+                  mobileSearchOpen
+                    ? "bg-brand-50 text-brand-600"
+                    : "text-slate-600 hover:bg-stone-100 hover:text-slate-900"
+                )}
               >
-                <Search className="h-6 w-6" />
-              </Link>
+                {mobileSearchOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Search className="h-6 w-6" />
+                )}
+              </button>
               
               {/* Mobile menu button */}
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={() => {
+                  setMobileMenuOpen(!mobileMenuOpen);
+                  setMobileSearchOpen(false);
+                }}
                 className="rounded-lg p-2 text-slate-600 hover:bg-stone-100 hover:text-slate-900"
               >
                 {mobileMenuOpen ? (
@@ -1024,6 +1055,26 @@ export function Header() {
           </div>
         </div>
 
+        {/* Mobile Search Overlay */}
+        {mobileSearchOpen && (
+          <div className="border-t border-stone-100 bg-white px-4 py-3 lg:hidden">
+            <form action="/catalog" method="GET" className="relative">
+              <input
+                ref={mobileSearchInputRef}
+                type="text"
+                name="search"
+                placeholder="Search by style # or keyword..."
+                className="w-full rounded-full border border-stone-200 bg-stone-50 py-3 pl-4 pr-12 text-base focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+              <button
+                type="submit"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-brand-500 p-2 text-white hover:bg-brand-600 transition-colors"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
