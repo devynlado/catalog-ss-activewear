@@ -19,7 +19,7 @@ export const itemVariants: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
   },
 };
 
@@ -28,7 +28,7 @@ export const fadeInVariants: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
   },
 };
 
@@ -37,7 +37,7 @@ export const slideInLeftVariants: Variants = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
   },
 };
 
@@ -46,7 +46,7 @@ export const slideInRightVariants: Variants = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
   },
 };
 
@@ -55,7 +55,7 @@ export const scaleInVariants: Variants = {
   visible: {
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
   },
 };
 
@@ -135,7 +135,7 @@ const directionVariants = {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+      transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
     },
   },
   left: slideInLeftVariants,
@@ -216,7 +216,7 @@ export function FadeIn({
       initial={{ opacity: 0, ...offsets[direction] }}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration, delay, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] }}
       {...motionProps}
     >
       {children}

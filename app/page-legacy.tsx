@@ -1,14 +1,14 @@
-import { Hero } from '@/components/home/HeroLegacy';
-import { WhoWeService } from '@/components/home/WhoWeServiceLegacy';
-import { TurnaroundBanner } from '@/components/home/TurnaroundBannerLegacy';
-import { HowItWorks } from '@/components/home/HowItWorksLegacy';
-import { CategoryGrid } from '@/components/home/CategoryGridLegacy';
+import { HeroLegacy as Hero } from '@/components/home/HeroLegacy';
+import { WhoWeServiceLegacy as WhoWeService } from '@/components/home/WhoWeServiceLegacy';
+import { TurnaroundBannerLegacy as TurnaroundBanner } from '@/components/home/TurnaroundBannerLegacy';
+import { HowItWorksLegacy as HowItWorks } from '@/components/home/HowItWorksLegacy';
+import { CategoryGridLegacy as CategoryGrid } from '@/components/home/CategoryGridLegacy';
 import { FeaturedProducts } from '@/components/home/FeaturedProducts';
-import { ProductGuidesPromo } from '@/components/home/ProductGuidesPromoLegacy';
-import { ServicesGrid } from '@/components/home/ServicesGridLegacy';
-import { BuiltForScale } from '@/components/home/BuiltForScaleLegacy';
-import { TrustSignals } from '@/components/home/TrustSignalsLegacy';
-import { FinalCTA } from '@/components/home/FinalCTALegacy';
+import { ProductGuidesPromoLegacy as ProductGuidesPromo } from '@/components/home/ProductGuidesPromoLegacy';
+import { ServicesGridLegacy as ServicesGrid } from '@/components/home/ServicesGridLegacy';
+import { BuiltForScaleLegacy as BuiltForScale } from '@/components/home/BuiltForScaleLegacy';
+import { TrustSignalsLegacy as TrustSignals } from '@/components/home/TrustSignalsLegacy';
+import { FinalCTALegacy as FinalCTA } from '@/components/home/FinalCTALegacy';
 
 /**
  * LEGACY HOMEPAGE

@@ -102,10 +102,11 @@ async function getProduct(slugOrId: string) {
         .limit(1)
         .single();
       
-      if (data?.style_id) {
-        const product = await getProductByStyleId(data.style_id);
+      const result = data as { style_id: number } | null;
+      if (result?.style_id) {
+        const product = await getProductByStyleId(result.style_id);
         if (product) {
-          console.log(`[Product Page] Found via fallback: style ${data.style_id}`);
+          console.log(`[Product Page] Found via fallback: style ${result.style_id}`);
           return product;
         }
       }
@@ -151,8 +152,9 @@ export async function generateMetadata({ params }: ProductPageProps) {
           .limit(1)
           .single();
         
-        if (data?.style_id) {
-          product = await getProductByStyleId(data.style_id);
+        const result = data as { style_id: number } | null;
+        if (result?.style_id) {
+          product = await getProductByStyleId(result.style_id);
         }
       } catch {
         // Ignore errors

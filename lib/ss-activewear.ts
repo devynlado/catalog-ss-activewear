@@ -1297,12 +1297,20 @@ function transformProduct(ssProduct: SSProduct): Product {
   // Product is on sale if there's a genuine sale price
   const isOnSale = minSalePrice !== null && minSalePrice < minRetailPrice;
   
+  // Generate SEO-friendly slug from brand and style
+  const styleName = ssProduct.styleName || ssProduct.uniqueStyleName;
+  const slug = `${ssProduct.brandName}-${styleName}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
   return {
     id: ssProduct.styleID.toString(),
     styleId: ssProduct.styleID,
-    styleName: ssProduct.styleName || ssProduct.uniqueStyleName,
+    styleName,
     brandName: ssProduct.brandName,
     brandId: ssProduct.brandID || 0,
+    slug,
     title: ssProduct.title || ssProduct.styleName,
     description: ssProduct.description || '',
     basePrice: minRetailPrice,
@@ -1409,12 +1417,19 @@ function transformSkuDataToProduct(skuData: SSProductSku[]): Product {
   const basePrice = firstSku.piecePrice || firstSku.customerPrice || 0;
   const salePrice = firstSku.salePrice || null;
 
+  // Generate SEO-friendly slug from brand and style
+  const slug = `${firstSku.brandName}-${firstSku.styleName}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
   return {
     id: firstSku.styleID.toString(),
     styleId: firstSku.styleID,
     styleName: firstSku.styleName,
     brandName: firstSku.brandName,
     brandId: parseInt(firstSku.brandID, 10) || 0,
+    slug,
     title: firstSku.styleName, // Products endpoint doesn't have title
     description: '', // Products endpoint doesn't have description
     basePrice,

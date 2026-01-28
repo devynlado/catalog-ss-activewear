@@ -13,6 +13,7 @@ interface CompanionProduct {
   brandName: string;
   imageUrl: string;
   price: number;
+  slug: string;
 }
 
 interface CompanionProductsProps {
