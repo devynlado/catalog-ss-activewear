@@ -46,9 +46,10 @@ export const EMAIL_FONTS = {
 } as const;
 
 export const LOGO_URLS = {
-  wordmarkWhite: 'https://garmentdecor.com/images/brand/logo-wordmark-white.svg',
-  wordmarkDark: 'https://garmentdecor.com/images/brand/logo-wordmark-dark.svg',
-  iconDark: 'https://garmentdecor.com/images/brand/logo-circle-dark.svg',
+  // Using PNG for email compatibility (most email clients block SVG)
+  wordmarkWhite: 'https://www.garmentdecor.com/images/brand/logo-wordmark-white.png',
+  wordmarkDark: 'https://www.garmentdecor.com/images/brand/logo-wordmark-dark.png',
+  iconDark: 'https://www.garmentdecor.com/images/brand/logo-circle-dark.png',
 } as const;
 
 export const COMPANY_INFO = {
