@@ -3,11 +3,12 @@
 import { Fragment } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertTriangle, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQuoteStore } from '@/lib/quote-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { MINIMUM_ORDER_QTY } from '@/lib/pricing-utils';
 
 // Quick category links for empty state
 const quickCategories = [
@@ -18,9 +19,18 @@ const quickCategories = [
 ];
 
 export function QuoteDrawer() {
-  const { items, isDrawerOpen, closeDrawer, removeItem, updateQuantity } = useQuoteStore();
+  const { 
+    items, 
+    isDrawerOpen, 
+    closeDrawer, 
+    removeItem, 
+    updateQuantity,
+    getTotalUnits,
+  } = useQuoteStore();
   const router = useRouter();
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const totalUnits = getTotalUnits();
+  const meetsMinimum = totalUnits >= MINIMUM_ORDER_QTY;
   
   const handleBrowseCatalog = () => {
     closeDrawer();
@@ -182,16 +192,34 @@ export function QuoteDrawer() {
         {/* Footer */}
         {items.length > 0 && (
           <div className="relative z-10 border-t border-stone-200/70 bg-gradient-to-t from-stone-50/80 to-white p-6">
+            {/* Minimum Warning */}
+            {totalUnits > 0 && !meetsMinimum && (
+              <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
+                <div>
+                  <p className="text-xs font-medium text-amber-800">
+                    Minimum: {MINIMUM_ORDER_QTY} pieces
+                  </p>
+                  <p className="text-[10px] text-amber-600">
+                    Add {MINIMUM_ORDER_QTY - totalUnits} more
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Subtotal card */}
             <div className="mb-4 rounded-xl bg-gradient-to-br from-brand-50/80 to-brand-100/50 backdrop-blur-sm p-4 border border-brand-200/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Estimated Subtotal</span>
+                <span className="text-sm font-medium text-slate-700">
+                  {totalUnits} pieces
+                </span>
                 <span className="text-xl font-bold text-brand-700">
                   {formatPrice(subtotal)}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
-                * Final pricing will be confirmed in your quote
+              <p className="mt-2 flex items-center gap-1 text-[10px] text-slate-500">
+                <Info className="h-3 w-3" />
+                Add decoration options on quote page
               </p>
             </div>
             <Link href="/quote" onClick={closeDrawer}>

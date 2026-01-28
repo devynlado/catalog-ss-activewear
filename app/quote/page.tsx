@@ -12,6 +12,7 @@ import {
   Send,
   Check,
   AlertCircle,
+  AlertTriangle,
   Bookmark,
   X,
   Mail,
@@ -21,67 +22,126 @@ import {
   Phone,
   Sparkles,
   Shirt,
+  Layers,
+  PenTool,
+  Palette,
+  Package,
+  Tag,
+  Scissors,
+  Maximize2,
+  Info,
   type LucideIcon
 } from 'lucide-react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { formatPrice, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import {
+  DecorationType,
+  StitchCount,
+  PrintLocation,
+  getCombinedEstimate,
+  getFinishingEstimate,
+  formatPriceRange,
+  formatTotalRange,
+  MINIMUM_ORDER_QTY,
+  stitchCountLabels,
+  locationLabels,
+} from '@/lib/pricing-utils';
 
 // Decoration method options
-const decorationOptions = [
+const decorationOptions: { id: DecorationType; name: string; description: string; icon: LucideIcon }[] = [
   {
     id: 'screen',
     name: 'Screen Printing',
-    description: 'Best for 1-8 colors, bulk orders',
-    image: '/images/services/screen-printing.jpg',
+    description: 'Standard prints, 1-8 colors',
+    icon: Layers,
+  },
+  {
+    id: 'jumbo',
+    name: 'Jumbo Printing',
+    description: 'Oversized prints 17"x23"',
+    icon: Maximize2,
   },
   {
     id: 'embroidery',
     name: 'Embroidery',
     description: 'Professional stitched logos',
-    image: '/images/services/embroidery.jpg',
+    icon: PenTool,
   },
   {
     id: 'digital',
     name: 'Digital Printing',
     description: 'Full color, photo-quality',
-    image: '/images/services/digital-printing.jpg',
+    icon: Palette,
   },
   {
     id: 'none',
     name: 'No Decoration',
     description: 'Blanks only',
-    image: null,
+    icon: ShoppingBag,
   },
-] as const;
+];
+
+// Color count options for screen/jumbo printing
+const colorOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+
+// Print location options
+const printLocationOptions: { id: PrintLocation; label: string }[] = [
+  { id: 'front', label: 'Front' },
+  { id: 'back', label: 'Back' },
+  { id: 'left-sleeve', label: 'Left Sleeve' },
+  { id: 'right-sleeve', label: 'Right Sleeve' },
+];
+
+// Stitch count options for embroidery
+const stitchCountOptions: { id: StitchCount; label: string }[] = [
+  { id: 'under5k', label: 'Under 5,000' },
+  { id: '5k-7.5k', label: '5,000 - 7,500' },
+  { id: '7.5k-10k', label: '7,500 - 10,000' },
+  { id: 'over10k', label: 'Over 10,000' },
+];
 
 // Finishing service options
 const finishingOptions = [
   {
     id: 'fold-bag',
     name: 'Fold & Bag',
-    image: '/images/services/fold-bag.jpg',
+    icon: Package,
   },
   {
     id: 'printed-tags',
     name: 'Printed Tags',
-    image: '/images/services/printed-tags.jpg',
+    icon: Tag,
   },
   {
     id: 'hang-tags',
     name: 'Hang Tags',
-    image: '/images/services/hang-tags.jpg',
+    icon: Bookmark,
   },
   {
     id: 'sewn-tags',
     name: 'Sewn Tags',
-    image: '/images/services/sewn-tags.jpg',
+    icon: Scissors,
   },
 ] as const;
 
 export default function QuotePage() {
-  const { items, removeItem, updateQuantity, clearQuote } = useQuoteStore();
+  const { 
+    items, 
+    removeItem, 
+    updateQuantity, 
+    clearQuote,
+    decorationDetails,
+    finishingServices,
+    designDescription,
+    setDecorationType,
+    setDecorationDetails,
+    toggleFinishingService,
+    setDesignDescription,
+    getTotalUnits,
+  } = useQuoteStore();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [quoteId, setQuoteId] = useState<string | null>(null);
@@ -95,10 +155,6 @@ export default function QuotePage() {
     message: '',
   });
   
-  // Decoration & Finishing Services
-  const [decorationType, setDecorationType] = useState<'screen' | 'embroidery' | 'digital' | 'none'>('none');
-  const [designDescription, setDesignDescription] = useState('');
-  const [finishingServices, setFinishingServices] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Save for Later state
@@ -109,7 +165,22 @@ export default function QuotePage() {
   const [saveError, setSaveError] = useState('');
 
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalUnits = getTotalUnits();
+  const meetsMinimum = totalUnits >= MINIMUM_ORDER_QTY;
+  
+  // Get price estimates
+  const decorationEstimate = getCombinedEstimate(
+    totalUnits,
+    decorationDetails.type,
+    {
+      colors: decorationDetails.colors,
+      locations: decorationDetails.locations,
+      stitchCount: decorationDetails.stitchCount,
+    },
+    [] // Don't include finishing here, we'll show it separately
+  );
+  
+  const finishingEstimate = getFinishingEstimate(totalUnits, finishingServices);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -150,10 +221,15 @@ export default function QuotePage() {
           contact: formData,
           eventDate: formData.eventDate || null,
           decoration: {
-            type: decorationType,
+            type: decorationDetails.type,
+            colors: decorationDetails.colors,
+            locations: decorationDetails.locations,
+            stitchCount: decorationDetails.stitchCount,
             description: designDescription,
           },
           finishing: finishingServices,
+          decorationEstimate,
+          finishingEstimate,
           submittedAt: new Date(),
         }),
       });
@@ -205,7 +281,10 @@ export default function QuotePage() {
         email: saveEmail,
         items,
         decoration: {
-          type: decorationType,
+          type: decorationDetails.type,
+          colors: decorationDetails.colors,
+          locations: decorationDetails.locations,
+          stitchCount: decorationDetails.stitchCount,
           description: designDescription,
         },
         finishing: finishingServices,
@@ -331,7 +410,7 @@ export default function QuotePage() {
   // Calculate progress step based on state
   const getProgressStep = () => {
     if (items.length === 0) return 1;
-    if (decorationType === 'none' && !formData.name) return 2;
+    if (decorationDetails.type === 'none' && !formData.name) return 2;
     if (!formData.name || !formData.email || !formData.phone) return 3;
     return 4;
   };
@@ -498,7 +577,7 @@ export default function QuotePage() {
               <div className="rounded-xl bg-white shadow-sm">
                 <div className="border-b border-stone-100 px-6 py-4">
                   <h2 className="text-lg font-semibold text-slate-900">
-                    Quote Items ({totalItems})
+                    Quote Items ({totalUnits})
                   </h2>
                 </div>
                 <div className="divide-y divide-slate-100">
@@ -581,43 +660,36 @@ export default function QuotePage() {
                   </p>
                 </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                     {decorationOptions.map((option) => (
                       <button
                         key={option.id}
                         type="button"
                         onClick={() => setDecorationType(option.id)}
                         className={cn(
-                          'relative flex flex-col items-center rounded-xl border-2 p-4 text-center transition-all',
-                          decorationType === option.id
+                          'relative flex flex-col items-center rounded-xl border-2 p-3 text-center transition-all',
+                          decorationDetails.type === option.id
                             ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200'
                             : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
                         )}
                       >
-                        {/* Image placeholder */}
-                        <div className="mb-3 h-16 w-16 overflow-hidden rounded-lg bg-stone-100">
-                          {option.image ? (
-                            <Image
-                              src={option.image}
-                              alt={option.name}
-                              width={64}
-                              height={64}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-400">
-                              <ShoppingBag className="h-6 w-6" />
-                            </div>
-                          )}
+                        {/* Icon */}
+                        <div className={cn(
+                          "mb-2 flex h-12 w-12 items-center justify-center rounded-xl transition-colors",
+                          decorationDetails.type === option.id
+                            ? "bg-brand-100 text-brand-600"
+                            : "bg-stone-100 text-slate-400"
+                        )}>
+                          <option.icon className="h-5 w-5" />
                         </div>
-                        <span className="text-sm font-medium text-slate-900">
+                        <span className="text-xs font-medium text-slate-900">
                           {option.name}
                         </span>
-                        <span className="mt-1 text-xs text-slate-500">
+                        <span className="mt-0.5 text-[10px] text-slate-500 leading-tight">
                           {option.description}
                         </span>
                         {/* Selection indicator */}
-                        {decorationType === option.id && (
+                        {decorationDetails.type === option.id && (
                           <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500">
                             <Check className="h-3 w-3 text-white" />
                           </div>
@@ -626,8 +698,173 @@ export default function QuotePage() {
                     ))}
                   </div>
 
+                  {/* Decoration Options - conditional based on type */}
+                  {(decorationDetails.type === 'screen' || decorationDetails.type === 'jumbo') && (
+                    <div className="mt-6 space-y-4">
+                      {/* Color Count */}
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Number of Colors
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {colorOptions.map((num) => (
+                            <button
+                              key={num}
+                              type="button"
+                              onClick={() => setDecorationDetails({ colors: num })}
+                              className={cn(
+                                'h-9 w-9 rounded-lg border-2 text-sm font-medium transition-all',
+                                decorationDetails.colors === num
+                                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                  : 'border-stone-200 text-slate-600 hover:border-stone-300'
+                              )}
+                            >
+                              {num}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Print Locations */}
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Print Locations
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {printLocationOptions.map((loc) => {
+                            const isSelected = decorationDetails.locations?.includes(loc.id);
+                            return (
+                              <button
+                                key={loc.id}
+                                type="button"
+                                onClick={() => {
+                                  const currentLocations = decorationDetails.locations || [];
+                                  const newLocations = isSelected
+                                    ? currentLocations.filter((l) => l !== loc.id)
+                                    : [...currentLocations, loc.id];
+                                  setDecorationDetails({ locations: newLocations });
+                                }}
+                                className={cn(
+                                  'rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all',
+                                  isSelected
+                                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                    : 'border-stone-200 text-slate-600 hover:border-stone-300'
+                                )}
+                              >
+                                {loc.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Embroidery Options */}
+                  {decorationDetails.type === 'embroidery' && (
+                    <div className="mt-6 space-y-4">
+                      {/* Stitch Count */}
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Estimated Stitch Count
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {stitchCountOptions.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setDecorationDetails({ stitchCount: opt.id })}
+                              className={cn(
+                                'rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all',
+                                decorationDetails.stitchCount === opt.id
+                                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                  : 'border-stone-200 text-slate-600 hover:border-stone-300'
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-1.5 text-xs text-slate-500">
+                          Not sure? We&apos;ll provide an exact count with your quote.
+                        </p>
+                      </div>
+                      
+                      {/* Embroidery Locations */}
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Embroidery Locations
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {printLocationOptions.map((loc) => {
+                            const isSelected = decorationDetails.locations?.includes(loc.id);
+                            return (
+                              <button
+                                key={loc.id}
+                                type="button"
+                                onClick={() => {
+                                  const currentLocations = decorationDetails.locations || [];
+                                  const newLocations = isSelected
+                                    ? currentLocations.filter((l) => l !== loc.id)
+                                    : [...currentLocations, loc.id];
+                                  setDecorationDetails({ locations: newLocations });
+                                }}
+                                className={cn(
+                                  'rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all',
+                                  isSelected
+                                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                    : 'border-stone-200 text-slate-600 hover:border-stone-300'
+                                )}
+                              >
+                                {loc.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Digital Printing Options */}
+                  {decorationDetails.type === 'digital' && (
+                    <div className="mt-6">
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Print Locations
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {printLocationOptions.map((loc) => {
+                          const isSelected = decorationDetails.locations?.includes(loc.id);
+                          return (
+                            <button
+                              key={loc.id}
+                              type="button"
+                              onClick={() => {
+                                const currentLocations = decorationDetails.locations || [];
+                                const newLocations = isSelected
+                                  ? currentLocations.filter((l) => l !== loc.id)
+                                  : [...currentLocations, loc.id];
+                                setDecorationDetails({ locations: newLocations });
+                              }}
+                              className={cn(
+                                'rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all',
+                                isSelected
+                                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                  : 'border-stone-200 text-slate-600 hover:border-stone-300'
+                              )}
+                            >
+                              {loc.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        Full color printing - no color limit
+                      </p>
+                    </div>
+                  )}
+
                   {/* Design description - show when decoration selected */}
-                  {decorationType !== 'none' && (
+                  {decorationDetails.type !== 'none' && (
                     <div className="mt-6">
                       <label className="mb-1.5 block text-sm font-medium text-slate-700">
                         Describe your design
@@ -662,13 +899,7 @@ export default function QuotePage() {
                         <button
                           key={option.id}
                           type="button"
-                          onClick={() => {
-                            if (isSelected) {
-                              setFinishingServices(finishingServices.filter(id => id !== option.id));
-                            } else {
-                              setFinishingServices([...finishingServices, option.id]);
-                            }
-                          }}
+                          onClick={() => toggleFinishingService(option.id)}
                           className={cn(
                             'relative flex flex-col items-center rounded-xl border-2 p-4 text-center transition-all',
                             isSelected
@@ -676,9 +907,14 @@ export default function QuotePage() {
                               : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
                           )}
                         >
-                          {/* Image placeholder */}
-                          <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-stone-100 text-slate-400">
-                            <ShoppingBag className="h-6 w-6" />
+                          {/* Icon */}
+                          <div className={cn(
+                            "mb-3 flex h-14 w-14 items-center justify-center rounded-xl transition-colors",
+                            isSelected
+                              ? "bg-brand-100 text-brand-600"
+                              : "bg-stone-100 text-slate-400"
+                          )}>
+                            <option.icon className="h-6 w-6" />
                           </div>
                           <span className="text-sm font-medium text-slate-900">
                             {option.name}
@@ -704,38 +940,111 @@ export default function QuotePage() {
             <div className="mt-8 lg:mt-0">
               <div className="sticky top-24 space-y-6">
                 {/* Summary */}
+                {/* Minimum Warning */}
+                {totalUnits > 0 && !meetsMinimum && (
+                  <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">
+                        Minimum order is {MINIMUM_ORDER_QTY} pieces
+                      </p>
+                      <p className="mt-0.5 text-xs text-amber-600">
+                        Add {MINIMUM_ORDER_QTY - totalUnits} more to meet minimum
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-xl bg-white p-6 shadow-sm">
                   <h2 className="text-lg font-semibold text-slate-900">Summary</h2>
-                  <dl className="mt-4 space-y-3">
+                  
+                  {/* Piece count */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total Pieces</span>
+                    <span className={cn(
+                      "text-sm font-medium",
+                      meetsMinimum ? "text-slate-900" : "text-amber-600"
+                    )}>
+                      {totalUnits} {!meetsMinimum && `/ ${MINIMUM_ORDER_QTY} min`}
+                    </span>
+                  </div>
+
+                  {/* Cost Breakdown */}
+                  <dl className="mt-4 space-y-3 border-t border-stone-100 pt-4">
+                    {/* Garment Cost */}
                     <div className="flex justify-between text-sm">
-                      <dt className="text-slate-600">Items</dt>
-                      <dd className="font-medium text-slate-900">{totalItems}</dd>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <dt className="text-slate-600">Estimated Subtotal</dt>
+                      <dt className="text-slate-600">Garment Cost</dt>
                       <dd className="font-medium text-slate-900">{formatPrice(subtotal)}</dd>
                     </div>
-                    {decorationType !== 'none' && (
+                    
+                    {/* Decoration Cost */}
+                    {decorationDetails.type !== 'none' && (
                       <div className="flex justify-between text-sm">
-                        <dt className="text-slate-600">Decoration</dt>
+                        <dt className="text-slate-600">
+                          <span>{decorationOptions.find(o => o.id === decorationDetails.type)?.name}</span>
+                          {decorationEstimate && meetsMinimum && (
+                            <span className="ml-1 text-xs text-slate-400">
+                              ({formatPriceRange(decorationEstimate)})
+                            </span>
+                          )}
+                        </dt>
                         <dd className="font-medium text-slate-900">
-                          {decorationOptions.find(o => o.id === decorationType)?.name}
+                          {decorationEstimate && meetsMinimum 
+                            ? formatTotalRange(decorationEstimate)
+                            : '—'
+                          }
                         </dd>
                       </div>
                     )}
+                    
+                    {/* Finishing Services Cost */}
                     {finishingServices.length > 0 && (
                       <div className="flex justify-between text-sm">
-                        <dt className="text-slate-600">Finishing</dt>
-                        <dd className="font-medium text-slate-900 text-right">
-                          {finishingServices.map(id => 
-                            finishingOptions.find(o => o.id === id)?.name
-                          ).join(', ')}
+                        <dt className="text-slate-600">
+                          <span>Finishing Services</span>
+                          {finishingEstimate && meetsMinimum && (
+                            <span className="ml-1 text-xs text-slate-400">
+                              ({formatPriceRange(finishingEstimate)})
+                            </span>
+                          )}
+                        </dt>
+                        <dd className="font-medium text-slate-900">
+                          {finishingEstimate && meetsMinimum 
+                            ? formatTotalRange(finishingEstimate)
+                            : '—'
+                          }
                         </dd>
                       </div>
                     )}
                   </dl>
-                  <p className="mt-4 text-xs text-slate-500">
-                    * Final pricing will be confirmed in your quote response
+
+                  {/* Total Project Cost */}
+                  {meetsMinimum && (decorationDetails.type !== 'none' || finishingServices.length > 0) && (
+                    <div className="mt-4 rounded-lg border border-brand-200 bg-brand-50 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-700">Est. Project Total</span>
+                        <span className="text-xl font-bold text-brand-700">
+                          {(() => {
+                            const decorationMin = decorationEstimate?.totalMin || 0;
+                            const decorationMax = decorationEstimate?.totalMax || 0;
+                            const finishingMin = finishingEstimate?.totalMin || 0;
+                            const finishingMax = finishingEstimate?.totalMax || 0;
+                            const totalMin = subtotal + decorationMin + finishingMin;
+                            const totalMax = subtotal + decorationMax + finishingMax;
+                            
+                            if (totalMin === totalMax) {
+                              return `$${totalMin.toLocaleString()}`;
+                            }
+                            return `$${totalMin.toLocaleString()} - $${totalMax.toLocaleString()}`;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="mt-4 flex items-start gap-1.5 text-xs text-slate-500">
+                    <Info className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                    Final pricing confirmed within 2 hours based on artwork review
                   </p>
                 </div>
 
@@ -934,8 +1243,8 @@ export default function QuotePage() {
                     </p>
                     <ul className="mt-2 space-y-1 text-sm text-slate-600">
                       <li>• {items.length} item{items.length !== 1 ? 's' : ''} in your quote</li>
-                      {decorationType !== 'none' && (
-                        <li>• {decorationOptions.find(d => d.id === decorationType)?.name}</li>
+                      {decorationDetails.type !== 'none' && (
+                        <li>• {decorationOptions.find(d => d.id === decorationDetails.type)?.name}</li>
                       )}
                       {finishingServices.length > 0 && (
                         <li>• {finishingServices.length} finishing service{finishingServices.length !== 1 ? 's' : ''}</li>

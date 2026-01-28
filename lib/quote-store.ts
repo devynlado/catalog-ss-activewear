@@ -1,11 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { QuoteItem } from './types';
+import { DecorationType, StitchCount, PrintLocation } from './pricing-utils';
+
+// Decoration configuration
+export interface DecorationDetails {
+  type: DecorationType;
+  colors?: number;              // 1-8 for screen/jumbo
+  locations?: PrintLocation[];  // Print/embroidery locations
+  stitchCount?: StitchCount;    // For embroidery
+}
 
 interface QuoteStore {
   items: QuoteItem[];
   isDrawerOpen: boolean;
   justAdded: boolean; // For pulse animation
+  
+  // Decoration & Finishing
+  decorationDetails: DecorationDetails;
+  finishingServices: string[];
+  designDescription: string;
   
   // Actions
   addItem: (item: Omit<QuoteItem, 'id' | 'addedAt'>) => void;
@@ -17,10 +31,25 @@ interface QuoteStore {
   toggleDrawer: () => void;
   clearJustAdded: () => void;
   
+  // Decoration actions
+  setDecorationType: (type: DecorationType) => void;
+  setDecorationDetails: (details: Partial<DecorationDetails>) => void;
+  setFinishingServices: (services: string[]) => void;
+  toggleFinishingService: (service: string) => void;
+  setDesignDescription: (description: string) => void;
+  
   // Computed
   getItemCount: () => number;
   getSubtotal: () => number;
+  getTotalUnits: () => number;
 }
+
+const defaultDecorationDetails: DecorationDetails = {
+  type: 'none',
+  colors: 1,
+  locations: [],
+  stitchCount: '5k-7.5k',
+};
 
 export const useQuoteStore = create<QuoteStore>()(
   persist(
@@ -28,6 +57,11 @@ export const useQuoteStore = create<QuoteStore>()(
       items: [],
       isDrawerOpen: false,
       justAdded: false,
+      
+      // Decoration & Finishing defaults
+      decorationDetails: defaultDecorationDetails,
+      finishingServices: [],
+      designDescription: '',
       
       addItem: (item) => {
         const newItem: QuoteItem = {
@@ -102,10 +136,58 @@ export const useQuoteStore = create<QuoteStore>()(
           0
         );
       },
+      
+      getTotalUnits: () => {
+        return get().items.reduce((sum, item) => sum + item.quantity, 0);
+      },
+      
+      // Decoration actions
+      setDecorationType: (type) => {
+        set((state) => ({
+          decorationDetails: {
+            ...state.decorationDetails,
+            type,
+            // Reset type-specific fields when changing type
+            colors: type === 'screen' || type === 'jumbo' ? 1 : undefined,
+            locations: [],
+            stitchCount: type === 'embroidery' ? '5k-7.5k' : undefined,
+          },
+        }));
+      },
+      
+      setDecorationDetails: (details) => {
+        set((state) => ({
+          decorationDetails: {
+            ...state.decorationDetails,
+            ...details,
+          },
+        }));
+      },
+      
+      setFinishingServices: (services) => {
+        set({ finishingServices: services });
+      },
+      
+      toggleFinishingService: (service) => {
+        set((state) => ({
+          finishingServices: state.finishingServices.includes(service)
+            ? state.finishingServices.filter((s) => s !== service)
+            : [...state.finishingServices, service],
+        }));
+      },
+      
+      setDesignDescription: (description) => {
+        set({ designDescription: description });
+      },
     }),
     {
       name: 'garment-decor-quote',
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ 
+        items: state.items,
+        decorationDetails: state.decorationDetails,
+        finishingServices: state.finishingServices,
+        designDescription: state.designDescription,
+      }),
     }
   )
 );
