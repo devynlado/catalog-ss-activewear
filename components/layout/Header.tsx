@@ -504,7 +504,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm shadow-stone-200/50">
       {/* ============== TIER 1: UTILITY BAR ============== */}
-      <div className="relative bg-gradient-to-r from-[#070131] via-[#0a0142] to-[#070131] text-white overflow-hidden">
+      <div className="relative bg-gradient-to-r from-[#070131] via-[#0a0142] to-[#070131] text-white">
         {/* Grain texture */}
         <div 
           className="pointer-events-none absolute inset-0 opacity-[0.03]"
@@ -572,7 +572,7 @@ export function Header() {
                 </button>
                 
                 {resourcesOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg bg-white p-3 shadow-xl ring-1 ring-stone-200">
+                  <div className="absolute right-0 top-full z-[60] mt-2 w-64 rounded-lg bg-white p-3 shadow-xl ring-1 ring-stone-200">
                     <Link
                       href="/resources/screen-printing-guide"
                       onClick={() => setResourcesOpen(false)}

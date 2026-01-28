@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Building2, Users, Heart } from 'lucide-react';
-import { warehouseImages } from '@/lib/service-images';
+import { warehouseImages, factoryTourImages } from '@/lib/service-images';
 
 const features = [
   {
@@ -118,10 +118,10 @@ export function TrustSignals() {
           >
             <div className="aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl shadow-slate-200/50">
               <Image
-                src={warehouseImages.facility.src}
-                alt={warehouseImages.facility.alt}
+                src={warehouseImages.productionFloor.src}
+                alt={warehouseImages.productionFloor.alt}
                 fill
-                className="object-cover"
+                className="object-cover object-[center_30%]"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
               {/* Overlay with location info */}

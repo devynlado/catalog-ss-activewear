@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, ExternalLink, Check, Info } from 'lucide-react';
+import { ShoppingBag, ExternalLink, Check, Info, Loader2 } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
@@ -22,7 +22,11 @@ interface QuickViewModalProps {
 // Type for tracking quantities per color per size
 type ColorQuantities = Record<string, Record<string, number>>;
 
-export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps) {
+export function QuickViewModal({ product: initialProduct, isOpen, onClose }: QuickViewModalProps) {
+  // Full product data with SKUs (fetched on modal open)
+  const [product, setProduct] = useState<Product>(initialProduct);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  
   // Track selected colors (array for multi-color support)
   const [selectedColors, setSelectedColors] = useState<ProductColor[]>([]);
   
@@ -30,12 +34,66 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
   const [colorQuantities, setColorQuantities] = useState<ColorQuantities>({});
   
   const [addedToQuote, setAddedToQuote] = useState(false);
+  
+  // Track which image view is active (flat and model views)
+  const [activeView, setActiveView] = useState<'front' | 'back' | 'side' | 'modelFront' | 'modelBack' | 'modelSide'>('front');
 
   const { addItem } = useQuoteStore();
+  
+  // Fetch full product data with SKUs when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // Check if we already have size data
+    const hasSkuData = initialProduct.colors?.some(c => c.sizes && c.sizes.length > 0);
+    if (hasSkuData) {
+      setProduct(initialProduct);
+      return;
+    }
+    
+    // Fetch full product with SKU data
+    const fetchFullProduct = async () => {
+      setIsLoadingProduct(true);
+      try {
+        const response = await fetch(`/api/products/${initialProduct.styleId}`);
+        if (response.ok) {
+          const fullProduct = await response.json();
+          setProduct(fullProduct);
+        }
+      } catch (error) {
+        console.error('Failed to fetch full product data:', error);
+      } finally {
+        setIsLoadingProduct(false);
+      }
+    };
+    
+    fetchFullProduct();
+  }, [isOpen, initialProduct]);
 
-  // Get image from first selected color or product default
-  const displayColor = selectedColors[0] || product.colors?.[0] || null;
-  const imageUrl = displayColor?.frontImage || displayColor?.onModelFrontImage || product.imageUrl;
+  // For image display and thumbnails, use first selected color OR first available color
+  const activeColor = selectedColors[0] || product.colors?.[0] || null;
+  
+  // Get the image URL based on active view (same logic as ProductDetailClient)
+  const getActiveImageUrl = () => {
+    if (!activeColor) return product.imageUrl;
+    
+    switch (activeView) {
+      case 'back':
+        return activeColor.backImage || product.imageUrl;
+      case 'side':
+        return activeColor.sideImage || product.imageUrl;
+      case 'modelFront':
+        return activeColor.onModelFrontImage || activeColor.frontImage || product.imageUrl;
+      case 'modelBack':
+        return activeColor.onModelBackImage || activeColor.backImage || product.imageUrl;
+      case 'modelSide':
+        return activeColor.onModelSideImage || activeColor.sideImage || product.imageUrl;
+      default:
+        // Front view: try frontImage, then model, then styleImage
+        return activeColor.frontImage || activeColor.onModelFrontImage || product.imageUrl;
+    }
+  };
+  const imageUrl = getActiveImageUrl();
   const displayPrice = product.salePrice || product.price;
 
   // Calculate total pieces across all colors and sizes
@@ -98,6 +156,8 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
     } else {
       // Add to selection at the FRONT so it becomes the active preview color
       setSelectedColors([color, ...selectedColors]);
+      // Reset to front view when adding a new color
+      setActiveView('front');
     }
   };
 
@@ -162,6 +222,8 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
     setSelectedColors([]);
     setColorQuantities({});
     setAddedToQuote(false);
+    setActiveView('front');
+    setProduct(initialProduct); // Reset to initial product
     onClose();
   };
 
@@ -169,40 +231,181 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="xl">
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-4 lg:p-6">
-        {/* Left: Image - smaller on mobile */}
-        <div className="lg:w-2/5 flex-shrink-0">
-          <div className="relative aspect-[4/3] lg:aspect-square overflow-hidden rounded-xl bg-stone-50">
+      <div className="relative flex flex-col lg:flex-row gap-5 lg:gap-8 p-5 lg:p-8">
+        {/* Decorative gradient orb */}
+        <div className="pointer-events-none absolute -left-20 -top-20 h-40 w-40 rounded-full bg-brand-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 -bottom-20 h-40 w-40 rounded-full bg-navy-800/5 blur-3xl" />
+        
+        {/* Left: Image - compact with thumbnails */}
+        <div className="lg:w-[38%] flex-shrink-0 relative z-10 space-y-3">
+          {/* Main Image - 4:5 aspect ratio to match SS Activewear portrait images */}
+          <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 via-white to-stone-100 border border-stone-200/50 shadow-inner">
             {imageUrl ? (
               <Image
                 src={imageUrl}
                 alt={product.title}
                 fill
-                className="object-contain p-4"
+                className="object-contain"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-300">
-                <ShoppingBag className="h-16 w-16 lg:h-20 lg:w-20" />
+                <ShoppingBag className="h-12 w-12 lg:h-16 lg:w-16" />
               </div>
             )}
           </div>
+          
+          {/* Thumbnail Images - horizontal scroll */}
+          {activeColor && (
+            activeColor.frontImage || 
+            activeColor.backImage || 
+            activeColor.sideImage || 
+            activeColor.onModelFrontImage || 
+            activeColor.onModelBackImage || 
+            activeColor.onModelSideImage
+          ) && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {/* Flat product images */}
+              {activeColor.frontImage && (
+                <button 
+                  onClick={() => setActiveView('front')}
+                  className={cn(
+                    "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                    activeView === 'front' 
+                      ? "border-brand-500 ring-2 ring-brand-200" 
+                      : "border-stone-200 hover:border-stone-400"
+                  )}
+                  title="Front view"
+                >
+                  <Image
+                    src={activeColor.frontImage}
+                    alt="Front"
+                    width={80}
+                    height={80}
+                    className="h-14 w-auto"
+                  />
+                </button>
+              )}
+              {activeColor.backImage && (
+                <button 
+                  onClick={() => setActiveView('back')}
+                  className={cn(
+                    "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                    activeView === 'back' 
+                      ? "border-brand-500 ring-2 ring-brand-200" 
+                      : "border-stone-200 hover:border-stone-400"
+                  )}
+                  title="Back view"
+                >
+                  <Image
+                    src={activeColor.backImage}
+                    alt="Back"
+                    width={80}
+                    height={80}
+                    className="h-14 w-auto"
+                  />
+                </button>
+              )}
+              {activeColor.sideImage && (
+                <button 
+                  onClick={() => setActiveView('side')}
+                  className={cn(
+                    "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                    activeView === 'side' 
+                      ? "border-brand-500 ring-2 ring-brand-200" 
+                      : "border-stone-200 hover:border-stone-400"
+                  )}
+                  title="Side view"
+                >
+                  <Image
+                    src={activeColor.sideImage}
+                    alt="Side"
+                    width={80}
+                    height={80}
+                    className="h-14 w-auto"
+                  />
+                </button>
+              )}
+              
+              {/* Model images (on-model photography) */}
+              {activeColor.onModelFrontImage && (
+                <button 
+                  onClick={() => setActiveView('modelFront')}
+                  className={cn(
+                    "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                    activeView === 'modelFront' 
+                      ? "border-brand-500 ring-2 ring-brand-200" 
+                      : "border-stone-200 hover:border-stone-400"
+                  )}
+                  title="Model front view"
+                >
+                  <Image
+                    src={activeColor.onModelFrontImage}
+                    alt="Model Front"
+                    width={80}
+                    height={80}
+                    className="h-14 w-auto"
+                  />
+                </button>
+              )}
+              {activeColor.onModelBackImage && (
+                <button 
+                  onClick={() => setActiveView('modelBack')}
+                  className={cn(
+                    "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                    activeView === 'modelBack' 
+                      ? "border-brand-500 ring-2 ring-brand-200" 
+                      : "border-stone-200 hover:border-stone-400"
+                  )}
+                  title="Model back view"
+                >
+                  <Image
+                    src={activeColor.onModelBackImage}
+                    alt="Model Back"
+                    width={80}
+                    height={80}
+                    className="h-14 w-auto"
+                  />
+                </button>
+              )}
+              {activeColor.onModelSideImage && (
+                <button 
+                  onClick={() => setActiveView('modelSide')}
+                  className={cn(
+                    "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                    activeView === 'modelSide' 
+                      ? "border-brand-500 ring-2 ring-brand-200" 
+                      : "border-stone-200 hover:border-stone-400"
+                  )}
+                  title="Model side view"
+                >
+                  <Image
+                    src={activeColor.onModelSideImage}
+                    alt="Model Side"
+                    width={80}
+                    height={80}
+                    className="h-14 w-auto"
+                  />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: Details */}
-        <div className="lg:w-3/5 flex flex-col min-h-0">
+        <div className="lg:w-[62%] flex flex-col min-h-0 relative z-10">
           {/* Header - Fixed */}
           <div className="flex-shrink-0">
-            <p className="text-xs lg:text-sm font-medium uppercase tracking-wide text-slate-500">
+            <p className="text-xs lg:text-sm font-semibold uppercase tracking-wide text-brand-600">
               {product.brandName}
             </p>
-            <h2 className="mt-0.5 lg:mt-1 text-lg lg:text-xl font-bold text-slate-900 pr-8">
+            <h2 className="mt-1 lg:mt-1.5 text-lg lg:text-xl font-bold text-slate-900 pr-10">
               {product.title || product.styleName}
             </h2>
-            <p className="text-xs lg:text-sm text-slate-500">
+            <p className="mt-0.5 text-xs lg:text-sm text-slate-500">
               Style #{product.styleName}
             </p>
-            <div className="mt-1 lg:mt-2 flex items-baseline gap-2">
-              <span className="text-xl lg:text-2xl font-semibold text-brand-600">
+            <div className="mt-2 lg:mt-3 flex items-baseline gap-2">
+              <span className="text-xl lg:text-2xl font-bold text-brand-600">
                 {formatPrice(displayPrice)}
               </span>
               <span className="text-xs lg:text-sm text-slate-500">per piece</span>
@@ -210,17 +413,17 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
           </div>
 
           {/* Scrollable Content */}
-          <div className="mt-3 lg:mt-4">
+          <div className="mt-5 lg:mt-6">
             {/* Color Selection */}
             {product.colors && product.colors.length > 0 && (
               <div>
-                <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
+                <h3 className="text-xs lg:text-sm font-bold text-slate-900">
                   Select Colors ({product.colors.length} available)
                 </h3>
-                <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
+                <p className="mt-1 text-xs text-slate-500 hidden lg:block">
                   Click colors to add size rows below. Click again to remove.
                 </p>
-                <div className="mt-2 lg:mt-3">
+                <div className="mt-3 lg:mt-4">
                   <ColorSwatches
                     colors={product.colors}
                     selectedColor={null}
@@ -237,9 +440,9 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
             {/* Size Distribution Rows */}
             {selectedColors.length > 0 && (
-              <div className="mt-4 lg:mt-5 space-y-2 lg:space-y-3">
+              <div className="mt-5 lg:mt-6 space-y-3 lg:space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
+                  <h3 className="text-xs lg:text-sm font-bold text-slate-900">
                     Enter Quantities by Size
                   </h3>
                   <div className="hidden lg:flex items-center gap-1 text-xs text-slate-500">
@@ -261,14 +464,24 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               </div>
             )}
 
+            {/* Loading state while fetching SKU data */}
+            {isLoadingProduct && (
+              <div className="mt-5 lg:mt-6 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50/80 p-5 lg:p-6 text-center">
+                <Loader2 className="mx-auto h-7 w-7 lg:h-8 lg:w-8 text-brand-500 animate-spin" />
+                <p className="mt-3 text-sm font-medium text-slate-600">
+                  Loading inventory data...
+                </p>
+              </div>
+            )}
+
             {/* No colors selected prompt */}
-            {selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
-              <div className="mt-4 lg:mt-5 rounded-xl border-2 border-dashed border-slate-300 bg-stone-50 p-4 lg:p-6 text-center">
-                <ShoppingBag className="mx-auto h-6 w-6 lg:h-8 lg:w-8 text-slate-400" />
-                <p className="mt-2 text-sm font-medium text-slate-600">
+            {!isLoadingProduct && selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
+              <div className="mt-5 lg:mt-6 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50/80 p-5 lg:p-6 text-center">
+                <ShoppingBag className="mx-auto h-7 w-7 lg:h-8 lg:w-8 text-slate-400" />
+                <p className="mt-3 text-sm font-medium text-slate-600">
                   Select a color above to enter quantities
                 </p>
-                <p className="mt-1 text-xs text-slate-500 hidden lg:block">
+                <p className="mt-1.5 text-xs text-slate-500 hidden lg:block">
                   You can select multiple colors for a multi-color order
                 </p>
               </div>
@@ -276,13 +489,13 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
           </div>
 
           {/* Footer: Order Summary & Add to Quote - Fixed */}
-          <div className="flex-shrink-0 mt-3 lg:mt-4 pt-3 lg:pt-4 border-t border-stone-200">
-            {/* Order Summary */}
+          <div className="flex-shrink-0 mt-4 lg:mt-5 pt-4 lg:pt-5 border-t border-stone-200">
+            {/* Order Summary - Glassmorphism style */}
             {selectedColors.length > 0 && grandTotal > 0 && (
-              <div className="rounded-lg bg-brand-50 p-3 lg:p-4 mb-3 lg:mb-4">
+              <div className="rounded-xl bg-gradient-to-br from-brand-50/80 to-brand-100/50 backdrop-blur-sm p-4 lg:p-5 mb-4 border border-brand-200/50 shadow-sm">
                 {/* Per-color breakdown - only show when 2+ colors */}
                 {colorSubtotals.length > 1 && (
-                  <div className="space-y-1.5 mb-2 pb-2 border-b border-brand-200">
+                  <div className="space-y-1.5 mb-2 pb-2 border-b border-brand-200/70">
                     {colorSubtotals.map((item) => (
                       <div key={item.colorCode} className="flex items-center justify-between text-sm">
                         <span className="text-slate-700">
@@ -347,10 +560,10 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
             <Link
               href={`/product/${product.slug}`}
               onClick={handleClose}
-              className="mt-2 lg:mt-3 flex items-center justify-center gap-2 text-xs lg:text-sm text-brand-600 hover:text-brand-700 pb-2"
+              className="mt-3 lg:mt-4 flex items-center justify-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-700 pb-1 transition-colors"
             >
               View Full Product Details
-              <ExternalLink className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+              <ExternalLink className="h-4 w-4" />
             </Link>
           </div>
         </div>

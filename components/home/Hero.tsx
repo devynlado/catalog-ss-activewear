@@ -9,13 +9,13 @@ import { PhoneButton } from '@/components/ui/PhoneButton';
 
 // Hero images - asymmetric duo layout
 const HERO_PRIMARY = {
-  src: '/images/services/puff-printing/3d-puff-screen-printed-los-angeles-apparel-1801gd-t-shirts-ls14001-hoodies-for-swish-studios.webp',
-  alt: '3D Puff screen printed LA Apparel hoodies - Swish Studios',
+  src: '/images/factory-tour/quality-inspection-in-shirts-we-trust.webp',
+  alt: 'Quality inspection at Garment Decor - In Shirts We Trust',
 };
 
 const HERO_ACCENT = {
-  src: '/images/services/simulated-process/vibrant-goat-fuel-print-why-brands-trust-garment-decor-for-screen-printing-4.webp',
-  alt: 'Vibrant simulated process screen print',
+  src: '/images/factory-tour/thread-wall-color-selection.webp',
+  alt: 'Colorful thread wall for embroidery color matching',
 };
 
 export function Hero() {
@@ -121,25 +121,31 @@ export function Hero() {
             
             <motion.div 
               variants={itemVariants}
-              className="mt-6 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4"
+              className="mt-6 sm:mt-10"
             >
-              <Link
-                href="/catalog"
-                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
-              >
-                Start Your Quote
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Link>
-              
-              <PhoneButton 
-                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-navy-800 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:bg-navy-800 hover:text-white hover:-translate-y-0.5"
-              />
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                <Link
+                  href="/catalog"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
+                >
+                  Start Your Quote
+                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+                
+                <PhoneButton 
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-navy-800 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:bg-navy-800 hover:text-white hover:-translate-y-0.5"
+                />
+              </div>
+              <p className="mt-4 flex items-center gap-2 text-sm text-slate-500">
+                <Clock className="h-4 w-4 text-brand-500" />
+                Quotes in 2 hours or less
+              </p>
             </motion.div>
             
             {/* Quick Stats - hidden on mobile for cleaner above-the-fold */}
             <motion.div 
               variants={itemVariants}
-              className="mt-10 hidden gap-4 border-t border-slate-200/60 pt-6 sm:flex"
+              className="mt-8 hidden gap-4 border-t border-slate-200/60 pt-5 sm:flex"
             >
               <div className="flex items-center gap-3 rounded-xl bg-white/60 backdrop-blur-sm border border-stone-200 px-4 py-3 shadow-sm">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
@@ -190,7 +196,7 @@ export function Hero() {
                 src={HERO_PRIMARY.src}
                 alt={HERO_PRIMARY.alt}
                 fill
-                className="object-cover"
+                className="object-cover object-[center_80%]"
                 sizes="(max-width: 1024px) 100vw, 500px"
                 priority
               />
@@ -213,26 +219,6 @@ export function Hero() {
                 className="object-cover"
                 sizes="200px"
               />
-            </motion.div>
-            
-            {/* Floating badge overlay */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="absolute bottom-16 -left-6 z-10"
-            >
-              <div className="rounded-2xl bg-white/95 backdrop-blur-sm p-4 shadow-xl border border-stone-200">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/30">
-                    <Clock className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-navy-800">2hr Quote Response</p>
-                    <p className="text-sm text-slate-500">Build your quote. Get pricing fast.</p>
-                  </div>
-                </div>
-              </div>
             </motion.div>
             
             {/* Decorative elements */}

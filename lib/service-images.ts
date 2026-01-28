@@ -329,11 +329,57 @@ export const serviceImages: Record<string, ServiceImages> = {
   },
 };
 
+// Factory tour images - for hero, about, and marketing sections
+export const factoryTourImages = {
+  qualityInspection: {
+    src: '/images/factory-tour/quality-inspection-in-shirts-we-trust.webp',
+    alt: 'Quality inspection at Garment Decor - In Shirts We Trust',
+    featured: true,
+  },
+  threadWall: {
+    src: '/images/factory-tour/thread-wall-color-selection.webp',
+    alt: 'Colorful thread wall for embroidery color matching',
+    featured: true,
+  },
+  productionFloorCuring: {
+    src: '/images/factory-tour/production-floor-curing-station.webp',
+    alt: 'Production floor curing station with stacks of printed apparel',
+  },
+  teamMember: {
+    src: '/images/factory-tour/team-member-embroidery-station.webp',
+    alt: 'Team member at embroidery workstation',
+  },
+  inkMixing: {
+    src: '/images/factory-tour/ink-mixing-craftsmanship.webp',
+    alt: 'Ink mixing craftsmanship - attention to color detail',
+  },
+  screenExposure: {
+    src: '/images/factory-tour/screen-exposure-room.webp',
+    alt: 'Screen exposure room with screen racks',
+  },
+  screenReclaim: {
+    src: '/images/factory-tour/screen-reclaim-station.webp',
+    alt: 'Screen reclaiming station',
+  },
+};
+
 // Warehouse/facility images
 export const warehouseImages = {
   facility: {
     src: '/images/warehouse/garment-decor-factory-montclair-ca.webp',
     alt: 'Garment Decor factory and warehouse in Montclair, CA',
+  },
+  aerialFacility: {
+    src: '/images/warehouse/aerial-facility-montclair-ca.webp',
+    alt: 'Aerial view of Garment Decor facility in Montclair, California',
+  },
+  embroideryDepartment: {
+    src: '/images/warehouse/embroidery-department-wide.webp',
+    alt: 'Embroidery department with multiple machines and workstations',
+  },
+  productionFloor: {
+    src: '/images/warehouse/production-floor-screen-printing.webp',
+    alt: 'Screen printing production floor with multiple press stations',
   },
 };
 
