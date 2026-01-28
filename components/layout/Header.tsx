@@ -553,12 +553,9 @@ export function Header() {
                 <span className="text-[10px]">
                   {businessStatus.isOpen ? (
                     <>
-                      <span className="hidden sm:inline text-green-400">(855) 942-7636 • </span>
-                      <span className={cn(
-                        businessStatus.isOpen ? "text-green-400 sm:text-green-400" : "text-stone-400"
-                      )}>
-                        <span className="hidden sm:inline">{businessStatus.message}</span>
-                        <span className="sm:hidden text-amber-400">{businessStatus.message}</span>
+                      <span className="hidden sm:inline text-white/80">(855) 942-7636 • </span>
+                      <span className="text-amber-400">
+                        {businessStatus.message}
                       </span>
                     </>
                   ) : (
