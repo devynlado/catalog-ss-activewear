@@ -513,14 +513,14 @@ export function Header() {
           }}
         />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-10 items-center justify-between text-xs">
+          <div className="flex h-auto py-2.5 items-center justify-between text-xs sm:h-10 sm:py-0">
             {/* Left - Talk to Our Team with dynamic status */}
             <PhoneButton 
               className="flex items-center gap-2 text-white hover:text-brand-300 transition-colors group"
               showIcon={false}
             >
               <div className={cn(
-                "flex items-center justify-center h-6 w-6 rounded-full text-white",
+                "flex items-center justify-center h-6 w-6 flex-shrink-0 rounded-full text-white",
                 businessStatus.isOpen ? "bg-green-500" : "bg-stone-500"
               )}>
                 {businessStatus.isOpen ? (
@@ -530,15 +530,23 @@ export function Header() {
                 )}
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-semibold text-white group-hover:text-brand-300">Talk to Our Team</span>
-                <span className={cn(
-                  "text-[10px]",
-                  businessStatus.isOpen ? "text-green-400" : "text-stone-400"
-                )}>
+                <span className="font-semibold text-white group-hover:text-brand-300">
+                  <span className="hidden sm:inline">Talk to Our Team</span>
+                  <span className="sm:hidden">(855) 942-7636</span>
+                </span>
+                <span className="text-[10px]">
                   {businessStatus.isOpen ? (
-                    <>(855) 942-7636 • {businessStatus.message}</>
+                    <>
+                      <span className="hidden sm:inline text-green-400">(855) 942-7636 • </span>
+                      <span className={cn(
+                        businessStatus.isOpen ? "text-green-400 sm:text-green-400" : "text-stone-400"
+                      )}>
+                        <span className="hidden sm:inline">{businessStatus.message}</span>
+                        <span className="sm:hidden text-amber-400">{businessStatus.message}</span>
+                      </span>
+                    </>
                   ) : (
-                    <>{businessStatus.message} • Leave a message</>
+                    <span className="text-stone-400">{businessStatus.message} • Leave a message</span>
                   )}
                 </span>
               </div>
@@ -640,14 +648,6 @@ export function Header() {
               >
                 <Zap className="h-3.5 w-3.5" />
                 <span className="text-xs font-medium">Rush: 48hr</span>
-              </Link>
-              
-              {/* Search icon for mobile */}
-              <Link
-                href="/catalog"
-                className="text-stone-300 hover:text-white transition-colors lg:hidden"
-              >
-                <Search className="h-4 w-4" />
               </Link>
             </div>
           </div>

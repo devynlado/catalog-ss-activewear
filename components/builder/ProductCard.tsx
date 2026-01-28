@@ -224,19 +224,19 @@ export function ProductCard({
                 </button>
               )}
             </div>
-            {/* Attribute badges - absolutely positioned to not affect layout */}
+            {/* Attribute badges - icon-only on mobile, full badge on desktop */}
             {(product.isSustainable || (product.isPopular && product.popularTier === 'value')) && (
               <div className="absolute right-0 top-0 flex flex-col items-end gap-1">
                 {product.isPopular && product.popularTier === 'value' && (
-                  <Badge variant="success" className="flex items-center gap-1">
+                  <Badge variant="success" className="flex items-center gap-1 px-1.5 sm:px-2">
                     <BadgeDollarSign className="h-3 w-3" />
-                    Value
+                    <span className="hidden sm:inline">Value</span>
                   </Badge>
                 )}
                 {product.isSustainable && (
-                  <Badge variant="success" className="flex items-center gap-1">
+                  <Badge variant="success" className="flex items-center gap-1 px-1.5 sm:px-2">
                     <Leaf className="h-3 w-3" />
-                    Eco
+                    <span className="hidden sm:inline">Eco</span>
                   </Badge>
                 )}
               </div>
@@ -309,25 +309,32 @@ export function ProductCard({
           )}
         </p>
 
-        {/* Price */}
+        {/* Price - stacked on mobile when discounted */}
         {showPricing && (
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2">
             {hasPrice ? (
-              <>
+              hasDiscount ? (
+                <>
+                  {/* Mobile: stacked layout */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                    <span className="text-lg font-bold text-slate-900">
+                      {formatPrice(displayPrice)}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span className="text-slate-400 line-through">
+                        {formatPrice(product.price)}
+                      </span>
+                      <span className="text-green-600 font-medium sm:text-slate-500 sm:font-normal">
+                        · Save {discountPercent}%
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
                 <span className="text-lg font-bold text-slate-900">
                   {formatPrice(displayPrice)}
                 </span>
-                {hasDiscount && (
-                  <>
-                    <span className="text-sm text-slate-400 line-through">
-                      {formatPrice(product.price)}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      · Save {discountPercent}%
-                    </span>
-                  </>
-                )}
-              </>
+              )
             ) : (
               <span className="text-sm font-medium text-brand-600">
                 Request Quote

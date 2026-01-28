@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { POPULAR_PRODUCTS } from '@/lib/popular-products';
+import { createServerSupabaseClient } from '@/lib/supabase';
 
 // Generate slug from brand and style number (matches product-sync.ts logic)
 function generateSlug(brand: string, styleNumber: string): string {
@@ -16,7 +17,24 @@ const popularProductSlugs = [...new Set(
   POPULAR_PRODUCTS.map(p => generateSlug(p.brand, p.styleNumber))
 )];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Fetch guides from database
+async function getGuides(): Promise<string[]> {
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data } = await supabase
+      .from('categories')
+      .select('slug')
+      .eq('type', 'guide')
+      .eq('is_active', true);
+    
+    if (!data) return [];
+    return (data as { slug: string }[]).map(g => g.slug).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
   
   // Static pages
@@ -166,6 +184,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
+  // Guide pages (dynamic from database)
+  const guideSlugs = await getGuides();
+  const guidePages: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/guides`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    },
+    ...guideSlugs.map(slug => ({
+      url: `${baseUrl}/guides/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    })),
+  ];
+
   return [
     ...staticPages,
     ...servicePages,
@@ -174,5 +209,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...portfolioPages,
     ...catalogPages,
     ...productPages,
+    ...guidePages,
   ];
 }

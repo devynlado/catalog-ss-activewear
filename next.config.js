@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Bypass Vercel's Image Optimization - SS Activewear images are already CDN-optimized
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

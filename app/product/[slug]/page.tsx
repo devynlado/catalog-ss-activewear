@@ -7,6 +7,7 @@ import { ProductBreadcrumbs } from '@/components/catalog/ProductBreadcrumbs';
 import { CompanionProducts } from '@/components/builder/CompanionProducts';
 import { RelatedProducts } from '@/components/builder/RelatedProducts';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 
 interface ProductPageProps {
   params: {
@@ -164,9 +165,38 @@ export async function generateMetadata({ params }: ProductPageProps) {
   
   if (!product) return { title: 'Product Not Found' };
 
+  const title = `${product.title || product.styleName} - ${product.brandName}`;
+  const description = product.description || `Shop ${product.styleName} by ${product.brandName}. View colors, sizes, inventory and get wholesale pricing.`;
+  const productUrl = `https://garmentdecor.com/product/${product.slug}`;
+  const imageUrl = product.imageUrl || 'https://garmentdecor.com/images/og-default.png';
+
   return {
-    title: `${product.title || product.styleName} - ${product.brandName} | Garment Decor`,
-    description: product.description || `Shop ${product.styleName} by ${product.brandName}`,
+    title,
+    description,
+    alternates: {
+      canonical: productUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: productUrl,
+      siteName: 'Garment Decor',
+      images: [
+        {
+          url: imageUrl,
+          width: 800,
+          height: 800,
+          alt: `${product.title || product.styleName} by ${product.brandName}`,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
+    },
   };
 }
 
@@ -177,9 +207,30 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  // Build breadcrumb data for structured data
+  const breadcrumbItems = [
+    { name: 'Home', url: 'https://garmentdecor.com' },
+    { name: 'Catalog', url: 'https://garmentdecor.com/catalog' },
+    { name: product.brandName, url: `https://garmentdecor.com/catalog?brand=${product.brandId}` },
+    { name: product.title || product.styleName, url: `https://garmentdecor.com/product/${product.slug}` },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50">
-      {/* Breadcrumb */}
+    <>
+      {/* Structured Data */}
+      <ProductJsonLd
+        name={product.title || product.styleName}
+        description={product.description || `${product.styleName} by ${product.brandName}`}
+        image={product.imageUrl || ''}
+        brand={product.brandName}
+        sku={product.styleName}
+        price={product.salePrice || product.price}
+        url={`https://garmentdecor.com/product/${product.slug}`}
+      />
+      <BreadcrumbJsonLd items={breadcrumbItems} />
+
+      <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50">
+        {/* Breadcrumb */}
       <div className="relative bg-gradient-to-r from-white via-stone-50/30 to-white border-b border-stone-200 overflow-hidden">
         {/* Subtle grain */}
         <div 
@@ -236,6 +287,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

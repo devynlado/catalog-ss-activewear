@@ -86,55 +86,58 @@ export function HowItWorks() {
 
         {/* Steps */}
         <motion.div 
-          className="mt-20"
+          className="mt-16 sm:mt-20"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
         >
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isLast = index === steps.length - 1;
-              
-              return (
-                <motion.div 
-                  key={step.number} 
-                  className="relative"
-                  variants={itemVariants}
-                >
-                  {/* Connector Line (hidden on mobile, shown on lg) */}
-                  {!isLast && (
-                    <div className="absolute left-1/2 top-10 hidden h-0.5 w-full bg-gradient-to-r from-brand-300/50 via-brand-200/30 to-transparent lg:block" />
-                  )}
-                  
-                  <div className="relative flex flex-col items-center text-center">
-                    {/* Number Circle */}
-                    <motion.div 
-                      className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm border border-brand-100 shadow-lg shadow-brand-500/10"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    >
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30">
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      {/* Step Number Badge */}
-                      <span className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-navy-800 text-xs font-bold text-white shadow-md">
-                        {step.number}
-                      </span>
-                    </motion.div>
+          {/* Mobile: Horizontal scroll with peek | Desktop: Grid */}
+          <div className="-mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-2 md:gap-8 md:overflow-visible md:pb-0 lg:grid-cols-4">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const isLast = index === steps.length - 1;
+                
+                return (
+                  <motion.div 
+                    key={step.number} 
+                    className="relative flex-shrink-0 w-[75%] snap-start md:w-auto"
+                    variants={itemVariants}
+                  >
+                    {/* Connector Line (hidden on mobile, shown on lg) */}
+                    {!isLast && (
+                      <div className="absolute left-1/2 top-10 hidden h-0.5 w-full bg-gradient-to-r from-brand-300/50 via-brand-200/30 to-transparent lg:block" />
+                    )}
                     
-                    {/* Content */}
-                    <h3 className="mt-6 text-lg font-bold text-navy-800">
-                      {step.title}
-                    </h3>
-                    <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                      {step.description}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
+                    <div className="relative flex flex-col items-center text-center">
+                      {/* Number Circle */}
+                      <motion.div 
+                        className="relative z-10 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm border border-brand-100 shadow-lg shadow-brand-500/10"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      >
+                        <div className="flex h-11 w-11 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30">
+                          <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </div>
+                        {/* Step Number Badge */}
+                        <span className="absolute -right-1 -top-1 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-navy-800 text-[10px] sm:text-xs font-bold text-white shadow-md">
+                          {step.number}
+                        </span>
+                      </motion.div>
+                      
+                      {/* Content */}
+                      <h3 className="mt-4 sm:mt-6 text-base sm:text-lg font-bold text-navy-800">
+                        {step.title}
+                      </h3>
+                      <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        {step.description}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         </motion.div>
 

@@ -78,7 +78,7 @@ export function WhoWeService() {
         </motion.div>
 
         <motion.div 
-          className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-12 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -92,15 +92,15 @@ export function WhoWeService() {
                 variants={itemVariants}
                 whileHover={{ y: -4, scale: 1.02 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="flex flex-col items-center rounded-2xl bg-white/70 backdrop-blur-sm border border-stone-200 p-6 text-center shadow-sm hover:shadow-xl hover:shadow-brand-500/5 transition-shadow"
+                className="flex flex-col items-center rounded-2xl bg-white/70 backdrop-blur-sm border border-stone-200 p-4 sm:p-6 text-center shadow-sm hover:shadow-xl hover:shadow-brand-500/5 transition-shadow"
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-navy-800 to-navy-700 shadow-lg shadow-navy-800/20">
-                  <Icon className="h-7 w-7 text-white" />
+                <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-navy-800 to-navy-700 shadow-lg shadow-navy-800/20">
+                  <Icon className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
                 </div>
-                <h3 className="mt-4 font-semibold text-navy-800">
+                <h3 className="mt-3 sm:mt-4 text-sm sm:text-base font-semibold text-navy-800">
                   {audience.title}
                 </h3>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate-600">
                   {audience.description}
                 </p>
               </motion.div>
