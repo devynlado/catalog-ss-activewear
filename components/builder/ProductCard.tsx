@@ -191,7 +191,7 @@ export function ProductCard({
                     handleColorChange(color);
                   }}
                   className={cn(
-                    'relative h-5 w-5 rounded-full border-2 transition-all',
+                    'relative h-5 w-5 flex-shrink-0 overflow-hidden rounded-full border-2 transition-all',
                     selectedColor?.colorCode === color.colorCode
                       ? 'border-brand-500 ring-1 ring-brand-200'
                       : 'border-stone-200 hover:border-stone-400'
@@ -203,10 +203,10 @@ export function ProductCard({
                       src={color.swatchImage}
                       alt={color.colorName}
                       fill
-                      className="rounded-full object-cover"
+                      className="rounded-full object-cover object-center"
                     />
                   ) : (
-                    <span className="absolute inset-0.5 rounded-full bg-slate-300" />
+                    <span className="absolute inset-0 rounded-full bg-slate-300" />
                   )}
                 </button>
               ))}
@@ -265,7 +265,7 @@ export function ProductCard({
                         setShowAllColors(false);
                       }}
                       className={cn(
-                        'relative h-6 w-6 rounded-full border-2 transition-all',
+                        'relative h-6 w-6 flex-shrink-0 overflow-hidden rounded-full border-2 transition-all',
                         selectedColor?.colorCode === color.colorCode
                           ? 'border-brand-500 ring-2 ring-brand-200'
                           : 'border-stone-200 hover:border-stone-400 hover:scale-110'
@@ -277,10 +277,10 @@ export function ProductCard({
                           src={color.swatchImage}
                           alt={color.colorName}
                           fill
-                          className="rounded-full object-cover"
+                          className="rounded-full object-cover object-center"
                         />
                       ) : (
-                        <span className="absolute inset-0.5 rounded-full bg-slate-300" />
+                        <span className="absolute inset-0 rounded-full bg-slate-300" />
                       )}
                     </button>
                   ))}

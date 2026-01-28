@@ -45,7 +45,7 @@ const itemVariants = {
 
 export function WhoWeService() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-stone-100 via-white to-stone-50/50 py-20">
+    <section className="relative overflow-hidden bg-gradient-to-b from-stone-100 via-white to-stone-50/50 py-12 sm:py-16">
       {/* Soft transition from dark TurnaroundBanner above */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-navy-800/[0.03] to-transparent" />
       
