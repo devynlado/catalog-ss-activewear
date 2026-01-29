@@ -105,7 +105,16 @@ function escapeCSV(value: string | number | null | undefined): string {
   return str;
 }
 
+// Validate GTIN format (8, 12, 13, or 14 digits, numeric only)
+export function isValidGtin(gtin: string | undefined | null): boolean {
+  if (!gtin || gtin.trim() === '') return false;
+  const cleaned = gtin.trim();
+  // Must be numeric and valid length (8, 12, 13, or 14 digits)
+  return /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(cleaned);
+}
+
 // CSV header row
+// GTIN included when valid; identifier_exists=false when GTIN is missing/invalid
 export const GMC_CSV_HEADERS = [
   'id',
   'title',
@@ -121,6 +130,7 @@ export const GMC_CSV_HEADERS = [
   'color',
   'item_group_id',
   'gtin',
+  'identifier_exists',
   'mpn',
   'product_type',
   'additional_image_link',
@@ -170,6 +180,7 @@ export interface GMCFeedRow {
   color: string;
   item_group_id: string;
   gtin: string;
+  identifier_exists: string;  // 'true' when GTIN is valid, 'false' otherwise
   mpn: string;
   product_type: string;
   additional_image_link: string;
@@ -223,6 +234,9 @@ export function generateFeedRow(
     variant.pieceWeight ? `${variant.pieceWeight} oz` : undefined
   );
   
+  // Check if GTIN is valid - if so, include it; otherwise use identifier_exists=false
+  const hasValidGtin = isValidGtin(variant.gtin);
+  
   return {
     id: variant.sku,
     title,
@@ -237,7 +251,8 @@ export function generateFeedRow(
     age_group: determineAgeGroup(category),
     color: variant.colorName,
     item_group_id: String(variant.styleId),
-    gtin: variant.gtin || '',
+    gtin: hasValidGtin ? variant.gtin! : '',
+    identifier_exists: hasValidGtin ? 'true' : 'false',
     mpn: variant.sku,
     product_type: productType,
     additional_image_link: '',
