@@ -306,12 +306,16 @@ function findPopularProduct(brandName: string, styleName: string): PopularProduc
 
 function buildImageUrl(imagePath: string): string {
   if (!imagePath) return '';
-  if (imagePath.startsWith('http')) return imagePath;
+  // Normalize existing URLs to use CDN (www redirects to cdn)
+  if (imagePath.startsWith('http')) {
+    return imagePath.replace('www.ssactivewear.com', 'cdn.ssactivewear.com');
+  }
   const cleanPath = imagePath.replace(/^\/+/, '');
   if (cleanPath.startsWith('cdn.') || cleanPath.startsWith('cdnm.')) {
     return `https://${cleanPath}`;
   }
-  return `https://www.ssactivewear.com/${cleanPath}`;
+  // Use CDN directly to avoid redirects
+  return `https://cdn.ssactivewear.com/${cleanPath}`;
 }
 
 function determineGender(category?: ProductCategory, attributes?: string[]): string {
