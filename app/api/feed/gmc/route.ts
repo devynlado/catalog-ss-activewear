@@ -48,6 +48,7 @@ interface CachedProduct {
 async function fetchFromSupabase(): Promise<{
   rows: GMCFeedRow[];
   fromCache: boolean;
+  debug?: { colorRecords: number; colorProducts: number };
 }> {
   const supabase = createServerSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
@@ -132,7 +133,8 @@ async function fetchFromSupabase(): Promise<{
       });
     }
   }
-  console.log(`[GMC Feed] Loaded color images for ${colorImageMap.size} products`);
+  const colorDataCount = colorData?.length || 0;
+  console.log(`[GMC Feed] Loaded ${colorDataCount} color records for ${colorImageMap.size} products`);
   
   // Build a map of style_id -> category from POPULAR_PRODUCTS
   const categoryMap = new Map<number, ProductCategory>();
@@ -230,7 +232,11 @@ async function fetchFromSupabase(): Promise<{
   }
   
   console.log(`[GMC Feed] Generated ${feedRows.length} rows from Supabase cache`);
-  return { rows: feedRows, fromCache: true };
+  return { 
+    rows: feedRows, 
+    fromCache: true,
+    debug: { colorRecords: colorDataCount, colorProducts: colorImageMap.size }
+  };
 }
 
 // ============================================================================
@@ -362,12 +368,14 @@ export async function GET(request: NextRequest) {
     // ========================================================================
     // TRY SUPABASE CACHE FIRST (fast: ~1-2 seconds vs 30-60 seconds)
     // ========================================================================
+    let debugInfo: { colorRecords: number; colorProducts: number } | undefined;
     if (!forceRefresh) {
       try {
         const cached = await fetchFromSupabase();
         if (cached.fromCache && cached.rows.length > 0) {
           feedRows = cached.rows;
           source = 'supabase_cache';
+          debugInfo = cached.debug;
           console.log(`[GMC Feed] Using Supabase cache (${feedRows.length} rows)`);
         }
       } catch (cacheError) {
@@ -419,6 +427,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         count: finalRows.length,
         source,
+        debug: debugInfo,
         products: finalRows,
       });
     }
