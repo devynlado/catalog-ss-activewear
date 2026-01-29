@@ -40,12 +40,6 @@ interface CachedProduct {
     qty: number;
     availability: string;
   }>;
-  product_colors: Array<{
-    color_code: string;
-    front_image: string | null;
-    back_image: string | null;
-    side_image: string | null;
-  }>;
 }
 
 // ============================================================================
@@ -102,12 +96,6 @@ async function fetchFromSupabase(): Promise<{
         piece_weight,
         qty,
         availability
-      ),
-      product_colors (
-        color_code,
-        front_image,
-        back_image,
-        side_image
       )
     `)
     .eq('is_active', true)
@@ -120,6 +108,30 @@ async function fetchFromSupabase(): Promise<{
   
   // Cast to typed array
   const products = data as CachedProduct[];
+  
+  // Fetch color images separately (no FK relationship in Supabase)
+  const styleIds = products.map(p => p.style_id);
+  type ColorRecord = { style_id: number; color_code: string; front_image: string | null; back_image: string | null; side_image: string | null };
+  const { data: colorData } = await supabase
+    .from('product_colors')
+    .select('style_id, color_code, front_image, back_image, side_image')
+    .in('style_id', styleIds) as { data: ColorRecord[] | null };
+  
+  // Build a lookup map: style_id -> color_code -> images
+  const colorImageMap = new Map<number, Map<string, { front: string | null; back: string | null; side: string | null }>>();
+  if (colorData) {
+    for (const color of colorData) {
+      if (!colorImageMap.has(color.style_id)) {
+        colorImageMap.set(color.style_id, new Map());
+      }
+      colorImageMap.get(color.style_id)!.set(color.color_code, {
+        front: color.front_image,
+        back: color.back_image,
+        side: color.side_image,
+      });
+    }
+  }
+  console.log(`[GMC Feed] Loaded color images for ${colorImageMap.size} products`);
   
   // Build a map of style_id -> category from POPULAR_PRODUCTS
   const categoryMap = new Map<number, ProductCategory>();
@@ -147,19 +159,11 @@ async function fetchFromSupabase(): Promise<{
   
   for (const product of products) {
     const skus = product.product_skus || [];
-    const colors = product.product_colors || [];
     const category = categoryMap.get(product.style_id) || 't-shirts' as ProductCategory;
     const tier = (product.popular_tier || 'value') as ProductTier;
     
-    // Build a map of color_code -> color images for this product
-    const colorImageMap = new Map<string, { front: string | null; back: string | null; side: string | null }>();
-    for (const color of colors) {
-      colorImageMap.set(color.color_code, {
-        front: color.front_image,
-        back: color.back_image,
-        side: color.side_image,
-      });
-    }
+    // Get color images for this product from the pre-built map
+    const productColorMap = colorImageMap.get(product.style_id);
     
     for (const sku of skus) {
       const variant: ProductVariant = {
@@ -193,7 +197,7 @@ async function fetchFromSupabase(): Promise<{
       row.auto_pricing_min_price = sku.auto_min_price ? `${sku.auto_min_price.toFixed(2)} USD` : '';
       
       // Build additional_image_link from color images (front, back, side)
-      const colorImages = colorImageMap.get(sku.color_code);
+      const colorImages = productColorMap?.get(sku.color_code);
       if (colorImages) {
         const additionalImages: string[] = [];
         // Add back and side images if they exist
