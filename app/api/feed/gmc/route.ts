@@ -39,6 +39,11 @@ interface CachedProduct {
     piece_weight: number;
     qty: number;
     availability: string;
+    product_colors: {
+      front_image: string | null;
+      back_image: string | null;
+      side_image: string | null;
+    } | null;
   }>;
 }
 
@@ -95,7 +100,12 @@ async function fetchFromSupabase(): Promise<{
         gtin,
         piece_weight,
         qty,
-        availability
+        availability,
+        product_colors (
+          front_image,
+          back_image,
+          side_image
+        )
       )
     `)
     .eq('is_active', true)
@@ -168,6 +178,27 @@ async function fetchFromSupabase(): Promise<{
       }
       row.cost_of_goods_sold = sku.cogs ? `${sku.cogs.toFixed(2)} USD` : '';
       row.auto_pricing_min_price = sku.auto_min_price ? `${sku.auto_min_price.toFixed(2)} USD` : '';
+      
+      // Build additional_image_link from color images (front, back, side)
+      const colorImages = sku.product_colors;
+      if (colorImages) {
+        const additionalImages: string[] = [];
+        // Add back and side images if they exist and are different from main image
+        if (colorImages.back_image && colorImages.back_image !== colorImages.front_image) {
+          additionalImages.push(colorImages.back_image);
+        }
+        if (colorImages.side_image && colorImages.side_image !== colorImages.front_image) {
+          additionalImages.push(colorImages.side_image);
+        }
+        // Use front image as primary if style image is different
+        if (colorImages.front_image && colorImages.front_image !== row.image_link) {
+          // Set front image as main image, move style image to additional
+          row.image_link = colorImages.front_image;
+        }
+        if (additionalImages.length > 0) {
+          row.additional_image_link = additionalImages.join(',');
+        }
+      }
       
       feedRows.push(row);
     }
