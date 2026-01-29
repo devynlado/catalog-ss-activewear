@@ -1,11 +1,7 @@
 import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
 import './globals.css';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
-import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
-import { MobileQuoteBar } from '@/components/quote/MobileQuoteBar';
-import { ExitIntentPopup } from '@/components/quote/ExitIntentPopup';
+import { LayoutWrapper } from '@/components/layout/LayoutWrapper';
 import { OrganizationJsonLd } from '@/components/seo/JsonLd';
 
 const dmSans = DM_Sans({
@@ -90,14 +86,9 @@ export default function RootLayout({
         <OrganizationJsonLd />
       </head>
       <body className="min-h-screen bg-background font-sans text-text">
-        <Header />
-        <main className="pb-14 lg:pb-0">
+        <LayoutWrapper>
           {children}
-        </main>
-        <Footer />
-        <QuoteDrawer />
-        <MobileQuoteBar />
-        <ExitIntentPopup />
+        </LayoutWrapper>
       </body>
     </html>
   );

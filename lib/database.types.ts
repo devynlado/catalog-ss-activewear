@@ -26,6 +26,8 @@ export interface Database {
           notes: string | null;
           subtotal: number;
           status: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
+          customer_id: string | null;
+          assigned_sales_rep_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -42,6 +44,8 @@ export interface Database {
           notes?: string | null;
           subtotal: number;
           status?: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
+          customer_id?: string | null;
+          assigned_sales_rep_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -58,6 +62,8 @@ export interface Database {
           notes?: string | null;
           subtotal?: number;
           status?: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
+          customer_id?: string | null;
+          assigned_sales_rep_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -171,6 +177,117 @@ export interface Database {
           recovered_at?: string | null;
           reminder_sent_at?: string | null;
           created_at?: string;
+        };
+      };
+      // User Profiles Table
+      profiles: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string | null;
+          avatar_url: string | null;
+          role: 'customer' | 'sales_rep' | 'admin';
+          phone: string | null;
+          company: string | null;
+          assigned_sales_rep_id: string | null;
+          calendly_url: string | null;
+          notification_preferences: Json | null;
+          // Customer type & verification
+          customer_type: 'direct' | 'distributor';
+          verification_status: 'pending' | 'approved' | 'denied' | null;
+          verified_at: string | null;
+          verified_by: string | null;
+          verification_notes: string | null;
+          // Industry credentials
+          asi_number: string | null;
+          ppai_number: string | null;
+          business_type: string | null;
+          // Website & Address
+          website: string | null;
+          billing_address_street: string | null;
+          billing_address_city: string | null;
+          billing_address_state: string | null;
+          billing_address_zip: string | null;
+          // Business Licenses
+          business_license: string | null;
+          sellers_permit: string | null;
+          // Tax & Compliance
+          tax_exempt: boolean;
+          resale_certificate: string | null;
+          resale_certificate_expiry: string | null;
+          tax_id: string | null;
+          // Pricing tier
+          pricing_tier: 'standard' | 'bronze' | 'silver' | 'gold' | 'platinum';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: 'customer' | 'sales_rep' | 'admin';
+          phone?: string | null;
+          company?: string | null;
+          assigned_sales_rep_id?: string | null;
+          calendly_url?: string | null;
+          notification_preferences?: Json | null;
+          customer_type?: 'direct' | 'distributor';
+          verification_status?: 'pending' | 'approved' | 'denied' | null;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          verification_notes?: string | null;
+          asi_number?: string | null;
+          ppai_number?: string | null;
+          business_type?: string | null;
+          website?: string | null;
+          billing_address_street?: string | null;
+          billing_address_city?: string | null;
+          billing_address_state?: string | null;
+          billing_address_zip?: string | null;
+          business_license?: string | null;
+          sellers_permit?: string | null;
+          tax_exempt?: boolean;
+          resale_certificate?: string | null;
+          resale_certificate_expiry?: string | null;
+          tax_id?: string | null;
+          pricing_tier?: 'standard' | 'bronze' | 'silver' | 'gold' | 'platinum';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: 'customer' | 'sales_rep' | 'admin';
+          phone?: string | null;
+          company?: string | null;
+          assigned_sales_rep_id?: string | null;
+          calendly_url?: string | null;
+          notification_preferences?: Json | null;
+          customer_type?: 'direct' | 'distributor';
+          verification_status?: 'pending' | 'approved' | 'denied' | null;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          verification_notes?: string | null;
+          asi_number?: string | null;
+          ppai_number?: string | null;
+          business_type?: string | null;
+          website?: string | null;
+          billing_address_street?: string | null;
+          billing_address_city?: string | null;
+          billing_address_state?: string | null;
+          billing_address_zip?: string | null;
+          business_license?: string | null;
+          sellers_permit?: string | null;
+          tax_exempt?: boolean;
+          resale_certificate?: string | null;
+          resale_certificate_expiry?: string | null;
+          tax_id?: string | null;
+          pricing_tier?: 'standard' | 'bronze' | 'silver' | 'gold' | 'platinum';
+          created_at?: string;
+          updated_at?: string;
         };
       };
       // Product Cache Tables

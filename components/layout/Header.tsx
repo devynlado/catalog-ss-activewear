@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQuoteStore } from '@/lib/quote-store';
 import { cn } from '@/lib/utils';
 import { Brand } from '@/lib/types';
 import { getMainCategories } from '@/lib/category-taxonomy';
 import { PhoneButton } from '@/components/ui/PhoneButton';
+import { createSupabaseBrowserClient, signOut } from '@/lib/supabase-browser';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 // Services menu configuration
 const servicesMenu = {
@@ -331,9 +333,13 @@ export function Header() {
   const [shopOpen, setShopOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [businessStatus, setBusinessStatus] = useState(() => isBusinessOpen());
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const shopRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
@@ -487,6 +493,42 @@ export function Header() {
     };
     fetchBrands();
   }, []);
+
+  // Check auth state
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setUserLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    await signOut();
+    setUserMenuOpen(false);
+    window.location.href = '/';
+  };
 
 
   // Close dropdowns when clicking outside
@@ -989,8 +1031,78 @@ export function Header() {
               </form>
             </div>
 
-            {/* Right side - Quote CTA */}
+            {/* Right side - Auth + Quote CTA */}
             <div className="hidden items-center gap-3 lg:flex">
+              {/* User Menu / Sign In */}
+              {!userLoading && (
+                user ? (
+                  <div className="relative" ref={userMenuRef}>
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 transition-colors"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                        {user.user_metadata?.avatar_url ? (
+                          <Image
+                            src={user.user_metadata.avatar_url}
+                            alt=""
+                            width={32}
+                            height={32}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <User className="h-4 w-4" />
+                        )}
+                      </div>
+                      <ChevronDown className={cn('h-4 w-4 transition-transform', userMenuOpen && 'rotate-180')} />
+                    </button>
+
+                    {userMenuOpen && (
+                      <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl bg-white p-2 shadow-xl ring-1 ring-stone-200">
+                        <div className="border-b border-stone-100 px-3 py-2 mb-2">
+                          <p className="text-sm font-medium text-slate-900 truncate">
+                            {user.user_metadata?.full_name || user.user_metadata?.name || 'User'}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                        </div>
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          Dashboard
+                        </Link>
+                        <Link
+                          href="/dashboard/settings"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
+                        >
+                          <Settings className="h-4 w-4" />
+                          Settings
+                        </Link>
+                        <div className="border-t border-stone-100 mt-2 pt-2">
+                          <button
+                            onClick={handleSignOut}
+                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                          >
+                            <LogOut className="h-4 w-4" />
+                            Sign Out
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                )
+              )}
+
               <button
                 onClick={openDrawer}
                 className={cn(
@@ -1253,6 +1365,70 @@ export function Header() {
                 >
                   View all brands →
                 </Link>
+              </div>
+
+              {/* Auth Section */}
+              <div className="border-t border-stone-100 pt-4 mt-4">
+                {!userLoading && (
+                  user ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 px-3 py-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                          {user.user_metadata?.avatar_url ? (
+                            <Image
+                              src={user.user_metadata.avatar_url}
+                              alt=""
+                              width={40}
+                              height={40}
+                              className="rounded-full"
+                            />
+                          ) : (
+                            <User className="h-5 w-5" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">
+                            {user.user_metadata?.full_name || user.user_metadata?.name || 'User'}
+                          </p>
+                          <p className="text-xs text-slate-500">{user.email}</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Link>
+                      <button
+                        onClick={handleSignOut}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-stone-200 px-4 py-3 text-sm font-medium text-slate-900 hover:bg-stone-50"
+                      >
+                        <User className="h-4 w-4" />
+                        Sign In
+                      </Link>
+                      <Link
+                        href="/signup"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white hover:bg-brand-600"
+                      >
+                        Create Account
+                      </Link>
+                    </div>
+                  )
+                )}
               </div>
 
               {/* Call CTA */}
