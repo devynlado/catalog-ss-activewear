@@ -615,6 +615,177 @@ export interface Database {
           category_id?: number;
         };
       };
+      orders: {
+        Row: {
+          id: string;
+          order_number: string;
+          customer_id: string | null;
+          customer_email: string;
+          customer_name: string | null;
+          customer_phone: string | null;
+          company: string | null;
+          quote_id: string | null;
+          items: Json;
+          subtotal: number;
+          shipping_cost: number;
+          tax_amount: number;
+          discount_amount: number;
+          total: number;
+          shipping_address: Json | null;
+          billing_address: Json | null;
+          payment_method: 'card' | 'ach' | 'invoice' | null;
+          payment_status: 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+          stripe_payment_intent_id: string | null;
+          stripe_charge_id: string | null;
+          po_number: string | null;
+          paid_at: string | null;
+          status: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          tracking_number: string | null;
+          carrier: string | null;
+          shipped_at: string | null;
+          delivered_at: string | null;
+          risk_score: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_number: string;
+          customer_id?: string | null;
+          customer_email: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          company?: string | null;
+          quote_id?: string | null;
+          items: Json;
+          subtotal: number;
+          shipping_cost?: number;
+          tax_amount?: number;
+          discount_amount?: number;
+          total: number;
+          shipping_address?: Json | null;
+          billing_address?: Json | null;
+          payment_method?: 'card' | 'ach' | 'invoice' | null;
+          payment_status?: 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          po_number?: string | null;
+          paid_at?: string | null;
+          status?: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          tracking_number?: string | null;
+          carrier?: string | null;
+          shipped_at?: string | null;
+          delivered_at?: string | null;
+          risk_score?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_number?: string;
+          customer_id?: string | null;
+          customer_email?: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          company?: string | null;
+          quote_id?: string | null;
+          items?: Json;
+          subtotal?: number;
+          shipping_cost?: number;
+          tax_amount?: number;
+          discount_amount?: number;
+          total?: number;
+          shipping_address?: Json | null;
+          billing_address?: Json | null;
+          payment_method?: 'card' | 'ach' | 'invoice' | null;
+          payment_status?: 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          po_number?: string | null;
+          paid_at?: string | null;
+          status?: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          tracking_number?: string | null;
+          carrier?: string | null;
+          shipped_at?: string | null;
+          delivered_at?: string | null;
+          risk_score?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      payments: {
+        Row: {
+          id: string;
+          order_id: string;
+          amount: number;
+          currency: string;
+          type: 'charge' | 'refund';
+          status: 'pending' | 'succeeded' | 'failed';
+          stripe_payment_intent_id: string | null;
+          stripe_charge_id: string | null;
+          stripe_refund_id: string | null;
+          failure_code: string | null;
+          failure_message: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          amount: number;
+          currency?: string;
+          type: 'charge' | 'refund';
+          status: 'pending' | 'succeeded' | 'failed';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          stripe_refund_id?: string | null;
+          failure_code?: string | null;
+          failure_message?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          amount?: number;
+          currency?: string;
+          type?: 'charge' | 'refund';
+          status?: 'pending' | 'succeeded' | 'failed';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          stripe_refund_id?: string | null;
+          failure_code?: string | null;
+          failure_message?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+      };
+      order_activities: {
+        Row: {
+          id: string;
+          order_id: string;
+          user_id: string | null;
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          user_id?: string | null;
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          details?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          user_id?: string | null;
+          activity_type?: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          details?: Json;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -649,3 +820,43 @@ export type AttributeGroupRow = Database['public']['Tables']['attribute_groups']
 export type AttributeGroupInsert = Database['public']['Tables']['attribute_groups']['Insert'];
 export type ProductCategoryRow = Database['public']['Tables']['product_categories']['Row'];
 export type ProductCategoryInsert = Database['public']['Tables']['product_categories']['Insert'];
+
+// Order System type aliases
+export type Order = Database['public']['Tables']['orders']['Row'];
+export type OrderInsert = Database['public']['Tables']['orders']['Insert'];
+export type OrderUpdate = Database['public']['Tables']['orders']['Update'];
+export type Payment = Database['public']['Tables']['payments']['Row'];
+export type PaymentInsert = Database['public']['Tables']['payments']['Insert'];
+export type OrderActivity = Database['public']['Tables']['order_activities']['Row'];
+export type OrderActivityInsert = Database['public']['Tables']['order_activities']['Insert'];
+
+// Cart item type (for cart store)
+export interface CartItem {
+  id: string;
+  sku: string;
+  styleId: number;
+  styleName: string;
+  brandName: string;
+  colorName: string;
+  colorCode: string;
+  sizeName: string;
+  quantity: number;
+  unitPrice: number;
+  discountedPrice?: number;  // Google automated discount price
+  discountSource?: 'google';  // Track discount origin
+  imageUrl?: string;
+}
+
+// Shipping address type
+export interface ShippingAddress {
+  firstName: string;
+  lastName: string;
+  company?: string;
+  address1: string;
+  address2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone?: string;
+}

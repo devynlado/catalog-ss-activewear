@@ -8,10 +8,15 @@ import { CompanionProducts } from '@/components/builder/CompanionProducts';
 import { RelatedProducts } from '@/components/builder/RelatedProducts';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd';
+import { validateDiscountToken, GoogleDiscount } from '@/lib/google-discount';
 
 interface ProductPageProps {
   params: {
     slug: string;
+  };
+  searchParams: {
+    pv2?: string;
+    [key: string]: string | string[] | undefined;
   };
 }
 
@@ -200,11 +205,34 @@ export async function generateMetadata({ params }: ProductPageProps) {
   };
 }
 
-export default async function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({ params, searchParams }: ProductPageProps) {
   const product = await getProduct(params.slug);
 
   if (!product) {
     notFound();
+  }
+  
+  // Check for Google automated discount token (pv2 parameter)
+  let googleDiscount: GoogleDiscount | null = null;
+  const pv2Token = searchParams.pv2;
+  
+  if (pv2Token && typeof pv2Token === 'string') {
+    const merchantId = process.env.GOOGLE_MERCHANT_ID;
+    
+    if (merchantId) {
+      // Validate the JWT token server-side
+      const result = await validateDiscountToken(pv2Token, merchantId);
+      
+      if (result.success) {
+        // Token is valid, pass discount to client
+        googleDiscount = result.discount;
+        console.log(`[Product Page] Valid Google discount for ${result.discount.offerId}: $${result.discount.price}`);
+      } else {
+        console.warn(`[Product Page] Invalid Google discount token: ${result.error}`);
+      }
+    } else {
+      console.warn('[Product Page] GOOGLE_MERCHANT_ID not configured, skipping discount validation');
+    }
   }
 
   // Build breadcrumb data for structured data
@@ -250,10 +278,23 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </div>
 
       {/* Product Content */}
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
-        <Suspense fallback={<ProductDetailSkeleton />}>
-          <ProductDetailClient product={product} />
-        </Suspense>
+      <div className="relative overflow-hidden">
+        {/* Grain texture */}
+        <div 
+          className="pointer-events-none absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        {/* Decorative gradient orbs */}
+        <div className="pointer-events-none absolute -right-32 top-20 h-80 w-80 rounded-full bg-brand-500/5 blur-3xl" />
+        <div className="pointer-events-none absolute -left-32 top-1/2 h-64 w-64 rounded-full bg-navy-800/5 blur-3xl" />
+        
+        <div className="relative mx-auto max-w-7xl px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
+          <Suspense fallback={<ProductDetailSkeleton />}>
+            <ProductDetailClient product={product} googleDiscount={googleDiscount} />
+          </Suspense>
+        </div>
       </div>
 
       {/* Companion Products (Complete the Look) */}

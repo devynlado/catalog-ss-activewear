@@ -1,26 +1,30 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { ShoppingBag, Check, Info } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Check, Info, Sparkles, Truck, FileText, ChevronDown, Package, Tag } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
+import { useCartStore } from '@/lib/cart-store';
+import { useDiscountStore } from '@/lib/discount-store';
+import { GoogleDiscount } from '@/lib/google-discount';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ColorSwatches } from '@/components/builder/ColorSwatches';
 import { SizeDistributionRow } from '@/components/builder/SizeDistributionRow';
 import { SpecsAccordion } from '@/components/builder/SpecsAccordion';
-import { TruncatedDescription } from '@/components/ui/TruncatedDescription';
+import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
 
 interface ProductDetailClientProps {
   product: Product;
+  googleDiscount?: GoogleDiscount | null;
 }
 
 // Type for tracking quantities per color per size
 type ColorQuantities = Record<string, Record<string, number>>;
 
-export function ProductDetailClient({ product }: ProductDetailClientProps) {
+export function ProductDetailClient({ product, googleDiscount: initialDiscount }: ProductDetailClientProps) {
   // Track selected colors (array for multi-color support)
   const [selectedColors, setSelectedColors] = useState<ProductColor[]>([]);
   
@@ -28,11 +32,32 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [colorQuantities, setColorQuantities] = useState<ColorQuantities>({});
   
   const [addedToQuote, setAddedToQuote] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
   
   // Track which image view is active (flat and model views)
   const [activeView, setActiveView] = useState<'front' | 'back' | 'side' | 'modelFront' | 'modelBack' | 'modelSide'>('front');
+  
+  // Track if main image failed to load
+  const [imageError, setImageError] = useState(false);
+  
+  // Track decoration method modal
+  const [isDecorationModalOpen, setIsDecorationModalOpen] = useState(false);
 
   const { addItem } = useQuoteStore();
+  const { addItem: addToCart } = useCartStore();
+  
+  // Google automated discounts
+  const { addDiscount, getDiscountByStyleId } = useDiscountStore();
+  
+  // Store the discount from URL param in the store for persistence
+  useEffect(() => {
+    if (initialDiscount) {
+      addDiscount(initialDiscount);
+    }
+  }, [initialDiscount, addDiscount]);
+  
+  // Get active discount (from store, which persists across navigation)
+  const activeDiscount = getDiscountByStyleId(product.styleId) || initialDiscount;
 
   // Get the currently displayed color (for order summary purposes)
   const displayColor = selectedColors[0] || null;
@@ -63,8 +88,24 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     }
   };
   const imageUrl = getActiveImageUrl();
-  const displayPrice = product.salePrice || product.price;
+  
+  // Price logic: Google discount > sale price > regular price
+  const basePrice = product.salePrice || product.price;
+  const displayPrice = activeDiscount?.price ?? basePrice;
   const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const hasGoogleDiscount = activeDiscount && activeDiscount.price < basePrice;
+  const originalPrice = hasGoogleDiscount ? basePrice : (hasDiscount ? product.price : null);
+  
+  // Helper to validate image URLs (must be http/https)
+  const isValidImageUrl = (url: string | undefined | null): url is string => {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  };
+  
+  // Reset image error state when URL changes
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
 
   // Calculate total pieces across all colors and sizes
   const totalPieces = useMemo(() => {
@@ -196,20 +237,67 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     }, 2000);
   };
 
+  // Add all items to cart (for direct checkout)
+  const handleAddToCart = () => {
+    if (totalPieces === 0) return;
+
+    // Loop through all colors and sizes with quantities
+    Object.entries(colorQuantities).forEach(([colorCode, sizeQtys]) => {
+      const color = selectedColors.find((c) => c.colorCode === colorCode);
+      if (!color) return;
+
+      Object.entries(sizeQtys).forEach(([sizeName, quantity]) => {
+        if (quantity <= 0) return;
+
+        const sizeInfo = color.sizes.find((s) => s.name === sizeName);
+        const sku = sizeInfo?.sku || `${product.styleId}-${colorCode}-${sizeName}`;
+
+        // Use discounted price if available
+        const regularPrice = sizeInfo?.price || basePrice;
+        const finalPrice = activeDiscount?.price ?? regularPrice;
+        
+        addToCart({
+          sku,
+          styleId: product.styleId,
+          styleName: product.styleName,
+          brandName: product.brandName,
+          colorName: color.colorName,
+          colorCode: color.colorCode,
+          sizeName,
+          quantity,
+          unitPrice: regularPrice,
+          discountedPrice: activeDiscount ? finalPrice : undefined,
+          discountSource: activeDiscount ? 'google' : undefined,
+          imageUrl: color.frontImage || product.imageUrl,
+        });
+      });
+    });
+
+    setAddedToCart(true);
+    
+    // Reset selections after adding
+    setTimeout(() => {
+      setAddedToCart(false);
+      setSelectedColors([]);
+      setColorQuantities({});
+    }, 2000);
+  };
+
   const canAddToQuote = totalPieces > 0;
+  const canAddToCart = totalPieces > 0;
 
   return (
     <div className="grid gap-6 lg:gap-8 lg:grid-cols-[45fr_55fr]">
       {/* Left: Images (45%) */}
       <div className="space-y-3 lg:space-y-4">
         {/* Main Image - constrained height on mobile to show product info above fold */}
-        <div className="relative overflow-hidden rounded-xl lg:rounded-2xl border border-stone-200 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white">
+        <div className="relative w-full overflow-hidden rounded-xl lg:rounded-2xl border border-stone-200/80 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white shadow-lg shadow-stone-200/50 min-h-[300px] lg:min-h-[400px]">
           {hasDiscount && (
             <Badge variant="error" className="absolute left-3 top-3 lg:left-4 lg:top-4 z-10">
               Sale
             </Badge>
           )}
-          {imageUrl ? (
+          {imageUrl && !imageError ? (
             <Image
               src={imageUrl}
               alt={product.title}
@@ -217,6 +305,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               height={800}
               className="w-full h-auto max-h-[50vh] lg:max-h-none object-contain"
               priority
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center bg-stone-50 text-slate-300">
@@ -227,15 +316,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         {/* Thumbnail Images - horizontal scroll on mobile, wrap on desktop */}
         {activeColor && (
-          activeColor.backImage || 
-          activeColor.sideImage || 
-          activeColor.onModelFrontImage || 
-          activeColor.onModelBackImage || 
-          activeColor.onModelSideImage
+          isValidImageUrl(activeColor.backImage) || 
+          isValidImageUrl(activeColor.sideImage) || 
+          isValidImageUrl(activeColor.onModelFrontImage) || 
+          isValidImageUrl(activeColor.onModelBackImage) || 
+          isValidImageUrl(activeColor.onModelSideImage)
         ) && (
           <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2 lg:pb-0 lg:flex-wrap -mx-4 px-4 lg:mx-0 lg:px-0">
             {/* Flat product images */}
-            {activeColor.frontImage && (
+            {isValidImageUrl(activeColor.frontImage) && (
               <button 
                 onClick={() => setActiveView('front')}
                 className={cn(
@@ -255,7 +344,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 />
               </button>
             )}
-            {activeColor.backImage && (
+            {isValidImageUrl(activeColor.backImage) && (
               <button 
                 onClick={() => setActiveView('back')}
                 className={cn(
@@ -275,7 +364,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 />
               </button>
             )}
-            {activeColor.sideImage && (
+            {isValidImageUrl(activeColor.sideImage) && (
               <button 
                 onClick={() => setActiveView('side')}
                 className={cn(
@@ -297,7 +386,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             )}
             
             {/* Model images (on-model photography) */}
-            {activeColor.onModelFrontImage && (
+            {isValidImageUrl(activeColor.onModelFrontImage) && (
               <button 
                 onClick={() => setActiveView('modelFront')}
                 className={cn(
@@ -317,7 +406,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 />
               </button>
             )}
-            {activeColor.onModelBackImage && (
+            {isValidImageUrl(activeColor.onModelBackImage) && (
               <button 
                 onClick={() => setActiveView('modelBack')}
                 className={cn(
@@ -337,7 +426,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 />
               </button>
             )}
-            {activeColor.onModelSideImage && (
+            {isValidImageUrl(activeColor.onModelSideImage) && (
               <button 
                 onClick={() => setActiveView('modelSide')}
                 className={cn(
@@ -362,55 +451,55 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       </div>
 
       {/* Right: Product Details */}
-      <div>
-        {/* Header */}
-        <div>
-          <p className="text-xs lg:text-sm font-medium uppercase tracking-wide text-brand-600">
-            {product.brandName}
-          </p>
-          <h1 className="mt-1 lg:mt-2 text-xl lg:text-3xl font-bold text-slate-900">
-            {product.title || `${product.brandName} ${product.styleName}`}
-          </h1>
-          <p className="text-xs lg:text-sm text-slate-500">
-            Style #{product.styleName}
-          </p>
-        </div>
-
-        {/* Price */}
-        <div className="mt-2 lg:mt-4 flex items-baseline gap-2 lg:gap-3">
-          {displayPrice > 0 ? (
-            <>
-              <span className="text-2xl lg:text-3xl font-bold text-brand-600">
-                {formatPrice(displayPrice)}
-              </span>
-              {hasDiscount && (
-                <span className="text-lg lg:text-xl text-slate-400 line-through">
-                  {formatPrice(product.price)}
-                </span>
-              )}
-              <span className="text-xs lg:text-sm text-slate-500">per piece</span>
-            </>
-          ) : (
-            <span className="text-lg lg:text-xl font-semibold text-brand-600">
-              Request Quote for Pricing
-            </span>
-          )}
-        </div>
-
-        {/* Brief Description (truncated with read more) */}
-        {product.description && (
-          <div className="mt-4">
-            <TruncatedDescription 
-              html={product.description} 
-              maxLines={3}
-            />
+      <div className="space-y-4 lg:space-y-5">
+        {/* Product Info Card */}
+        <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm p-4 lg:p-6 shadow-lg shadow-stone-200/50">
+          {/* Header */}
+          <div>
+            <p className="text-xs lg:text-sm font-medium uppercase tracking-wide text-brand-600">
+              {product.brandName}
+            </p>
+            <h1 className="mt-1 lg:mt-2 text-xl lg:text-3xl font-bold text-slate-900">
+              {product.title || `${product.brandName} ${product.styleName}`}
+            </h1>
+            <p className="text-xs lg:text-sm text-slate-500">
+              Style #{product.styleName}
+            </p>
           </div>
-        )}
 
-        {/* Color Selection */}
+          {/* Price */}
+          <div className="mt-3 lg:mt-4 flex flex-wrap items-baseline gap-2 lg:gap-3">
+            {displayPrice > 0 ? (
+              <>
+                <span className="text-2xl lg:text-3xl font-bold text-brand-600">
+                  {formatPrice(displayPrice)}
+                </span>
+                {originalPrice && (
+                  <span className="text-lg lg:text-xl text-slate-400 line-through">
+                    {formatPrice(originalPrice)}
+                  </span>
+                )}
+                <span className="text-xs lg:text-sm text-slate-500">per piece</span>
+                {hasGoogleDiscount && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                    <Tag className="w-3 h-3" />
+                    Special Offer
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-lg lg:text-xl font-semibold text-brand-600">
+                Request Quote for Pricing
+              </span>
+            )}
+          </div>
+
+        </div>
+
+        {/* Color Selection Card */}
         {product.colors && product.colors.length > 0 && (
-          <div className="mt-4 lg:mt-6">
-            <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
+          <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm p-4 lg:p-6 shadow-lg shadow-stone-200/50">
+            <h3 className="text-sm lg:text-base font-semibold text-slate-900">
               Select Colors ({product.colors.length} available)
             </h3>
             <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
@@ -431,11 +520,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           </div>
         )}
 
-        {/* Size Distribution Rows */}
+        {/* Size Distribution Rows Card */}
         {selectedColors.length > 0 && (
-          <div className="mt-4 lg:mt-6 space-y-3 lg:space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs lg:text-sm font-semibold text-slate-900">
+          <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm p-4 lg:p-6 shadow-lg shadow-stone-200/50">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm lg:text-base font-semibold text-slate-900">
                 Enter Quantities by Size
               </h3>
               <div className="hidden lg:flex items-center gap-1 text-xs text-slate-500">
@@ -444,24 +533,28 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </div>
             </div>
 
-            {selectedColors.map((color) => (
-              <SizeDistributionRow
-                key={color.colorCode}
-                color={color}
-                quantities={colorQuantities[color.colorCode] || {}}
-                onQuantitiesChange={(qtys) => handleQuantitiesChange(color.colorCode, qtys)}
-                onRemove={() => handleRemoveColor(color.colorCode)}
-                showRemoveButton={selectedColors.length > 1}
-              />
-            ))}
+            <div className="space-y-3 lg:space-y-4">
+              {selectedColors.map((color) => (
+                <SizeDistributionRow
+                  key={color.colorCode}
+                  color={color}
+                  quantities={colorQuantities[color.colorCode] || {}}
+                  onQuantitiesChange={(qtys) => handleQuantitiesChange(color.colorCode, qtys)}
+                  onRemove={() => handleRemoveColor(color.colorCode)}
+                  showRemoveButton={selectedColors.length > 1}
+                />
+              ))}
+            </div>
           </div>
         )}
 
         {/* No colors selected prompt */}
         {selectedColors.length === 0 && product.colors && product.colors.length > 0 && (
-          <div className="mt-4 lg:mt-6 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-4 lg:p-8 text-center">
-            <ShoppingBag className="mx-auto h-8 w-8 lg:h-10 lg:w-10 text-slate-400" />
-            <p className="mt-2 lg:mt-3 text-sm font-medium text-slate-600">
+          <div className="rounded-2xl border-2 border-dashed border-stone-300 bg-gradient-to-br from-stone-50 to-stone-100/50 p-4 lg:p-8 text-center">
+            <div className="mx-auto h-12 w-12 lg:h-14 lg:w-14 rounded-full bg-white shadow-sm flex items-center justify-center">
+              <ShoppingBag className="h-6 w-6 lg:h-7 lg:w-7 text-slate-400" />
+            </div>
+            <p className="mt-3 lg:mt-4 text-sm font-medium text-slate-700">
               Select a color above to enter quantities
             </p>
             <p className="mt-1 text-xs text-slate-500 hidden lg:block">
@@ -472,7 +565,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         {/* Order Summary & Add to Quote */}
         {selectedColors.length > 0 && (
-          <div className="mt-4 lg:mt-6 rounded-xl bg-brand-50 p-4 lg:p-5">
+          <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100/50 border border-brand-200/50 p-4 lg:p-5 shadow-lg shadow-brand-500/10">
             {/* Per-color breakdown - only show when 2+ colors */}
             {colorSubtotals.length > 1 && (
               <div className="space-y-2 mb-3">
@@ -509,42 +602,135 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </div>
             )}
 
-            {/* Add to Quote Button */}
-            <Button
-              onClick={handleAddToQuote}
-              disabled={!canAddToQuote}
-              size="lg"
-              className={cn(
-                'w-full mt-4',
-                addedToQuote && 'bg-green-600 hover:bg-green-700'
-              )}
-            >
-              {addedToQuote ? (
-                <>
-                  <Check className="mr-2 h-5 w-5" />
-                  Added to Quote!
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="mr-2 h-5 w-5" />
-                  Add to Quote
-                </>
-              )}
-            </Button>
+            {/* Primary CTA - Add to Cart */}
+            <div className="mt-5 space-y-4">
+              <Button
+                onClick={handleAddToCart}
+                disabled={!canAddToCart}
+                size="lg"
+                className={cn(
+                  'w-full text-base font-semibold py-4 rounded-xl transition-all duration-200',
+                  addedToCart 
+                    ? 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/25' 
+                    : 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30 hover:scale-[1.02]'
+                )}
+              >
+                {addedToCart ? (
+                  <>
+                    <Check className="mr-2 h-5 w-5" />
+                    Added to Cart
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="mr-2 h-5 w-5" />
+                    Add to Cart
+                  </>
+                )}
+              </Button>
 
-            {!canAddToQuote && (
-              <p className="mt-2 text-xs text-center text-slate-500">
-                Enter quantities for at least one size
+              {/* Trust Signals */}
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-green-100">
+                    <Check className="h-2.5 w-2.5 text-green-600" />
+                  </span>
+                  In Stock
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Truck className="h-4 w-4 text-slate-400" />
+                  Ships in 24-48 hours
+                </span>
+                {grandTotal >= 500 ? (
+                  <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                    <Package className="h-4 w-4" />
+                    Free Shipping
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <Package className="h-4 w-4 text-slate-400" />
+                    Free over $500
+                  </span>
+                )}
+              </div>
+
+              {/* Secondary CTA - Decoration */}
+              <div className="pt-3 border-t border-stone-200">
+                <button
+                  onClick={() => setIsDecorationModalOpen(true)}
+                  disabled={!canAddToQuote}
+                  className={cn(
+                    'w-full group flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed transition-all duration-200',
+                    canAddToQuote
+                      ? 'border-brand-300 bg-brand-50/50 hover:border-brand-400 hover:bg-brand-50'
+                      : 'border-stone-200 bg-stone-50/50 cursor-not-allowed opacity-60'
+                  )}
+                >
+                  <Sparkles className={cn(
+                    'h-5 w-5 transition-colors',
+                    canAddToQuote ? 'text-brand-500 group-hover:text-brand-600' : 'text-slate-400'
+                  )} />
+                  <span className={cn(
+                    'font-medium transition-colors',
+                    canAddToQuote ? 'text-slate-700 group-hover:text-slate-900' : 'text-slate-400'
+                  )}>
+                    Add Your Logo
+                  </span>
+                  <span className={cn(
+                    'text-sm transition-colors',
+                    canAddToQuote ? 'text-slate-500 group-hover:text-slate-600' : 'text-slate-400'
+                  )}>
+                    — From $2/piece
+                  </span>
+                </button>
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Screen print, embroidery & finishing services
+                </p>
+              </div>
+            </div>
+
+            {!canAddToCart && (
+              <p className="mt-3 text-xs text-center text-slate-500">
+                Select colors and enter quantities to continue
               </p>
             )}
           </div>
         )}
 
+        {/* Description Accordion */}
+        {product.description && (
+          <details className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm shadow-lg shadow-stone-200/50 overflow-hidden group">
+            <summary className="flex items-center justify-between p-4 lg:p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-slate-600" />
+                </div>
+                <span className="font-semibold text-slate-900">Description</span>
+              </div>
+              <ChevronDown className="h-5 w-5 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
+            </summary>
+            <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-stone-100">
+              <div 
+                className="pt-4 prose prose-sm prose-slate max-w-none prose-p:text-slate-600 prose-p:leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: product.description }} 
+              />
+            </div>
+          </details>
+        )}
+
         {/* Specifications Accordion */}
-        <div className="mt-4 lg:mt-6">
+        <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm shadow-lg shadow-stone-200/50 overflow-hidden">
           <SpecsAccordion styleId={product.styleId} />
         </div>
       </div>
+
+      {/* Decoration Method Selection Modal */}
+      <DecorationMethodModal
+        isOpen={isDecorationModalOpen}
+        onClose={() => setIsDecorationModalOpen(false)}
+        productStyleId={product.styleId}
+        totalPieces={totalPieces}
+        totalAmount={grandTotal}
+      />
     </div>
   );
 }
