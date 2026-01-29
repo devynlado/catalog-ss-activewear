@@ -124,6 +124,7 @@ export const GMC_CSV_HEADERS = [
   'price',
   'condition',
   'availability',
+  'quantity',
   'brand',
   'gender',
   'age_group',
@@ -159,6 +160,7 @@ export interface ProductVariant {
   sizeName: string;
   customerPrice: number;
   gtin?: string;
+  qty?: number;  // Inventory quantity from Supabase
   pieceWeight?: number;
   material?: string;
   colorSwatchImage?: string;
@@ -174,6 +176,7 @@ export interface GMCFeedRow {
   price: string;
   condition: string;
   availability: string;
+  quantity: string;  // Inventory quantity (999 for in-stock wholesale, 0 for out-of-stock)
   brand: string;
   gender: string;
   age_group: string;
@@ -246,6 +249,7 @@ export function generateFeedRow(
     price: `${salePrice.toFixed(2)} USD`,
     condition: 'new',
     availability: 'in_stock',
+    quantity: String(variant.qty || 999),  // Use actual qty or 999 for wholesale
     brand: variant.brandName,
     gender: determineGender(category),
     age_group: determineAgeGroup(category),

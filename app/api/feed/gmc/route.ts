@@ -149,6 +149,7 @@ async function fetchFromSupabase(): Promise<{
         sizeName: sku.size_name,
         customerPrice: sku.cogs || 0,  // COGS for pricing calculation
         gtin: sku.gtin || '',
+        qty: sku.qty || 0,  // Inventory quantity
         pieceWeight: sku.piece_weight || 0,
         material: product.material || '',
         colorSwatchImage: '',
@@ -159,6 +160,8 @@ async function fetchFromSupabase(): Promise<{
       
       // Override with cached values
       row.availability = sku.availability === 'in_stock' ? 'in_stock' : 'out_of_stock';
+      // Set quantity based on availability (0 if out of stock, actual qty or 999 if in stock)
+      row.quantity = sku.availability === 'in_stock' ? String(sku.qty || 999) : '0';
       row.price = sku.retail_price ? `${sku.retail_price.toFixed(2)} USD` : row.price;
       if (sku.sale_price) {
         row.sale_price = `${sku.sale_price.toFixed(2)} USD`;
