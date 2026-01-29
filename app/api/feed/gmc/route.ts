@@ -124,7 +124,8 @@ async function fetchFromSupabase(): Promise<{
       if (!colorImageMap.has(color.style_id)) {
         colorImageMap.set(color.style_id, new Map());
       }
-      colorImageMap.get(color.style_id)!.set(color.color_code, {
+      // Normalize color_code to string for consistent matching
+      colorImageMap.get(color.style_id)!.set(String(color.color_code), {
         front: color.front_image,
         back: color.back_image,
         side: color.side_image,
@@ -197,19 +198,27 @@ async function fetchFromSupabase(): Promise<{
       row.auto_pricing_min_price = sku.auto_min_price ? `${sku.auto_min_price.toFixed(2)} USD` : '';
       
       // Build additional_image_link from color images (front, back, side)
-      const colorImages = productColorMap?.get(sku.color_code);
+      const colorImages = productColorMap?.get(String(sku.color_code));
       if (colorImages) {
+        // Helper to normalize image URLs to CDN
+        const normalizeCdnUrl = (url: string | null) => 
+          url ? url.replace('www.ssactivewear.com', 'cdn.ssactivewear.com') : null;
+        
+        const front = normalizeCdnUrl(colorImages.front);
+        const back = normalizeCdnUrl(colorImages.back);
+        const side = normalizeCdnUrl(colorImages.side);
+        
         const additionalImages: string[] = [];
         // Add back and side images if they exist
-        if (colorImages.back && colorImages.back !== colorImages.front) {
-          additionalImages.push(colorImages.back);
+        if (back && back !== front) {
+          additionalImages.push(back);
         }
-        if (colorImages.side && colorImages.side !== colorImages.front) {
-          additionalImages.push(colorImages.side);
+        if (side && side !== front) {
+          additionalImages.push(side);
         }
         // Use color front image as primary if available
-        if (colorImages.front && colorImages.front !== row.image_link) {
-          row.image_link = colorImages.front;
+        if (front && front !== row.image_link) {
+          row.image_link = front;
         }
         if (additionalImages.length > 0) {
           row.additional_image_link = additionalImages.join(',');
