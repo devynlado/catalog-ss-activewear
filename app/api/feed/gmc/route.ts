@@ -39,11 +39,12 @@ interface CachedProduct {
     piece_weight: number;
     qty: number;
     availability: string;
-    product_colors: {
-      front_image: string | null;
-      back_image: string | null;
-      side_image: string | null;
-    } | null;
+  }>;
+  product_colors: Array<{
+    color_code: string;
+    front_image: string | null;
+    back_image: string | null;
+    side_image: string | null;
   }>;
 }
 
@@ -100,12 +101,13 @@ async function fetchFromSupabase(): Promise<{
         gtin,
         piece_weight,
         qty,
-        availability,
-        product_colors (
-          front_image,
-          back_image,
-          side_image
-        )
+        availability
+      ),
+      product_colors (
+        color_code,
+        front_image,
+        back_image,
+        side_image
       )
     `)
     .eq('is_active', true)
@@ -145,8 +147,19 @@ async function fetchFromSupabase(): Promise<{
   
   for (const product of products) {
     const skus = product.product_skus || [];
+    const colors = product.product_colors || [];
     const category = categoryMap.get(product.style_id) || 't-shirts' as ProductCategory;
     const tier = (product.popular_tier || 'value') as ProductTier;
+    
+    // Build a map of color_code -> color images for this product
+    const colorImageMap = new Map<string, { front: string | null; back: string | null; side: string | null }>();
+    for (const color of colors) {
+      colorImageMap.set(color.color_code, {
+        front: color.front_image,
+        back: color.back_image,
+        side: color.side_image,
+      });
+    }
     
     for (const sku of skus) {
       const variant: ProductVariant = {
@@ -180,20 +193,19 @@ async function fetchFromSupabase(): Promise<{
       row.auto_pricing_min_price = sku.auto_min_price ? `${sku.auto_min_price.toFixed(2)} USD` : '';
       
       // Build additional_image_link from color images (front, back, side)
-      const colorImages = sku.product_colors;
+      const colorImages = colorImageMap.get(sku.color_code);
       if (colorImages) {
         const additionalImages: string[] = [];
-        // Add back and side images if they exist and are different from main image
-        if (colorImages.back_image && colorImages.back_image !== colorImages.front_image) {
-          additionalImages.push(colorImages.back_image);
+        // Add back and side images if they exist
+        if (colorImages.back && colorImages.back !== colorImages.front) {
+          additionalImages.push(colorImages.back);
         }
-        if (colorImages.side_image && colorImages.side_image !== colorImages.front_image) {
-          additionalImages.push(colorImages.side_image);
+        if (colorImages.side && colorImages.side !== colorImages.front) {
+          additionalImages.push(colorImages.side);
         }
-        // Use front image as primary if style image is different
-        if (colorImages.front_image && colorImages.front_image !== row.image_link) {
-          // Set front image as main image, move style image to additional
-          row.image_link = colorImages.front_image;
+        // Use color front image as primary if available
+        if (colorImages.front && colorImages.front !== row.image_link) {
+          row.image_link = colorImages.front;
         }
         if (additionalImages.length > 0) {
           row.additional_image_link = additionalImages.join(',');
