@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package } from 'lucide-react';
-import { Product, ProductColor } from '@/lib/types';
+import Link from 'next/link';
+import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight } from 'lucide-react';
+import { Product, ProductColor, Category } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
 import { useCartStore } from '@/lib/cart-store';
@@ -23,6 +24,26 @@ interface ProductDetailClientProps {
 
 // Type for tracking quantities per color per size
 type ColorQuantities = Record<string, Record<string, number>>;
+
+// Helper to get "Popular for" tags based on product categories
+function getPopularForTags(categories: Category[]): string[] {
+  const categoryNames = categories.map(c => c.name.toLowerCase());
+  
+  if (categoryNames.some(n => n.includes('polo'))) 
+    return ['Corporate', 'Uniforms', 'Golf Events'];
+  if (categoryNames.some(n => n.includes('cap') || n.includes('hat') || n.includes('headwear'))) 
+    return ['Promo', 'Teams', 'Retail', 'Events'];
+  if (categoryNames.some(n => n.includes('hoodie') || n.includes('sweat') || n.includes('fleece'))) 
+    return ['Streetwear', 'Merch', 'Teams', 'Events'];
+  if (categoryNames.some(n => n.includes('jacket') || n.includes('outerwear'))) 
+    return ['Corporate', 'Teams', 'Uniforms'];
+  if (categoryNames.some(n => n.includes('tank'))) 
+    return ['Events', 'Fitness', 'Promo'];
+  if (categoryNames.some(n => n.includes('t-shirt') || n.includes('tee'))) 
+    return ['Merch Drops', 'Events', 'Promo', 'Uniforms'];
+  
+  return ['Custom Apparel', 'Bulk Orders', 'Events'];
+}
 
 export function ProductDetailClient({ product, googleDiscount: initialDiscount }: ProductDetailClientProps) {
   // Track selected colors (array for multi-color support)
@@ -551,6 +572,21 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
               </div>
             )}
           </div>
+
+          {/* Popular For Tags */}
+          {product.categories && product.categories.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-slate-500 font-medium">Popular for:</span>
+              {getPopularForTags(product.categories).map(tag => (
+                <span 
+                  key={tag} 
+                  className="px-2 py-0.5 text-xs bg-stone-100 text-slate-600 rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Color Selection Card - Enhanced depth */}
@@ -685,26 +721,24 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 )}
               </Button>
 
-              {/* Trust Signals */}
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-green-100">
-                    <Check className="h-2.5 w-2.5 text-green-600" />
-                  </span>
+              {/* Trust Signals - Enhanced Badges */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+                  <Check className="h-3 w-3" />
                   In Stock
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <Truck className="h-4 w-4 text-slate-400" />
-                  Ships within 24 hours
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                  <Truck className="h-3 w-3" />
+                  Ships in 24hrs
                 </span>
                 {grandTotal >= 500 ? (
-                  <span className="flex items-center gap-1.5 text-green-600 font-medium">
-                    <Package className="h-4 w-4" />
-                    Free Shipping
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">
+                    <Package className="h-3 w-3" />
+                    Free Shipping!
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1.5">
-                    <Package className="h-4 w-4 text-slate-400" />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 text-xs font-medium">
+                    <Package className="h-3 w-3" />
                     Free over $500
                   </span>
                 )}
@@ -759,6 +793,30 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
               <SpecsContent styleId={product.styleId} isActive={specsOpened} />
             </div>
           </details>
+
+          {/* Subtle Decoration Hint */}
+          <div className="mt-4 rounded-xl border border-brand-100 bg-gradient-to-r from-brand-50 to-white p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100">
+                <Palette className="h-4 w-4 text-brand-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">
+                  Need these decorated?
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  We offer screen printing, embroidery, and more on this product.
+                </p>
+                <Link 
+                  href="/services" 
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
+                >
+                  Explore decoration services
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

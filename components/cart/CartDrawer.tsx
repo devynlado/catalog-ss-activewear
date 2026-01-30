@@ -414,15 +414,9 @@ export function CartDrawer() {
                           
                           return (
                             <div key={size} className="flex flex-col items-center">
-                              <span className="text-[10px] font-semibold text-slate-500 uppercase">
+                              <span className="text-[10px] font-semibold text-slate-500 uppercase mb-1">
                                 {size}
                               </span>
-                              {upcharge > 0 && (
-                                <span className="text-[9px] text-orange-600 font-medium -mt-0.5 mb-0.5">
-                                  +{formatPrice(upcharge)}
-                                </span>
-                              )}
-                              {upcharge === 0 && <div className="mb-1" />}
                               <input
                                 type="number"
                                 min="0"
@@ -430,6 +424,13 @@ export function CartDrawer() {
                                 onChange={(e) => handleQuantityChange(sizeData.id, parseInt(e.target.value) || 0)}
                                 className="w-full h-8 text-center text-sm font-semibold bg-white border border-stone-200 rounded-md focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors"
                               />
+                              {upcharge > 0 ? (
+                                <span className="text-[9px] text-orange-600 font-medium mt-0.5">
+                                  +{formatPrice(upcharge)}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] mt-0.5 invisible">+$0.00</span>
+                              )}
                             </div>
                           );
                         })}

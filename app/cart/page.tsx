@@ -17,14 +17,6 @@ const glassCard = "bg-white border border-stone-200 rounded-2xl shadow-xl shadow
 // Standard size order for consistent display
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'OS'];
 
-// Size upcharges (typically 2XL+ cost more)
-const SIZE_UPCHARGES: Record<string, number> = {
-  '2XL': 2,
-  '3XL': 3,
-  '4XL': 4,
-  '5XL': 5,
-};
-
 // Normalize size names for sorting
 function normalizeSize(size: string): string {
   const sizeUpper = size.toUpperCase().trim();
@@ -385,20 +377,9 @@ export default function CartPage() {
                           <thead>
                             <tr className="border-b border-stone-200">
                               {sizesToShow.map((size) => {
-                                const upcharge = SIZE_UPCHARGES[size];
-                                const availableSize = group.availableSizes.find(s => normalizeSize(s.name) === size);
-                                const actualPrice = availableSize?.price || group.basePrice;
-                                const basePrice = group.basePrice;
-                                const hasUpcharge = actualPrice > basePrice;
-                                
                                 return (
                                   <th key={size} className="px-1 py-2 text-center">
                                     <div className="text-xs font-bold text-slate-700 uppercase">{size}</div>
-                                    {hasUpcharge && (
-                                      <div className="text-[10px] text-orange-600 font-medium">
-                                        +{formatPrice(actualPrice - basePrice)}
-                                      </div>
-                                    )}
                                   </th>
                                 );
                               })}
@@ -415,26 +396,38 @@ export default function CartPage() {
                               {sizesToShow.map((size) => {
                                 const sizeData = group.sizes.get(size);
                                 const hasQuantity = sizeData && sizeData.quantity > 0;
+                                const availableSize = group.availableSizes.find(s => normalizeSize(s.name) === size);
+                                const actualPrice = availableSize?.price || group.basePrice;
+                                const hasUpcharge = actualPrice > group.basePrice;
                                 
                                 return (
                                   <td key={size} className="px-1 py-2 text-center">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={sizeData?.quantity || ''}
-                                      placeholder=""
-                                      onChange={(e) => handleQuantityChange(
-                                        sizeData?.id || null,
-                                        group,
-                                        size,
-                                        parseInt(e.target.value) || 0
+                                    <div className="flex flex-col items-center">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={sizeData?.quantity || ''}
+                                        placeholder=""
+                                        onChange={(e) => handleQuantityChange(
+                                          sizeData?.id || null,
+                                          group,
+                                          size,
+                                          parseInt(e.target.value) || 0
+                                        )}
+                                        className={`w-14 h-9 text-center text-sm font-semibold rounded-md focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors ${
+                                          hasQuantity 
+                                            ? 'bg-white border-2 border-brand-400 text-slate-900' 
+                                            : 'bg-stone-50 border border-stone-300 text-slate-400'
+                                        }`}
+                                      />
+                                      {hasUpcharge ? (
+                                        <span className="text-[10px] text-orange-600 font-medium mt-0.5">
+                                          +{formatPrice(actualPrice - group.basePrice)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] mt-0.5 invisible">+$0.00</span>
                                       )}
-                                      className={`w-14 h-9 text-center text-sm font-semibold rounded-md focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors ${
-                                        hasQuantity 
-                                          ? 'bg-white border-2 border-brand-400 text-slate-900' 
-                                          : 'bg-stone-50 border border-stone-300 text-slate-400'
-                                      }`}
-                                    />
+                                    </div>
                                   </td>
                                 );
                               })}
