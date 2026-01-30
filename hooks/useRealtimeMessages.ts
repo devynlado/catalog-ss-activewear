@@ -42,11 +42,12 @@ export function useRealtimeMessages({
           // Only process if it's from the current conversation
           if (newMsg.sender_id === recipientId) {
             // Fetch sender details
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { data: sender } = await supabase
               .from('profiles')
               .select('full_name, avatar_url')
               .eq('id', newMsg.sender_id)
-              .single();
+              .single() as { data: any };
 
             const message: Message = {
               id: newMsg.id,

@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('quote_id', quoteId);
     }
 
-    const { data: messages, error } = await query;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: messages, error } = await query as { data: any[] | null; error: any };
 
     if (error) {
       console.error('Error fetching messages:', error);
@@ -105,11 +106,12 @@ export async function POST(request: NextRequest) {
     const { profile: senderProfile } = await getServerProfile();
 
     // Validate recipient exists and get their info
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: recipient } = await supabase
       .from('profiles')
       .select('id, full_name, email, role')
       .eq('id', recipient_id)
-      .single();
+      .single() as { data: { id: string; full_name: string | null; email: string; role: string } | null };
 
     if (!recipient) {
       return NextResponse.json(
@@ -119,7 +121,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert message
-    const { data: message, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: message, error } = await (supabase as any)
       .from('messages')
       .insert({
         sender_id: user.id,

@@ -45,7 +45,8 @@ export default async function RepCustomersPage({
     );
   }
 
-  const { data: customers, error } = await query.limit(50);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: customers } = await query.limit(50) as { data: any[] | null };
 
   return (
     <div className="min-h-screen bg-stone-50">

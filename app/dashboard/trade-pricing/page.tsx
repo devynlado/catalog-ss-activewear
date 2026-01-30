@@ -88,7 +88,8 @@ export default function TradePricingPage() {
         return;
       }
 
-      const { error: updateError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (supabase as any)
         .from('profiles')
         .update({
           asi_number: formData.asi_number || null,

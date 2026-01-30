@@ -60,6 +60,7 @@ export default async function CustomerQuoteDetailPage({
   }
 
   // Fetch quote - must belong to this user
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: quote, error } = await supabase
     .from('quotes')
     .select(`
@@ -75,14 +76,15 @@ export default async function CustomerQuoteDetailPage({
     `)
     .eq('id', params.id)
     .eq('customer_id', user.id)
-    .single();
+    .single() as { data: any; error: any };
 
   if (error || !quote) {
     notFound();
   }
 
   // Mark messages as read for this quote
-  await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any)
     .from('messages')
     .update({ read_at: new Date().toISOString() })
     .eq('quote_id', params.id)

@@ -27,15 +27,17 @@ export default async function RepMessagesPage() {
   }
 
   // Get unique conversations (customers who have messaged this rep or been messaged by this rep)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: sentMessages } = await supabase
     .from('messages')
     .select('recipient_id')
-    .eq('sender_id', user.id);
+    .eq('sender_id', user.id) as { data: any[] | null };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: receivedMessages } = await supabase
     .from('messages')
     .select('sender_id')
-    .eq('recipient_id', user.id);
+    .eq('recipient_id', user.id) as { data: any[] | null };
 
   // Get unique customer IDs
   const customerIds = new Set<string>();
@@ -43,11 +45,12 @@ export default async function RepMessagesPage() {
   receivedMessages?.forEach(m => customerIds.add(m.sender_id));
 
   // Also add assigned customers who haven't messaged yet
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: assignedCustomers } = await supabase
     .from('profiles')
     .select('id')
     .eq('assigned_sales_rep_id', user.id)
-    .eq('role', 'customer');
+    .eq('role', 'customer') as { data: any[] | null };
 
   assignedCustomers?.forEach(c => customerIds.add(c.id));
 

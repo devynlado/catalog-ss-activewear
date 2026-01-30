@@ -65,7 +65,31 @@ export default async function CustomersPage({
     );
   }
 
-  const { data: customers, error } = await query.limit(50);
+  const { data: customers } = await query.limit(50) as { data: Array<{
+    id: string;
+    email: string;
+    full_name?: string | null;
+    avatar_url?: string | null;
+    company?: string | null;
+    phone?: string | null;
+    customer_type: 'direct' | 'distributor';
+    verification_status?: 'pending' | 'approved' | 'denied' | null;
+    asi_number?: string | null;
+    ppai_number?: string | null;
+    business_type?: string | null;
+    website?: string | null;
+    billing_address_city?: string | null;
+    billing_address_state?: string | null;
+    created_at: string;
+    assigned_rep?: {
+      id: string;
+      full_name: string;
+      email: string;
+      avatar_url?: string | null;
+      phone?: string | null;
+      calendly_url?: string | null;
+    } | null;
+  }> | null };
 
   // Get type counts
   const { count: allCount } = await supabase

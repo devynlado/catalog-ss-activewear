@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert the view (update viewed_at if exists)
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('recently_viewed_products')
       .upsert(
         {

@@ -40,11 +40,12 @@ export async function POST(request: Request) {
     }
 
     // Get the applicant's info for email
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: applicant, error: fetchError } = await supabase
       .from('profiles')
       .select('email, company')
       .eq('id', applicationId)
-      .single();
+      .single() as { data: { email: string; company: string | null } | null; error: any };
 
     if (fetchError || !applicant) {
       console.error('Failed to fetch applicant:', fetchError);
@@ -69,7 +70,8 @@ export async function POST(request: Request) {
           verified_by: user.id,
         };
 
-    const { error: updateError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (supabase as any)
       .from('profiles')
       .update(updateData)
       .eq('id', applicationId);

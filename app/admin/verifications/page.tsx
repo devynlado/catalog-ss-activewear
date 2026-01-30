@@ -37,19 +37,21 @@ export default async function VerificationsPage() {
   }
 
   // Get pending verifications
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: pendingApplications } = await supabase
     .from('profiles')
     .select('*')
     .eq('verification_status', 'pending')
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false }) as { data: any[] | null };
 
   // Get recent approved/denied for reference
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: recentDecisions } = await supabase
     .from('profiles')
     .select('*')
     .in('verification_status', ['approved', 'denied'])
     .order('verified_at', { ascending: false })
-    .limit(10);
+    .limit(10) as { data: any[] | null };
 
   return (
     <div className="min-h-screen bg-stone-50">

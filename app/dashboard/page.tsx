@@ -51,12 +51,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const verificationStatus = profile?.verification_status;
 
   // Get user's quotes with unread message counts
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: quotesData } = await supabase
     .from('quotes')
     .select('*')
     .eq('customer_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(10);
+    .limit(10) as { data: any[] | null };
 
   // Get unread counts for each quote
   const quotes = await Promise.all(

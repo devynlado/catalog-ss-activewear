@@ -57,7 +57,10 @@ export async function getServerSession() {
 /**
  * Get the user's profile from the database (server-side)
  */
-export async function getServerProfile() {
+export async function getServerProfile(): Promise<{ 
+  profile: Database['public']['Tables']['profiles']['Row'] | null; 
+  error: Error | null;
+}> {
   const supabase = await createSupabaseServerClient();
   
   const { data: { user }, error: userError } = await supabase.auth.getUser();

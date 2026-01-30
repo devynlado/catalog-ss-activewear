@@ -830,12 +830,21 @@ export type PaymentInsert = Database['public']['Tables']['payments']['Insert'];
 export type OrderActivity = Database['public']['Tables']['order_activities']['Row'];
 export type OrderActivityInsert = Database['public']['Tables']['order_activities']['Insert'];
 
+// Available size info for cart (used to show all sizes in cart/drawer)
+export interface AvailableSize {
+  name: string;
+  code: string;
+  price: number;
+  inStock: boolean;
+}
+
 // Cart item type (for cart store)
 export interface CartItem {
   id: string;
   sku: string;
   styleId: number;
-  styleName: string;
+  styleName: string;  // Style number (e.g., "202")
+  productTitle?: string;  // Full product name (e.g., "Unisex Fine Jersey T-Shirt")
   brandName: string;
   colorName: string;
   colorCode: string;
@@ -845,6 +854,7 @@ export interface CartItem {
   discountedPrice?: number;  // Google automated discount price
   discountSource?: 'google';  // Track discount origin
   imageUrl?: string;
+  availableSizes?: AvailableSize[];  // All sizes available for this style/color
 }
 
 // Shipping address type

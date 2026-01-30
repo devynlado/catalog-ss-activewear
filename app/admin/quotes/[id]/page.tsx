@@ -62,7 +62,7 @@ export default async function QuoteDetailPage({
   }
 
   // Fetch quote with related data
-  const { data: quote, error } = await supabase
+  const { data: quoteData, error } = await supabase
     .from('quotes')
     .select(`
       *,
@@ -88,9 +88,13 @@ export default async function QuoteDetailPage({
     .eq('id', params.id)
     .single();
 
-  if (error || !quote) {
+  if (error || !quoteData) {
     notFound();
   }
+
+  // Type assertion for quote with nested relations
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const quote = quoteData as any;
 
   // Get sales reps for assignment
   const { data: salesReps } = await supabase

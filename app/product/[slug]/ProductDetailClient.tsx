@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { ShoppingBag, ShoppingCart, Check, Info, Sparkles, Truck, FileText, ChevronDown, Package, Tag } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ColorSwatches } from '@/components/builder/ColorSwatches';
 import { SizeDistributionRow } from '@/components/builder/SizeDistributionRow';
-import { SpecsAccordion } from '@/components/builder/SpecsAccordion';
+import { SpecsContent } from '@/components/builder/SpecsAccordion';
 import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
 
 interface ProductDetailClientProps {
@@ -40,8 +40,8 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   // Track if main image failed to load
   const [imageError, setImageError] = useState(false);
   
-  // Track decoration method modal
-  const [isDecorationModalOpen, setIsDecorationModalOpen] = useState(false);
+  // Track if specs section has been opened (for lazy loading)
+  const [specsOpened, setSpecsOpened] = useState(false);
 
   const { addItem } = useQuoteStore();
   const { addItem: addToCart } = useCartStore();
@@ -95,6 +95,36 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const hasGoogleDiscount = activeDiscount && activeDiscount.price < basePrice;
   const originalPrice = hasGoogleDiscount ? basePrice : (hasDiscount ? product.price : null);
+
+  // Calculate base price (lowest S-XL price, excluding plus size upcharges)
+  const basePriceDisplay = useMemo(() => {
+    // Get the minimum base price across all colors (this is typically the S-XL price)
+    const allBasePrices = product.colors?.flatMap(color => 
+      color.sizes
+        .filter(size => {
+          // Filter to standard sizes only (exclude 2XL, 3XL, 4XL, 5XL which have upcharges)
+          const sizeName = size.name.toUpperCase();
+          return !sizeName.includes('2X') && !sizeName.includes('3X') && 
+                 !sizeName.includes('4X') && !sizeName.includes('5X');
+        })
+        .map(size => size.salePrice || size.price)
+    ) || [];
+    
+    // If no standard sizes found, fall back to all sizes
+    const pricesToConsider = allBasePrices.length > 0 
+      ? allBasePrices 
+      : (product.colors?.flatMap(color => color.sizes.map(size => size.salePrice || size.price)) || []);
+    
+    if (pricesToConsider.length === 0) {
+      return { hasPrice: false, price: 0 };
+    }
+
+    const minPrice = Math.min(...pricesToConsider);
+    return { 
+      hasPrice: true, 
+      price: activeDiscount?.price ?? minPrice 
+    };
+  }, [product.colors, activeDiscount]);
   
   // Helper to validate image URLs (must be http/https)
   const isValidImageUrl = (url: string | undefined | null): url is string => {
@@ -207,6 +237,14 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
       const color = selectedColors.find((c) => c.colorCode === colorCode);
       if (!color) return;
 
+      // Build available sizes array for this color
+      const availableSizes = color.sizes.map(s => ({
+        name: s.name,
+        code: s.code,
+        price: s.price,
+        inStock: s.qty > 0,
+      }));
+
       Object.entries(sizeQtys).forEach(([sizeName, quantity]) => {
         if (quantity <= 0) return;
 
@@ -223,6 +261,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           quantity,
           unitPrice: sizeInfo?.price || displayPrice,
           imageUrl: color.frontImage || product.imageUrl,
+          availableSizes,
         });
       });
     });
@@ -246,6 +285,14 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
       const color = selectedColors.find((c) => c.colorCode === colorCode);
       if (!color) return;
 
+      // Build available sizes array for this color
+      const availableSizes = color.sizes.map(s => ({
+        name: s.name,
+        code: s.code,
+        price: s.price,
+        inStock: s.qty > 0,
+      }));
+
       Object.entries(sizeQtys).forEach(([sizeName, quantity]) => {
         if (quantity <= 0) return;
 
@@ -260,6 +307,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           sku,
           styleId: product.styleId,
           styleName: product.styleName,
+          productTitle: product.title || `${product.brandName} ${product.styleName}`,
           brandName: product.brandName,
           colorName: color.colorName,
           colorCode: color.colorCode,
@@ -269,6 +317,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           discountedPrice: activeDiscount ? finalPrice : undefined,
           discountSource: activeDiscount ? 'google' : undefined,
           imageUrl: color.frontImage || product.imageUrl,
+          availableSizes,
         });
       });
     });
@@ -287,11 +336,11 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   const canAddToCart = totalPieces > 0;
 
   return (
-    <div className="grid gap-6 lg:gap-8 lg:grid-cols-[45fr_55fr]">
+    <div className="grid gap-6 lg:gap-8 lg:grid-cols-[40fr_60fr]">
       {/* Left: Images (45%) */}
       <div className="space-y-3 lg:space-y-4">
-        {/* Main Image - constrained height on mobile to show product info above fold */}
-        <div className="relative w-full overflow-hidden rounded-xl lg:rounded-2xl border border-stone-200/80 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white shadow-lg shadow-stone-200/50 min-h-[300px] lg:min-h-[400px]">
+        {/* Main Image - constrained height on mobile to show product info above fold - Enhanced depth */}
+        <div className="relative w-full overflow-hidden rounded-xl lg:rounded-2xl border border-stone-200 max-h-[50vh] lg:max-h-none flex items-center justify-center bg-white shadow-xl shadow-stone-300/40 min-h-[300px] lg:min-h-[400px]">
           {hasDiscount && (
             <Badge variant="error" className="absolute left-3 top-3 lg:left-4 lg:top-4 z-10">
               Sale
@@ -452,55 +501,63 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
 
       {/* Right: Product Details */}
       <div className="space-y-4 lg:space-y-5">
-        {/* Product Info Card */}
-        <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm p-4 lg:p-6 shadow-lg shadow-stone-200/50">
+        {/* Product Info Card - Enhanced depth */}
+        <div className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
           {/* Header */}
           <div>
-            <p className="text-xs lg:text-sm font-medium uppercase tracking-wide text-brand-600">
+            <p className="text-xs lg:text-sm font-semibold uppercase tracking-wide text-brand-600">
               {product.brandName}
             </p>
             <h1 className="mt-1 lg:mt-2 text-xl lg:text-3xl font-bold text-slate-900">
               {product.title || `${product.brandName} ${product.styleName}`}
             </h1>
-            <p className="text-xs lg:text-sm text-slate-500">
+            <p className="text-xs lg:text-sm text-slate-500 font-medium">
               Style #{product.styleName}
             </p>
           </div>
 
-          {/* Price */}
-          <div className="mt-3 lg:mt-4 flex flex-wrap items-baseline gap-2 lg:gap-3">
-            {displayPrice > 0 ? (
-              <>
-                <span className="text-2xl lg:text-3xl font-bold text-brand-600">
-                  {formatPrice(displayPrice)}
-                </span>
-                {originalPrice && (
-                  <span className="text-lg lg:text-xl text-slate-400 line-through">
-                    {formatPrice(originalPrice)}
-                  </span>
-                )}
-                <span className="text-xs lg:text-sm text-slate-500">per piece</span>
-                {hasGoogleDiscount && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                    <Tag className="w-3 h-3" />
-                    Special Offer
-                  </span>
-                )}
-              </>
-            ) : (
+          {/* Price Display - Clean and minimal */}
+          <div className="mt-4 lg:mt-5">
+            {!basePriceDisplay.hasPrice ? (
               <span className="text-lg lg:text-xl font-semibold text-brand-600">
                 Request Quote for Pricing
               </span>
+            ) : (
+              <div className="flex flex-wrap items-baseline gap-2">
+                {/* From prefix */}
+                <span className="text-base text-slate-500 font-medium">From</span>
+                
+                {/* Main price - bold and prominent */}
+                <span className="text-3xl lg:text-4xl font-bold text-slate-900">
+                  {formatPrice(basePriceDisplay.price)}
+                </span>
+                
+                {/* Per piece label */}
+                <span className="text-base text-slate-500 font-medium">per piece</span>
+                
+                {/* Original price if discounted */}
+                {originalPrice && (
+                  <span className="text-lg text-slate-400 line-through ml-1">
+                    {formatPrice(originalPrice)}
+                  </span>
+                )}
+                
+                {/* Sale badge - simple */}
+                {(hasDiscount || hasGoogleDiscount) && (
+                  <span className="ml-1 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-sm font-semibold">
+                    Sale
+                  </span>
+                )}
+              </div>
             )}
           </div>
-
         </div>
 
-        {/* Color Selection Card */}
+        {/* Color Selection Card - Enhanced depth */}
         {product.colors && product.colors.length > 0 && (
-          <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm p-4 lg:p-6 shadow-lg shadow-stone-200/50">
-            <h3 className="text-sm lg:text-base font-semibold text-slate-900">
-              Select Colors ({product.colors.length} available)
+          <div className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
+            <h3 className="text-sm lg:text-base font-bold text-slate-800">
+              Select Colors <span className="font-normal text-slate-500">({product.colors.length} available)</span>
             </h3>
             <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
               Click colors to add size rows below. Click again to remove.
@@ -520,14 +577,14 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           </div>
         )}
 
-        {/* Size Distribution Rows Card */}
+        {/* Size Distribution Rows Card - Enhanced depth */}
         {selectedColors.length > 0 && (
-          <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm p-4 lg:p-6 shadow-lg shadow-stone-200/50">
+          <div className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm lg:text-base font-semibold text-slate-900">
+              <h3 className="text-sm lg:text-base font-bold text-slate-800">
                 Enter Quantities by Size
               </h3>
-              <div className="hidden lg:flex items-center gap-1 text-xs text-slate-500">
+              <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-500 bg-stone-100 px-2.5 py-1 rounded-full">
                 <Info className="h-3.5 w-3.5" />
                 <span>Stock shown below each size</span>
               </div>
@@ -638,7 +695,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Truck className="h-4 w-4 text-slate-400" />
-                  Ships in 24-48 hours
+                  Ships within 24 hours
                 </span>
                 {grandTotal >= 500 ? (
                   <span className="flex items-center gap-1.5 text-green-600 font-medium">
@@ -653,39 +710,6 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 )}
               </div>
 
-              {/* Secondary CTA - Decoration */}
-              <div className="pt-3 border-t border-stone-200">
-                <button
-                  onClick={() => setIsDecorationModalOpen(true)}
-                  disabled={!canAddToQuote}
-                  className={cn(
-                    'w-full group flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed transition-all duration-200',
-                    canAddToQuote
-                      ? 'border-brand-300 bg-brand-50/50 hover:border-brand-400 hover:bg-brand-50'
-                      : 'border-stone-200 bg-stone-50/50 cursor-not-allowed opacity-60'
-                  )}
-                >
-                  <Sparkles className={cn(
-                    'h-5 w-5 transition-colors',
-                    canAddToQuote ? 'text-brand-500 group-hover:text-brand-600' : 'text-slate-400'
-                  )} />
-                  <span className={cn(
-                    'font-medium transition-colors',
-                    canAddToQuote ? 'text-slate-700 group-hover:text-slate-900' : 'text-slate-400'
-                  )}>
-                    Add Your Logo
-                  </span>
-                  <span className={cn(
-                    'text-sm transition-colors',
-                    canAddToQuote ? 'text-slate-500 group-hover:text-slate-600' : 'text-slate-400'
-                  )}>
-                    — From $2/piece
-                  </span>
-                </button>
-                <p className="mt-2 text-center text-xs text-slate-500">
-                  Screen print, embroidery & finishing services
-                </p>
-              </div>
             </div>
 
             {!canAddToCart && (
@@ -696,41 +720,47 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           </div>
         )}
 
-        {/* Description Accordion */}
-        {product.description && (
-          <details className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm shadow-lg shadow-stone-200/50 overflow-hidden group">
-            <summary className="flex items-center justify-between p-4 lg:p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center">
-                  <FileText className="h-4 w-4 text-slate-600" />
-                </div>
-                <span className="font-semibold text-slate-900">Description</span>
+        {/* Product Details - Minimal collapsible sections */}
+        <div className="space-y-2">
+          {/* Description - First */}
+          {product.description && (
+            <details className="rounded-xl border border-stone-200 bg-white overflow-hidden group">
+              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-stone-50 transition-colors">
+                <span className="font-medium text-slate-700 text-sm">Description</span>
+                <svg className="h-4 w-4 text-slate-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="px-4 pb-4 border-t border-stone-100">
+                <div 
+                  className="pt-3 prose prose-sm prose-slate max-w-none prose-p:text-slate-600 prose-p:leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: product.description }} 
+                />
               </div>
-              <ChevronDown className="h-5 w-5 text-slate-400 transition-transform duration-200 group-open:rotate-180" />
+            </details>
+          )}
+
+          {/* Specifications - Second (lazy loads on open) */}
+          <details 
+            className="rounded-xl border border-stone-200 bg-white overflow-hidden group"
+            onToggle={(e) => {
+              if ((e.target as HTMLDetailsElement).open && !specsOpened) {
+                setSpecsOpened(true);
+              }
+            }}
+          >
+            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-stone-50 transition-colors">
+              <span className="font-medium text-slate-700 text-sm">Specifications</span>
+              <svg className="h-4 w-4 text-slate-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </summary>
-            <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-stone-100">
-              <div 
-                className="pt-4 prose prose-sm prose-slate max-w-none prose-p:text-slate-600 prose-p:leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: product.description }} 
-              />
+            <div className="border-t border-stone-100">
+              <SpecsContent styleId={product.styleId} isActive={specsOpened} />
             </div>
           </details>
-        )}
-
-        {/* Specifications Accordion */}
-        <div className="rounded-2xl border border-stone-200/80 bg-white/70 backdrop-blur-sm shadow-lg shadow-stone-200/50 overflow-hidden">
-          <SpecsAccordion styleId={product.styleId} />
         </div>
       </div>
-
-      {/* Decoration Method Selection Modal */}
-      <DecorationMethodModal
-        isOpen={isDecorationModalOpen}
-        onClose={() => setIsDecorationModalOpen(false)}
-        productStyleId={product.styleId}
-        totalPieces={totalPieces}
-        totalAmount={grandTotal}
-      />
     </div>
   );
 }

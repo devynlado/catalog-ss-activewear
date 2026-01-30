@@ -6,9 +6,10 @@ interface CartStore {
   items: CartItem[];
   isDrawerOpen: boolean;
   justAdded: boolean;
+  hasHydrated: boolean;
   
   // Actions
-  addItem: (item: Omit<CartItem, 'id'>) => void;
+  addItem: (item: Omit<CartItem, 'id'>, options?: { openDrawer?: boolean }) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -16,6 +17,7 @@ interface CartStore {
   closeDrawer: () => void;
   toggleDrawer: () => void;
   clearJustAdded: () => void;
+  setHasHydrated: (hydrated: boolean) => void;
   
   // Computed
   getItemCount: () => number;
@@ -30,8 +32,11 @@ export const useCartStore = create<CartStore>()(
       items: [],
       isDrawerOpen: false,
       justAdded: false,
+      hasHydrated: false,
       
-      addItem: (item) => {
+      addItem: (item, options = {}) => {
+        const { openDrawer = true } = options;
+        
         const newItem: CartItem = {
           ...item,
           id: `${item.sku}-${Date.now()}`,
@@ -46,20 +51,26 @@ export const useCartStore = create<CartStore>()(
           // Update quantity of existing item
           const items = [...get().items];
           items[existingIndex].quantity += item.quantity;
-          set({ items, isDrawerOpen: true, justAdded: true });
+          set({ 
+            items, 
+            isDrawerOpen: openDrawer ? true : get().isDrawerOpen, 
+            justAdded: openDrawer 
+          });
         } else {
           // Add new item
           set((state) => ({ 
             items: [...state.items, newItem],
-            isDrawerOpen: true,
-            justAdded: true,
+            isDrawerOpen: openDrawer ? true : state.isDrawerOpen,
+            justAdded: openDrawer,
           }));
         }
         
-        // Clear justAdded after animation
-        setTimeout(() => {
-          set({ justAdded: false });
-        }, 1000);
+        // Clear justAdded after animation (only if we triggered it)
+        if (openDrawer) {
+          setTimeout(() => {
+            set({ justAdded: false });
+          }, 1000);
+        }
       },
       
       removeItem: (id) => {
@@ -89,6 +100,7 @@ export const useCartStore = create<CartStore>()(
       closeDrawer: () => set({ isDrawerOpen: false }),
       toggleDrawer: () => set((state) => ({ isDrawerOpen: !state.isDrawerOpen })),
       clearJustAdded: () => set({ justAdded: false }),
+      setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
       
       getItemCount: () => {
         return get().items.reduce((sum, item) => sum + item.quantity, 0);
@@ -114,6 +126,9 @@ export const useCartStore = create<CartStore>()(
       partialize: (state) => ({ 
         items: state.items,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

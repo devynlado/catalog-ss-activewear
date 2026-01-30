@@ -87,6 +87,7 @@ export async function PATCH(
     const { status, admin_notes, assigned_sales_rep_id } = body;
 
     // Get current quote state for activity logging (including customer info for emails)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: currentQuote } = await supabase
       .from('quotes')
       .select(`
@@ -99,7 +100,7 @@ export async function PATCH(
         customer_id
       `)
       .eq('id', params.id)
-      .single();
+      .single() as { data: any };
 
     if (!currentQuote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
@@ -147,7 +148,8 @@ export async function PATCH(
     }
 
     // Update quote
-    const { data: quote, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: quote, error } = await (supabase as any)
       .from('quotes')
       .update(updates)
       .eq('id', params.id)
@@ -161,7 +163,8 @@ export async function PATCH(
 
     // Log activities
     if (activities.length > 0) {
-      await supabase.from('quote_activities').insert(activities);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('quote_activities').insert(activities);
     }
 
     // Send email notifications (non-blocking)
@@ -181,11 +184,12 @@ export async function PATCH(
     // Rep assignment email (only if assigning a new rep, not removing)
     if (assigned_sales_rep_id && assigned_sales_rep_id !== currentQuote.assigned_sales_rep_id && customerEmail) {
       // Get rep details
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: repData } = await supabase
         .from('profiles')
         .select('full_name, email, phone, calendly_url')
         .eq('id', assigned_sales_rep_id)
-        .single();
+        .single() as { data: any };
 
       if (repData) {
         sendRepAssignmentEmail(

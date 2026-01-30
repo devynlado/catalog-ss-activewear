@@ -63,9 +63,9 @@ export function SizeDistributionRow({
   }, 0);
 
   return (
-    <div className="rounded-xl border-2 border-stone-200 bg-white overflow-hidden">
+    <div className="rounded-xl border-2 border-stone-300 bg-white overflow-hidden shadow-md">
       {/* Header with color info */}
-      <div className="flex items-center justify-between bg-stone-50 px-4 py-3 border-b border-stone-200">
+      <div className="flex items-center justify-between bg-stone-100 px-4 py-3 border-b border-stone-200">
         <div className="flex items-center gap-3">
           {/* Color swatch */}
           {color.swatchImage ? (
@@ -108,24 +108,25 @@ export function SizeDistributionRow({
 
       {/* Size inputs - Desktop: horizontal row, Mobile: grid */}
       <div className="p-4">
-        {/* Desktop layout */}
-        <div className="hidden sm:flex gap-2 overflow-x-auto pb-2">
+        {/* Desktop layout - wraps to multiple rows if needed */}
+        <div className="hidden sm:flex flex-wrap gap-2">
           {color.sizes.map((size) => {
             const stock = size.qty;
             const indicator = getStockIndicator(stock);
             const isOutOfStock = stock === 0;
             const currentQty = quantities[size.name] || '';
+            const hasQuantity = currentQty !== '' && Number(currentQty) > 0;
 
             return (
               <div
                 key={size.code}
                 className={cn(
-                  'flex flex-col items-center min-w-[70px] p-2 rounded-lg transition-colors',
+                  'flex flex-col items-center min-w-[70px] p-2 rounded-lg transition-all',
                   isOutOfStock ? 'bg-stone-50' : indicator.bgColor
                 )}
               >
                 {/* Size label */}
-                <span className="text-xs font-semibold text-slate-700 mb-1">
+                <span className="text-xs font-bold mb-1 text-slate-700">
                   {size.name}
                 </span>
                 
@@ -139,7 +140,7 @@ export function SizeDistributionRow({
                   min="1"
                   max={stock}
                   className={cn(
-                    'w-14 h-10 text-center text-sm font-semibold rounded-md border-2 transition-colors',
+                    'w-14 h-10 text-center text-sm font-bold rounded-md border-2 transition-all',
                     isOutOfStock
                       ? 'bg-slate-100 border-stone-200 text-slate-400 cursor-not-allowed'
                       : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
@@ -147,7 +148,7 @@ export function SizeDistributionRow({
                 />
                 
                 {/* Price */}
-                <div className="mt-1 text-xs font-semibold text-brand-600">
+                <div className="mt-1 text-xs font-bold text-brand-600">
                   {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
                 </div>
                 
@@ -171,17 +172,18 @@ export function SizeDistributionRow({
             const indicator = getStockIndicator(stock);
             const isOutOfStock = stock === 0;
             const currentQty = quantities[size.name] || '';
+            const hasQuantity = currentQty !== '' && Number(currentQty) > 0;
 
             return (
               <div
                 key={size.code}
                 className={cn(
-                  'flex flex-col items-center p-3 rounded-lg transition-colors',
+                  'flex flex-col items-center p-3 rounded-lg transition-all',
                   isOutOfStock ? 'bg-stone-50' : indicator.bgColor
                 )}
               >
                 {/* Size label */}
-                <span className="text-xs font-semibold text-slate-700 mb-1.5">
+                <span className="text-xs font-bold mb-1.5 text-slate-700">
                   {size.name}
                 </span>
                 
@@ -195,7 +197,7 @@ export function SizeDistributionRow({
                   min="1"
                   max={stock}
                   className={cn(
-                    'w-full h-11 text-center text-base font-semibold rounded-md border-2 transition-colors',
+                    'w-full h-11 text-center text-base font-bold rounded-md border-2 transition-all',
                     isOutOfStock
                       ? 'bg-slate-100 border-stone-200 text-slate-400 cursor-not-allowed'
                       : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
@@ -203,7 +205,7 @@ export function SizeDistributionRow({
                 />
                 
                 {/* Price */}
-                <div className="mt-1 text-xs font-semibold text-brand-600">
+                <div className="mt-1 text-xs font-bold text-brand-600">
                   {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
                 </div>
                 

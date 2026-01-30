@@ -47,24 +47,26 @@ export default async function SalesRepDashboardPage({ searchParams }: SalesRepDa
     }
   }
 
-  const firstName = profile.full_name?.split(' ')[0] || 'there';
+  const firstName = profile?.full_name?.split(' ')[0] || 'there';
 
   // Get assigned customers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: assignedCustomers, count: totalCustomers } = await supabase
     .from('profiles')
     .select('*', { count: 'exact' })
     .eq('assigned_sales_rep_id', user.id)
     .eq('role', 'customer')
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(5) as { data: any[] | null; count: number | null };
 
   // Get assigned quotes
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: assignedQuotes, count: totalQuotes } = await supabase
     .from('quotes')
     .select('*', { count: 'exact' })
     .eq('assigned_sales_rep_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(5) as { data: any[] | null; count: number | null };
 
   // Get new quotes count
   const { count: newQuotesCount } = await supabase
@@ -279,7 +281,7 @@ export default async function SalesRepDashboardPage({ searchParams }: SalesRepDa
         </div>
 
         {/* Calendly Link */}
-        {profile.calendly_url && (
+        {profile?.calendly_url && (
           <div className="mt-6 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>

@@ -22,12 +22,13 @@ export async function PATCH(
     }
 
     // Fetch the quote - must belong to this user AND be in 'new' status
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: quote, error: fetchError } = await supabase
       .from('quotes')
       .select('id, status, customer_id, items')
       .eq('id', params.id)
       .eq('customer_id', user.id)
-      .single();
+      .single() as { data: { id: string; status: string; customer_id: string; items: any } | null; error: any };
 
     if (fetchError || !quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
@@ -46,7 +47,8 @@ export async function PATCH(
     }, 0);
 
     // Update the quote
-    const { data: updatedQuote, error: updateError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: updatedQuote, error: updateError } = await (supabase as any)
       .from('quotes')
       .update({ 
         items,
@@ -63,7 +65,8 @@ export async function PATCH(
     }
 
     // Log the activity
-    await supabase.from('quote_activities').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('quote_activities').insert({
       quote_id: params.id,
       user_id: user.id,
       activity_type: 'items_updated',

@@ -81,7 +81,8 @@ export async function POST(
       );
     }
 
-    const { data: activity, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: activity, error } = await (supabase as any)
       .from('quote_activities')
       .insert({
         quote_id: params.id,

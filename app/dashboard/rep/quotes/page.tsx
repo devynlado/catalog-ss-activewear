@@ -49,7 +49,8 @@ export default async function RepQuotesPage({
     );
   }
 
-  const { data: quotes, error } = await query.limit(50);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: quotes } = await query.limit(50) as { data: any[] | null };
 
   // Get status counts for this rep
   const { count: allCount } = await supabase

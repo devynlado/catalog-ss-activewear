@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
+import { CartDrawer } from '@/components/cart/CartDrawer';
 import { ExitIntentPopup } from '@/components/quote/ExitIntentPopup';
 
 // Routes that should not show the main header/footer
@@ -27,6 +28,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       </main>
       <Footer />
       <QuoteDrawer />
+      <CartDrawer />
       <ExitIntentPopup />
     </>
   );
