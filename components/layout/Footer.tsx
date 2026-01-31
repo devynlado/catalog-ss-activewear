@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Linkedin } from 'lucide-react';
 import { getMainCategories } from '@/lib/category-taxonomy';
+import { trackPhoneClick } from '@/lib/analytics';
 
 // Get main categories for footer links
 const mainCategories = getMainCategories().slice(0, 8);
@@ -50,7 +51,8 @@ export function Footer() {
             
             <div className="space-y-3">
               <a 
-                href="tel:+18559427636" 
+                href="tel:+18559427636"
+                onClick={() => trackPhoneClick({ source: 'footer' })}
                 className="flex items-center gap-3 text-sm text-slate-300 hover:text-brand-400 transition-colors"
               >
                 <Phone className="h-4 w-4 text-brand-500" />

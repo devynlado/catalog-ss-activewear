@@ -33,6 +33,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import { useQuoteStore } from '@/lib/quote-store';
+import { trackQuoteFormSubmit } from '@/lib/analytics';
 import { formatPrice, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -240,6 +241,13 @@ export default function QuotePage() {
         throw new Error(data.error || 'Failed to submit quote');
       }
       
+      // Track successful quote submission
+      trackQuoteFormSubmit({
+        totalItems: items.length,
+        totalUnits: getTotalUnits(),
+        decorationType: decorationDetails.type,
+      });
+
       setSubmitStatus('success');
       setQuoteId(data.quoteId);
       clearQuote();

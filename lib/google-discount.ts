@@ -119,6 +119,16 @@ export async function validateDiscountToken(
       merchantId: discountPayload.m,
     };
     
+    // Debug logging for troubleshooting Google Automated Discounts
+    console.log(`[Google Discount] Validated JWT:`, {
+      offerId: discount.offerId,
+      price: `$${discount.price}`,
+      currency: discount.currency,
+      priorPrice: discount.priorPrice ? `$${discount.priorPrice}` : 'N/A',
+      merchantId: discount.merchantId,
+      expiresAt: new Date(discount.expiresAt).toISOString(),
+    });
+    
     return { success: true, discount };
   } catch (error) {
     // Handle specific JWT errors

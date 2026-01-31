@@ -322,3 +322,51 @@ export function trackCustomQuoteRequest(params: {
     total_units: params.totalUnits,
   });
 }
+
+/**
+ * Track phone click (for call tracking attribution)
+ */
+export function trackPhoneClick(params?: {
+  phoneNumber?: string;
+  source?: string;
+}) {
+  trackEvent('phone_click', {
+    phone_number: params?.phoneNumber || '(855) 942-7636',
+    source: params?.source || 'website',
+    link_url: `tel:${params?.phoneNumber || '+18559427636'}`,
+  });
+}
+
+/**
+ * Track contact form submission
+ */
+export function trackContactFormSubmit(params?: {
+  service?: string;
+  hasPhone?: boolean;
+  hasCompany?: boolean;
+}) {
+  trackEvent('generate_lead', {
+    source: 'contact_form',
+    service: params?.service || 'general',
+    has_phone: params?.hasPhone || false,
+    has_company: params?.hasCompany || false,
+  });
+}
+
+/**
+ * Track quote form submission
+ */
+export function trackQuoteFormSubmit(params: {
+  totalItems: number;
+  totalUnits: number;
+  decorationType: string;
+  estimatedValue?: number;
+}) {
+  trackEvent('generate_lead', {
+    source: 'quote_form',
+    total_items: params.totalItems,
+    total_units: params.totalUnits,
+    decoration_type: params.decorationType,
+    value: params.estimatedValue,
+  });
+}

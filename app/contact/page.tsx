@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
+import { trackContactFormSubmit, trackPhoneClick } from '@/lib/analytics';
 
 // Service name mapping for pre-filling the message
 const serviceNames: Record<string, string> = {
@@ -63,6 +64,13 @@ function ContactForm() {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send message');
       }
+
+      // Track successful form submission
+      trackContactFormSubmit({
+        service: serviceParam ? serviceNames[serviceParam] : undefined,
+        hasPhone: !!formState.phone,
+        hasCompany: !!formState.company,
+      });
 
       setIsSubmitted(true);
     } catch (error) {
@@ -282,6 +290,7 @@ function ContactForm() {
                 {/* Phone */}
                 <a
                   href="tel:+18559427636"
+                  onClick={() => trackPhoneClick({ source: 'contact_page' })}
                   className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition-all hover:shadow-md hover:ring-brand-200"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">

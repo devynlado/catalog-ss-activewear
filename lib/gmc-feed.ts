@@ -165,6 +165,18 @@ export interface ProductVariant {
   material?: string;
   colorSwatchImage?: string;
   styleImage?: string;
+  slug?: string;  // SEO-friendly URL slug (e.g., "bella-canvas-3413")
+}
+
+/**
+ * Generate a slug from brand and style name
+ * Used as fallback if slug is not provided
+ */
+function generateSlug(brandName: string, styleName: string): string {
+  return `${brandName}-${styleName}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 export interface GMCFeedRow {
@@ -240,11 +252,14 @@ export function generateFeedRow(
   // Check if GTIN is valid - if so, include it; otherwise use identifier_exists=false
   const hasValidGtin = isValidGtin(variant.gtin);
   
+  // Use SEO-friendly slug URL (generate from brand/style if not provided)
+  const productSlug = variant.slug || generateSlug(variant.brandName, variant.styleName);
+  
   return {
     id: variant.sku,
     title,
     description,
-    link: `${baseUrl}/product/${variant.styleId}?color=${encodeURIComponent(variant.colorName)}&size=${encodeURIComponent(variant.sizeName)}`,
+    link: `${baseUrl}/product/${productSlug}?color=${encodeURIComponent(variant.colorName)}&size=${encodeURIComponent(variant.sizeName)}`,
     image_link: variant.styleImage || '',
     price: `${salePrice.toFixed(2)} USD`,
     condition: 'new',

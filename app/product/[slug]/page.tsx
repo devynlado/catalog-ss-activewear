@@ -63,8 +63,9 @@ function parseSlugForLookup(slug: string): { brand: string; style: string } | nu
 /**
  * Get product by slug or numeric ID
  * If numeric ID, look up and redirect to slug URL for SEO
+ * Preserves query parameters (especially pv2 for Google Automated Discounts)
  */
-async function getProduct(slugOrId: string) {
+async function getProduct(slugOrId: string, searchParams?: Record<string, string | string[] | undefined>) {
   // Check if it's a numeric ID (legacy URL)
   const numericId = parseInt(slugOrId, 10);
   const isNumericId = !isNaN(numericId) && slugOrId === numericId.toString();
@@ -73,8 +74,21 @@ async function getProduct(slugOrId: string) {
     // Legacy numeric URL - look up product and redirect to slug
     const product = await getProductByNumericId(numericId);
     if (product) {
-      // Redirect to SEO-friendly slug URL
-      redirect(`/product/${product.slug}`);
+      // Preserve query params (especially pv2 for Google Automated Discounts)
+      const queryString = searchParams 
+        ? new URLSearchParams(
+            Object.entries(searchParams).reduce((acc, [key, value]) => {
+              if (typeof value === 'string') acc[key] = value;
+              return acc;
+            }, {} as Record<string, string>)
+          ).toString()
+        : '';
+      
+      const redirectUrl = queryString 
+        ? `/product/${product.slug}?${queryString}`
+        : `/product/${product.slug}`;
+      
+      redirect(redirectUrl);
     }
     return null;
   }
@@ -206,7 +220,7 @@ export async function generateMetadata({ params }: ProductPageProps) {
 }
 
 export default async function ProductPage({ params, searchParams }: ProductPageProps) {
-  const product = await getProduct(params.slug);
+  const product = await getProduct(params.slug, searchParams);
 
   if (!product) {
     notFound();
