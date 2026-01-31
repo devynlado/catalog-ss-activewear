@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Star, TrendingUp, Clock, Factory } from 'lucide-react';
-import { PhoneButton } from '@/components/ui/PhoneButton';
 
 // Hero images - asymmetric duo layout
 const HERO_PRIMARY = {
@@ -116,7 +115,7 @@ export function Hero() {
               className="mt-4 text-base leading-relaxed text-slate-600 sm:mt-6 sm:text-lg"
             >
               Screen printing, embroidery & premium blank apparel — delivered when you need it. 
-              Starting at just 50 pieces (mix sizes, colors & styles!), build your quote in minutes.
+              Shop blanks, add decoration at checkout.
             </motion.p>
             
             <motion.div 
@@ -128,17 +127,19 @@ export function Hero() {
                   href="/catalog"
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
                 >
-                  Start Your Quote
+                  Shop Products
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
                 
-                <PhoneButton 
+                <Link
+                  href="/services"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-navy-800 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:bg-navy-800 hover:text-white hover:-translate-y-0.5"
-                />
+                >
+                  View Services
+                </Link>
               </div>
-              <p className="mt-4 flex items-center gap-2 text-sm text-slate-500">
-                <Clock className="h-4 w-4 text-brand-500" />
-                Quotes in 2 hours or less
+              <p className="mt-4 text-sm text-slate-500">
+                50 piece minimum • Mix sizes, colors & styles • Instant pricing
               </p>
             </motion.div>
             

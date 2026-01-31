@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingBag, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
+import { Menu, X, ShoppingCart, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { useQuoteStore } from '@/lib/quote-store';
+import { useCartStore } from '@/lib/cart-store';
 import { cn } from '@/lib/utils';
 import { Brand } from '@/lib/types';
 import { getMainCategories } from '@/lib/category-taxonomy';
@@ -45,6 +45,12 @@ const servicesMenu = {
     icon: Zap,
     description: 'As fast as 48 hours',
     highlight: true,
+  },
+  largeOrders: {
+    title: 'Large Orders',
+    href: '/services/large-orders',
+    icon: Package,
+    description: '500+ pieces, dedicated support',
   },
 };
 
@@ -350,7 +356,7 @@ export function Header() {
   const shopCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const resourcesCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
-  const { items, openDrawer, justAdded } = useQuoteStore();
+  const { items, openDrawer, justAdded } = useCartStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   // Auto-focus mobile search input when opened
@@ -879,7 +885,9 @@ export function Header() {
                 onMouseEnter={handleServicesEnter}
                 onMouseLeave={handleServicesLeave}
               >
-                <button
+                <Link
+                  href="/services"
+                  onClick={() => setServicesOpen(false)}
                   className={cn(
                     'flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
                     servicesOpen || pathname.startsWith('/services')
@@ -889,7 +897,7 @@ export function Header() {
                 >
                   Services
                   <ChevronDown className={cn('h-4 w-4 transition-transform', servicesOpen && 'rotate-180')} />
-                </button>
+                </Link>
 
                 {servicesOpen && (
                   <div className="absolute left-0 top-full z-50 mt-1 w-[480px] rounded-xl bg-white p-6 shadow-xl ring-1 ring-stone-200">
@@ -980,6 +988,36 @@ export function Header() {
                           <p className="text-xs text-amber-600">{servicesMenu.rush.description}</p>
                         </div>
                         <ChevronRight className="h-5 w-5 text-amber-400 group-hover:text-amber-600" />
+                      </Link>
+
+                      {/* Large Orders */}
+                      <Link
+                        href={servicesMenu.largeOrders.href}
+                        onClick={() => setServicesOpen(false)}
+                        className="col-span-2 flex items-center gap-3 rounded-lg p-3 hover:bg-stone-50 group"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-800 text-white">
+                          <Package className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-slate-800 group-hover:text-brand-600">
+                            {servicesMenu.largeOrders.title}
+                          </h3>
+                          <p className="text-xs text-slate-500">{servicesMenu.largeOrders.description}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-brand-500" />
+                      </Link>
+                    </div>
+
+                    {/* View All Services Link */}
+                    <div className="mt-4 pt-4 border-t border-stone-200">
+                      <Link
+                        href="/services"
+                        onClick={() => setServicesOpen(false)}
+                        className="flex items-center justify-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-700"
+                      >
+                        View all services
+                        <ChevronRight className="h-4 w-4" />
                       </Link>
                     </div>
                   </div>
@@ -1106,17 +1144,17 @@ export function Header() {
               <button
                 onClick={openDrawer}
                 className={cn(
-                  "relative flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-600",
-                  justAdded && "animate-pulse ring-2 ring-brand-300 ring-offset-2"
+                  "relative flex items-center justify-center rounded-2xl border border-stone-200 bg-white/70 p-2.5 text-slate-600 shadow-sm shadow-brand-500/5 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-stone-300 hover:text-slate-900 hover:shadow-xl hover:shadow-brand-500/10",
+                  justAdded && "animate-pulse ring-2 ring-brand-200 ring-offset-1"
                 )}
+                aria-label="Shopping cart"
               >
-                <ShoppingBag className="h-5 w-5" />
-                <span>Get Quote</span>
+                <ShoppingCart className="h-5 w-5" />
                 {itemCount > 0 && (
                   <span className={cn(
-                    "flex items-center justify-center rounded-full bg-white font-bold text-brand-500 transition-transform",
-                    itemCount > 99 ? "h-5 min-w-[1.25rem] px-1.5 text-[10px]" : "h-5 w-5 text-xs",
-                    justAdded && "scale-125"
+                    "absolute -right-1.5 -top-1.5 flex items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 font-semibold text-white shadow-lg shadow-brand-500/30 ring-2 ring-white transition-transform",
+                    itemCount > 99 ? "h-5 min-w-[1.25rem] px-1 text-[10px]" : "h-5 w-5 text-[11px]",
+                    justAdded && "scale-110"
                   )}>
                     {itemCount > 99 ? '99+' : itemCount}
                   </span>
@@ -1124,7 +1162,7 @@ export function Header() {
               </button>
             </div>
 
-            {/* Mobile: Search + Menu buttons */}
+            {/* Mobile: Search + Cart + Menu buttons */}
             <div className="flex items-center gap-1 lg:hidden">
               {/* Mobile Search Icon */}
               <button
@@ -1143,6 +1181,27 @@ export function Header() {
                   <X className="h-6 w-6" />
                 ) : (
                   <Search className="h-6 w-6" />
+                )}
+              </button>
+
+              {/* Mobile Cart Icon */}
+              <button
+                onClick={openDrawer}
+                className={cn(
+                  "relative rounded-2xl border border-stone-200 bg-white/70 p-2 text-slate-600 shadow-sm shadow-brand-500/5 backdrop-blur-sm transition-all duration-200 hover:text-slate-900 hover:shadow-md hover:shadow-brand-500/10",
+                  justAdded && "animate-pulse ring-2 ring-brand-200"
+                )}
+                aria-label="Shopping cart"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {itemCount > 0 && (
+                  <span className={cn(
+                    "absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 font-semibold text-white shadow-lg shadow-brand-500/30 ring-2 ring-white transition-transform",
+                    itemCount > 99 ? "h-4 min-w-[1rem] px-1 text-[9px]" : "h-4 w-4 text-[10px]",
+                    justAdded && "scale-110"
+                  )}>
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
                 )}
               </button>
               
@@ -1219,16 +1278,18 @@ export function Header() {
               >
                 All Products
               </Link>
-              {mainCategories.map((cat) => (
-                <Link
-                  key={cat.name}
-                  href={cat.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
-                >
-                  {cat.name}
-                </Link>
-              ))}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                {mainCategories.map((cat) => (
+                  <Link
+                    key={cat.name}
+                    href={cat.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
 
               {/* Services Section - Prominent */}
               <div className="border-t border-stone-100 pt-3 mt-3">
@@ -1266,6 +1327,21 @@ export function Header() {
                 >
                   <Zap className="h-4 w-4 text-amber-500" />
                   Rush Turnaround
+                </Link>
+                <Link
+                  href="/services/large-orders"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
+                >
+                  <Package className="h-4 w-4 text-navy-600" />
+                  Large Orders (500+)
+                </Link>
+                <Link
+                  href="/services"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 text-sm font-medium text-brand-600 hover:text-brand-700"
+                >
+                  View all services →
                 </Link>
               </div>
 

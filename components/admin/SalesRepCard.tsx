@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Phone, Mail, Calendar, MessageSquare, Star, Zap, Palette, Shirt, Building2, Clock, ArrowRight } from 'lucide-react';
+import { Phone, Mail, Calendar, MessageSquare, Star, Zap, Palette, Shirt, Building2, Clock, ArrowRight, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 // Specialty icons mapping
@@ -11,6 +11,7 @@ const specialtyIcons: Record<string, React.ElementType> = {
   'Corporate': Building2,
   'Rush Orders': Zap,
   'Large Orders': Building2,
+  'Coordinating': Users,
 };
 
 interface SalesRepCardProps {

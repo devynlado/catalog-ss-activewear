@@ -418,6 +418,23 @@ export default function QuotePage() {
 
   return (
     <div className="min-h-screen bg-stone-50">
+      {/* New Flow Banner */}
+      <div className="bg-brand-50 border-b border-brand-200">
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+          <p className="text-center text-sm text-brand-800">
+            <span className="font-semibold">New!</span> Add items to your{' '}
+            <Link href="/cart" className="underline font-medium hover:text-brand-900">
+              cart
+            </Link>
+            {' '}for instant pricing, or{' '}
+            <Link href="/services/large-orders" className="underline font-medium hover:text-brand-900">
+              contact us for large orders (500+ pieces)
+            </Link>
+            .
+          </p>
+        </div>
+      </div>
+
       {/* Trust Signals Banner */}
       <div className="bg-navy-800 text-white py-2.5">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

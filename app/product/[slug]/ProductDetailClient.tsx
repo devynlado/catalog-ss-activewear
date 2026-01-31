@@ -16,6 +16,7 @@ import { ColorSwatches } from '@/components/builder/ColorSwatches';
 import { SizeDistributionRow } from '@/components/builder/SizeDistributionRow';
 import { SpecsContent } from '@/components/builder/SpecsAccordion';
 import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
+import { trackViewItem, trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -79,6 +80,17 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   
   // Get active discount (from store, which persists across navigation)
   const activeDiscount = getDiscountByStyleId(product.styleId) || initialDiscount;
+  
+  // Track view_item event on page load
+  useEffect(() => {
+    trackViewItem({
+      itemId: product.styleId.toString(),
+      itemName: product.title,
+      itemBrand: product.brandName,
+      itemCategory: product.categories?.[0]?.name,
+      price: product.salePrice || product.price,
+    });
+  }, [product.styleId, product.title, product.brandName, product.categories, product.salePrice, product.price]);
 
   // Get the currently displayed color (for order summary purposes)
   const displayColor = selectedColors[0] || null;
@@ -301,6 +313,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   const handleAddToCart = () => {
     if (totalPieces === 0) return;
 
+    // Build items for GA4 tracking
+    const ga4Items: GA4CartItem[] = [];
+
     // Loop through all colors and sizes with quantities
     Object.entries(colorQuantities).forEach(([colorCode, sizeQtys]) => {
       const color = selectedColors.find((c) => c.colorCode === colorCode);
@@ -340,8 +355,31 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           imageUrl: color.frontImage || product.imageUrl,
           availableSizes,
         });
+
+        // Add to GA4 items array
+        ga4Items.push({
+          sku,
+          styleId: product.styleId,
+          styleName: product.styleName,
+          productTitle: product.title,
+          brandName: product.brandName,
+          colorName: color.colorName,
+          colorCode: colorCode,
+          sizeName,
+          quantity,
+          unitPrice: regularPrice,
+          discountedPrice: activeDiscount ? finalPrice : undefined,
+        });
       });
     });
+
+    // Track add_to_cart event
+    if (ga4Items.length > 0) {
+      const totalValue = ga4Items.reduce((sum, item) => 
+        sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0
+      );
+      trackAddToCart({ items: ga4Items, value: totalValue });
+    }
 
     setAddedToCart(true);
     
@@ -805,13 +843,13 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                   Need these decorated?
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  We offer screen printing, embroidery, and more on this product.
+                  Add screen printing or embroidery at checkout.
                 </p>
                 <Link 
                   href="/services" 
                   className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
                 >
-                  Explore decoration services
+                  Learn about decoration
                   <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>

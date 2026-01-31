@@ -8,6 +8,7 @@ interface HowItWorksProps {
   description: string;
   steps?: { title: string; description: string }[];
   image?: { src: string; alt: string };
+  customContent?: React.ReactNode; // Custom content to display instead of image
 }
 
 const containerVariants = {
@@ -27,7 +28,7 @@ const itemVariants = {
   },
 };
 
-export function HowItWorks({ title, description, steps, image }: HowItWorksProps) {
+export function HowItWorks({ title, description, steps, image, customContent }: HowItWorksProps) {
   return (
     <section className="relative py-16 lg:py-20 bg-stone-50 overflow-hidden">
       {/* Grain texture */}
@@ -80,7 +81,7 @@ export function HowItWorks({ title, description, steps, image }: HowItWorksProps
             )}
           </motion.div>
           
-          {/* Process Image */}
+          {/* Process Image or Custom Content */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -88,28 +89,32 @@ export function HowItWorks({ title, description, steps, image }: HowItWorksProps
             transition={{ duration: 0.5, delay: 0.2 }}
             className="relative"
           >
-            <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl shadow-brand-500/10 border border-stone-200">
-              {image ? (
-                <Image
-                  src={image.src}
-                  alt={image.alt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-stone-200 to-stone-300 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/50 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+            {customContent ? (
+              customContent
+            ) : (
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl shadow-brand-500/10 border border-stone-200">
+                {image ? (
+                  <Image
+                    src={image.src}
+                    alt={image.alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-stone-200 to-stone-300 flex items-center justify-center">
+                    <div className="text-center p-8">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/50 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-slate-500">Process image placeholder</p>
                     </div>
-                    <p className="text-sm text-slate-500">Process image placeholder</p>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </motion.div>
         </div>
       </div>

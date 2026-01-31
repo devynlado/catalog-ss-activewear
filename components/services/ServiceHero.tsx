@@ -117,18 +117,18 @@ export function ServiceHero({
           
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link
-              href={serviceSlug ? `/contact?service=${serviceSlug}` : '/contact'}
+              href={serviceSlug ? `/catalog?service=${serviceSlug}` : '/catalog'}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-navy-800 shadow-lg transition-all hover:bg-stone-50 hover:shadow-xl hover:-translate-y-0.5"
             >
-              Request a Quote
+              Shop {title} Blanks
               <ArrowRight className="h-5 w-5" />
             </Link>
-            <a
-              href="tel:+18559427636"
+            <Link
+              href={serviceSlug ? `/contact?service=${serviceSlug}` : '/contact'}
               className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-white/50 px-6 py-3.5 text-base font-semibold text-white transition-all hover:border-white hover:bg-white/10"
             >
-              Call (855) 942-7636
-            </a>
+              Questions? Let&apos;s Talk
+            </Link>
           </div>
         </div>
       </div>

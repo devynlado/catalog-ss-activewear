@@ -2,11 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Package, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Pencil, Paintbrush, Scissors } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { CartItem } from '@/lib/database.types';
 import { formatPrice, cn } from '@/lib/utils';
-import { ShippingMethod, getDeliveryEstimate, formatDateRange } from './ShippingOptions';
+import { ShippingMethod, getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
+import { DecorationSelection } from '@/lib/decoration-pricing';
 
 interface OrderSummaryProps {
   items: CartItem[];
@@ -14,6 +15,7 @@ interface OrderSummaryProps {
   shippingCost: number;
   taxAmount?: number;
   isEditable?: boolean;
+  decoration?: DecorationSelection | null;
 }
 
 // Standard size order for consistent display
@@ -114,7 +116,8 @@ export function OrderSummary({
   shippingMethod,
   shippingCost,
   taxAmount,
-  isEditable = true 
+  isEditable = true,
+  decoration
 }: OrderSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   
@@ -123,6 +126,7 @@ export function OrderSummary({
   
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
+  const decorationTotal = decoration?.totalPrice ?? 0;
   const totalSavings = items.reduce((sum, item) => {
     if (item.discountedPrice && item.discountedPrice < item.unitPrice) {
       return sum + (item.unitPrice - item.discountedPrice) * item.quantity;
@@ -130,12 +134,15 @@ export function OrderSummary({
     return sum;
   }, 0);
   
-  // Calculate tax (8.25% estimate if not provided)
-  const calculatedTax = taxAmount ?? subtotal * 0.0825;
-  const total = subtotal + shippingCost + calculatedTax;
+  // Calculate tax (8.25% estimate if not provided) - include decoration in taxable amount
+  const taxableAmount = subtotal + decorationTotal;
+  const calculatedTax = taxAmount ?? taxableAmount * 0.0825;
+  const total = subtotal + decorationTotal + shippingCost + calculatedTax;
   
-  // Get delivery estimate
-  const deliveryEstimate = getDeliveryEstimate(shippingMethod);
+  // Get delivery estimate - adjust for decoration if present
+  const deliveryEstimate = decoration 
+    ? getDecoratedDeliveryEstimate(shippingMethod)
+    : getDeliveryEstimate(shippingMethod);
 
   // Generate product slug from style name
   const getProductSlug = (group: GroupedItem) => {
@@ -150,27 +157,43 @@ export function OrderSummary({
   return (
     <div className="rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/40 overflow-hidden">
       {/* Header - Collapsible on mobile */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between border-b border-stone-100 bg-gradient-to-r from-stone-50/80 to-white/80 px-5 py-4 lg:cursor-default"
-      >
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between border-b border-stone-100 bg-gradient-to-r from-stone-50/80 to-white/80 px-5 py-4">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-3 lg:cursor-default"
+        >
           <h2 className="font-bold text-slate-800">
             Order Summary
           </h2>
           <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
             {itemCount} {itemCount === 1 ? 'piece' : 'pieces'}
           </span>
-        </div>
-        <div className="flex items-center gap-2 lg:hidden">
-          <span className="font-bold text-navy-800">{formatPrice(total)}</span>
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-slate-400" />
+        </button>
+        <div className="flex items-center gap-4">
+          {/* Edit link - desktop only */}
+          {isEditable && (
+            <Link 
+              href="/cart"
+              className="hidden lg:flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 transition-colors"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </Link>
           )}
+          {/* Mobile expand toggle */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-2 lg:hidden"
+          >
+            <span className="font-bold text-navy-800">{formatPrice(total)}</span>
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            )}
+          </button>
         </div>
-      </button>
+      </div>
 
       {/* Collapsible Content */}
       <div className={cn(
@@ -180,8 +203,11 @@ export function OrderSummary({
         {/* Delivery Estimate Banner */}
         <div className="bg-green-50/80 border-b border-green-100 px-5 py-2.5">
           <p className="text-sm text-green-800">
-            <span className="font-medium">Estimated delivery:</span>{' '}
+            <span className="font-medium">{decoration ? 'Decorated & delivered:' : 'Estimated delivery:'}</span>{' '}
             <span className="font-semibold">{formatDateRange(deliveryEstimate.min, deliveryEstimate.max)}</span>
+            {decoration && (
+              <span className="text-green-600 ml-1">(includes decoration)</span>
+            )}
           </p>
         </div>
 
@@ -280,16 +306,6 @@ export function OrderSummary({
             })}
           </div>
 
-          {/* Edit in cart link */}
-          {isEditable && (
-            <Link 
-              href="/cart"
-              className="mt-4 flex items-center justify-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 transition-colors py-2"
-            >
-              <Pencil className="h-3 w-3" />
-              Edit quantities in cart
-            </Link>
-          )}
         </div>
 
         {/* Totals */}
@@ -303,6 +319,31 @@ export function OrderSummary({
             <div className="flex justify-between text-sm">
               <span className="text-green-600 font-medium">Discount Savings</span>
               <span className="text-green-600 font-medium">-{formatPrice(totalSavings)}</span>
+            </div>
+          )}
+
+          {decoration && (
+            <div className="rounded-lg border border-green-200 bg-green-50/50 p-3 -mx-1">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 flex-shrink-0">
+                  {decoration.type === 'screen-print' ? (
+                    <Paintbrush className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Scissors className="h-4 w-4 text-green-600" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-slate-800">
+                      {decoration.type === 'screen-print' ? 'Screen Printing' : 'Embroidery'} - {decoration.packageName}
+                    </p>
+                    <span className="font-semibold text-slate-800">{formatPrice(decorationTotal)}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {decoration.quantity} pcs × {formatPrice(decoration.pricePerPiece)}/pc • Arrives {formatDateRange(deliveryEstimate.min, deliveryEstimate.max)}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
           

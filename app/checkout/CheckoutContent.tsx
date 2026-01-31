@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -25,7 +25,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { OrderSummary } from './OrderSummary';
-import { getDeliveryEstimate, formatDateRange } from './ShippingOptions';
+import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
+import { trackBeginCheckout, trackAddShippingInfo, CartItem as GA4CartItem } from '@/lib/analytics';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -133,7 +134,7 @@ const usStates = [
 const glassCard = "bg-white border border-stone-200 rounded-2xl shadow-xl shadow-stone-300/40";
 
 export default function CheckoutContent() {
-  const { items } = useCartStore();
+  const { items, decoration, getDecorationTotal } = useCartStore();
   
   // Form state
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(initialShippingInfo);
@@ -152,6 +153,26 @@ export default function CheckoutContent() {
   const totals = calculateOrderTotals(items, shippingMethod);
   const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
   const actualShippingCost = shippingMethod === 'economy' && subtotal >= 500 ? 0 : totals.shippingCost;
+
+  // Track begin_checkout event when page loads with items
+  useEffect(() => {
+    if (items.length > 0) {
+      const ga4Items: GA4CartItem[] = items.map(item => ({
+        sku: item.sku,
+        styleId: item.styleId,
+        styleName: item.styleName,
+        productTitle: item.productTitle,
+        brandName: item.brandName,
+        colorName: item.colorName,
+        colorCode: item.colorCode,
+        sizeName: item.sizeName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discountedPrice: item.discountedPrice,
+      }));
+      trackBeginCheckout({ items: ga4Items, value: totals.total });
+    }
+  }, []); // Only fire once on mount
 
   // Form validation
   const isFormValid = Boolean(
@@ -219,9 +240,13 @@ export default function CheckoutContent() {
     }
   }, [items, shippingInfo, shippingMethod, poNumber, orderNotes, isFormValid]);
 
-  // Get delivery estimates
-  const economyDelivery = getDeliveryEstimate('economy');
-  const expressDelivery = getDeliveryEstimate('same_day');
+  // Get delivery estimates - adjust for decoration if present
+  const economyDelivery = decoration 
+    ? getDecoratedDeliveryEstimate('economy') 
+    : getDeliveryEstimate('economy');
+  const expressDelivery = decoration 
+    ? getDecoratedDeliveryEstimate('same_day') 
+    : getDeliveryEstimate('same_day');
 
   // Show empty cart message
   if (items.length === 0) {
@@ -564,6 +589,7 @@ export default function CheckoutContent() {
                 shippingCost={actualShippingCost}
                 taxAmount={totals.taxAmount}
                 isEditable={!clientSecret} // Shows "Edit in cart" link when not in payment
+                decoration={decoration}
               />
 
               {/* Shipping Method */}

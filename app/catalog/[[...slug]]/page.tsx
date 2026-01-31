@@ -5,7 +5,6 @@ import { ProductGrid } from '@/components/builder/ProductGrid';
 import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 import { ActiveFilters } from '@/components/catalog/ActiveFilters';
 import { MobileFilters } from '@/components/catalog/MobileFilters';
-import { QuoteProgressStepper } from '@/components/quote/QuoteProgressStepper';
 import { resolveSlugPath, getRouteTitle, CATALOG_ROUTES } from '@/lib/catalog-routes';
 import { getCategoryDisplayName, parseCategoryParam, getCategoryParamDisplayName } from '@/lib/category-taxonomy';
 
@@ -111,12 +110,9 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
         <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-brand-500/5 blur-3xl" />
         
         <div className="relative mx-auto max-w-7xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
-          {/* Progress Stepper */}
-          <QuoteProgressStepper currentStep={1} className="mb-4 sm:mb-6" />
-          
           <div className="flex flex-wrap items-center gap-2 sm:block">
             <h1 className="text-2xl font-bold text-navy-800 sm:text-3xl">
-              {route || searchParams.category ? pageTitle : 'Build Your Quote'}
+              {route || searchParams.category ? pageTitle : 'Shop Products'}
             </h1>
             <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 sm:hidden">
               50pc min
@@ -124,12 +120,12 @@ export default function CatalogPage({ params, searchParams }: CatalogPageProps) 
           </div>
           <p className="mt-1 text-sm text-slate-600 sm:mt-2 sm:text-base">
             {route || searchParams.category
-              ? `Add ${pageTitle.toLowerCase()} to your quote`
-              : 'Browse products and add your favorites to your quote'
+              ? `Browse our ${pageTitle.toLowerCase()} collection`
+              : 'All products are decoratable. Add screen printing or embroidery at checkout.'
             }
           </p>
           <p className="mt-1 hidden text-sm text-brand-600 font-medium sm:block">
-            Mix sizes, colors & styles across products — 50 piece minimum
+            Mix sizes, colors & styles across products
           </p>
         </div>
       </div>

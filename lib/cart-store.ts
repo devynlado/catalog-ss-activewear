@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CartItem } from './database.types';
+import { DecorationSelection } from './decoration-pricing';
 
 interface CartStore {
   items: CartItem[];
+  decoration: DecorationSelection | null;
   isDrawerOpen: boolean;
+  isDecorationModalOpen: boolean;
   justAdded: boolean;
   hasHydrated: boolean;
   
@@ -19,18 +22,28 @@ interface CartStore {
   clearJustAdded: () => void;
   setHasHydrated: (hydrated: boolean) => void;
   
+  // Decoration actions
+  setDecoration: (decoration: DecorationSelection | null) => void;
+  clearDecoration: () => void;
+  openDecorationModal: () => void;
+  closeDecorationModal: () => void;
+  
   // Computed
   getItemCount: () => number;
   getUniqueItemCount: () => number;
   getSubtotal: () => number;
   getTotalUnits: () => number;
+  getDecorationTotal: () => number;
+  getGrandTotal: () => number;
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      decoration: null,
       isDrawerOpen: false,
+      isDecorationModalOpen: false,
       justAdded: false,
       hasHydrated: false,
       
@@ -93,8 +106,19 @@ export const useCartStore = create<CartStore>()(
       },
       
       clearCart: () => {
-        set({ items: [] });
+        set({ items: [], decoration: null });
       },
+      
+      setDecoration: (decoration) => {
+        set({ decoration });
+      },
+      
+      clearDecoration: () => {
+        set({ decoration: null });
+      },
+      
+      openDecorationModal: () => set({ isDecorationModalOpen: true }),
+      closeDecorationModal: () => set({ isDecorationModalOpen: false }),
       
       openDrawer: () => set({ isDrawerOpen: true }),
       closeDrawer: () => set({ isDrawerOpen: false }),
@@ -120,11 +144,21 @@ export const useCartStore = create<CartStore>()(
       getTotalUnits: () => {
         return get().items.reduce((sum, item) => sum + item.quantity, 0);
       },
+      
+      getDecorationTotal: () => {
+        const decoration = get().decoration;
+        return decoration ? decoration.totalPrice : 0;
+      },
+      
+      getGrandTotal: () => {
+        return get().getSubtotal() + get().getDecorationTotal();
+      },
     }),
     {
       name: 'garment-decor-cart',
       partialize: (state) => ({ 
         items: state.items,
+        decoration: state.decoration,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
@@ -133,23 +167,3 @@ export const useCartStore = create<CartStore>()(
   )
 );
 
-// Volume discount thresholds (for UI hints)
-export const VOLUME_THRESHOLDS = [
-  { min: 48, discount: 5, label: '5% off' },
-  { min: 144, discount: 10, label: '10% off' },
-  { min: 288, discount: 15, label: '15% off' },
-];
-
-export function getNextVolumeThreshold(currentUnits: number) {
-  for (const threshold of VOLUME_THRESHOLDS) {
-    if (currentUnits < threshold.min) {
-      return {
-        unitsNeeded: threshold.min - currentUnits,
-        threshold: threshold.min,
-        discount: threshold.discount,
-        label: threshold.label,
-      };
-    }
-  }
-  return null; // Already at highest tier
-}

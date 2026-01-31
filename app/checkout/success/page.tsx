@@ -23,6 +23,14 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useCartStore } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
+import { trackPurchase } from '@/lib/analytics';
+
+interface GA4LineItem {
+  item_id: string;
+  item_name: string;
+  price: number;
+  quantity: number;
+}
 
 interface OrderDetails {
   orderNumber: string;
@@ -33,6 +41,8 @@ interface OrderDetails {
   customerCompany?: string;
   customerName?: string;
   shippingMethod?: string;
+  lineItems?: GA4LineItem[];
+  shippingCost?: number;
 }
 
 // Glass card styles
@@ -110,6 +120,24 @@ function SuccessContent() {
         .then((data) => {
           if (data.orderNumber) {
             setOrderDetails(data);
+            
+            // Track GA4 purchase event (with deduplication built into trackPurchase)
+            trackPurchase({
+              transactionId: data.orderNumber,
+              items: (data.lineItems || []).map((item: GA4LineItem) => ({
+                sku: item.item_id,
+                styleId: 0, // Not available from Stripe
+                styleName: item.item_name,
+                brandName: '',
+                colorName: '',
+                colorCode: '',
+                sizeName: '',
+                quantity: item.quantity,
+                unitPrice: item.price,
+              })),
+              value: (data.total || 0) / 100,
+              shipping: data.shippingCost || 0,
+            });
           }
         })
         .catch(console.error)

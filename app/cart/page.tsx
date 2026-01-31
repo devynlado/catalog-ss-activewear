@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, ShoppingCart, Trash2, Tag, Truck, Shield, BadgeCheck, Package, Pencil, Phone, ChevronDown } from 'lucide-react';
-import { useCartStore, getNextVolumeThreshold } from '@/lib/cart-store';
+import { ArrowLeft, ArrowRight, ShoppingCart, Trash2, Tag, Truck, Shield, BadgeCheck, Package, Pencil, Phone, ChevronDown, Paintbrush, Scissors } from 'lucide-react';
+import { useCartStore } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { CartItem, AvailableSize } from '@/lib/database.types';
 import { DecorationPitch } from '@/components/cart/DecorationPitch';
+import { getDecoratedDeliveryEstimate, formatDateRange } from '@/app/checkout/ShippingOptions';
+import { trackViewCart, CartItem as GA4CartItem } from '@/lib/analytics';
 
 // Card styles - stronger contrast/depth
 const glassCard = "bg-white border border-stone-200 rounded-2xl shadow-xl shadow-stone-300/40";
@@ -131,7 +133,11 @@ export default function CartPage() {
     clearCart,
     getSubtotal,
     getTotalUnits,
+    getDecorationTotal,
+    getGrandTotal,
+    decoration,
     hasHydrated,
+    openDecorationModal,
   } = useCartStore();
   
   const [promoCode, setPromoCode] = useState('');
@@ -139,7 +145,6 @@ export default function CartPage() {
   
   const subtotal = getSubtotal();
   const totalUnits = getTotalUnits();
-  const nextThreshold = getNextVolumeThreshold(totalUnits);
   const freeShippingThreshold = 500;
   const qualifiesForFreeShipping = subtotal >= freeShippingThreshold;
   const amountToFreeShipping = freeShippingThreshold - subtotal;
@@ -149,6 +154,26 @@ export default function CartPage() {
 
   // Check if any items have discounts
   const hasDiscounts = items.some(item => item.discountedPrice && item.discountedPrice < item.unitPrice);
+
+  // Track view_cart event when page loads with items
+  useEffect(() => {
+    if (hasHydrated && items.length > 0) {
+      const ga4Items: GA4CartItem[] = items.map(item => ({
+        sku: item.sku,
+        styleId: item.styleId,
+        styleName: item.styleName,
+        productTitle: item.productTitle,
+        brandName: item.brandName,
+        colorName: item.colorName,
+        colorCode: item.colorCode,
+        sizeName: item.sizeName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discountedPrice: item.discountedPrice,
+      }));
+      trackViewCart({ items: ga4Items, value: subtotal });
+    }
+  }, [hasHydrated]); // Only fire once when hydrated
 
   // Handle quantity change
   const handleQuantityChange = (itemId: string | null, group: GroupedItem, sizeName: string, newQuantity: number) => {
@@ -472,7 +497,10 @@ export default function CartPage() {
             </div>
 
             {/* Decoration Services Pitch */}
-            <DecorationPitch totalUnits={totalUnits} />
+            <DecorationPitch 
+              totalUnits={totalUnits} 
+              onOpenModal={openDecorationModal}
+            />
 
             {/* Promo Code Section */}
             <div className={glassCard + " p-4"}>
@@ -502,25 +530,6 @@ export default function CartPage() {
             <div className={glassCard + " p-6 lg:sticky lg:top-24"}>
               <h2 className="text-lg font-bold text-slate-800 mb-4">Order Summary</h2>
 
-              {/* Volume Discount Hint */}
-              {nextThreshold && (
-                <div className="mb-4 rounded-xl bg-gradient-to-r from-brand-50 to-brand-100/50 border border-brand-200 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 flex-shrink-0">
-                      <Tag className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-brand-800">
-                        Unlock {nextThreshold.label}
-                      </p>
-                      <p className="text-xs text-brand-600 mt-0.5">
-                        Add {nextThreshold.unitsNeeded} more pieces to reach {nextThreshold.threshold} total
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-3 border-b border-stone-200 pb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Subtotal ({totalUnits} pieces)</span>
@@ -532,6 +541,33 @@ export default function CartPage() {
                     <span className="font-medium text-green-600">Included</span>
                   </div>
                 )}
+                {decoration && (() => {
+                  const decoratedDelivery = getDecoratedDeliveryEstimate('economy');
+                  return (
+                    <div className="rounded-lg border border-green-200 bg-green-50/50 p-3 -mx-1">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 flex-shrink-0">
+                          {decoration.type === 'screen-print' ? (
+                            <Paintbrush className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Scissors className="h-4 w-4 text-green-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-slate-800">
+                              {decoration.type === 'screen-print' ? 'Screen Printing' : 'Embroidery'} - {decoration.packageName}
+                            </p>
+                            <span className="font-semibold text-slate-800">{formatPrice(getDecorationTotal())}</span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {totalUnits} pcs × {formatPrice(decoration.pricePerPiece)}/pc • Arrives {formatDateRange(decoratedDelivery.min, decoratedDelivery.max)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Shipping</span>
                   <span className="font-medium">
@@ -550,7 +586,7 @@ export default function CartPage() {
 
               <div className="flex justify-between items-center py-4">
                 <span className="text-lg font-bold text-slate-800">Estimated Total</span>
-                <span className="text-2xl font-bold text-brand-600">{formatPrice(subtotal)}</span>
+                <span className="text-2xl font-bold text-brand-600">{formatPrice(getGrandTotal())}</span>
               </div>
 
               <Link href="/checkout">
@@ -621,6 +657,7 @@ export default function CartPage() {
           </p>
         </div>
       </div>
+
     </div>
   );
 }

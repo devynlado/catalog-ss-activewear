@@ -13,8 +13,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['line_items'],
+      expand: ['line_items', 'line_items.data.price.product'],
     });
+
+    // Format line items for GA4 tracking
+    const lineItems = session.line_items?.data?.map(item => ({
+      item_id: item.price?.product && typeof item.price.product !== 'string' 
+        ? item.price.product.metadata?.sku || item.id 
+        : item.id,
+      item_name: item.description || 'Product',
+      price: (item.amount_total || 0) / 100 / (item.quantity || 1),
+      quantity: item.quantity || 1,
+    })) || [];
 
     return NextResponse.json({
       orderNumber: session.metadata?.orderNumber || null,
@@ -31,6 +41,11 @@ export async function GET(request: NextRequest) {
       // Shipping
       shippingMethod: session.metadata?.shippingMethod || 'economy',
       totalPieces: session.metadata?.totalPieces || null,
+      // GA4 tracking data
+      lineItems,
+      shippingCost: session.shipping_cost?.amount_total 
+        ? session.shipping_cost.amount_total / 100 
+        : 0,
     });
   } catch (error) {
     console.error('Error retrieving session:', error);

@@ -5,10 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { X, Trash2, ShoppingCart, ArrowRight, Tag, Truck, Package, Plus, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCartStore, getNextVolumeThreshold } from '@/lib/cart-store';
+import { useCartStore } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { CartItem, AvailableSize } from '@/lib/database.types';
+import { DecorationTeaser } from './DecorationTeaser';
 
 // Quick category links for empty state
 const quickCategories = [
@@ -149,7 +150,6 @@ export function CartDrawer() {
   const router = useRouter();
   const subtotal = getSubtotal();
   const totalUnits = getTotalUnits();
-  const nextThreshold = getNextVolumeThreshold(totalUnits);
   const freeShippingThreshold = 500;
   const awayFromFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
   
@@ -501,20 +501,13 @@ export function CartDrawer() {
         {/* Footer */}
         {items.length > 0 && (
           <div className="relative z-10 border-t border-stone-200/70 bg-white/80 backdrop-blur-sm p-5">
-            {/* Volume Discount Hint */}
-            {nextThreshold && (
-              <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-brand-200/70 bg-gradient-to-r from-brand-50/80 to-brand-100/50 backdrop-blur-sm px-3 py-2.5">
-                <Tag className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-500" />
-                <div>
-                  <p className="text-xs font-semibold text-brand-800">
-                    Add {nextThreshold.unitsNeeded} more pieces for {nextThreshold.label}
-                  </p>
-                  <p className="text-[10px] text-brand-600 mt-0.5">
-                    Reach {nextThreshold.threshold} pieces to unlock
-                  </p>
-                </div>
-              </div>
-            )}
+            {/* Decoration Teaser */}
+            <div className="mb-4">
+              <DecorationTeaser 
+                totalUnits={totalUnits} 
+                onNavigateToCart={handleViewCart}
+              />
+            </div>
 
             {/* Subtotal card */}
             <div className="mb-4 rounded-xl bg-gradient-to-br from-stone-50 to-stone-100/80 backdrop-blur-sm p-4 border border-stone-200/50">
