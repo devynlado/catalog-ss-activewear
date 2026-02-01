@@ -139,7 +139,7 @@ export function ShopBlanksSection({ title, subtitle, categories, serviceSlug }: 
             className="inline-flex items-center justify-center gap-2 bg-brand-500 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-brand-600 transition-colors shadow-lg shadow-brand-500/25 hover:shadow-xl hover:-translate-y-0.5"
           >
             <ShoppingBag className="h-5 w-5" />
-            Start Building Your Quote
+            Shop All Products
           </Link>
           <Link
             href="/pricing"

@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
-import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
-import { MobileQuoteBar } from '@/components/quote/MobileQuoteBar';
-import { ExitIntentPopup } from '@/components/quote/ExitIntentPopup';
+import { LayoutWrapper } from '@/components/layout/LayoutWrapper';
 import { OrganizationJsonLd } from '@/components/seo/JsonLd';
+
+// GA4 Measurement ID from environment
+const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -88,16 +88,28 @@ export default function RootLayout({
     <html lang="en" className={dmSans.variable}>
       <head>
         <OrganizationJsonLd />
+        {/* GA4 Analytics */}
+        {GA4_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA4_ID}'${process.env.NODE_ENV === 'development' ? ", { 'debug_mode': true }" : ''});
+              `}
+            </Script>
+          </>
+        )}
       </head>
       <body className="min-h-screen bg-background font-sans text-text">
-        <Header />
-        <main className="pb-14 lg:pb-0">
+        <LayoutWrapper>
           {children}
-        </main>
-        <Footer />
-        <QuoteDrawer />
-        <MobileQuoteBar />
-        <ExitIntentPopup />
+        </LayoutWrapper>
       </body>
     </html>
   );

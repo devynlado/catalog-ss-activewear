@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { ShoppingBag, ExternalLink, Check, Info, Loader2 } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
-import { useQuoteStore } from '@/lib/quote-store';
+import { useCartStore } from '@/lib/cart-store';
+import { trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { ColorSwatches } from './ColorSwatches';
@@ -33,12 +34,12 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
   // Track quantities per color: { colorCode: { sizeName: quantity } }
   const [colorQuantities, setColorQuantities] = useState<ColorQuantities>({});
   
-  const [addedToQuote, setAddedToQuote] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
   
   // Track which image view is active (flat and model views)
   const [activeView, setActiveView] = useState<'front' | 'back' | 'side' | 'modelFront' | 'modelBack' | 'modelSide'>('front');
 
-  const { addItem } = useQuoteStore();
+  const { addItem } = useCartStore();
   
   // Fetch full product data with SKUs when modal opens
   useEffect(() => {
@@ -177,9 +178,12 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
     setColorQuantities(newQuantities);
   };
 
-  // Add all items to quote
-  const handleAddToQuote = () => {
+  // Add all items to cart
+  const handleAddToCart = () => {
     if (totalPieces === 0) return;
+
+    // Build items for GA4 tracking
+    const ga4Items: GA4CartItem[] = [];
 
     // Loop through all colors and sizes with quantities
     Object.entries(colorQuantities).forEach(([colorCode, sizeQtys]) => {
@@ -190,27 +194,50 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
         if (quantity <= 0) return;
 
         const sizeInfo = color.sizes.find((s) => s.name === sizeName);
+        const sku = `${product.styleId}-${colorCode}-${sizeName}`;
+        const unitPrice = sizeInfo?.price || displayPrice;
 
         addItem({
-          productId: product.id,
+          sku,
           styleId: product.styleId,
           styleName: product.styleName,
+          productTitle: product.title,
           brandName: product.brandName,
           colorName: color.colorName,
-          colorCode: color.colorCode,
+          colorCode: colorCode,
           sizeName,
           quantity,
-          unitPrice: sizeInfo?.price || displayPrice,
+          unitPrice,
           imageUrl: color.frontImage || product.imageUrl,
+        });
+
+        // Add to GA4 items array
+        ga4Items.push({
+          sku,
+          styleId: product.styleId,
+          styleName: product.styleName,
+          productTitle: product.title,
+          brandName: product.brandName,
+          colorName: color.colorName,
+          colorCode,
+          sizeName,
+          quantity,
+          unitPrice,
         });
       });
     });
 
-    setAddedToQuote(true);
+    // Track add_to_cart event
+    if (ga4Items.length > 0) {
+      const totalValue = ga4Items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+      trackAddToCart({ items: ga4Items, value: totalValue });
+    }
+
+    setAddedToCart(true);
     
     // Reset and close after success animation
     setTimeout(() => {
-      setAddedToQuote(false);
+      setAddedToCart(false);
       setSelectedColors([]);
       setColorQuantities({});
       onClose();
@@ -221,13 +248,13 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
   const handleClose = () => {
     setSelectedColors([]);
     setColorQuantities({});
-    setAddedToQuote(false);
+    setAddedToCart(false);
     setActiveView('front');
     setProduct(initialProduct); // Reset to initial product
     onClose();
   };
 
-  const canAddToQuote = totalPieces > 0;
+  const canAddToCart = totalPieces > 0;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="xl">
@@ -488,7 +515,7 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
             )}
           </div>
 
-          {/* Footer: Order Summary & Add to Quote - Fixed */}
+          {/* Footer: Order Summary & Add to Cart - Fixed */}
           <div className="flex-shrink-0 mt-4 lg:mt-5 pt-4 lg:pt-5 border-t border-stone-200">
             {/* Order Summary - Glassmorphism style */}
             {selectedColors.length > 0 && grandTotal > 0 && (
@@ -527,30 +554,30 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
               </div>
             )}
 
-            {/* Add to Quote Button */}
+            {/* Add to Cart Button */}
             <Button
-              onClick={handleAddToQuote}
-              disabled={!canAddToQuote}
+              onClick={handleAddToCart}
+              disabled={!canAddToCart}
               size="lg"
               className={cn(
                 'w-full',
-                addedToQuote && 'bg-green-600 hover:bg-green-700'
+                addedToCart && 'bg-green-600 hover:bg-green-700'
               )}
             >
-              {addedToQuote ? (
+              {addedToCart ? (
                 <>
                   <Check className="mr-2 h-5 w-5" />
-                  Added to Quote!
+                  Added to Cart!
                 </>
               ) : (
                 <>
                   <ShoppingBag className="mr-2 h-5 w-5" />
-                  Add to Quote
+                  Add to Cart
                 </>
               )}
             </Button>
 
-            {!canAddToQuote && selectedColors.length > 0 && (
+            {!canAddToCart && selectedColors.length > 0 && (
               <p className="mt-2 text-xs text-center text-slate-500">
                 Enter quantities for at least one size
               </p>

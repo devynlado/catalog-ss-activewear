@@ -7,26 +7,26 @@ import { ShoppingBag, Upload, PhoneCall, CheckCircle, ArrowRight } from 'lucide-
 const steps = [
   {
     number: 1,
-    title: 'Browse & Build',
-    description: 'Explore our catalog of premium blanks. Add items and quantities to your quote.',
+    title: 'Shop Products',
+    description: 'Browse our catalog of premium blanks. Add items and quantities to your cart.',
     icon: ShoppingBag,
   },
   {
     number: 2,
-    title: 'Tell Us Your Vision',
-    description: 'Share your artwork or describe your design. We handle the rest.',
+    title: 'Add Decoration',
+    description: 'Choose screen printing or embroidery at checkout. Upload your artwork.',
     icon: Upload,
   },
   {
     number: 3,
-    title: 'Get Your Quote',
-    description: "We'll call within 24 hours with pricing, options, and guaranteed delivery date.",
+    title: 'Approve Proof',
+    description: 'Receive a digital proof within 1-2 days. Review and approve to start production.',
     icon: PhoneCall,
   },
   {
     number: 4,
-    title: 'Approve & Produce',
-    description: 'Confirm your order and we start production. Track progress every step.',
+    title: 'Receive Order',
+    description: 'We produce and ship your decorated apparel. Track progress every step.',
     icon: CheckCircle,
   },
 ];
@@ -153,14 +153,14 @@ export function HowItWorks() {
                 Ready to start your project?
               </p>
               <p className="mt-1 text-slate-600">
-                Browse our catalog and build your quote today.
+                Browse our catalog and add decoration at checkout.
               </p>
             </div>
             <Link
               href="/catalog"
               className="group mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-500 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:-translate-y-0.5 sm:mt-0"
             >
-              Start Building Your Quote
+              Shop Products
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>

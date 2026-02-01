@@ -1329,13 +1329,14 @@ function transformProduct(ssProduct: SSProduct): Product {
 /**
  * Build full image URL from SS Activewear image path
  * Normalizes paths and handles various input formats
+ * Uses CDN directly to avoid redirects (www → cdn causes issues with Google)
  */
 function buildImageUrl(imagePath: string): string {
   if (!imagePath) return '';
   
-  // Already a full URL
+  // Already a full URL - normalize to CDN if it's www.ssactivewear.com
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
+    return imagePath.replace('www.ssactivewear.com', 'cdn.ssactivewear.com');
   }
   
   // Remove leading slashes for consistency
@@ -1346,8 +1347,8 @@ function buildImageUrl(imagePath: string): string {
     return `https://${cleanPath}`;
   }
   
-  // Default to www.ssactivewear.com
-  return `https://www.ssactivewear.com/${cleanPath}`;
+  // Default to CDN (not www, which redirects)
+  return `https://cdn.ssactivewear.com/${cleanPath}`;
 }
 
 /**

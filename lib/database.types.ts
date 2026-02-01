@@ -26,6 +26,8 @@ export interface Database {
           notes: string | null;
           subtotal: number;
           status: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
+          customer_id: string | null;
+          assigned_sales_rep_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -42,6 +44,8 @@ export interface Database {
           notes?: string | null;
           subtotal: number;
           status?: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
+          customer_id?: string | null;
+          assigned_sales_rep_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -58,6 +62,8 @@ export interface Database {
           notes?: string | null;
           subtotal?: number;
           status?: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
+          customer_id?: string | null;
+          assigned_sales_rep_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -171,6 +177,117 @@ export interface Database {
           recovered_at?: string | null;
           reminder_sent_at?: string | null;
           created_at?: string;
+        };
+      };
+      // User Profiles Table
+      profiles: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string | null;
+          avatar_url: string | null;
+          role: 'customer' | 'sales_rep' | 'admin';
+          phone: string | null;
+          company: string | null;
+          assigned_sales_rep_id: string | null;
+          calendly_url: string | null;
+          notification_preferences: Json | null;
+          // Customer type & verification
+          customer_type: 'direct' | 'distributor';
+          verification_status: 'pending' | 'approved' | 'denied' | null;
+          verified_at: string | null;
+          verified_by: string | null;
+          verification_notes: string | null;
+          // Industry credentials
+          asi_number: string | null;
+          ppai_number: string | null;
+          business_type: string | null;
+          // Website & Address
+          website: string | null;
+          billing_address_street: string | null;
+          billing_address_city: string | null;
+          billing_address_state: string | null;
+          billing_address_zip: string | null;
+          // Business Licenses
+          business_license: string | null;
+          sellers_permit: string | null;
+          // Tax & Compliance
+          tax_exempt: boolean;
+          resale_certificate: string | null;
+          resale_certificate_expiry: string | null;
+          tax_id: string | null;
+          // Pricing tier
+          pricing_tier: 'standard' | 'bronze' | 'silver' | 'gold' | 'platinum';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: 'customer' | 'sales_rep' | 'admin';
+          phone?: string | null;
+          company?: string | null;
+          assigned_sales_rep_id?: string | null;
+          calendly_url?: string | null;
+          notification_preferences?: Json | null;
+          customer_type?: 'direct' | 'distributor';
+          verification_status?: 'pending' | 'approved' | 'denied' | null;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          verification_notes?: string | null;
+          asi_number?: string | null;
+          ppai_number?: string | null;
+          business_type?: string | null;
+          website?: string | null;
+          billing_address_street?: string | null;
+          billing_address_city?: string | null;
+          billing_address_state?: string | null;
+          billing_address_zip?: string | null;
+          business_license?: string | null;
+          sellers_permit?: string | null;
+          tax_exempt?: boolean;
+          resale_certificate?: string | null;
+          resale_certificate_expiry?: string | null;
+          tax_id?: string | null;
+          pricing_tier?: 'standard' | 'bronze' | 'silver' | 'gold' | 'platinum';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: 'customer' | 'sales_rep' | 'admin';
+          phone?: string | null;
+          company?: string | null;
+          assigned_sales_rep_id?: string | null;
+          calendly_url?: string | null;
+          notification_preferences?: Json | null;
+          customer_type?: 'direct' | 'distributor';
+          verification_status?: 'pending' | 'approved' | 'denied' | null;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          verification_notes?: string | null;
+          asi_number?: string | null;
+          ppai_number?: string | null;
+          business_type?: string | null;
+          website?: string | null;
+          billing_address_street?: string | null;
+          billing_address_city?: string | null;
+          billing_address_state?: string | null;
+          billing_address_zip?: string | null;
+          business_license?: string | null;
+          sellers_permit?: string | null;
+          tax_exempt?: boolean;
+          resale_certificate?: string | null;
+          resale_certificate_expiry?: string | null;
+          tax_id?: string | null;
+          pricing_tier?: 'standard' | 'bronze' | 'silver' | 'gold' | 'platinum';
+          created_at?: string;
+          updated_at?: string;
         };
       };
       // Product Cache Tables
@@ -498,6 +615,177 @@ export interface Database {
           category_id?: number;
         };
       };
+      orders: {
+        Row: {
+          id: string;
+          order_number: string;
+          customer_id: string | null;
+          customer_email: string;
+          customer_name: string | null;
+          customer_phone: string | null;
+          company: string | null;
+          quote_id: string | null;
+          items: Json;
+          subtotal: number;
+          shipping_cost: number;
+          tax_amount: number;
+          discount_amount: number;
+          total: number;
+          shipping_address: Json | null;
+          billing_address: Json | null;
+          payment_method: 'card' | 'ach' | 'invoice' | null;
+          payment_status: 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+          stripe_payment_intent_id: string | null;
+          stripe_charge_id: string | null;
+          po_number: string | null;
+          paid_at: string | null;
+          status: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          tracking_number: string | null;
+          carrier: string | null;
+          shipped_at: string | null;
+          delivered_at: string | null;
+          risk_score: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_number: string;
+          customer_id?: string | null;
+          customer_email: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          company?: string | null;
+          quote_id?: string | null;
+          items: Json;
+          subtotal: number;
+          shipping_cost?: number;
+          tax_amount?: number;
+          discount_amount?: number;
+          total: number;
+          shipping_address?: Json | null;
+          billing_address?: Json | null;
+          payment_method?: 'card' | 'ach' | 'invoice' | null;
+          payment_status?: 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          po_number?: string | null;
+          paid_at?: string | null;
+          status?: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          tracking_number?: string | null;
+          carrier?: string | null;
+          shipped_at?: string | null;
+          delivered_at?: string | null;
+          risk_score?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_number?: string;
+          customer_id?: string | null;
+          customer_email?: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          company?: string | null;
+          quote_id?: string | null;
+          items?: Json;
+          subtotal?: number;
+          shipping_cost?: number;
+          tax_amount?: number;
+          discount_amount?: number;
+          total?: number;
+          shipping_address?: Json | null;
+          billing_address?: Json | null;
+          payment_method?: 'card' | 'ach' | 'invoice' | null;
+          payment_status?: 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          po_number?: string | null;
+          paid_at?: string | null;
+          status?: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          tracking_number?: string | null;
+          carrier?: string | null;
+          shipped_at?: string | null;
+          delivered_at?: string | null;
+          risk_score?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      payments: {
+        Row: {
+          id: string;
+          order_id: string;
+          amount: number;
+          currency: string;
+          type: 'charge' | 'refund';
+          status: 'pending' | 'succeeded' | 'failed';
+          stripe_payment_intent_id: string | null;
+          stripe_charge_id: string | null;
+          stripe_refund_id: string | null;
+          failure_code: string | null;
+          failure_message: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          amount: number;
+          currency?: string;
+          type: 'charge' | 'refund';
+          status: 'pending' | 'succeeded' | 'failed';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          stripe_refund_id?: string | null;
+          failure_code?: string | null;
+          failure_message?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          amount?: number;
+          currency?: string;
+          type?: 'charge' | 'refund';
+          status?: 'pending' | 'succeeded' | 'failed';
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          stripe_refund_id?: string | null;
+          failure_code?: string | null;
+          failure_message?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+      };
+      order_activities: {
+        Row: {
+          id: string;
+          order_id: string;
+          user_id: string | null;
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          user_id?: string | null;
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          details?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          user_id?: string | null;
+          activity_type?: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          details?: Json;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -532,3 +820,53 @@ export type AttributeGroupRow = Database['public']['Tables']['attribute_groups']
 export type AttributeGroupInsert = Database['public']['Tables']['attribute_groups']['Insert'];
 export type ProductCategoryRow = Database['public']['Tables']['product_categories']['Row'];
 export type ProductCategoryInsert = Database['public']['Tables']['product_categories']['Insert'];
+
+// Order System type aliases
+export type Order = Database['public']['Tables']['orders']['Row'];
+export type OrderInsert = Database['public']['Tables']['orders']['Insert'];
+export type OrderUpdate = Database['public']['Tables']['orders']['Update'];
+export type Payment = Database['public']['Tables']['payments']['Row'];
+export type PaymentInsert = Database['public']['Tables']['payments']['Insert'];
+export type OrderActivity = Database['public']['Tables']['order_activities']['Row'];
+export type OrderActivityInsert = Database['public']['Tables']['order_activities']['Insert'];
+
+// Available size info for cart (used to show all sizes in cart/drawer)
+export interface AvailableSize {
+  name: string;
+  code: string;
+  price: number;
+  inStock: boolean;
+}
+
+// Cart item type (for cart store)
+export interface CartItem {
+  id: string;
+  sku: string;
+  styleId: number;
+  styleName: string;  // Style number (e.g., "202")
+  productTitle?: string;  // Full product name (e.g., "Unisex Fine Jersey T-Shirt")
+  brandName: string;
+  colorName: string;
+  colorCode: string;
+  sizeName: string;
+  quantity: number;
+  unitPrice: number;
+  discountedPrice?: number;  // Google automated discount price
+  discountSource?: 'google';  // Track discount origin
+  imageUrl?: string;
+  availableSizes?: AvailableSize[];  // All sizes available for this style/color
+}
+
+// Shipping address type
+export interface ShippingAddress {
+  firstName: string;
+  lastName: string;
+  company?: string;
+  address1: string;
+  address2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone?: string;
+}

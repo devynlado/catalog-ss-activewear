@@ -72,25 +72,18 @@ export function ServiceCTA({
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href={serviceSlug ? `/contact?service=${serviceSlug}` : '/contact'}
+                href={serviceSlug ? `/catalog?service=${serviceSlug}` : '/catalog'}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:-translate-y-0.5"
               >
-                Request a Quote
+                Shop Products
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
-                href={serviceSlug ? `/pricing?service=${serviceSlug}` : '/pricing'}
+                href={serviceSlug ? `/contact?service=${serviceSlug}` : '/contact'}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-stone-300 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:border-brand-300 hover:bg-brand-50"
               >
-                <Calculator className="h-5 w-5" />
-                Get Instant Estimate
+                Questions? Contact Us
               </Link>
-              <a
-                href="tel:+18559427636"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-stone-300 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:border-brand-300 hover:bg-brand-50"
-              >
-                Call (855) 942-7636
-              </a>
             </div>
           </div>
         </motion.div>

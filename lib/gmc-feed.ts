@@ -105,7 +105,16 @@ function escapeCSV(value: string | number | null | undefined): string {
   return str;
 }
 
+// Validate GTIN format (8, 12, 13, or 14 digits, numeric only)
+export function isValidGtin(gtin: string | undefined | null): boolean {
+  if (!gtin || gtin.trim() === '') return false;
+  const cleaned = gtin.trim();
+  // Must be numeric and valid length (8, 12, 13, or 14 digits)
+  return /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(cleaned);
+}
+
 // CSV header row
+// GTIN included when valid; identifier_exists=false when GTIN is missing/invalid
 export const GMC_CSV_HEADERS = [
   'id',
   'title',
@@ -115,12 +124,14 @@ export const GMC_CSV_HEADERS = [
   'price',
   'condition',
   'availability',
+  'quantity',
   'brand',
   'gender',
   'age_group',
   'color',
   'item_group_id',
   'gtin',
+  'identifier_exists',
   'mpn',
   'product_type',
   'additional_image_link',
@@ -149,10 +160,23 @@ export interface ProductVariant {
   sizeName: string;
   customerPrice: number;
   gtin?: string;
+  qty?: number;  // Inventory quantity from Supabase
   pieceWeight?: number;
   material?: string;
   colorSwatchImage?: string;
   styleImage?: string;
+  slug?: string;  // SEO-friendly URL slug (e.g., "bella-canvas-3413")
+}
+
+/**
+ * Generate a slug from brand and style name
+ * Used as fallback if slug is not provided
+ */
+function generateSlug(brandName: string, styleName: string): string {
+  return `${brandName}-${styleName}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 export interface GMCFeedRow {
@@ -164,12 +188,14 @@ export interface GMCFeedRow {
   price: string;
   condition: string;
   availability: string;
+  quantity: string;  // Inventory quantity (999 for in-stock wholesale, 0 for out-of-stock)
   brand: string;
   gender: string;
   age_group: string;
   color: string;
   item_group_id: string;
   gtin: string;
+  identifier_exists: string;  // 'true' when GTIN is valid, 'false' otherwise
   mpn: string;
   product_type: string;
   additional_image_link: string;
@@ -223,21 +249,29 @@ export function generateFeedRow(
     variant.pieceWeight ? `${variant.pieceWeight} oz` : undefined
   );
   
+  // Check if GTIN is valid - if so, include it; otherwise use identifier_exists=false
+  const hasValidGtin = isValidGtin(variant.gtin);
+  
+  // Use SEO-friendly slug URL (generate from brand/style if not provided)
+  const productSlug = variant.slug || generateSlug(variant.brandName, variant.styleName);
+  
   return {
     id: variant.sku,
     title,
     description,
-    link: `${baseUrl}/product/${variant.styleId}?color=${encodeURIComponent(variant.colorName)}&size=${encodeURIComponent(variant.sizeName)}`,
+    link: `${baseUrl}/product/${productSlug}?color=${encodeURIComponent(variant.colorName)}&size=${encodeURIComponent(variant.sizeName)}`,
     image_link: variant.styleImage || '',
     price: `${salePrice.toFixed(2)} USD`,
     condition: 'new',
     availability: 'in_stock',
+    quantity: String(variant.qty || 999),  // Use actual qty or 999 for wholesale
     brand: variant.brandName,
     gender: determineGender(category),
     age_group: determineAgeGroup(category),
     color: variant.colorName,
     item_group_id: String(variant.styleId),
-    gtin: variant.gtin || '',
+    gtin: hasValidGtin ? variant.gtin! : '',
+    identifier_exists: hasValidGtin ? 'true' : 'false',
     mpn: variant.sku,
     product_type: productType,
     additional_image_link: '',

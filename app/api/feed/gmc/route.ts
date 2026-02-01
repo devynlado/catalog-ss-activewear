@@ -48,6 +48,7 @@ interface CachedProduct {
 async function fetchFromSupabase(): Promise<{
   rows: GMCFeedRow[];
   fromCache: boolean;
+  debug?: { colorRecords: number; colorProducts: number };
 }> {
   const supabase = createServerSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
@@ -109,6 +110,32 @@ async function fetchFromSupabase(): Promise<{
   // Cast to typed array
   const products = data as CachedProduct[];
   
+  // Fetch color images separately (no FK relationship in Supabase)
+  const styleIds = products.map(p => p.style_id);
+  type ColorRecord = { style_id: number; color_code: string; front_image: string | null; back_image: string | null; side_image: string | null };
+  const { data: colorData } = await supabase
+    .from('product_colors')
+    .select('style_id, color_code, front_image, back_image, side_image')
+    .in('style_id', styleIds) as { data: ColorRecord[] | null };
+  
+  // Build a lookup map: style_id -> color_code -> images
+  const colorImageMap = new Map<number, Map<string, { front: string | null; back: string | null; side: string | null }>>();
+  if (colorData) {
+    for (const color of colorData) {
+      if (!colorImageMap.has(color.style_id)) {
+        colorImageMap.set(color.style_id, new Map());
+      }
+      // Normalize color_code to string for consistent matching
+      colorImageMap.get(color.style_id)!.set(String(color.color_code), {
+        front: color.front_image,
+        back: color.back_image,
+        side: color.side_image,
+      });
+    }
+  }
+  const colorDataCount = colorData?.length || 0;
+  console.log(`[GMC Feed] Loaded ${colorDataCount} color records for ${colorImageMap.size} products`);
+  
   // Build a map of style_id -> category from POPULAR_PRODUCTS
   const categoryMap = new Map<number, ProductCategory>();
   const styleIdMap = new Map<string, number>();
@@ -138,6 +165,9 @@ async function fetchFromSupabase(): Promise<{
     const category = categoryMap.get(product.style_id) || 't-shirts' as ProductCategory;
     const tier = (product.popular_tier || 'value') as ProductTier;
     
+    // Get color images for this product from the pre-built map
+    const productColorMap = colorImageMap.get(product.style_id);
+    
     for (const sku of skus) {
       const variant: ProductVariant = {
         sku: sku.sku,
@@ -149,6 +179,7 @@ async function fetchFromSupabase(): Promise<{
         sizeName: sku.size_name,
         customerPrice: sku.cogs || 0,  // COGS for pricing calculation
         gtin: sku.gtin || '',
+        qty: sku.qty || 0,  // Inventory quantity
         pieceWeight: sku.piece_weight || 0,
         material: product.material || '',
         colorSwatchImage: '',
@@ -159,6 +190,8 @@ async function fetchFromSupabase(): Promise<{
       
       // Override with cached values
       row.availability = sku.availability === 'in_stock' ? 'in_stock' : 'out_of_stock';
+      // Set quantity based on availability (0 if out of stock, actual qty or 999 if in stock)
+      row.quantity = sku.availability === 'in_stock' ? String(sku.qty || 999) : '0';
       row.price = sku.retail_price ? `${sku.retail_price.toFixed(2)} USD` : row.price;
       if (sku.sale_price) {
         row.sale_price = `${sku.sale_price.toFixed(2)} USD`;
@@ -166,12 +199,44 @@ async function fetchFromSupabase(): Promise<{
       row.cost_of_goods_sold = sku.cogs ? `${sku.cogs.toFixed(2)} USD` : '';
       row.auto_pricing_min_price = sku.auto_min_price ? `${sku.auto_min_price.toFixed(2)} USD` : '';
       
+      // Build additional_image_link from color images (front, back, side)
+      const colorImages = productColorMap?.get(String(sku.color_code));
+      if (colorImages) {
+        // Helper to normalize image URLs to CDN
+        const normalizeCdnUrl = (url: string | null) => 
+          url ? url.replace('www.ssactivewear.com', 'cdn.ssactivewear.com') : null;
+        
+        const front = normalizeCdnUrl(colorImages.front);
+        const back = normalizeCdnUrl(colorImages.back);
+        const side = normalizeCdnUrl(colorImages.side);
+        
+        const additionalImages: string[] = [];
+        // Add back and side images if they exist
+        if (back && back !== front) {
+          additionalImages.push(back);
+        }
+        if (side && side !== front) {
+          additionalImages.push(side);
+        }
+        // Use color front image as primary if available
+        if (front && front !== row.image_link) {
+          row.image_link = front;
+        }
+        if (additionalImages.length > 0) {
+          row.additional_image_link = additionalImages.join(',');
+        }
+      }
+      
       feedRows.push(row);
     }
   }
   
   console.log(`[GMC Feed] Generated ${feedRows.length} rows from Supabase cache`);
-  return { rows: feedRows, fromCache: true };
+  return { 
+    rows: feedRows, 
+    fromCache: true,
+    debug: { colorRecords: colorDataCount, colorProducts: colorImageMap.size }
+  };
 }
 
 // ============================================================================
@@ -303,12 +368,14 @@ export async function GET(request: NextRequest) {
     // ========================================================================
     // TRY SUPABASE CACHE FIRST (fast: ~1-2 seconds vs 30-60 seconds)
     // ========================================================================
+    let debugInfo: { colorRecords: number; colorProducts: number } | undefined;
     if (!forceRefresh) {
       try {
         const cached = await fetchFromSupabase();
         if (cached.fromCache && cached.rows.length > 0) {
           feedRows = cached.rows;
           source = 'supabase_cache';
+          debugInfo = cached.debug;
           console.log(`[GMC Feed] Using Supabase cache (${feedRows.length} rows)`);
         }
       } catch (cacheError) {
@@ -360,6 +427,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         count: finalRows.length,
         source,
+        debug: debugInfo,
         products: finalRows,
       });
     }

@@ -185,6 +185,7 @@ export interface ProductSize {
   salePrice: number | null;
   qty: number;
   gtin: string;
+  sku?: string;
 }
 
 export interface Category {
