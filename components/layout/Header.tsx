@@ -1071,75 +1071,76 @@ export function Header() {
 
             {/* Right side - Auth + Quote CTA */}
             <div className="hidden items-center gap-3 lg:flex">
-              {/* User Menu / Sign In */}
-              {!userLoading && (
-                user ? (
-                  <div className="relative" ref={userMenuRef}>
-                    <button
-                      onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 transition-colors"
-                    >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-600">
-                        {user.user_metadata?.avatar_url ? (
-                          <Image
-                            src={user.user_metadata.avatar_url}
-                            alt=""
-                            width={32}
-                            height={32}
-                            className="rounded-full"
-                          />
-                        ) : (
-                          <User className="h-4 w-4" />
-                        )}
-                      </div>
-                      <ChevronDown className={cn('h-4 w-4 transition-transform', userMenuOpen && 'rotate-180')} />
-                    </button>
-
-                    {userMenuOpen && (
-                      <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl bg-white p-2 shadow-xl ring-1 ring-stone-200">
-                        <div className="border-b border-stone-100 px-3 py-2 mb-2">
-                          <p className="text-sm font-medium text-slate-900 truncate">
-                            {user.user_metadata?.full_name || user.user_metadata?.name || 'User'}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">{user.email}</p>
-                        </div>
-                        <Link
-                          href="/dashboard"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
-                        >
-                          <LayoutDashboard className="h-4 w-4" />
-                          Dashboard
-                        </Link>
-                        <Link
-                          href="/dashboard/settings"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
-                        >
-                          <Settings className="h-4 w-4" />
-                          Settings
-                        </Link>
-                        <div className="border-t border-stone-100 mt-2 pt-2">
-                          <button
-                            onClick={handleSignOut}
-                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                          >
-                            <LogOut className="h-4 w-4" />
-                            Sign Out
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 transition-colors"
+              {/* User Menu - Sign In hidden for MVP (dashboard not ready) */}
+              {!userLoading && user && (
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 transition-colors"
                   >
-                    Sign In
-                  </Link>
-                )
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                      {user.user_metadata?.avatar_url ? (
+                        <Image
+                          src={user.user_metadata.avatar_url}
+                          alt=""
+                          width={32}
+                          height={32}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <User className="h-4 w-4" />
+                      )}
+                    </div>
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', userMenuOpen && 'rotate-180')} />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl bg-white p-2 shadow-xl ring-1 ring-stone-200">
+                      <div className="border-b border-stone-100 px-3 py-2 mb-2">
+                        <p className="text-sm font-medium text-slate-900 truncate">
+                          {user.user_metadata?.full_name || user.user_metadata?.name || 'User'}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                      </div>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-stone-50"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+                      <div className="border-t border-stone-100 mt-2 pt-2">
+                        <button
+                          onClick={handleSignOut}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
+              {/* TODO: Re-enable Sign In link when dashboard is ready
+              {!userLoading && !user && (
+                <Link
+                  href="/login"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 transition-colors"
+                >
+                  Sign In
+                </Link>
+              )}
+              */}
 
               <button
                 onClick={openDrawer}
@@ -1443,69 +1444,72 @@ export function Header() {
                 </Link>
               </div>
 
-              {/* Auth Section */}
-              <div className="border-t border-stone-100 pt-4 mt-4">
-                {!userLoading && (
-                  user ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 px-3 py-2">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
-                          {user.user_metadata?.avatar_url ? (
-                            <Image
-                              src={user.user_metadata.avatar_url}
-                              alt=""
-                              width={40}
-                              height={40}
-                              className="rounded-full"
-                            />
-                          ) : (
-                            <User className="h-5 w-5" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">
-                            {user.user_metadata?.full_name || user.user_metadata?.name || 'User'}
-                          </p>
-                          <p className="text-xs text-slate-500">{user.email}</p>
-                        </div>
+              {/* Auth Section - Sign In hidden for MVP (dashboard not ready) */}
+              {!userLoading && user && (
+                <div className="border-t border-stone-100 pt-4 mt-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 px-3 py-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                        {user.user_metadata?.avatar_url ? (
+                          <Image
+                            src={user.user_metadata.avatar_url}
+                            alt=""
+                            width={40}
+                            height={40}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <User className="h-5 w-5" />
+                        )}
                       </div>
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Dashboard
-                      </Link>
-                      <button
-                        onClick={handleSignOut}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Sign Out
-                      </button>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">
+                          {user.user_metadata?.full_name || user.user_metadata?.name || 'User'}
+                        </p>
+                        <p className="text-xs text-slate-500">{user.email}</p>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Link
-                        href="/login"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 rounded-lg border border-stone-200 px-4 py-3 text-sm font-medium text-slate-900 hover:bg-stone-50"
-                      >
-                        <User className="h-4 w-4" />
-                        Sign In
-                      </Link>
-                      <Link
-                        href="/signup"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white hover:bg-brand-600"
-                      >
-                        Create Account
-                      </Link>
-                    </div>
-                  )
-                )}
-              </div>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* TODO: Re-enable when dashboard is ready
+              {!userLoading && !user && (
+                <div className="border-t border-stone-100 pt-4 mt-4">
+                  <div className="space-y-2">
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-stone-200 px-4 py-3 text-sm font-medium text-slate-900 hover:bg-stone-50"
+                    >
+                      <User className="h-4 w-4" />
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/signup"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white hover:bg-brand-600"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                </div>
+              )}
+              */}
 
               {/* Call CTA */}
               <div className="border-t border-stone-100 pt-4 mt-4">
