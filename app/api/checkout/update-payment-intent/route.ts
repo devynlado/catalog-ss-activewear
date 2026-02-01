@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
 
     // Update the order in database
     const supabase = await createSupabaseServerClient();
-    const { error: updateError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (supabase as any)
       .from('orders')
       .update({
         subtotal,

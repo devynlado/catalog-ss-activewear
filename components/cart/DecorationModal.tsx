@@ -135,7 +135,7 @@ export function DecorationModal({ isOpen, onClose }: DecorationModalProps) {
     try {
       // Build cart summary for the quote
       const cartSummary = items.map(item => ({
-        name: item.productName,
+        name: item.productTitle || `${item.brandName} ${item.styleName}`,
         color: item.colorName,
         size: item.sizeName,
         quantity: item.quantity,

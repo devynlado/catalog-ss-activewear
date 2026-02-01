@@ -127,7 +127,7 @@ export function LPHero({ service, headline: defaultHeadline, subheadline: defaul
             <LPQuoteForm 
               service={service} 
               source={`lp_${service}${variant ? `_${variant}` : ''}`}
-              variant={variant}
+              variant={variant || undefined}
             />
           </div>
         </div>

@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
     const supabase = await createSupabaseServerClient();
 
     // Update the order with actual customer details
-    const { error: updateError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (supabase as any)
       .from('orders')
       .update({
         customer_email: customerEmail,
@@ -59,7 +60,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the update
-    await supabase.from('order_activities').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('order_activities').insert({
       order_id: orderId,
       activity_type: 'order_updated',
       description: 'Customer details updated before payment',

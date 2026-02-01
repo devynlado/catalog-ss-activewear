@@ -17,14 +17,19 @@ export async function GET(request: NextRequest) {
     });
 
     // Format line items for GA4 tracking
-    const lineItems = session.line_items?.data?.map(item => ({
-      item_id: item.price?.product && typeof item.price.product !== 'string' 
-        ? item.price.product.metadata?.sku || item.id 
-        : item.id,
-      item_name: item.description || 'Product',
-      price: (item.amount_total || 0) / 100 / (item.quantity || 1),
-      quantity: item.quantity || 1,
-    })) || [];
+    const lineItems = session.line_items?.data?.map(item => {
+      const product = item.price?.product;
+      // Check if product is a full Product object (not string and not deleted)
+      const sku = product && typeof product !== 'string' && 'metadata' in product
+        ? product.metadata?.sku || item.id 
+        : item.id;
+      return {
+        item_id: sku,
+        item_name: item.description || 'Product',
+        price: (item.amount_total || 0) / 100 / (item.quantity || 1),
+        quantity: item.quantity || 1,
+      };
+    }) || [];
 
     return NextResponse.json({
       orderNumber: session.metadata?.orderNumber || null,

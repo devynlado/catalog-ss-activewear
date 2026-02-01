@@ -412,16 +412,18 @@ function DecorateContent() {
 
                 {/* CTAs */}
                 <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Button asChild size="lg" className="w-full sm:w-auto">
-                    <Link href="/contact">
-                      Contact Our Team
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
-                    <Link href="/quote">
-                      Build a Quote Manually
-                    </Link>
-                  </Button>
+                  <Link 
+                    href="/contact"
+                    className="inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500 h-12 rounded-lg px-6 text-base w-full sm:w-auto"
+                  >
+                    Contact Our Team
+                  </Link>
+                  <Link 
+                    href="/quote"
+                    className="inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 border border-stone-200 bg-white text-slate-900 hover:bg-stone-50 focus:ring-brand-500 h-12 rounded-lg px-6 text-base w-full sm:w-auto"
+                  >
+                    Build a Quote Manually
+                  </Link>
                 </div>
 
                 {/* Contact info */}

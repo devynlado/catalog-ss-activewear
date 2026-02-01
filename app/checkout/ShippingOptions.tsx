@@ -59,3 +59,18 @@ export function formatDateRange(min: Date, max: Date): string {
   
   return `${minStr} - ${maxStr}`;
 }
+
+// Check if current time is before same-day shipping cutoff (2pm PST)
+export function isBeforeCutoff(): boolean {
+  const now = new Date();
+  // Convert to PST
+  const pstTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const hour = pstTime.getHours();
+  const day = pstTime.getDay();
+  
+  // Only Mon-Fri, before 2pm PST
+  const isWeekday = day >= 1 && day <= 5;
+  const beforeCutoff = hour < 14;
+  
+  return isWeekday && beforeCutoff;
+}

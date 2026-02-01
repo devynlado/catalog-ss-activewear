@@ -294,7 +294,6 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           quantity,
           unitPrice: sizeInfo?.price || displayPrice,
           imageUrl: color.frontImage || product.imageUrl,
-          availableSizes,
         });
       });
     });

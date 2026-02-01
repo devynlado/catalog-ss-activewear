@@ -149,18 +149,20 @@ export function QuoteConfirmation({
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-        <Button asChild size="lg" className="w-full sm:w-auto">
-          <Link href="/catalog">
-            <Package className="mr-2 h-4 w-4" />
-            Continue Shopping
-          </Link>
-        </Button>
-        <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
-          <Link href="/quote">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Start Another Quote
-          </Link>
-        </Button>
+        <Link 
+          href="/catalog"
+          className="inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500 h-12 rounded-lg px-6 text-base w-full sm:w-auto"
+        >
+          <Package className="mr-2 h-4 w-4" />
+          Continue Shopping
+        </Link>
+        <Link 
+          href="/quote"
+          className="inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 border border-stone-200 bg-white text-slate-900 hover:bg-stone-50 focus:ring-brand-500 h-12 rounded-lg px-6 text-base w-full sm:w-auto"
+        >
+          <MessageSquare className="mr-2 h-4 w-4" />
+          Start Another Quote
+        </Link>
       </div>
 
       {/* Support Note */}

@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 
+// Force dynamic rendering to avoid useSearchParams issues during static generation
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Custom Embroidery in Southern California | Garment Decor',
   description: 'Professional custom embroidery in Los Angeles & Southern California. Premium threads, expert digitizing, factory-direct pricing. Get a free quote today.',

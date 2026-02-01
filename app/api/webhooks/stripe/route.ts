@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { stripe, fromStripeCents } from '@/lib/stripe';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Use service role client for webhooks (bypasses RLS)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: NextRequest) {
+  const supabase = getSupabase();
   const body = await request.text();
   const headersList = await headers();
   const signature = headersList.get('stripe-signature');
@@ -43,15 +46,15 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case 'payment_intent.succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent);
+        await handlePaymentSucceeded(supabase, event.data.object as Stripe.PaymentIntent);
         break;
         
       case 'payment_intent.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
+        await handlePaymentFailed(supabase, event.data.object as Stripe.PaymentIntent);
         break;
         
       case 'charge.refunded':
-        await handleChargeRefunded(event.data.object as Stripe.Charge);
+        await handleChargeRefunded(supabase, event.data.object as Stripe.Charge);
         break;
         
       default:
@@ -69,7 +72,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentIntent: Stripe.PaymentIntent) {
   const orderId = paymentIntent.metadata?.order_id;
   const orderNumber = paymentIntent.metadata?.order_number;
   
@@ -157,7 +161,8 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   console.log(`Payment succeeded for order ${orderNumber} (${orderId})`);
 }
 
-async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handlePaymentFailed(supabase: SupabaseClient<any>, paymentIntent: Stripe.PaymentIntent) {
   const orderId = paymentIntent.metadata?.order_id;
   
   if (!orderId) {
@@ -199,7 +204,8 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   console.log(`Payment failed for order ${orderId}`);
 }
 
-async function handleChargeRefunded(charge: Stripe.Charge) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleChargeRefunded(supabase: SupabaseClient<any>, charge: Stripe.Charge) {
   const paymentIntentId = charge.payment_intent as string;
   
   if (!paymentIntentId) {
