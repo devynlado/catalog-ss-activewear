@@ -12,6 +12,7 @@ import { createServerSupabaseClient } from '@/lib/supabase';
 interface CachedProduct {
   style_id: number;
   style_name: string;
+  slug: string | null;
   brand_name: string;
   title_raw: string | null;
   title_optimized: string | null;
@@ -70,6 +71,7 @@ async function fetchFromSupabase(): Promise<{
     .select(`
       style_id,
       style_name,
+      slug,
       brand_name,
       title_raw,
       title_optimized,
@@ -116,7 +118,8 @@ async function fetchFromSupabase(): Promise<{
   const { data: colorData } = await supabase
     .from('product_colors')
     .select('style_id, color_code, front_image, back_image, side_image')
-    .in('style_id', styleIds) as { data: ColorRecord[] | null };
+    .in('style_id', styleIds)
+    .limit(50000) as { data: ColorRecord[] | null };  // Ensure all color images are fetched
   
   // Build a lookup map: style_id -> color_code -> images
   const colorImageMap = new Map<number, Map<string, { front: string | null; back: string | null; side: string | null }>>();
@@ -160,7 +163,14 @@ async function fetchFromSupabase(): Promise<{
   // Generate GMC rows from cached data
   const feedRows: GMCFeedRow[] = [];
   
+  let skippedProducts = 0;
   for (const product of products) {
+    // Skip products without slugs - they would cause 404s
+    if (!product.slug) {
+      skippedProducts++;
+      continue;
+    }
+    
     const skus = product.product_skus || [];
     const category = categoryMap.get(product.style_id) || 't-shirts' as ProductCategory;
     const tier = (product.popular_tier || 'value') as ProductTier;
@@ -184,6 +194,7 @@ async function fetchFromSupabase(): Promise<{
         material: product.material || '',
         colorSwatchImage: '',
         styleImage: product.primary_image_url || '',
+        slug: product.slug,  // Use database slug for correct URLs
       };
       
       const row = generateFeedRow(variant, category, tier, baseUrl);
@@ -231,6 +242,9 @@ async function fetchFromSupabase(): Promise<{
     }
   }
   
+  if (skippedProducts > 0) {
+    console.warn(`[GMC Feed] Skipped ${skippedProducts} products without slugs`);
+  }
   console.log(`[GMC Feed] Generated ${feedRows.length} rows from Supabase cache`);
   return { 
     rows: feedRows, 

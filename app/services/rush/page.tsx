@@ -8,6 +8,7 @@ import {
   TipsSection,
   PortfolioGrid,
   ServiceCTA,
+  ServiceQuoteForm,
 } from '@/components/services';
 import { getServiceImages } from '@/lib/service-images';
 
@@ -183,6 +184,14 @@ export default function RushPage() {
           </div>
         </div>
       </section>
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="rush"
+        serviceName="Rush Order"
+        headline="Tight Deadline? We've Got You."
+        description="Same-week turnaround available. Connect with a dedicated rep now."
+      />
 
       {/* Rush Requirements */}
       <section className="py-16 lg:py-20 bg-stone-50">

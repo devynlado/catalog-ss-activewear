@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2018",
     "lib": [
       "dom",
       "dom.iterable",
@@ -38,7 +38,6 @@
   ],
   "exclude": [
     "node_modules",
-    "scripts",
-    "lib/typesense.ts"
+    "scripts"
   ]
 }

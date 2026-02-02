@@ -11,6 +11,7 @@ import {
   PortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
+  ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
@@ -250,6 +251,14 @@ export default function ScreenPrintingPage() {
           { title: 'Final Cure', description: 'Prints pass through a conveyor dryer at 320-330°F to fully cure and ensure durability.' },
         ]}
         image={serviceImages?.gallery[0]}
+      />
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="screen-printing"
+        serviceName="Screen Printing"
+        headline="Let's Talk About Your Order"
+        description="Get factory-direct pricing on your screen printing project. We'll connect you with a dedicated rep."
       />
 
       {/* Method Comparison Table */}

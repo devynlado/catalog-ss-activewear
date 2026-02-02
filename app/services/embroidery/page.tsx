@@ -9,6 +9,7 @@ import {
   PortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
+  ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
@@ -140,6 +141,14 @@ export default function EmbroideryPage() {
           { title: 'Finishing', description: 'Backing is trimmed, loose threads are removed, and items are steamed.' },
         ]}
         image={serviceImages?.gallery[0]}
+      />
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="embroidery"
+        serviceName="Custom Embroidery"
+        headline="Get Your Embroidery Quote"
+        description="Professional embroidery from 50 to 10,000+ pieces. We'll connect you with a dedicated rep."
       />
 
       {/* Embroidery Types */}

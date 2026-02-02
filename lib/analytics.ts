@@ -370,3 +370,149 @@ export function trackQuoteFormSubmit(params: {
     value: params.estimatedValue,
   });
 }
+
+// ============ Package Deals Events ============
+
+/**
+ * Track packages page view
+ */
+export function trackPackagesPageView(params?: {
+  referrer?: string;
+}) {
+  trackEvent('packages_page_view', {
+    referrer: params?.referrer || document?.referrer || 'direct',
+  });
+}
+
+/**
+ * Track package card click (user selects a package)
+ */
+export function trackPackageCardClick(params: {
+  packageId: string;
+  packageName: string;
+}) {
+  trackEvent('package_card_click', {
+    package_id: params.packageId,
+    package_name: params.packageName,
+  });
+}
+
+/**
+ * Track product selection in packages flow
+ */
+export function trackPackageProductSelected(params: {
+  productId: string;
+  productName: string;
+  packageId: string;
+}) {
+  trackEvent('package_product_selected', {
+    product_id: params.productId,
+    product_name: params.productName,
+    package_id: params.packageId,
+  });
+}
+
+/**
+ * Track form start (user begins filling form)
+ */
+export function trackPackageFormStart(params: {
+  packageId: string;
+  productId: string;
+  quantity: number;
+}) {
+  trackEvent('package_form_start', {
+    package_id: params.packageId,
+    product_id: params.productId,
+    quantity: params.quantity,
+  });
+}
+
+/**
+ * Track package form submission
+ */
+export function trackPackageFormSubmit(params: {
+  packageId: string;
+  packageName: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  estimatedValue: number;
+  rushOrder: boolean;
+  hasLogo: boolean;
+}) {
+  trackEvent('generate_lead', {
+    source: 'package_form',
+    package_id: params.packageId,
+    package_name: params.packageName,
+    product_id: params.productId,
+    product_name: params.productName,
+    quantity: params.quantity,
+    value: params.estimatedValue,
+    rush_order: params.rushOrder,
+    has_logo: params.hasLogo,
+  });
+}
+
+/**
+ * Track exit intent popup shown
+ */
+export function trackExitIntentShown(params?: {
+  timeOnPage?: number;
+  page?: string;
+}) {
+  trackEvent('exit_intent_shown', {
+    time_on_page: params?.timeOnPage,
+    page: params?.page || 'packages',
+  });
+}
+
+/**
+ * Track exit intent click (user clicks sample pack CTA)
+ */
+export function trackExitIntentClick() {
+  trackEvent('exit_intent_click', {
+    destination: 'samples',
+  });
+}
+
+// ============ Sample Packs Events ============
+
+/**
+ * Track samples page view
+ */
+export function trackSamplesPageView() {
+  trackEvent('samples_page_view', {
+    referrer: typeof document !== 'undefined' ? document.referrer : 'direct',
+  });
+}
+
+/**
+ * Track sample pack added to cart
+ */
+export function trackSamplePackAddToCart(params: {
+  packId: string;
+  packName: string;
+  price: number;
+}) {
+  trackEvent('sample_pack_add_to_cart', {
+    pack_id: params.packId,
+    pack_name: params.packName,
+    price: params.price,
+  });
+}
+
+/**
+ * Track sample pack checkout start
+ */
+export function trackSamplePackCheckout(params: {
+  packIds: string[];
+  totalValue: number;
+  itemCount: number;
+}) {
+  trackEvent('begin_checkout', {
+    source: 'sample_packs',
+    pack_ids: params.packIds.join(','),
+    value: params.totalValue,
+    item_count: params.itemCount,
+  });
+}

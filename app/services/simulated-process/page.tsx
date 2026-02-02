@@ -11,6 +11,7 @@ import {
   PortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
+  ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
@@ -134,6 +135,14 @@ export default function SimulatedProcessPage() {
           { title: 'Final Cure', description: 'The completed print is cured to bond all layers permanently to the fabric.' },
         ]}
         image={serviceImages?.gallery[0]}
+      />
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="simulated-process"
+        serviceName="Simulated Process Printing"
+        headline="Photo-Realistic, Factory-Direct"
+        description="Complex designs printed with precision. Connect with a dedicated rep."
       />
 
       {/* Tour Merch Section */}

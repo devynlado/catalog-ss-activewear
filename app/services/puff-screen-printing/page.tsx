@@ -9,6 +9,7 @@ import {
   PortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
+  ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
@@ -120,6 +121,14 @@ export default function PuffScreenPrintingPage() {
           { title: 'Heat Activation', description: 'Garments pass through our dryer where heat activates the puff, creating the 3D effect.' },
         ]}
         image={serviceImages?.gallery[0]}
+      />
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="puff-screen-printing"
+        serviceName="Puff Screen Printing"
+        headline="Ready for That 3D Look?"
+        description="Puff printing that pops. Get connected with a dedicated rep — no obligation."
       />
 
       {/* What Makes Great Puff Design */}

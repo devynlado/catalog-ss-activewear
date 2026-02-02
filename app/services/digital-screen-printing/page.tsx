@@ -11,6 +11,7 @@ import {
   PortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
+  ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
@@ -134,6 +135,14 @@ export default function DigitalScreenPrintingPage() {
           { title: 'Quality Check', description: 'Every piece is inspected for color accuracy and print quality before packing.' },
         ]}
         image={serviceImages?.gallery[0]}
+      />
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="digital-screen-printing"
+        serviceName="Digital Screen Printing"
+        headline="Perfect for Complex Artwork"
+        description="Unlimited colors, no setup fees. Tell us about your design and we'll connect you with a rep."
       />
 
       {/* Technology Section */}

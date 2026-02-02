@@ -10,6 +10,7 @@ import {
   PortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
+  ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
 } from '@/components/services';
@@ -134,6 +135,14 @@ export default function JumboScreenPrintingPage() {
           { title: 'Full Cure', description: 'Extended time in our conveyor dryer ensures complete curing across the larger print area.' },
         ]}
         image={serviceImages?.gallery[0]}
+      />
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="jumbo-screen-printing"
+        serviceName="Jumbo Screen Printing"
+        headline="Oversized Prints, Wholesale Pricing"
+        description="Full-coverage and all-over prints up to 16&quot; x 20&quot;. Connect with a dedicated rep."
       />
 
       {/* Size Comparison */}

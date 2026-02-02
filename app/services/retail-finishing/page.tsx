@@ -7,6 +7,7 @@ import {
   ServiceHero,
   BenefitsBadges,
   ServiceCTA,
+  ServiceQuoteForm,
   ShopBlanksSection,
 } from '@/components/services';
 import { getServiceImages } from '@/lib/service-images';
@@ -170,6 +171,14 @@ export default function RetailFinishingPage() {
           </div>
         </div>
       </section>
+
+      {/* Quote Form */}
+      <ServiceQuoteForm
+        service="retail-finishing"
+        serviceName="Retail Finishing"
+        headline="Make It Retail-Ready"
+        description="Folding, bagging, tagging, and labeling. Connect with a dedicated rep for pricing."
+      />
 
       {/* Relabeling Deep Dive */}
       <section className="py-16 lg:py-20 bg-stone-50">

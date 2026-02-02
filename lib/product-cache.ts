@@ -336,7 +336,57 @@ export async function getPopularProducts(options: {
 }
 
 /**
- * Search products using full-text search
+ * Calculate search relevance score for a product
+ * Scoring priority: SKU/Style (100) > Brand (70) > Title (30) > Description (10)
+ * No fuzzy matching - exact substring matching only
+ */
+function calculateSearchScore(
+  product: { style_name: string; brand_name: string; title_raw: string; description_raw: string },
+  searchTerms: string[]
+): number {
+  let score = 0;
+  
+  const styleName = (product.style_name || '').toUpperCase();
+  const brandName = (product.brand_name || '').toUpperCase();
+  const title = (product.title_raw || '').toUpperCase();
+  const description = (product.description_raw || '').toUpperCase();
+  
+  for (const term of searchTerms) {
+    // Style number matching (highest priority)
+    if (styleName === term) {
+      score += 100; // Exact style match
+    } else if (styleName.startsWith(term)) {
+      score += 80; // Style prefix match
+    } else if (styleName.includes(term)) {
+      score += 60; // Style contains match
+    }
+    
+    // Brand name matching
+    if (brandName === term) {
+      score += 70; // Exact brand match
+    } else if (brandName.includes(term)) {
+      score += 50; // Brand contains match
+    }
+    
+    // Title matching
+    if (title.includes(term)) {
+      score += 30; // Title contains match
+    }
+    
+    // Description matching (lowest priority)
+    if (description.includes(term)) {
+      score += 10; // Description contains match
+    }
+  }
+  
+  return score;
+}
+
+/**
+ * Search products with relevance-based ranking
+ * Searches: styleName, brandName, title, description
+ * Supports multi-word queries (e.g., "Gildan Navy Cotton")
+ * Results ranked by relevance score, not just ILIKE matching
  */
 export async function searchProductsFromCache(
   searchTerm: string,
@@ -351,7 +401,24 @@ export async function searchProductsFromCache(
     sustainable,
   } = options;
   
-  // Use full-text search on products
+  // Normalize and parse search terms
+  const normalizedQuery = searchTerm.trim().toUpperCase();
+  const searchTerms = normalizedQuery.split(/\s+/).filter(term => term.length >= 2);
+  
+  if (searchTerms.length === 0) {
+    return {
+      data: [],
+      total: 0,
+      page,
+      pageSize,
+      totalPages: 0,
+    };
+  }
+  
+  console.log(`[ProductCache] Searching for: "${normalizedQuery}" (terms: ${searchTerms.join(', ')})`);
+  
+  // Fetch broader results from Supabase - we'll score and sort in Node.js
+  // Fetch up to 500 potential matches to ensure we find the best ones
   let query = supabase
     .from('products')
     .select(`
@@ -387,12 +454,15 @@ export async function searchProductsFromCache(
         on_model_side,
         availability
       )
-    `, { count: 'exact' })
+    `)
     .eq('is_active', true);
   
-  // Search in title, brand, and style name
-  // Using OR to search across multiple fields
-  query = query.or(`title_raw.ilike.%${searchTerm}%,brand_name.ilike.%${searchTerm}%,style_name.ilike.%${searchTerm}%`);
+  // Build OR conditions for each search term across all searchable fields
+  const orConditions = searchTerms.map(term => 
+    `style_name.ilike.%${term}%,brand_name.ilike.%${term}%,title_raw.ilike.%${term}%,description_raw.ilike.%${term}%`
+  ).join(',');
+  
+  query = query.or(orConditions);
   
   if (featured) {
     query = query.eq('is_popular', true);
@@ -402,28 +472,90 @@ export async function searchProductsFromCache(
     query = query.eq('is_sustainable', true);
   }
   
-  // Pagination
-  const startIndex = (page - 1) * pageSize;
-  query = query
-    .order('is_popular', { ascending: false })
-    .order('base_price', { ascending: true })
-    .range(startIndex, startIndex + pageSize - 1);
+  // Fetch a larger result set for scoring (limit 500 for performance)
+  query = query.limit(500);
   
-  const { data, count, error } = await query;
+  const { data, error } = await query;
   
   if (error) {
     console.error('[ProductCache] Search error:', error);
     throw new Error(`Failed to search products: ${error.message}`);
   }
   
-  const products = (data || []).map(row => transformProduct(row));
-  const sortedProducts = sortProducts(products);
+  // Cast data to the expected row type (Supabase types can be tricky with dynamic queries)
+  const rows = data as Array<{
+    style_id: number;
+    style_name: string;
+    brand_id: number;
+    brand_name: string;
+    title_raw: string;
+    title_optimized: string | null;
+    description_raw: string;
+    description_optimized: string | null;
+    base_category: string | null;
+    product_type: string | null;
+    primary_image_url: string | null;
+    is_sustainable: boolean;
+    is_new: boolean;
+    is_popular: boolean;
+    popular_tier: string | null;
+    is_active: boolean;
+    color_count: number;
+    base_price: number;
+    product_colors: Array<{
+      id: number;
+      color_name: string;
+      color_code: string;
+      color_family: string | null;
+      swatch_image: string | null;
+      front_image: string | null;
+      back_image: string | null;
+      side_image: string | null;
+      on_model_front: string | null;
+      on_model_back: string | null;
+      on_model_side: string | null;
+      availability: string | null;
+    }>;
+  }> | null;
   
-  const total = count || products.length;
+  if (!rows || rows.length === 0) {
+    console.log('[ProductCache] No matches found');
+    return {
+      data: [],
+      total: 0,
+      page,
+      pageSize,
+      totalPages: 0,
+    };
+  }
+  
+  // Score each product based on relevance
+  const scoredResults = rows.map(row => ({
+    row,
+    score: calculateSearchScore(row, searchTerms),
+  })).filter(item => item.score > 0); // Only keep items with actual matches
+  
+  console.log(`[ProductCache] Scored ${scoredResults.length} products with relevance`);
+  
+  // Sort by score (highest first), then by style name for ties
+  scoredResults.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return (a.row.style_name || '').localeCompare(b.row.style_name || '');
+  });
+  
+  // Calculate pagination on scored results
+  const total = scoredResults.length;
   const totalPages = Math.ceil(total / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const paginatedResults = scoredResults.slice(startIndex, startIndex + pageSize);
+  
+  // Transform to Product format
+  const products = paginatedResults.map(item => transformProduct(item.row as any));
+  
+  console.log(`[ProductCache] Returning page ${page}/${totalPages} (${products.length} products)`);
   
   return {
-    data: sortedProducts,
+    data: products,
     total,
     page,
     pageSize,

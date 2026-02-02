@@ -1,6 +1,7 @@
 import { Hero } from '@/components/home/Hero';
 import { WhoWeService } from '@/components/home/WhoWeService';
 import { TurnaroundBanner } from '@/components/home/TurnaroundBanner';
+// import { PackageDeals } from '@/components/home/PackageDeals'; // Hidden for now - needs polish
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { FeaturedProducts } from '@/components/home/FeaturedProducts';
@@ -19,7 +20,11 @@ export default function HomePage() {
       {/* 2. Turnaround Banner - Urgency: We're fast */}
       <TurnaroundBanner />
       
-      {/* 3. Who We Service - Audience: We work with people like you */}
+      {/* Package Deals - Hidden for now, needs polish
+      <PackageDeals />
+      */}
+      
+      {/* 4. Who We Service - Audience: We work with people like you */}
       <WhoWeService />
       
       {/* 3. How It Works - Reassurance: It's easy */}

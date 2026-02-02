@@ -147,7 +147,6 @@ export const GMC_CSV_HEADERS = [
   'cost_of_goods_sold',
   'auto_pricing_min_price',
   'google_product_category',
-  'google_product_category (name)',
 ];
 
 export interface ProductVariant {
@@ -211,7 +210,6 @@ export interface GMCFeedRow {
   cost_of_goods_sold: string;
   auto_pricing_min_price: string;
   google_product_category: string;
-  'google_product_category (name)': string;
 }
 
 // Generate a feed row from a product variant
@@ -287,7 +285,6 @@ export function generateFeedRow(
     cost_of_goods_sold: `${costPrice.toFixed(2)} USD`,
     auto_pricing_min_price: `${minPrice.toFixed(2)} USD`,
     google_product_category: String(googleCategory.id),
-    'google_product_category (name)': googleCategory.name,
   };
 }
 

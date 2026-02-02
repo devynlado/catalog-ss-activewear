@@ -46,7 +46,13 @@ function getPopularForTags(categories: Category[]): string[] {
   return ['Custom Apparel', 'Bulk Orders', 'Events'];
 }
 
+// Check if product is from LA Apparel (synthetic style IDs start with 9001xxx)
+const isLAApparel = (styleId: number) => styleId >= 9001000 && styleId < 9010000;
+
 export function ProductDetailClient({ product, googleDiscount: initialDiscount }: ProductDetailClientProps) {
+  // Check if this is an LA Apparel product (needs special handling)
+  const isLAApparelProduct = isLAApparel(product.styleId);
+  
   // Track selected colors (array for multi-color support)
   const [selectedColors, setSelectedColors] = useState<ProductColor[]>([]);
   
@@ -645,6 +651,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 maxVisible={20}
                 multiSelect={true}
                 showSearch={true}
+                useProductImages={isLAApparelProduct}
               />
             </div>
           </div>
@@ -672,6 +679,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                   onQuantitiesChange={(qtys) => handleQuantitiesChange(color.colorCode, qtys)}
                   onRemove={() => handleRemoveColor(color.colorCode)}
                   showRemoveButton={selectedColors.length > 1}
+                  hideInventory={isLAApparelProduct}
                 />
               ))}
             </div>

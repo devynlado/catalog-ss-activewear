@@ -11,6 +11,7 @@ interface SizeDistributionRowProps {
   onQuantitiesChange: (quantities: Record<string, number>) => void;
   onRemove: () => void;
   showRemoveButton?: boolean;
+  hideInventory?: boolean; // Hide stock levels and allow all sizes (for LA Apparel)
 }
 
 // Stock level thresholds
@@ -36,6 +37,7 @@ export function SizeDistributionRow({
   onQuantitiesChange,
   onRemove,
   showRemoveButton = true,
+  hideInventory = false,
 }: SizeDistributionRowProps) {
   const handleQuantityChange = (sizeName: string, value: string) => {
     const numValue = parseInt(value, 10);
@@ -64,11 +66,27 @@ export function SizeDistributionRow({
 
   return (
     <div className="rounded-xl border-2 border-stone-300 bg-white overflow-hidden shadow-md">
+      {/* Inventory Notice Banner - shown when hideInventory is true */}
+      {hideInventory && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800">
+          <span className="font-medium">Note:</span> Live inventory not available from this supplier. Most sizes typically in stock.
+        </div>
+      )}
+      
       {/* Header with color info */}
       <div className="flex items-center justify-between bg-stone-100 px-4 py-3 border-b border-stone-200">
         <div className="flex items-center gap-3">
-          {/* Color swatch */}
-          {color.swatchImage ? (
+          {/* Color swatch - use front image when hideInventory (LA Apparel) */}
+          {hideInventory && color.frontImage ? (
+            <div className="relative h-10 w-10 rounded-lg overflow-hidden border-2 border-slate-300">
+              <Image
+                src={color.frontImage}
+                alt={color.colorName}
+                fill
+                className="object-cover"
+              />
+            </div>
+          ) : color.swatchImage ? (
             <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-slate-300">
               <Image
                 src={color.swatchImage}
@@ -112,17 +130,19 @@ export function SizeDistributionRow({
         <div className="hidden sm:flex flex-wrap gap-2">
           {color.sizes.map((size) => {
             const stock = size.qty;
-            const indicator = getStockIndicator(stock);
-            const isOutOfStock = stock === 0;
+            const indicator = hideInventory 
+              ? { color: 'text-slate-500', bgColor: 'bg-stone-50', label: '' }
+              : getStockIndicator(stock);
+            // When hideInventory is true, never disable the input
+            const isOutOfStock = hideInventory ? false : stock === 0;
             const currentQty = quantities[size.name] || '';
-            const hasQuantity = currentQty !== '' && Number(currentQty) > 0;
 
             return (
               <div
                 key={size.code}
                 className={cn(
                   'flex flex-col items-center min-w-[70px] p-2 rounded-lg transition-all',
-                  isOutOfStock ? 'bg-stone-50' : indicator.bgColor
+                  hideInventory ? 'bg-stone-50' : (isOutOfStock ? 'bg-stone-50' : indicator.bgColor)
                 )}
               >
                 {/* Size label */}
@@ -138,7 +158,6 @@ export function SizeDistributionRow({
                   disabled={isOutOfStock}
                   placeholder="—"
                   min="1"
-                  max={stock}
                   className={cn(
                     'w-14 h-10 text-center text-sm font-bold rounded-md border-2 transition-all',
                     isOutOfStock
@@ -152,14 +171,16 @@ export function SizeDistributionRow({
                   {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
                 </div>
                 
-                {/* Stock count with indicator */}
-                <div className={cn('text-[10px] font-medium', indicator.color)}>
-                  {isOutOfStock ? (
-                    <span>Out</span>
-                  ) : (
-                    <span>{formatNumber(stock)} avail</span>
-                  )}
-                </div>
+                {/* Stock count with indicator - hidden when hideInventory is true */}
+                {!hideInventory && (
+                  <div className={cn('text-[10px] font-medium', indicator.color)}>
+                    {stock === 0 ? (
+                      <span>Out</span>
+                    ) : (
+                      <span>{formatNumber(stock)} avail</span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -169,17 +190,19 @@ export function SizeDistributionRow({
         <div className="sm:hidden grid grid-cols-3 gap-2">
           {color.sizes.map((size) => {
             const stock = size.qty;
-            const indicator = getStockIndicator(stock);
-            const isOutOfStock = stock === 0;
+            const indicator = hideInventory 
+              ? { color: 'text-slate-500', bgColor: 'bg-stone-50', label: '' }
+              : getStockIndicator(stock);
+            // When hideInventory is true, never disable the input
+            const isOutOfStock = hideInventory ? false : stock === 0;
             const currentQty = quantities[size.name] || '';
-            const hasQuantity = currentQty !== '' && Number(currentQty) > 0;
 
             return (
               <div
                 key={size.code}
                 className={cn(
                   'flex flex-col items-center p-3 rounded-lg transition-all',
-                  isOutOfStock ? 'bg-stone-50' : indicator.bgColor
+                  hideInventory ? 'bg-stone-50' : (isOutOfStock ? 'bg-stone-50' : indicator.bgColor)
                 )}
               >
                 {/* Size label */}
@@ -195,7 +218,6 @@ export function SizeDistributionRow({
                   disabled={isOutOfStock}
                   placeholder="—"
                   min="1"
-                  max={stock}
                   className={cn(
                     'w-full h-11 text-center text-base font-bold rounded-md border-2 transition-all',
                     isOutOfStock
@@ -209,14 +231,16 @@ export function SizeDistributionRow({
                   {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
                 </div>
                 
-                {/* Stock count with indicator */}
-                <div className={cn('text-[10px] font-medium', indicator.color)}>
-                  {isOutOfStock ? (
-                    <span>Out of stock</span>
-                  ) : (
-                    <span>{formatNumber(stock)} avail</span>
-                  )}
-                </div>
+                {/* Stock count with indicator - hidden when hideInventory is true */}
+                {!hideInventory && (
+                  <div className={cn('text-[10px] font-medium', indicator.color)}>
+                    {stock === 0 ? (
+                      <span>Out of stock</span>
+                    ) : (
+                      <span>{formatNumber(stock)} avail</span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

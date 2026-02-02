@@ -6,6 +6,97 @@ import { Check, Search, X } from 'lucide-react';
 import { ProductColor } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+// Map color names to hex values for fallback swatch display
+const COLOR_NAME_TO_HEX: Record<string, string> = {
+  // Basics
+  black: '#1a1a1a', blk: '#1a1a1a',
+  white: '#ffffff', wht: '#ffffff',
+  grey: '#808080', gray: '#808080', gry: '#808080',
+  navy: '#1e3a5f', nvy: '#1e3a5f',
+  
+  // Blues
+  blue: '#3b82f6', blu: '#3b82f6',
+  'royal blue': '#4169e1', royal: '#4169e1', ryl: '#4169e1',
+  'cobalt blue': '#0047ab', cobalt: '#0047ab', cblu: '#0047ab',
+  'dolphin blue': '#5b92a8', dolphin: '#5b92a8', dlb: '#5b92a8',
+  'neon blue': '#1e90ff', nhblu: '#1e90ff',
+  'blue moon': '#6b8ba4', blmn: '#6b8ba4',
+  
+  // Greens
+  green: '#22c55e', grn: '#22c55e',
+  army: '#4b5320', arm: '#4b5320',
+  olive: '#808000', olv: '#808000',
+  sage: '#9dc183', sge: '#9dc183',
+  ivy: '#3b5323', igy: '#3b5323',
+  matcha: '#9ab973', mtc: '#9ab973',
+  'atlantic green': '#006d5b', atlg: '#006d5b',
+  
+  // Reds/Pinks
+  red: '#ef4444', 
+  burgundy: '#800020', brg: '#800020',
+  coral: '#ff7f50', corl: '#ff7f50',
+  ruby: '#e0115f', rub: '#e0115f',
+  tomato: '#ff6347', tom: '#ff6347',
+  
+  // Yellows/Oranges
+  yellow: '#eab308', ylw: '#eab308',
+  gold: '#d4af37', gld: '#d4af37',
+  brass: '#b5a642', bra: '#b5a642',
+  orange: '#f97316', org: '#f97316', 'bright orange': '#ff5722',
+  
+  // Purples
+  purple: '#9333ea', pur: '#9333ea',
+  'vintage black': '#2d2d2d', vblk: '#2d2d2d',
+  
+  // Browns/Neutrals
+  brown: '#8b4513', brn: '#8b4513',
+  tan: '#d2b48c',
+  beige: '#f5f5dc', bge: '#f5f5dc',
+  khaki: '#c3b091', kha: '#c3b091',
+  mushroom: '#b39b84', msh: '#b39b84',
+  cocoa: '#4a3728', cco: '#4a3728',
+  clove: '#6b4423', clve: '#6b4423',
+  
+  // Others
+  arctic: '#d4e5ed', arct: '#d4e5ed',
+  ash: '#b2beb5', ashe: '#b2beb5',
+  'carbon black': '#333333', carbk: '#333333',
+  'black edge': '#1f1f1f', bkedg: '#1f1f1f',
+};
+
+/**
+ * Get a hex color from colorName or colorCode
+ * Falls back to a neutral color if no match found
+ */
+function getSwatchColor(colorName: string, colorCode: string): string {
+  const nameLower = colorName.toLowerCase();
+  const codeLower = colorCode.toLowerCase();
+  
+  // Try exact color name match
+  if (COLOR_NAME_TO_HEX[nameLower]) {
+    return COLOR_NAME_TO_HEX[nameLower];
+  }
+  
+  // Try color code match
+  if (COLOR_NAME_TO_HEX[codeLower]) {
+    return COLOR_NAME_TO_HEX[codeLower];
+  }
+  
+  // Try partial name match (first word)
+  const firstWord = nameLower.split(' ')[0];
+  if (COLOR_NAME_TO_HEX[firstWord]) {
+    return COLOR_NAME_TO_HEX[firstWord];
+  }
+  
+  // If colorCode looks like a hex value (6 chars, all hex digits), use it
+  if (/^[0-9a-f]{6}$/i.test(colorCode)) {
+    return `#${colorCode}`;
+  }
+  
+  // Default to a neutral gray
+  return '#a0a0a0';
+}
+
 interface ColorSwatchesProps {
   colors: ProductColor[];
   selectedColor?: ProductColor | null;
@@ -17,6 +108,7 @@ interface ColorSwatchesProps {
   multiSelect?: boolean; // Enable multi-select mode
   showSearch?: boolean; // Show color search input
   productId?: string; // For Builder.io standalone usage
+  useProductImages?: boolean; // Show product frontImage instead of swatch (for LA Apparel)
 }
 
 export function ColorSwatches({
@@ -29,6 +121,7 @@ export function ColorSwatches({
   showColorName = true,
   multiSelect = false,
   showSearch = false,
+  useProductImages = false,
 }: ColorSwatchesProps) {
   const [internalSelected, setInternalSelected] = useState<ProductColor | null>(
     selectedColor || colors[0] || null
@@ -36,6 +129,12 @@ export function ColorSwatches({
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredColor, setHoveredColor] = useState<ProductColor | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  
+  // Track images that fail to load
+  const handleImageError = (colorCode: string) => {
+    setFailedImages(prev => new Set(prev).add(colorCode));
+  };
 
   const currentSelected = selectedColor ?? internalSelected;
   
@@ -57,7 +156,12 @@ export function ColorSwatches({
   // Auto-show search for large color palettes
   const shouldShowSearch = showSearch || colors.length > 20;
 
-  const sizes = {
+  // When using product images, make swatches larger for better visibility
+  const sizes = useProductImages ? {
+    sm: 'h-10 w-10',
+    md: 'h-12 w-12',
+    lg: 'h-14 w-14',
+  } : {
     sm: 'h-5 w-5',
     md: 'h-7 w-7',
     lg: 'h-10 w-10',
@@ -127,35 +231,50 @@ export function ColorSwatches({
                 onMouseEnter={() => setHoveredColor(color)}
                 onMouseLeave={() => setHoveredColor(null)}
                 className={cn(
-                  'relative rounded-full border-2 transition-all',
+                  'relative border-2 transition-all overflow-hidden',
+                  useProductImages ? 'rounded-lg' : 'rounded-full',
                   sizes[swatchSize],
                   isSelected
                     ? 'border-brand-500 ring-2 ring-brand-200'
-                    : 'border-stone-200 hover:border-stone-400 hover:scale-110'
+                    : 'border-stone-200 hover:border-stone-400 hover:scale-105'
                 )}
                 aria-label={multiSelect ? `Toggle ${color.colorName}` : `Select ${color.colorName}`}
               >
-                {color.swatchImage ? (
+                {/* Use product image when useProductImages is true */}
+                {useProductImages && color.frontImage ? (
+                  <Image
+                    src={color.frontImage}
+                    alt={color.colorName}
+                    fill
+                    className="object-cover"
+                    onError={() => handleImageError(color.colorCode)}
+                  />
+                ) : color.swatchImage && !failedImages.has(color.colorCode) ? (
                   <Image
                     src={color.swatchImage}
                     alt={color.colorName}
                     fill
                     className="rounded-full object-cover"
+                    onError={() => handleImageError(color.colorCode)}
                   />
                 ) : (
                   <span
-                    className="absolute inset-0.5 rounded-full"
+                    className={cn(
+                      "absolute inset-0.5",
+                      useProductImages ? "rounded-md" : "rounded-full"
+                    )}
                     style={{ 
-                      backgroundColor: color.colorCode.startsWith('#') 
-                        ? color.colorCode 
-                        : `#${color.colorCode}` 
+                      backgroundColor: getSwatchColor(color.colorName, color.colorCode)
                     }}
                   />
                 )}
                 
                 {/* Checkmark overlay for selected colors in multi-select mode */}
                 {multiSelect && isSelected && (
-                  <span className="absolute inset-0 flex items-center justify-center rounded-full bg-brand-500/70">
+                  <span className={cn(
+                    "absolute inset-0 flex items-center justify-center bg-brand-500/70",
+                    useProductImages ? "rounded-md" : "rounded-full"
+                  )}>
                     <Check className="h-4 w-4 text-white" strokeWidth={3} />
                   </span>
                 )}

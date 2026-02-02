@@ -1009,6 +1009,42 @@ export function Header() {
                       </Link>
                     </div>
 
+                    {/* Package Deals Section - Hidden for now, needs polish
+                    <div className="mt-4 pt-4 border-t border-stone-200">
+                      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Quick Start
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Link
+                          href="/packages"
+                          onClick={() => setServicesOpen(false)}
+                          className="flex items-center gap-3 rounded-lg bg-brand-50 border border-brand-100 p-3 hover:bg-brand-100 group"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white">
+                            <Star className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-brand-700 text-sm">Package Deals</h4>
+                            <p className="text-xs text-brand-600">Pre-built packages</p>
+                          </div>
+                        </Link>
+                        <Link
+                          href="/samples"
+                          onClick={() => setServicesOpen(false)}
+                          className="flex items-center gap-3 rounded-lg bg-stone-50 border border-stone-200 p-3 hover:bg-stone-100 group"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-600 text-white">
+                            <Package className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-slate-700 text-sm">Sample Packs</h4>
+                            <p className="text-xs text-slate-500">Try before you buy</p>
+                          </div>
+                        </Link>
+                      </div>
+                    </div>
+                    */}
+
                     {/* View All Services Link */}
                     <div className="mt-4 pt-4 border-t border-stone-200">
                       <Link
@@ -1345,6 +1381,30 @@ export function Header() {
                   View all services →
                 </Link>
               </div>
+
+              {/* Package Deals Section - Mobile - Hidden for now, needs polish
+              <div className="border-t border-stone-100 pt-3 mt-3">
+                <p className="py-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
+                  Quick Start
+                </p>
+                <Link
+                  href="/packages"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg my-1 px-3 py-2.5 text-sm font-medium text-brand-800 bg-brand-50 border border-brand-200 hover:bg-brand-100"
+                >
+                  <Star className="h-4 w-4 text-brand-500" />
+                  Package Deals
+                </Link>
+                <Link
+                  href="/samples"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
+                >
+                  <Package className="h-4 w-4 text-stone-500" />
+                  Sample Packs
+                </Link>
+              </div>
+              */}
 
               {/* Quick Links */}
               <div className="border-t border-stone-100 pt-3 mt-3">
