@@ -5,6 +5,18 @@ import { ProductColor } from '@/lib/types';
 import { cn, formatNumber, formatPrice } from '@/lib/utils';
 import Image from 'next/image';
 
+/**
+ * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
+ * S3 and other URLs pass through unchanged.
+ */
+function proxyImageUrl(url: string): string {
+  if (!url) return '';
+  if (url.includes('drive.usercontent.google.com') || url.includes('drive.google.com')) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 interface SizeDistributionRowProps {
   color: ProductColor;
   quantities: Record<string, number>;
@@ -76,11 +88,11 @@ export function SizeDistributionRow({
       {/* Header with color info */}
       <div className="flex items-center justify-between bg-stone-100 px-4 py-3 border-b border-stone-200">
         <div className="flex items-center gap-3">
-          {/* Color swatch - use front image when hideInventory (LA Apparel) */}
+          {/* Color swatch - use front image when hideInventory (LA Apparel / Otto Cap) */}
           {hideInventory && color.frontImage ? (
             <div className="relative h-10 w-10 rounded-lg overflow-hidden border-2 border-slate-300">
               <Image
-                src={color.frontImage}
+                src={proxyImageUrl(color.frontImage)}
                 alt={color.colorName}
                 fill
                 className="object-cover"
@@ -89,7 +101,7 @@ export function SizeDistributionRow({
           ) : color.swatchImage ? (
             <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-slate-300">
               <Image
-                src={color.swatchImage}
+                src={proxyImageUrl(color.swatchImage)}
                 alt={color.colorName}
                 fill
                 className="object-cover"

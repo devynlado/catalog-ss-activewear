@@ -159,6 +159,8 @@ export interface Product {
   // Popular products system
   isPopular?: boolean;
   popularTier?: 'bestseller' | 'staff-pick' | 'value' | 'streetwear';
+  // Multi-supplier support
+  supplier?: 'ss_activewear' | 'otto_cap';
 }
 
 export interface ProductColor {
@@ -175,6 +177,8 @@ export interface ProductColor {
   onModelFrontImage?: string;
   onModelBackImage?: string;
   onModelSideImage?: string;
+  // Additional images (Otto Cap: image_4 through image_10)
+  additionalImages?: string[];
   sizes: ProductSize[];
 }
 

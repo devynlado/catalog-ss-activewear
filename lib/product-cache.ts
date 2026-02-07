@@ -24,6 +24,7 @@ export interface ProductQueryOptions {
   sustainable?: boolean;
   featured?: boolean;
   streetwear?: boolean;
+  supplier?: 'ss_activewear' | 'otto_cap' | 'all';  // Filter by supplier (default: 'all')
   page?: number;
   pageSize?: number;
   includeSkus?: boolean;  // Whether to include full SKU data (slower)
@@ -82,6 +83,10 @@ const BRAND_TIERS: Record<string, number> = {
   'BADGER': 2,
   'CHARLES RIVER': 2,
   'DRI DUCK': 2,
+  
+  // Otto Cap (supplier)
+  'OTTO': 1,
+  'OTTO CAP': 1,
 };
 
 function getBrandTier(brandName: string): number {
@@ -161,6 +166,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
     sustainable,
     featured,
     streetwear,
+    supplier = 'all',  // Default to showing all suppliers
     page = 1,
     pageSize = 20,
     includeSkus = false,
@@ -220,6 +226,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
       min_retail_price,
       min_sale_price,
       is_on_sale,
+      supplier,
       product_colors (
         id,
         color_name,
@@ -232,6 +239,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
         on_model_front,
         on_model_back,
         on_model_side,
+        additional_images,
         availability
       )
     `, { count: 'exact' })
@@ -240,6 +248,11 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
   // Apply category filter (must be first to limit results)
   if (categoryFilteredStyleIds && categoryFilteredStyleIds.length > 0) {
     query = query.in('style_id', categoryFilteredStyleIds);
+  }
+  
+  // Apply supplier filter
+  if (supplier && supplier !== 'all') {
+    query = query.eq('supplier', supplier);
   }
   
   // Apply other filters
@@ -440,6 +453,7 @@ export async function searchProductsFromCache(
       is_active,
       color_count,
       base_price,
+      supplier,
       product_colors (
         id,
         color_name,
@@ -591,6 +605,7 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
       is_active,
       color_count,
       base_price,
+      supplier,
       product_colors (
         id,
         color_name,
@@ -603,6 +618,7 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
         on_model_front,
         on_model_back,
         on_model_side,
+        additional_images,
         availability,
         product_skus (
           sku,
@@ -655,6 +671,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       is_active,
       color_count,
       base_price,
+      supplier,
       product_colors (
         id,
         color_name,
@@ -667,6 +684,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
         on_model_front,
         on_model_back,
         on_model_side,
+        additional_images,
         availability,
         product_skus (
           sku,
@@ -804,6 +822,7 @@ function transformProduct(row: any): Product {
     isNew: row.is_new || false,
     isPopular: row.is_popular || false,
     popularTier: row.popular_tier as ProductTier | undefined,
+    supplier: row.supplier as 'ss_activewear' | 'otto_cap' | undefined,
   };
 }
 
@@ -878,6 +897,7 @@ function transformProductWithSkus(row: any): Product {
       onModelFrontImage: c.on_model_front || '',
       onModelBackImage: c.on_model_back || '',
       onModelSideImage: c.on_model_side || '',
+      additionalImages: c.additional_images || [],
       sizes,
     };
   });
@@ -920,6 +940,7 @@ function transformProductWithSkus(row: any): Product {
     isNew: row.is_new || false,
     isPopular: row.is_popular || false,
     popularTier: row.popular_tier as ProductTier | undefined,
+    supplier: row.supplier as 'ss_activewear' | 'otto_cap' | undefined,
   };
 }
 

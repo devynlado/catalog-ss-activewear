@@ -211,6 +211,7 @@ const megaMenuConfig: MegaMenuConfig = {
     {
       title: 'By Style',
       items: [
+        { name: 'Baseball Caps', href: '/catalog/headwear/baseball-caps' },
         { name: 'Trucker Hats', href: '/catalog/headwear/trucker-hats' },
         { name: 'Dad Caps', href: '/catalog/headwear/dad-caps' },
         { name: 'Snapbacks', href: '/catalog/headwear/snapbacks' },

@@ -112,6 +112,7 @@ export const SUB_CATEGORIES: Record<number, SubCategoryInfo> = {
   // HEADWEAR SUB-CATEGORIES (parentId: 11)
   // ============================================
   // Product types (standalone titles)
+  2000: { name: 'Baseball Caps', slug: 'baseball-caps', parentId: 11, isProductType: true },
   147: { name: 'Trucker Hats', slug: 'trucker-hats', parentId: 11, isProductType: true },
   796: { name: 'Dad Caps', slug: 'dad-caps', parentId: 11, isProductType: true },
   363: { name: 'Snapbacks', slug: 'snapbacks', parentId: 11, isProductType: true },

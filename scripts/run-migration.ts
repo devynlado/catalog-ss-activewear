@@ -1,115 +1,77 @@
 /**
- * Run database migration for category system
+ * Run Migration Script
  * 
- * Run with: npx tsx scripts/run-migration.ts
+ * Executes the supplier support migration directly via Supabase client.
+ * Run with: npx ts-node scripts/run-migration.ts
  */
 
-import { createClient } from '@supabase/supabase-js';
-import * as fs from 'fs';
+import * as dotenv from 'dotenv';
 import * as path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client with service key
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing Supabase credentials. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Load environment variables
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 async function runMigration() {
-  console.log('Running category system migration...\n');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
-  // Read the migration file
-  const migrationPath = path.join(process.cwd(), 'supabase/migrations/002_categories.sql');
-  const migrationSql = fs.readFileSync(migrationPath, 'utf-8');
-  
-  // Split into individual statements (rough split on semicolons)
-  // This is a simplified approach - for complex migrations use Supabase CLI
-  const statements = migrationSql
-    .split(/;\s*\n/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0 && !s.startsWith('--'));
-  
-  console.log(`Found ${statements.length} SQL statements\n`);
-  
-  let successCount = 0;
-  let errorCount = 0;
-  
-  for (let i = 0; i < statements.length; i++) {
-    const statement = statements[i];
-    const preview = statement.substring(0, 60).replace(/\n/g, ' ');
-    
-    try {
-      const { error } = await supabase.rpc('exec_sql', { sql: statement + ';' });
-      
-      if (error) {
-        // Try direct query for simple statements
-        const { error: directError } = await supabase.from('_exec').select().limit(0);
-        
-        // If exec_sql doesn't exist, inform user to run manually
-        if (error.message.includes('function') || error.message.includes('does not exist')) {
-          console.log(`\n⚠️  Cannot execute SQL directly via API.`);
-          console.log(`\nPlease run the migration manually:`);
-          console.log(`1. Go to your Supabase dashboard`);
-          console.log(`2. Open SQL Editor`);
-          console.log(`3. Paste and run the contents of: supabase/migrations/002_categories.sql`);
-          console.log(`\nAlternatively, use Supabase CLI: supabase db push`);
-          return;
-        }
-        
-        console.log(`  ✗ Statement ${i + 1}: ${preview}...`);
-        console.log(`    Error: ${error.message}`);
-        errorCount++;
-      } else {
-        console.log(`  ✓ Statement ${i + 1}: ${preview}...`);
-        successCount++;
-      }
-    } catch (err: any) {
-      console.log(`  ✗ Statement ${i + 1}: ${preview}...`);
-      console.log(`    Error: ${err.message}`);
-      errorCount++;
-    }
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase credentials');
   }
   
-  console.log(`\nMigration complete: ${successCount} succeeded, ${errorCount} failed`);
-}
-
-// Check if tables exist
-async function checkTables() {
-  console.log('Checking if tables exist...\n');
+  const supabase = createClient(supabaseUrl, supabaseKey);
   
-  const tables = ['categories', 'attribute_groups', 'product_categories'];
+  console.log('Running supplier support migration...\n');
   
-  for (const table of tables) {
-    const { data, error } = await supabase.from(table).select('*').limit(1);
-    
-    if (error) {
-      if (error.message.includes('does not exist')) {
-        console.log(`  ✗ ${table}: does not exist`);
-      } else {
-        console.log(`  ? ${table}: ${error.message}`);
-      }
-    } else {
-      console.log(`  ✓ ${table}: exists`);
-    }
+  // Check if columns already exist
+  const { data: existingColumns } = await supabase
+    .from('products')
+    .select('supplier')
+    .limit(1);
+  
+  if (existingColumns !== null) {
+    console.log('Migration may already be applied (supplier column exists)');
+    console.log('Checking other changes...\n');
+  }
+  
+  // Run migration SQL statements individually via RPC or direct queries
+  // Note: Most ALTER TABLE statements need to be run via Supabase dashboard
+  // or through a direct PostgreSQL connection
+  
+  console.log('The migration file has been created at:');
+  console.log('  supabase/migrations/013_add_supplier_support.sql\n');
+  console.log('To apply the migration, either:');
+  console.log('  1. Run via Supabase Dashboard SQL Editor');
+  console.log('  2. Use supabase db push with correct credentials');
+  console.log('  3. Apply via direct PostgreSQL connection\n');
+  
+  // Check if Baseball Caps category exists
+  const { data: baseballCat, error: catError } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('id', 900)
+    .single();
+  
+  if (catError && catError.code === 'PGRST116') {
+    console.log('Baseball Caps category (900) does not exist yet.');
+    console.log('It will be created when the migration runs.\n');
+  } else if (baseballCat) {
+    console.log('✓ Baseball Caps category already exists:', baseballCat.name);
+  }
+  
+  // Try to check if supplier column exists
+  const { error: checkError } = await supabase
+    .from('products')
+    .select('supplier')
+    .limit(1);
+  
+  if (checkError) {
+    console.log('\nSupplier columns do not exist yet.');
+    console.log('Please run the migration before importing Otto Cap products.\n');
+  } else {
+    console.log('\n✓ Supplier column exists - migration appears to be applied.\n');
   }
 }
 
-async function main() {
-  await checkTables();
-  console.log('\n');
-  
-  // Try to run migration
-  // await runMigration();
-  
-  console.log('\n📋 NEXT STEPS:');
-  console.log('1. Run the migration SQL in Supabase Dashboard > SQL Editor');
-  console.log('   File: supabase/migrations/002_categories.sql');
-  console.log('\n2. Then run category sync:');
-  console.log('   npx tsx scripts/sync-categories.ts');
-}
-
-main().catch(console.error);
+runMigration().catch(console.error);

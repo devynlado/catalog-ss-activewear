@@ -36,8 +36,9 @@ export default function HomePage() {
       {/* 5. Featured Products - Help: Not sure? Try these */}
       <FeaturedProducts />
       
-      {/* 6. Product Guides - Discovery: Browse curated collections */}
+      {/* 6. Product Guides - Hidden for now, added to /guides page instead
       <ProductGuidesPromo />
+      */}
       
       {/* 7. Services - Context: Here's what we'll do */}
       <ServicesGrid />

@@ -8,6 +8,18 @@ import { Product, ProductColor } from '@/lib/types';
 import { formatPrice, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
 
+/**
+ * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
+ * S3 and other URLs pass through unchanged.
+ */
+function proxyImageUrl(url: string): string {
+  if (!url) return '';
+  if (url.includes('drive.usercontent.google.com') || url.includes('drive.google.com')) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 interface ProductCardProps {
   product: Product;
   showSwatches?: boolean;
@@ -48,18 +60,22 @@ export function ProductCard({
   const [imageError, setImageError] = useState(false);
   const [showAllColors, setShowAllColors] = useState(false);
 
+  // Detect if this is an Otto Cap product (needs image proxying and different swatch style)
+  const isOttoCap = product.supplier === 'otto_cap';
+
   // Image priority:
-  // 1. Selected color's model image (if user clicked a swatch)
+  // 1. Selected color's model image (if user clicked a swatch) - S&S only
   // 2. Selected color's flat image (fallback)
   // 3. Product's default styleImage (initial state)
   const getImageUrl = () => {
     // Prioritize selected color's images when available
     if (selectedColor) {
-      if (selectedColor.onModelFrontImage) return selectedColor.onModelFrontImage;
-      if (selectedColor.frontImage) return selectedColor.frontImage;
+      // Otto Cap doesn't have on-model images
+      if (!isOttoCap && selectedColor.onModelFrontImage) return proxyImageUrl(selectedColor.onModelFrontImage);
+      if (selectedColor.frontImage) return proxyImageUrl(selectedColor.frontImage);
     }
     // Fall back to product's default image
-    if (product.imageUrl) return product.imageUrl;
+    if (product.imageUrl) return proxyImageUrl(product.imageUrl);
     return '';
   };
   const imageUrl = getImageUrl();
@@ -181,7 +197,11 @@ export function ProductCard({
             onMouseLeave={() => setShowAllColors(false)}
           >
             {/* Collapsed view - show swatches + count */}
-            <div className="flex items-center gap-1.5 pr-16">
+            {/* Otto Cap: show product image thumbnails; S&S: show color swatch circles */}
+            <div className={cn(
+              "flex items-center gap-1.5 pr-16",
+              isOttoCap && "gap-1"
+            )}>
               {product.colors.slice(0, maxSwatches).map((color) => (
                 <button
                   key={color.colorCode}
@@ -191,22 +211,39 @@ export function ProductCard({
                     handleColorChange(color);
                   }}
                   className={cn(
-                    'relative h-5 w-5 flex-shrink-0 overflow-hidden rounded-full border-2 transition-all',
+                    'relative flex-shrink-0 overflow-hidden border-2 transition-all',
+                    // Otto Cap: rectangular product thumbnails
+                    isOttoCap ? 'h-6 w-6 rounded-md' : 'h-5 w-5 rounded-full',
                     selectedColor?.colorCode === color.colorCode
                       ? 'border-brand-500 ring-1 ring-brand-200'
                       : 'border-stone-200 hover:border-stone-400'
                   )}
                   title={color.colorName}
                 >
-                  {color.swatchImage ? (
-                    <Image
-                      src={color.swatchImage}
-                      alt={color.colorName}
-                      fill
-                      className="rounded-full object-cover object-center"
-                    />
+                  {isOttoCap ? (
+                    // Otto Cap: use front product image as thumbnail
+                    color.frontImage ? (
+                      <Image
+                        src={proxyImageUrl(color.frontImage)}
+                        alt={color.colorName}
+                        fill
+                        className="rounded-sm object-cover object-center"
+                      />
+                    ) : (
+                      <span className="absolute inset-0 rounded-sm bg-slate-300" />
+                    )
                   ) : (
-                    <span className="absolute inset-0 rounded-full bg-slate-300" />
+                    // S&S: use swatch image or fallback color
+                    color.swatchImage ? (
+                      <Image
+                        src={color.swatchImage}
+                        alt={color.colorName}
+                        fill
+                        className="rounded-full object-cover object-center"
+                      />
+                    ) : (
+                      <span className="absolute inset-0 rounded-full bg-slate-300" />
+                    )
                   )}
                 </button>
               ))}
@@ -248,13 +285,19 @@ export function ProductCard({
                 {/* Invisible bridge to maintain hover when moving to popup */}
                 <div className="absolute left-0 top-full z-40 h-3 w-48" />
                 <div 
-                  className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-stone-200 bg-white p-3 shadow-lg"
+                  className={cn(
+                    "absolute left-0 top-full z-50 mt-2 rounded-lg border border-stone-200 bg-white p-3 shadow-lg",
+                    isOttoCap ? "w-56" : "w-48"
+                  )}
                   onClick={(e) => e.stopPropagation()}
                 >
                 <p className="mb-2 text-xs font-medium text-slate-500">
                   {product.colors.length} Colors Available
                 </p>
-                <div className="grid grid-cols-6 gap-1.5">
+                <div className={cn(
+                  "grid gap-1.5",
+                  isOttoCap ? "grid-cols-5" : "grid-cols-6"
+                )}>
                   {product.colors.map((color) => (
                     <button
                       key={color.colorCode}
@@ -265,22 +308,36 @@ export function ProductCard({
                         setShowAllColors(false);
                       }}
                       className={cn(
-                        'relative h-6 w-6 flex-shrink-0 overflow-hidden rounded-full border-2 transition-all',
+                        'relative flex-shrink-0 overflow-hidden border-2 transition-all',
+                        isOttoCap ? 'h-8 w-8 rounded-md' : 'h-6 w-6 rounded-full',
                         selectedColor?.colorCode === color.colorCode
                           ? 'border-brand-500 ring-2 ring-brand-200'
                           : 'border-stone-200 hover:border-stone-400 hover:scale-110'
                       )}
                       title={color.colorName}
                     >
-                      {color.swatchImage ? (
-                        <Image
-                          src={color.swatchImage}
-                          alt={color.colorName}
-                          fill
-                          className="rounded-full object-cover object-center"
-                        />
+                      {isOttoCap ? (
+                        color.frontImage ? (
+                          <Image
+                            src={proxyImageUrl(color.frontImage)}
+                            alt={color.colorName}
+                            fill
+                            className="rounded-sm object-cover object-center"
+                          />
+                        ) : (
+                          <span className="absolute inset-0 rounded-sm bg-slate-300" />
+                        )
                       ) : (
-                        <span className="absolute inset-0 rounded-full bg-slate-300" />
+                        color.swatchImage ? (
+                          <Image
+                            src={color.swatchImage}
+                            alt={color.colorName}
+                            fill
+                            className="rounded-full object-cover object-center"
+                          />
+                        ) : (
+                          <span className="absolute inset-0 rounded-full bg-slate-300" />
+                        )
                       )}
                     </button>
                   ))}

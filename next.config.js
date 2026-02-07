@@ -24,6 +24,17 @@ const nextConfig = {
         hostname: 'images.unsplash.com',
         pathname: '/**',
       },
+      // Otto Cap images
+      {
+        protocol: 'https',
+        hostname: 's3-us-west-2.amazonaws.com',
+        pathname: '/ottocap/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'drive.usercontent.google.com',
+        pathname: '/**',
+      },
     ],
   },
   async redirects() {

@@ -1,71 +1,59 @@
 'use client';
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Cog, Building2, Package, Camera, Scissors, Palette } from 'lucide-react';
+import { Cog, Building2, Package, Palette, Factory as FactoryIcon } from 'lucide-react';
+import { warehouseImages, factoryTourImages } from '@/lib/service-images';
 
 const capabilities = [
   {
+    stat: '25,000',
+    label: 'Sq Ft Facility',
+    icon: Building2,
+  },
+  {
     stat: '6',
-    label: 'Automatic Screen Presses',
-    description: 'High-volume production',
+    label: 'Auto Presses',
     icon: Cog,
   },
   {
-    stat: '20,000',
-    label: 'Sq Ft Facility',
-    description: 'Full-scale production space',
-    icon: Building2,
+    stat: 'In-House',
+    label: 'Color Lab',
+    icon: Palette,
   },
   {
     stat: 'Auto',
     label: 'Folding & Bagging',
-    description: 'Professional packaging',
     icon: Package,
-  },
-  {
-    stat: 'Complete',
-    label: 'Digital Dark Room',
-    description: 'In-house screen imaging',
-    icon: Camera,
-  },
-  {
-    stat: 'Full',
-    label: 'Embroidery Department',
-    description: 'Multi-head machines',
-    icon: Scissors,
-  },
-  {
-    stat: 'Custom',
-    label: 'Ink & Pantone Lab',
-    description: 'Exact color matching',
-    icon: Palette,
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.2 },
+const factoryImages = [
+  {
+    src: warehouseImages.productionFloor.src,
+    alt: warehouseImages.productionFloor.alt,
+    label: 'Production Floor',
   },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
+  {
+    src: warehouseImages.embroideryDepartment.src,
+    alt: warehouseImages.embroideryDepartment.alt,
+    label: 'Embroidery Dept',
   },
-};
+  {
+    src: factoryTourImages.inkMixing.src,
+    alt: factoryTourImages.inkMixing.alt,
+    label: 'Ink Lab',
+  },
+  {
+    src: factoryTourImages.qualityInspection.src,
+    alt: factoryTourImages.qualityInspection.alt,
+    label: 'Quality Check',
+  },
+];
 
 export function BuiltForScale() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-navy-800 via-navy-800 to-navy-700 py-24">
-      {/* Soft edge transitions for smoother section blending */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/[0.03] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-stone-50/[0.03] to-transparent" />
-      
+    <section className="relative py-16 lg:py-20 bg-gradient-to-br from-navy-800 via-navy-800 to-navy-700 overflow-hidden">
       {/* Grain texture */}
       <div 
         className="pointer-events-none absolute inset-0 opacity-[0.03]"
@@ -77,70 +65,92 @@ export function BuiltForScale() {
       {/* Decorative gradient orbs */}
       <div className="pointer-events-none absolute -left-48 top-0 h-96 w-96 rounded-full bg-brand-500/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-48 bottom-0 h-96 w-96 rounded-full bg-brand-500/5 blur-3xl" />
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-navy-600/20 blur-3xl" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <motion.div 
-          className="text-center"
+        {/* Header */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
+          className="text-center mb-12"
         >
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
-            Built for Scale
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm font-medium text-white mb-4">
+            <FactoryIcon className="h-4 w-4" />
+            Our Factory
+          </div>
+          <h2 className="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
+            See Where Your Order Is Made
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
-            From 24 pieces to 24,000 — we have the production capacity 
-            and equipment to handle any project size.
+          <p className="mt-4 text-lg text-slate-300 max-w-2xl mx-auto">
+            Tour our Montclair, CA production facility — equipped with the same industrial equipment 
+            used by the nation&apos;s largest decorators.
           </p>
         </motion.div>
 
-        {/* Capabilities Grid */}
+        {/* Capabilities - Glassmorphism cards */}
         <motion.div 
-          className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
           {capabilities.map((item, index) => {
             const Icon = item.icon;
             return (
               <motion.div
-                key={index}
-                variants={itemVariants}
-                whileHover={{ scale: 1.02, y: -4 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="group relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 transition-all hover:border-brand-500/30 hover:bg-white/10"
+                key={item.label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-5 text-center hover:border-brand-500/30 hover:bg-white/10 transition-all"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/20 border border-brand-500/20">
-                    <Icon className="h-6 w-6 text-brand-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-white">
-                        {item.stat}
-                      </span>
-                    </div>
-                    <p className="mt-1 font-semibold text-white">
-                      {item.label}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {item.description}
-                    </p>
-                  </div>
+                <div className="flex h-10 w-10 mx-auto items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/20 border border-brand-500/20 mb-3">
+                  <Icon className="h-5 w-5 text-brand-400" />
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {item.stat}
+                </div>
+                <div className="text-sm text-slate-400">
+                  {item.label}
                 </div>
               </motion.div>
             );
           })}
         </motion.div>
 
-        {/* Bottom tagline */}
+        {/* Image Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {factoryImages.map((image, index) => (
+            <motion.div
+              key={image.label}
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="relative aspect-[4/3] rounded-2xl overflow-hidden group"
+            >
+              <Image
+                src={image.src}
+                alt={image.alt}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 50vw, 25vw"
+              />
+              {/* Overlay with label */}
+              <div className="absolute inset-0 bg-gradient-to-t from-navy-900/80 via-navy-900/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <p className="text-sm font-medium text-white">{image.label}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Bottom tagline - Glassmorphism */}
         <motion.div 
-          className="mt-16 text-center"
+          className="mt-12 text-center"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -150,7 +160,7 @@ export function BuiltForScale() {
             <div className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
             <p className="text-slate-300">
               <span className="text-brand-400 font-semibold">Enterprise-ready infrastructure</span>
-              {' '}— the same equipment used by the largest decorators in the country.
+              {' '}— capacity for 50 to 50,000 piece orders.
             </p>
           </div>
         </motion.div>

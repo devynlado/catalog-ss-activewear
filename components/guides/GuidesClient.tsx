@@ -107,6 +107,50 @@ const USE_CASE_FILTERS = [
   },
 ];
 
+// Category cards for visual navigation (matching home page)
+const CATEGORY_CARDS = [
+  { 
+    id: 'schools',
+    label: 'For Schools', 
+    icon: GraduationCap, 
+    gradient: 'from-blue-500 to-blue-600',
+    bgHover: 'hover:bg-blue-50',
+    description: 'Uniforms, spirit wear & youth sizes'
+  },
+  { 
+    id: 'sports',
+    label: 'For Sports', 
+    icon: Trophy, 
+    gradient: 'from-green-500 to-green-600',
+    bgHover: 'hover:bg-green-50',
+    description: 'Athletic wear & team jerseys'
+  },
+  { 
+    id: 'corporate',
+    label: 'For Corporate', 
+    icon: Building2, 
+    gradient: 'from-purple-500 to-purple-600',
+    bgHover: 'hover:bg-purple-50',
+    description: 'Polos, workwear & professional'
+  },
+  { 
+    id: 'events',
+    label: 'For Events', 
+    icon: PartyPopper, 
+    gradient: 'from-amber-500 to-amber-600',
+    bgHover: 'hover:bg-amber-50',
+    description: 'Promos, giveaways & merch'
+  },
+  { 
+    id: 'retail',
+    label: 'For Retail', 
+    icon: Store, 
+    gradient: 'from-rose-500 to-rose-600',
+    bgHover: 'hover:bg-rose-50',
+    description: 'Streetwear & fashion blanks'
+  },
+];
+
 // Categorize guides by type
 function categorizeGuides(guides: Guide[]): {
   seasonal: Guide[];
@@ -457,6 +501,39 @@ export function GuidesClient({ guides }: GuidesClientProps) {
                 Curated collections to help you find the perfect blanks
               </p>
             </div>
+          </div>
+          
+          {/* Category Cards - Visual navigation */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            {CATEGORY_CARDS.map((category) => {
+              const Icon = category.icon;
+              const isActive = activeFilter === category.id;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setActiveFilter(isActive ? 'all' : category.id)}
+                  className={cn(
+                    'group flex flex-col items-center text-center rounded-xl border p-4 transition-all',
+                    isActive 
+                      ? 'bg-white border-brand-300 shadow-lg shadow-brand-100 ring-2 ring-brand-500/20'
+                      : `bg-white/70 backdrop-blur-sm border-stone-200 hover:shadow-lg hover:shadow-stone-200/50 hover:-translate-y-0.5 ${category.bgHover}`
+                  )}
+                >
+                  <div className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg mb-2 transition-transform',
+                    `bg-gradient-to-br ${category.gradient}`,
+                    isActive && 'scale-110'
+                  )}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <span className={cn(
+                    'font-semibold text-sm',
+                    isActive ? 'text-brand-600' : 'text-navy-800'
+                  )}>{category.label}</span>
+                  <span className="text-xs mt-0.5 text-slate-500 line-clamp-1">{category.description}</span>
+                </button>
+              );
+            })}
           </div>
           
           {/* Search Bar */}

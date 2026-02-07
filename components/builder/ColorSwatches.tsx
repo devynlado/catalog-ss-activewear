@@ -6,6 +6,18 @@ import { Check, Search, X } from 'lucide-react';
 import { ProductColor } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+/**
+ * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
+ * S3 and other URLs pass through unchanged.
+ */
+function proxyImageUrl(url: string): string {
+  if (!url) return '';
+  if (url.includes('drive.usercontent.google.com') || url.includes('drive.google.com')) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 // Map color names to hex values for fallback swatch display
 const COLOR_NAME_TO_HEX: Record<string, string> = {
   // Basics
@@ -243,7 +255,7 @@ export function ColorSwatches({
                 {/* Use product image when useProductImages is true */}
                 {useProductImages && color.frontImage ? (
                   <Image
-                    src={color.frontImage}
+                    src={proxyImageUrl(color.frontImage)}
                     alt={color.colorName}
                     fill
                     className="object-cover"
@@ -251,7 +263,7 @@ export function ColorSwatches({
                   />
                 ) : color.swatchImage && !failedImages.has(color.colorCode) ? (
                   <Image
-                    src={color.swatchImage}
+                    src={proxyImageUrl(color.swatchImage)}
                     alt={color.colorName}
                     fill
                     className="rounded-full object-cover"

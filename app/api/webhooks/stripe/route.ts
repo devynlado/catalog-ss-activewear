@@ -3,6 +3,22 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { stripe, fromStripeCents } from '@/lib/stripe';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+import {
+  generatePackageOrderConfirmationHtml,
+  generatePackageOrderConfirmationText,
+  getPackageOrderConfirmationSubject,
+} from '@/lib/emails/package-order-confirmation';
+import {
+  generatePackageOrderNotificationHtml,
+  generatePackageOrderNotificationText,
+  getPackageOrderNotificationSubject,
+} from '@/lib/emails/package-order-notification';
+
+// Lazy initialization for Resend
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 // Lazy initialization to avoid build-time errors
 function getSupabase() {
@@ -143,19 +159,27 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
     },
   });
 
-  // Send confirmation email (non-blocking)
-  try {
-    const customerEmail = paymentIntent.metadata?.customer_email || paymentIntent.receipt_email;
-    if (customerEmail) {
-      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/email/order-confirmation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
-      });
+  // Send confirmation emails based on order type
+  const orderType = paymentIntent.metadata?.order_type;
+  
+  if (orderType === 'package') {
+    // Handle package order emails
+    await sendPackageOrderEmails(supabase, orderId, orderNumber || '', paymentIntent);
+  } else {
+    // Default order confirmation email (non-blocking)
+    try {
+      const customerEmail = paymentIntent.metadata?.customer_email || paymentIntent.receipt_email;
+      if (customerEmail) {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/email/order-confirmation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId }),
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send confirmation email:', emailError);
+      // Don't fail the webhook for email errors
     }
-  } catch (emailError) {
-    console.error('Failed to send confirmation email:', emailError);
-    // Don't fail the webhook for email errors
   }
 
   console.log(`Payment succeeded for order ${orderNumber} (${orderId})`);
@@ -261,4 +285,129 @@ async function handleChargeRefunded(supabase: SupabaseClient<any>, charge: Strip
   });
 
   console.log(`Refund processed for order ${order.order_number}`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendPackageOrderEmails(
+  supabase: SupabaseClient<any>,
+  orderId: string,
+  orderNumber: string,
+  paymentIntent: Stripe.PaymentIntent
+) {
+  try {
+    // Fetch order details
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !order) {
+      console.error('Failed to fetch order for email:', error);
+      return;
+    }
+
+    const metadata = paymentIntent.metadata;
+    
+    // Extract order items (package orders store items as array)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderItems = order.items as any[];
+    const item = orderItems[0] || {};
+    
+    // Extract shipping address
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const shippingAddress = order.shipping_address as any;
+
+    const resend = getResend();
+    const fromEmail = 'Garment Decor <noreply@garmentdecor.com>';
+
+    // Parse addons from metadata or reconstruct from item
+    let addons: string[] = [];
+    if (metadata.addons) {
+      addons = metadata.addons.split(', ').filter(Boolean);
+    } else if (item.embroideryLocations || item.has3DPuff) {
+      if (item.embroideryLocations?.includes('side')) addons.push('Side Embroidery');
+      if (item.embroideryLocations?.includes('back')) addons.push('Back Embroidery');
+      if (item.has3DPuff) addons.push('3D Puff');
+    }
+
+    // Build email props
+    const emailProps = {
+      orderNumber,
+      customerName: metadata.customer_name || order.customer_name || `${shippingAddress.firstName} ${shippingAddress.lastName}`,
+      email: metadata.customer_email || order.customer_email || '',
+      phone: metadata.customer_phone || order.customer_phone || shippingAddress.phone,
+      company: metadata.customer_company || order.company || shippingAddress.company,
+      packageName: metadata.product_name || item.productName || 'Custom Embroidered Caps',
+      quantity: parseInt(metadata.total_quantity) || item.totalQuantity || 0,
+      color: metadata.color_summary || (item.colors?.map((c: { colorName: string }) => c.colorName).join(', ')) || 'Various',
+      addons,
+      subtotal: order.subtotal || 0,
+      tax: order.tax_amount || 0,
+      shipping: order.shipping_cost || 0,
+      total: order.total || 0,
+      shippingAddress: {
+        street: shippingAddress.address || shippingAddress.street || '',
+        city: shippingAddress.city || '',
+        state: shippingAddress.state || '',
+        zip: shippingAddress.zipCode || shippingAddress.zip || '',
+      },
+      logoUploaded: !!(metadata.logo_url),
+      logoUrl: metadata.logo_url || undefined,
+      notes: metadata.notes || order.notes || undefined,
+      paymentIntentId: paymentIntent.id,
+      createdAt: new Date().toLocaleString('en-US', {
+        timeZone: 'America/Los_Angeles',
+        dateStyle: 'full',
+        timeStyle: 'short',
+      }),
+    };
+
+    // Send customer confirmation email
+    if (emailProps.email) {
+      const { error: customerEmailError } = await resend.emails.send({
+        from: fromEmail,
+        to: emailProps.email,
+        subject: getPackageOrderConfirmationSubject(orderNumber, emailProps.packageName),
+        html: generatePackageOrderConfirmationHtml(emailProps),
+        text: generatePackageOrderConfirmationText(emailProps),
+      });
+
+      if (customerEmailError) {
+        console.error('Failed to send customer confirmation email:', customerEmailError);
+      } else {
+        console.log(`Customer confirmation email sent to ${emailProps.email}`);
+      }
+    }
+
+    // Send internal notification email
+    const salesEmail = process.env.SALES_NOTIFICATION_EMAIL || 'orders@garmentdecor.com';
+    const { error: salesEmailError } = await resend.emails.send({
+      from: fromEmail,
+      to: salesEmail,
+      subject: getPackageOrderNotificationSubject(orderNumber, pricing.total),
+      html: generatePackageOrderNotificationHtml(emailProps),
+      text: generatePackageOrderNotificationText(emailProps),
+    });
+
+    if (salesEmailError) {
+      console.error('Failed to send sales notification email:', salesEmailError);
+    } else {
+      console.log(`Sales notification email sent to ${salesEmail}`);
+    }
+
+    // Log activity for email sent
+    await supabase.from('order_activities').insert({
+      order_id: orderId,
+      activity_type: 'email_sent',
+      details: {
+        email_type: 'package_order_confirmation',
+        recipient: emailProps.email,
+      },
+    });
+
+  } catch (emailError) {
+    console.error('Failed to send package order emails:', emailError);
+    // Don't throw - we don't want to fail the webhook for email errors
+  }
 }

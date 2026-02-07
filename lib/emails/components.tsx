@@ -422,6 +422,286 @@ export function emailWrapper(content: string, preheaderText?: string): string {
 }
 
 // =============================================================================
+// PACKAGE ORDER TYPES & HELPERS
+// =============================================================================
+
+/**
+ * Decoration methods supported by the system
+ */
+export type DecorationMethod = 'embroidery' | 'screen-print' | 'heat-transfer' | 'dtg';
+
+/**
+ * Decoration details vary by method
+ */
+export interface DecorationDetails {
+  locations: string[];              // ['front', 'back'] or ['left-chest']
+  colors?: number;                  // For screen printing
+  stitchCount?: number;             // For embroidery
+}
+
+/**
+ * Individual item in a package order (supports multiple colors with optional sizes)
+ */
+export interface PackageOrderItem {
+  colorName: string;
+  quantity: number;
+  sizeBreakdown?: Record<string, number>;  // Optional for products with sizes
+}
+
+/**
+ * Unified interface for package order emails
+ * Supports any package type (embroidered caps, printed tees, etc.)
+ */
+export interface PackageOrderEmailProps {
+  // Order basics
+  orderNumber: string;
+  customerName: string;
+  email: string;
+  
+  // Package details (dynamic)
+  packageType: string;               // 'embroidered-caps', 'printed-tees-gildan', etc.
+  packageDisplayName: string;        // "Custom Embroidered Caps"
+  productName: string;               // "Richardson 112 Trucker Cap"
+  productUnit: string;               // "caps", "shirts", "polos"
+  decorationMethod: DecorationMethod;
+  
+  // Items (support single or multiple colors)
+  items: PackageOrderItem[];
+  
+  // Decoration details
+  decorationDetails: DecorationDetails;
+  
+  // Pricing
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  pricePerUnit: number;
+  
+  // Shipping
+  shippingAddress: { 
+    street: string; 
+    city: string; 
+    state: string; 
+    zip: string; 
+  };
+  
+  // Artwork
+  logoUploaded: boolean;
+  logoUrl?: string;
+  
+  // Optional fields
+  notes?: string;
+  phone?: string;
+  company?: string;
+  paymentIntentId?: string;
+  createdAt?: string;
+}
+
+/**
+ * Get human-readable decoration description
+ * Examples:
+ * - "2-color screen print on front & back"
+ * - "Embroidery up to 10,000 stitches on left chest"
+ */
+export function getDecorationDescription(
+  method: DecorationMethod, 
+  details: DecorationDetails
+): string {
+  const locationText = details.locations.length > 1 
+    ? details.locations.map(l => l.replace('-', ' ')).join(' & ')
+    : details.locations[0]?.replace('-', ' ') || 'front';
+  
+  switch (method) {
+    case 'screen-print':
+      const colorCount = details.colors || 1;
+      return `${colorCount}-color screen print on ${locationText}`;
+    
+    case 'embroidery':
+      const stitches = details.stitchCount 
+        ? `up to ${details.stitchCount.toLocaleString()} stitches` 
+        : 'custom embroidery';
+      return `${stitches} on ${locationText}`;
+    
+    case 'heat-transfer':
+      return `Heat transfer on ${locationText}`;
+    
+    case 'dtg':
+      return `Direct-to-garment print on ${locationText}`;
+    
+    default:
+      return `Custom decoration on ${locationText}`;
+  }
+}
+
+/**
+ * Get process steps based on decoration method
+ * Returns an array of steps for the "What's Next" section
+ */
+export function getProcessSteps(method: DecorationMethod): Array<{ 
+  title: string; 
+  description: string; 
+}> {
+  switch (method) {
+    case 'embroidery':
+      return [
+        { 
+          title: 'Art Digitization', 
+          description: 'Our team converts your logo to embroidery format (1-2 business days)' 
+        },
+        { 
+          title: 'Your Approval', 
+          description: "We'll email you a digital mockup to approve before production" 
+        },
+        { 
+          title: 'Production & Shipping', 
+          description: 'Ships within 10 business days of approval – tracking included!' 
+        },
+      ];
+    
+    case 'screen-print':
+      return [
+        { 
+          title: 'Art Setup', 
+          description: 'Our team prepares your artwork for screen printing (1-2 business days)' 
+        },
+        { 
+          title: 'Proof Approval', 
+          description: "We'll email you a digital proof to approve before production" 
+        },
+        { 
+          title: 'Production & Shipping', 
+          description: 'Ships within 7-10 business days of approval – tracking included!' 
+        },
+      ];
+    
+    case 'heat-transfer':
+      return [
+        { 
+          title: 'Art Preparation', 
+          description: 'Your design is prepared for heat transfer (1 business day)' 
+        },
+        { 
+          title: 'Proof Approval', 
+          description: "We'll send a digital proof for your approval" 
+        },
+        { 
+          title: 'Production & Shipping', 
+          description: 'Ships within 5-7 business days of approval – tracking included!' 
+        },
+      ];
+    
+    case 'dtg':
+      return [
+        { 
+          title: 'Color Matching', 
+          description: 'We optimize your artwork colors for DTG printing (1 business day)' 
+        },
+        { 
+          title: 'Proof Approval', 
+          description: "We'll email a digital proof for your review" 
+        },
+        { 
+          title: 'Production & Shipping', 
+          description: 'Ships within 5-7 business days of approval – tracking included!' 
+        },
+      ];
+    
+    default:
+      return [
+        { 
+          title: 'Art Review', 
+          description: 'Our team reviews your artwork (1-2 business days)' 
+        },
+        { 
+          title: 'Your Approval', 
+          description: "We'll email you a mockup to approve" 
+        },
+        { 
+          title: 'Production & Shipping', 
+          description: 'Ships after approval – tracking included!' 
+        },
+      ];
+  }
+}
+
+/**
+ * Get action items for internal team based on decoration method
+ */
+export function getActionItems(
+  method: DecorationMethod, 
+  hasLogo: boolean
+): string[] {
+  const items: string[] = [];
+  
+  if (!hasLogo) {
+    items.push('Request logo/artwork from customer');
+  }
+  
+  switch (method) {
+    case 'embroidery':
+      items.push('Digitize logo for embroidery');
+      items.push('Create embroidery mockup');
+      break;
+    
+    case 'screen-print':
+      items.push('Prepare artwork for screen printing');
+      items.push('Create screen print proof');
+      break;
+    
+    case 'heat-transfer':
+      items.push('Prepare heat transfer artwork');
+      items.push('Create mockup proof');
+      break;
+    
+    case 'dtg':
+      items.push('Optimize artwork for DTG');
+      items.push('Create digital proof');
+      break;
+    
+    default:
+      items.push('Review artwork');
+      items.push('Create mockup');
+  }
+  
+  items.push('Send proof for customer approval');
+  items.push('Begin production after approval');
+  
+  return items;
+}
+
+/**
+ * Calculate total quantity from items
+ */
+export function getTotalQuantity(items: PackageOrderItem[]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+/**
+ * Check if any items have size breakdowns
+ */
+export function hasAnySizeBreakdown(items: PackageOrderItem[]): boolean {
+  return items.some(item => item.sizeBreakdown && Object.keys(item.sizeBreakdown).length > 0);
+}
+
+/**
+ * Get aggregated size breakdown across all items
+ */
+export function getAggregatedSizeBreakdown(items: PackageOrderItem[]): Record<string, number> {
+  const aggregated: Record<string, number> = {};
+  
+  for (const item of items) {
+    if (item.sizeBreakdown) {
+      for (const [size, qty] of Object.entries(item.sizeBreakdown)) {
+        aggregated[size] = (aggregated[size] || 0) + qty;
+      }
+    }
+  }
+  
+  return aggregated;
+}
+
+// =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
 

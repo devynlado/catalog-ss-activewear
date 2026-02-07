@@ -1,9 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Building2, Users, Heart } from 'lucide-react';
-import { warehouseImages, factoryTourImages } from '@/lib/service-images';
+import { Building2, Users, Heart, Star } from 'lucide-react';
+import { SalesRepCard } from '@/components/admin/SalesRepCard';
 
 const features = [
   {
@@ -108,7 +107,7 @@ export function TrustSignals() {
             </motion.div>
           </motion.div>
 
-          {/* Facility Image */}
+          {/* Meet Your Future Rep */}
           <motion.div 
             className="relative"
             initial={{ opacity: 0, x: 30 }}
@@ -116,35 +115,41 @@ export function TrustSignals() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl shadow-slate-200/50">
-              <Image
-                src={warehouseImages.productionFloor.src}
-                alt={warehouseImages.productionFloor.alt}
-                fill
-                className="object-cover object-[center_30%]"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-              />
-              {/* Overlay with location info */}
-              <div className="absolute inset-0 bg-gradient-to-t from-navy-900/70 via-navy-900/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-                <p className="text-xl font-semibold">Montclair, California</p>
-                <p className="mt-1 text-white/80">
-                  Our 25,000 sq ft production facility
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 mb-2">
+                  <Star className="h-4 w-4 fill-brand-500 text-brand-500" />
+                  Meet Your Future Rep
+                </div>
+                <p className="text-sm text-slate-500">
+                  Every client gets a dedicated account manager like this
                 </p>
               </div>
+              
+              {/* Sales Rep Card */}
+              <SalesRepCard 
+                rep={{
+                  id: 'home-rep-preview',
+                  full_name: 'Devyn Lado',
+                  email: 'enterprise@garmentdecor.com',
+                  phone: '(855) 942-7636',
+                  avatar_url: '/images/team/devyn-lado.png',
+                  calendly_url: 'https://calendly.com/garmentdecor',
+                  title: 'Enterprise Account Manager',
+                  years_experience: 7,
+                  specialties: ['Coordinating', 'Large Orders', 'Corporate'],
+                  response_time: '< 2 hours',
+                }}
+                showEnhanced={true}
+                showActions={false}
+              />
+              
+              {/* Reassurance Note */}
+              <p className="text-xs text-center text-slate-400 italic">
+                Your assigned rep will reach out within 24 hours of your inquiry
+              </p>
             </div>
-            
-            {/* Floating badge */}
-            <motion.div 
-              className="absolute -bottom-6 -right-6 rounded-2xl bg-white/95 backdrop-blur-sm px-6 py-4 shadow-xl border border-stone-200"
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-            >
-              <p className="text-sm font-medium text-slate-600">Established</p>
-              <p className="text-3xl font-bold text-brand-600">2011</p>
-            </motion.div>
           </motion.div>
         </div>
       </div>

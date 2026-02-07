@@ -18,6 +18,18 @@ import { SpecsContent } from '@/components/builder/SpecsAccordion';
 import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
 import { trackViewItem, trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
 
+/**
+ * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
+ * S3 and other URLs pass through unchanged.
+ */
+function proxyImageUrl(url: string): string {
+  if (!url) return '';
+  if (url.includes('drive.usercontent.google.com') || url.includes('drive.google.com')) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 interface ProductDetailClientProps {
   product: Product;
   googleDiscount?: GoogleDiscount | null;
@@ -53,6 +65,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   // Check if this is an LA Apparel product (needs special handling)
   const isLAApparelProduct = isLAApparel(product.styleId);
   
+  // Check if this is an Otto Cap product (needs image proxy and different display)
+  const isOttoCap = product.supplier === 'otto_cap';
+  
   // Track selected colors (array for multi-color support)
   const [selectedColors, setSelectedColors] = useState<ProductColor[]>([]);
   
@@ -70,6 +85,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   
   // Track if specs section has been opened (for lazy loading)
   const [specsOpened, setSpecsOpened] = useState(false);
+  
+  // Custom image URL for additional images (Otto Cap)
+  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
 
   const { addItem } = useQuoteStore();
   const { addItem: addToCart } = useCartStore();
@@ -107,8 +125,24 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   
   // Get the image URL based on active view
   // Uses activeColor so thumbnails work immediately on page load
+  // Otto Cap images are proxied through /api/image-proxy to bypass CORS
   const getActiveImageUrl = () => {
-    if (!activeColor) return product.imageUrl;
+    // If custom image is set (from clicking additional images), use it
+    if (customImageUrl) return customImageUrl;
+    
+    if (!activeColor) return proxyImageUrl(product.imageUrl);
+    
+    // Otto Cap doesn't have on-model images
+    if (isOttoCap) {
+      switch (activeView) {
+        case 'back':
+          return proxyImageUrl(activeColor.backImage || product.imageUrl);
+        case 'side':
+          return proxyImageUrl(activeColor.sideImage || product.imageUrl);
+        default:
+          return proxyImageUrl(activeColor.frontImage || product.imageUrl);
+      }
+    }
     
     switch (activeView) {
       case 'back':
@@ -248,6 +282,8 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
       setSelectedColors([color, ...selectedColors]);
       // Reset to front view when adding a new color
       setActiveView('front');
+      // Clear custom image URL when changing colors
+      setCustomImageUrl(null);
     }
   };
 
@@ -431,25 +467,26 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
         {activeColor && (
           isValidImageUrl(activeColor.backImage) || 
           isValidImageUrl(activeColor.sideImage) || 
-          isValidImageUrl(activeColor.onModelFrontImage) || 
+          (!isOttoCap && (isValidImageUrl(activeColor.onModelFrontImage) || 
           isValidImageUrl(activeColor.onModelBackImage) || 
-          isValidImageUrl(activeColor.onModelSideImage)
+          isValidImageUrl(activeColor.onModelSideImage))) ||
+          (isOttoCap && activeColor.additionalImages && activeColor.additionalImages.length > 0)
         ) && (
           <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2 lg:pb-0 lg:flex-wrap -mx-4 px-4 lg:mx-0 lg:px-0">
             {/* Flat product images */}
             {isValidImageUrl(activeColor.frontImage) && (
               <button 
-                onClick={() => setActiveView('front')}
+                onClick={() => { setActiveView('front'); setCustomImageUrl(null); }}
                 className={cn(
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
-                  activeView === 'front' 
+                  activeView === 'front' && !customImageUrl
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Front view"
               >
                 <Image
-                  src={activeColor.frontImage}
+                  src={isOttoCap ? proxyImageUrl(activeColor.frontImage) : activeColor.frontImage}
                   alt="Front"
                   width={80}
                   height={80}
@@ -459,17 +496,17 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
             )}
             {isValidImageUrl(activeColor.backImage) && (
               <button 
-                onClick={() => setActiveView('back')}
+                onClick={() => { setActiveView('back'); setCustomImageUrl(null); }}
                 className={cn(
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
-                  activeView === 'back' 
+                  activeView === 'back' && !customImageUrl
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Back view"
               >
                 <Image
-                  src={activeColor.backImage}
+                  src={isOttoCap ? proxyImageUrl(activeColor.backImage) : activeColor.backImage}
                   alt="Back"
                   width={80}
                   height={80}
@@ -479,17 +516,17 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
             )}
             {isValidImageUrl(activeColor.sideImage) && (
               <button 
-                onClick={() => setActiveView('side')}
+                onClick={() => { setActiveView('side'); setCustomImageUrl(null); }}
                 className={cn(
                   "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
-                  activeView === 'side' 
+                  activeView === 'side' && !customImageUrl
                     ? "border-brand-500 ring-2 ring-brand-200" 
                     : "border-stone-200 hover:border-stone-400"
                 )}
                 title="Side view"
               >
                 <Image
-                  src={activeColor.sideImage}
+                  src={isOttoCap ? proxyImageUrl(activeColor.sideImage) : activeColor.sideImage}
                   alt="Side"
                   width={80}
                   height={80}
@@ -498,8 +535,8 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
               </button>
             )}
             
-            {/* Model images (on-model photography) */}
-            {isValidImageUrl(activeColor.onModelFrontImage) && (
+            {/* Model images (on-model photography) - S&S only, not for Otto Cap */}
+            {!isOttoCap && isValidImageUrl(activeColor.onModelFrontImage) && (
               <button 
                 onClick={() => setActiveView('modelFront')}
                 className={cn(
@@ -519,7 +556,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 />
               </button>
             )}
-            {isValidImageUrl(activeColor.onModelBackImage) && (
+            {!isOttoCap && isValidImageUrl(activeColor.onModelBackImage) && (
               <button 
                 onClick={() => setActiveView('modelBack')}
                 className={cn(
@@ -539,7 +576,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 />
               </button>
             )}
-            {isValidImageUrl(activeColor.onModelSideImage) && (
+            {!isOttoCap && isValidImageUrl(activeColor.onModelSideImage) && (
               <button 
                 onClick={() => setActiveView('modelSide')}
                 className={cn(
@@ -559,6 +596,31 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 />
               </button>
             )}
+            
+            {/* Additional images gallery - Otto Cap only (image_4 through image_10) */}
+            {isOttoCap && activeColor.additionalImages && activeColor.additionalImages.map((img, index) => (
+              isValidImageUrl(img) && (
+                <button 
+                  key={`additional-${index}`}
+                  onClick={() => setCustomImageUrl(proxyImageUrl(img))}
+                  className={cn(
+                    "flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                    customImageUrl === proxyImageUrl(img)
+                      ? "border-brand-500 ring-2 ring-brand-200" 
+                      : "border-stone-200 hover:border-stone-400"
+                  )}
+                  title={`Additional view ${index + 1}`}
+                >
+                  <Image
+                    src={proxyImageUrl(img)}
+                    alt={`Additional view ${index + 1}`}
+                    width={80}
+                    height={80}
+                    className="h-14 lg:h-20 w-auto"
+                  />
+                </button>
+              )
+            ))}
           </div>
         )}
       </div>
@@ -651,7 +713,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 maxVisible={20}
                 multiSelect={true}
                 showSearch={true}
-                useProductImages={isLAApparelProduct}
+                useProductImages={isLAApparelProduct || isOttoCap}
               />
             </div>
           </div>
