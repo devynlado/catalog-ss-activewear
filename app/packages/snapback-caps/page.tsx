@@ -28,7 +28,7 @@ export default async function SnapbackCapsPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <EmbroideryPackageBuilder 
             colors={product?.colors || []} 
-            productStyleId={product?.styleID || productStyleId}
+            productStyleId={product?.styleId || productStyleId}
             productName={product?.title || 'Otto Cap 125-978 Snapback'}
             config={snapbackCapsConfig}
           />

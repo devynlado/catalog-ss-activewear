@@ -9,12 +9,13 @@ import { ProductColor } from '@/lib/types';
 import { cn, formatPrice } from '@/lib/utils';
 
 // Pricing tiers - Print cost per bag (base includes 2 colors)
+// Extra colors: +$0.75/ea for 3rd color, +$1.50/ea for 4th color
 const PRINT_PRICING = {
-  50: { base: 3.50, perExtraColor: 0.50 },
-  75: { base: 2.80, perExtraColor: 0.40 },
-  100: { base: 2.25, perExtraColor: 0.25 },
-  250: { base: 1.75, perExtraColor: 0.20 },
-  500: { base: 1.45, perExtraColor: 0.15 },
+  50: { base: 3.50, perExtraColor: 0.75 },
+  75: { base: 2.80, perExtraColor: 0.75 },
+  100: { base: 2.25, perExtraColor: 0.75 },
+  250: { base: 1.75, perExtraColor: 0.75 },
+  500: { base: 1.45, perExtraColor: 0.75 },
 };
 
 // Quantity tiers for display

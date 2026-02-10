@@ -14,6 +14,10 @@ import {
   generatePackageOrderNotificationText,
   getPackageOrderNotificationSubject,
 } from '@/lib/emails/package-order-notification';
+import {
+  PackageOrderEmailProps,
+  DecorationMethod,
+} from '@/lib/emails/components';
 
 // Lazy initialization for Resend
 function getResend() {
@@ -321,40 +325,59 @@ async function sendPackageOrderEmails(
     const resend = getResend();
     const fromEmail = 'Garment Decor <noreply@garmentdecor.com>';
 
-    // Parse addons from metadata or reconstruct from item
-    let addons: string[] = [];
-    if (metadata.addons) {
-      addons = metadata.addons.split(', ').filter(Boolean);
-    } else if (item.embroideryLocations || item.has3DPuff) {
-      if (item.embroideryLocations?.includes('side')) addons.push('Side Embroidery');
-      if (item.embroideryLocations?.includes('back')) addons.push('Back Embroidery');
-      if (item.has3DPuff) addons.push('3D Puff');
-    }
-
-    // Build email props
-    const emailProps = {
+    // Build email props with new schema
+    const totalQuantity = parseInt(metadata.total_quantity) || item.totalQuantity || 0;
+    
+    const emailProps: PackageOrderEmailProps = {
+      // Order basics
       orderNumber,
       customerName: metadata.customer_name || order.customer_name || `${shippingAddress.firstName} ${shippingAddress.lastName}`,
       email: metadata.customer_email || order.customer_email || '',
-      phone: metadata.customer_phone || order.customer_phone || shippingAddress.phone,
-      company: metadata.customer_company || order.company || shippingAddress.company,
-      packageName: metadata.product_name || item.productName || 'Custom Embroidered Caps',
-      quantity: parseInt(metadata.total_quantity) || item.totalQuantity || 0,
-      color: metadata.color_summary || (item.colors?.map((c: { colorName: string }) => c.colorName).join(', ')) || 'Various',
-      addons,
+      
+      // Package details from metadata/order
+      packageType: metadata.package_type || item.packageType || 'embroidered-caps',
+      packageDisplayName: metadata.product_name || item.productName || 'Custom Embroidered Caps',
+      productName: metadata.product_style || item.productStyle || 'Richardson 112',
+      productUnit: metadata.product_unit || item.productUnit || 'caps',
+      decorationMethod: (metadata.decoration_method || item.decorationMethod || 'embroidery') as DecorationMethod,
+      
+      // Items array
+      items: item.colors?.map((c: { colorName: string; quantity: number; sizeBreakdown?: Record<string, number> }) => ({
+        colorName: c.colorName,
+        quantity: c.quantity,
+        sizeBreakdown: c.sizeBreakdown,
+      })) || [{ colorName: 'Various', quantity: totalQuantity }],
+      
+      // Decoration details
+      decorationDetails: {
+        locations: item.embroideryLocations || item.printLocations || ['front'],
+        colors: item.printColors,
+        stitchCount: item.stitchCount,
+      },
+      
+      // Pricing
       subtotal: order.subtotal || 0,
       tax: order.tax_amount || 0,
       shipping: order.shipping_cost || 0,
       total: order.total || 0,
+      pricePerUnit: item.pricePerUnit || (order.subtotal / (totalQuantity || 1)),
+      
+      // Shipping
       shippingAddress: {
         street: shippingAddress.address || shippingAddress.street || '',
         city: shippingAddress.city || '',
         state: shippingAddress.state || '',
         zip: shippingAddress.zipCode || shippingAddress.zip || '',
       },
+      
+      // Artwork
       logoUploaded: !!(metadata.logo_url),
       logoUrl: metadata.logo_url || undefined,
+      
+      // Optional
       notes: metadata.notes || order.notes || undefined,
+      phone: metadata.customer_phone || order.customer_phone || shippingAddress.phone,
+      company: metadata.customer_company || order.company || shippingAddress.company,
       paymentIntentId: paymentIntent.id,
       createdAt: new Date().toLocaleString('en-US', {
         timeZone: 'America/Los_Angeles',
@@ -368,7 +391,7 @@ async function sendPackageOrderEmails(
       const { error: customerEmailError } = await resend.emails.send({
         from: fromEmail,
         to: emailProps.email,
-        subject: getPackageOrderConfirmationSubject(orderNumber, emailProps.packageName),
+        subject: getPackageOrderConfirmationSubject(orderNumber, emailProps.packageDisplayName),
         html: generatePackageOrderConfirmationHtml(emailProps),
         text: generatePackageOrderConfirmationText(emailProps),
       });
@@ -385,7 +408,7 @@ async function sendPackageOrderEmails(
     const { error: salesEmailError } = await resend.emails.send({
       from: fromEmail,
       to: salesEmail,
-      subject: getPackageOrderNotificationSubject(orderNumber, pricing.total),
+      subject: getPackageOrderNotificationSubject(orderNumber, emailProps.total, emailProps.packageDisplayName),
       html: generatePackageOrderNotificationHtml(emailProps),
       text: generatePackageOrderNotificationText(emailProps),
     });

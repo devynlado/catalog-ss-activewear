@@ -19,7 +19,7 @@ import {
   Award
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { BenefitsBadges, ServiceCTA } from '@/components/services';
+import { BenefitsBadges, ServiceCTA, ProjectInquiryForm } from '@/components/services';
 
 // All decoration services
 const services = [
@@ -269,6 +269,9 @@ export default function ServicesPage() {
           </div>
         </div>
       </section>
+
+      {/* Project Inquiry Form */}
+      <ProjectInquiryForm />
 
       {/* Quick Comparison Table */}
       <section className="py-16 lg:py-20 bg-stone-50">

@@ -12,11 +12,12 @@ import { cn, formatPrice } from '@/lib/utils';
 // These are PRINT ONLY costs - blank cost added separately
 const PRINT_PRICING = {
   // Quantity tier -> base print cost (2 colors)
-  50: { base: 4.75, perExtraColor: 0.50 },
-  75: { base: 3.70, perExtraColor: 0.40 },
-  100: { base: 3.00, perExtraColor: 0.25 },
-  250: { base: 2.10, perExtraColor: 0.20 },
-  500: { base: 1.80, perExtraColor: 0.15 },
+  // Extra colors: +$0.75/ea for 3rd color, +$1.50/ea for 4th color
+  50: { base: 4.75, perExtraColor: 0.75 },
+  75: { base: 3.70, perExtraColor: 0.75 },
+  100: { base: 3.00, perExtraColor: 0.75 },
+  250: { base: 2.10, perExtraColor: 0.75 },
+  500: { base: 1.80, perExtraColor: 0.75 },
 };
 
 // Quantity tiers for display

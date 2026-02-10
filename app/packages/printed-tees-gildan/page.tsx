@@ -28,7 +28,7 @@ export default async function PrintedTeesGildanPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <ScreenPrintPackageBuilder 
             colors={product?.colors || []} 
-            productStyleId={product?.styleID || 0}
+            productStyleId={product?.styleId || 0}
             productName={product?.title || 'Gildan 5000 Heavy Cotton Tee'}
             productSlug={productSlug}
           />

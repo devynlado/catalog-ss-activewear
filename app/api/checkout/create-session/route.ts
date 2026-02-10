@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, generateOrderNumber, calculateOrderTotals, toStripeCents, ShippingMethod } from '@/lib/stripe';
 import { CartItem } from '@/lib/database.types';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
 interface ShippingInfo {
   email: string;
@@ -21,13 +22,12 @@ interface CheckoutRequest {
   shippingMethod: ShippingMethod;
   poNumber?: string;
   orderNotes?: string;
-  embedded?: boolean; // Use embedded checkout mode
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, poNumber, orderNotes, embedded = true } = body;
+    const { items, shippingInfo, shippingMethod, poNumber, orderNotes } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -55,141 +55,168 @@ export async function POST(request: NextRequest) {
       ? 0 
       : totals.shippingCost;
 
+    // Calculate total with shipping
+    const totalWithShipping = subtotal + actualShippingCost + totals.taxAmount;
+
     // Generate order number
     const orderNumber = generateOrderNumber();
-
-    // Create line items for Stripe
-    const lineItems = items.map((item) => {
-      const unitPrice = item.discountedPrice ?? item.unitPrice;
-      return {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `${item.brandName} ${item.styleName}`,
-            description: `${item.colorName} / ${item.sizeName}`,
-            images: item.imageUrl ? [item.imageUrl] : undefined,
-            metadata: {
-              sku: item.sku,
-              styleId: item.styleId.toString(),
-              colorCode: item.colorCode,
-              sizeName: item.sizeName,
-            },
-          },
-          unit_amount: toStripeCents(unitPrice),
-        },
-        quantity: item.quantity,
-      };
-    });
-
-    // Add shipping as a line item if not free
-    if (actualShippingCost > 0) {
-      lineItems.push({
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: shippingMethod === 'same_day' ? 'Express Shipping' : 'Economy Shipping',
-            description: shippingMethod === 'same_day' ? '1-2 business days' : '3-5 business days',
-          },
-          unit_amount: toStripeCents(actualShippingCost),
-        },
-        quantity: 1,
-      } as any);
-    }
-
+    
     // Get the base URL
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                    (request.headers.get('origin') ?? 'http://localhost:3000');
 
-    // Build metadata with B2B fields
-    const metadata: Record<string, string> = {
-      orderNumber,
-      shippingMethod,
-      customerName: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
-      customerPhone: shippingInfo.phone,
-      customerCompany: shippingInfo.company || '',
-      itemCount: items.length.toString(),
-      totalPieces: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
-    };
-
-    // Add B2B fields if provided
-    if (poNumber) {
-      metadata.poNumber = poNumber;
-    }
-    if (orderNotes) {
-      metadata.orderNotes = orderNotes;
-    }
-
-    // Shipping address for prefilling
-    const shippingAddress = {
-      line1: shippingInfo.address,
-      line2: shippingInfo.apartment || undefined,
+    // Build shipping address object for database
+    const shippingAddressData = {
+      firstName: shippingInfo.firstName,
+      lastName: shippingInfo.lastName,
+      company: shippingInfo.company || null,
+      address: shippingInfo.address,
+      apartment: shippingInfo.apartment || null,
       city: shippingInfo.city,
       state: shippingInfo.state,
-      postal_code: shippingInfo.zipCode,
-      country: 'US',
+      zipCode: shippingInfo.zipCode,
+      phone: shippingInfo.phone,
     };
 
-    // Create Stripe Checkout Session
-    if (embedded) {
-      // Embedded checkout mode - returns client_secret
-      const session = await stripe.checkout.sessions.create({
-        ui_mode: 'embedded',
-        payment_method_types: ['card'],
-        line_items: lineItems,
-        mode: 'payment',
-        return_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-        customer_email: shippingInfo.email,
-        automatic_tax: {
-          enabled: true,
-        },
-        metadata,
-        // Pre-fill shipping details for embedded checkout
-        shipping_address_collection: {
-          allowed_countries: ['US'],
-        },
-        phone_number_collection: {
-          enabled: true,
-        },
-        billing_address_collection: 'required',
-      });
+    // Get Supabase client
+    const supabase = await createSupabaseServerClient();
+    
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
 
-      return NextResponse.json({
-        clientSecret: session.client_secret,
-        sessionId: session.id,
-        orderNumber,
-      });
-    } else {
-      // Hosted checkout mode - returns redirect URL
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: lineItems,
-        mode: 'payment',
-        success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/checkout?canceled=true`,
+    // Create pending order in database first
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: order, error: orderError } = await (supabase as any)
+      .from('orders')
+      .insert({
+        order_number: orderNumber,
+        customer_id: user?.id || null,
         customer_email: shippingInfo.email,
-        shipping_address_collection: {
-          allowed_countries: ['US'],
+        customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+        customer_phone: shippingInfo.phone,
+        company: shippingInfo.company || null,
+        items: items.map(item => ({
+          type: 'product',
+          sku: item.sku,
+          styleId: item.styleId,
+          styleName: item.styleName,
+          brandName: item.brandName,
+          colorName: item.colorName,
+          colorCode: item.colorCode,
+          sizeName: item.sizeName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discountedPrice: item.discountedPrice,
+          imageUrl: item.imageUrl,
+        })),
+        subtotal: Math.round(subtotal * 100) / 100,
+        shipping_cost: actualShippingCost,
+        tax_amount: totals.taxAmount,
+        total: Math.round(totalWithShipping * 100) / 100,
+        shipping_address: shippingAddressData,
+        billing_address: shippingAddressData,
+        shipping_method: shippingMethod,
+        payment_method: 'card',
+        payment_status: 'pending',
+        status: 'pending',
+        notes: orderNotes || null,
+        metadata: {
+          order_type: 'cart',
+          po_number: poNumber || null,
         },
-        automatic_tax: {
-          enabled: true,
-        },
-        metadata,
-        phone_number_collection: {
-          enabled: true,
-        },
-        billing_address_collection: 'required',
-      });
+      })
+      .select()
+      .single();
 
-      return NextResponse.json({
-        sessionId: session.id,
-        url: session.url,
-        orderNumber,
-      });
+    if (orderError) {
+      console.error('Error creating order:', orderError);
+      return NextResponse.json(
+        { error: 'Failed to create order' },
+        { status: 500 }
+      );
     }
+
+    // Log order creation activity
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('order_activities').insert({
+      order_id: order.id,
+      user_id: user?.id || null,
+      activity_type: 'created',
+      details: {
+        order_number: orderNumber,
+        order_type: 'cart',
+        item_count: items.length,
+        total_pieces: items.reduce((sum, item) => sum + item.quantity, 0),
+        total: totalWithShipping,
+      },
+    });
+
+    // Build item summary for Stripe metadata
+    const itemSummary = items.slice(0, 3).map(item => 
+      `${item.brandName} ${item.styleName} (${item.quantity})`
+    ).join(', ') + (items.length > 3 ? ` +${items.length - 3} more` : '');
+
+    // Create Stripe PaymentIntent with comprehensive metadata for webhook
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: toStripeCents(totalWithShipping),
+      currency: 'usd',
+      payment_method_types: ['card'],
+      metadata: {
+        order_id: order.id,
+        order_number: orderNumber,
+        order_type: 'cart',
+        customer_email: shippingInfo.email,
+        customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+        customer_phone: shippingInfo.phone,
+        customer_company: shippingInfo.company || '',
+        shipping_method: shippingMethod,
+        item_count: items.length.toString(),
+        total_pieces: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
+        po_number: poNumber || '',
+        notes: orderNotes || '',
+      },
+      receipt_email: shippingInfo.email,
+      description: `Order ${orderNumber} - ${itemSummary}`,
+    });
+
+    // Update order with payment intent ID
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('orders')
+      .update({
+        stripe_payment_intent_id: paymentIntent.id,
+        payment_status: 'processing',
+      })
+      .eq('id', order.id);
+
+    // Log payment processing activity
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('order_activities').insert({
+      order_id: order.id,
+      user_id: user?.id || null,
+      activity_type: 'payment_processing',
+      details: {
+        payment_intent_id: paymentIntent.id,
+        amount: totalWithShipping,
+      },
+    });
+
+    return NextResponse.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      orderId: order.id,
+      orderNumber,
+      pricing: {
+        subtotal: Math.round(subtotal * 100) / 100,
+        tax: totals.taxAmount,
+        shipping: actualShippingCost,
+        total: Math.round(totalWithShipping * 100) / 100,
+      },
+    });
   } catch (error) {
-    console.error('Stripe session creation error:', error);
+    console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create checkout session' },
+      { error: error instanceof Error ? error.message : 'Failed to create checkout' },
       { status: 500 }
     );
   }

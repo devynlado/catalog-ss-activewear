@@ -105,6 +105,7 @@ function OrderTimeline({ currentStep = 1 }: { currentStep?: number }) {
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
+  const orderNumberParam = searchParams.get('order');
   const { clearCart } = useCartStore();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,9 +114,16 @@ function SuccessContent() {
     // Clear the cart on successful checkout
     clearCart();
 
-    // Fetch order details from session
-    if (sessionId) {
-      fetch(`/api/checkout/session?session_id=${sessionId}`)
+    // Determine which API to call based on available params
+    // New PaymentElement flow uses 'order' param, old EmbeddedCheckout uses 'session_id'
+    const fetchUrl = orderNumberParam 
+      ? `/api/checkout/order?order=${orderNumberParam}`
+      : sessionId 
+        ? `/api/checkout/session?session_id=${sessionId}`
+        : null;
+
+    if (fetchUrl) {
+      fetch(fetchUrl)
         .then((res) => res.json())
         .then((data) => {
           if (data.orderNumber) {
@@ -126,7 +134,7 @@ function SuccessContent() {
               transactionId: data.orderNumber,
               items: (data.lineItems || []).map((item: GA4LineItem) => ({
                 sku: item.item_id,
-                styleId: 0, // Not available from Stripe
+                styleId: 0, // Not available from order
                 styleName: item.item_name,
                 brandName: '',
                 colorName: '',
@@ -145,7 +153,7 @@ function SuccessContent() {
     } else {
       setIsLoading(false);
     }
-  }, [sessionId, clearCart]);
+  }, [sessionId, orderNumberParam, clearCart]);
 
   // Calculate estimated delivery date
   const getDeliveryDate = () => {

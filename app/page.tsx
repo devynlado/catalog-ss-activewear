@@ -1,11 +1,10 @@
 import { Hero } from '@/components/home/Hero';
 import { WhoWeService } from '@/components/home/WhoWeService';
 import { TurnaroundBanner } from '@/components/home/TurnaroundBanner';
-// import { PackageDeals } from '@/components/home/PackageDeals'; // Hidden for now - needs polish
+import { PackageDeals } from '@/components/home/PackageDeals';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { FeaturedProducts } from '@/components/home/FeaturedProducts';
-import { ProductGuidesPromo } from '@/components/home/ProductGuidesPromo';
 import { ServicesGrid } from '@/components/home/ServicesGrid';
 import { BuiltForScale } from '@/components/home/BuiltForScale';
 import { TrustSignals } from '@/components/home/TrustSignals';
@@ -20,36 +19,31 @@ export default function HomePage() {
       {/* 2. Turnaround Banner - Urgency: We're fast */}
       <TurnaroundBanner />
       
-      {/* Package Deals - Hidden for now, needs polish
+      {/* 3. Package Deals - Instant pricing path */}
       <PackageDeals />
-      */}
       
-      {/* 4. Who We Service - Audience: We work with people like you */}
-      <WhoWeService />
-      
-      {/* 3. How It Works - Reassurance: It's easy */}
-      <HowItWorks />
-      
-      {/* 4. Categories - Action: Step 1, start here */}
-      <CategoryGrid />
-      
-      {/* 5. Featured Products - Help: Not sure? Try these */}
-      <FeaturedProducts />
-      
-      {/* 6. Product Guides - Hidden for now, added to /guides page instead
-      <ProductGuidesPromo />
-      */}
-      
-      {/* 7. Services - Context: Here's what we'll do */}
+      {/* 4. Services - Our bread & butter: Here's what we do */}
       <ServicesGrid />
       
-      {/* 8. Built for Scale - Credibility: We can handle it */}
+      {/* 5. Who We Service - Audience: We work with people like you */}
+      <WhoWeService />
+      
+      {/* 6. How It Works - Reassurance: It's easy */}
+      <HowItWorks />
+      
+      {/* 7. Categories - Action: Browse products */}
+      <CategoryGrid />
+      
+      {/* 8. Featured Products - Help: Not sure? Try these */}
+      <FeaturedProducts />
+      
+      {/* 9. Built for Scale - Credibility: We can handle it */}
       <BuiltForScale />
       
-      {/* 9. Trust Signals - Proof: Others trust us */}
+      {/* 10. Trust Signals - Proof: Others trust us */}
       <TrustSignals />
       
-      {/* 10. Final CTA - Close: Let's do this */}
+      {/* 11. Final CTA - Close: Let's do this */}
       <FinalCTA />
     </div>
   );

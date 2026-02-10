@@ -124,22 +124,25 @@ export function Hero() {
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <Link
-                  href="/catalog"
+                  href="/services"
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
                 >
-                  Shop Products
+                  View Services
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
                 
                 <Link
-                  href="/services"
+                  href="/packages"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-navy-800 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:bg-navy-800 hover:text-white hover:-translate-y-0.5"
                 >
-                  View Services
+                  All-Inclusive Packages
                 </Link>
               </div>
               <p className="mt-4 text-sm text-slate-500">
-                50 piece minimum • Mix sizes, colors & styles • Instant pricing
+                50 piece minimum • Mix sizes, colors & styles •{' '}
+                <Link href="/catalog" className="text-brand-600 hover:text-brand-700 underline underline-offset-2">
+                  or browse our product catalog
+                </Link>
               </p>
             </motion.div>
             

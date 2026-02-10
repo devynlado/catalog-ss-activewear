@@ -28,7 +28,7 @@ export default async function PrintedTotesIsabellaPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <ToteBagPackageBuilder 
             colors={product?.colors || []} 
-            productStyleId={product?.styleID || 8503}
+            productStyleId={product?.styleId || 8503}
             productName={product?.title || 'Isabella Canvas Tote'}
             productSlug={productSlug}
           />

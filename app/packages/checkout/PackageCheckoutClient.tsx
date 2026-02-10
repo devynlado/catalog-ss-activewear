@@ -709,7 +709,7 @@ export function PackageCheckoutClient() {
                 <div className="py-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Price per hat</span>
-                    <span>{formatPrice(serverPricing?.pricePerHat || packageData.pricePerHat)}</span>
+                    <span>{formatPrice(packageData.pricePerHat)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-600">Subtotal ({packageData.totalQuantity} hats)</span>

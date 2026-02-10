@@ -9,3 +9,4 @@ export { ServiceCTA } from './ServiceCTA';
 export { ServiceQuoteForm } from './ServiceQuoteForm';
 export { ShopBlanksSection } from './ShopBlanksSection';
 export { WhyChooseSection } from './WhyChooseSection';
+export { ProjectInquiryForm } from './ProjectInquiryForm';

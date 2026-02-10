@@ -4,8 +4,10 @@ import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import {
-  EmbeddedCheckoutProvider,
-  EmbeddedCheckout,
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
 } from '@stripe/react-stripe-js';
 import { 
   ArrowLeft, 
@@ -16,6 +18,8 @@ import {
   Shield,
   BadgeCheck,
   Phone,
+  CreditCard,
+  AlertCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
@@ -133,6 +137,77 @@ const usStates = [
 // Card styles - stronger contrast/depth
 const glassCard = "bg-white border border-stone-200 rounded-2xl shadow-xl shadow-stone-300/40";
 
+// Payment form component using Stripe Elements
+function PaymentForm({ orderNumber, total }: { orderNumber: string; total: number }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setPaymentError(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout/success?order=${orderNumber}`,
+      },
+    });
+
+    // This point is only reached if there's an immediate error
+    // (e.g., card declined). If successful, Stripe redirects to return_url
+    if (error) {
+      setPaymentError(error.message || 'An error occurred during payment');
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement 
+        options={{
+          layout: 'tabs',
+        }}
+      />
+      
+      {paymentError && (
+        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-red-600">{paymentError}</p>
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        disabled={!stripe || isProcessing}
+        isLoading={isProcessing}
+        className="w-full"
+        size="lg"
+      >
+        {isProcessing ? (
+          'Processing payment...'
+        ) : (
+          <>
+            <CreditCard className="mr-2 h-4 w-4" />
+            Pay {formatPrice(total)} Now
+          </>
+        )}
+      </Button>
+      
+      <p className="text-center text-xs text-slate-500">
+        Your payment is encrypted and secure
+      </p>
+    </form>
+  );
+}
+
 export default function CheckoutContent() {
   const { items, decoration, getDecorationTotal } = useCartStore();
   
@@ -146,6 +221,8 @@ export default function CheckoutContent() {
   
   // Checkout state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [serverPricing, setServerPricing] = useState<{ subtotal: number; tax: number; shipping: number; total: number } | null>(null);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,18 +251,23 @@ export default function CheckoutContent() {
     }
   }, []); // Only fire once on mount
 
-  // Form validation
-  const isFormValid = Boolean(
-    shippingInfo.email &&
-    shippingInfo.firstName &&
-    shippingInfo.lastName &&
-    shippingInfo.company &&
-    shippingInfo.address &&
-    shippingInfo.city &&
-    shippingInfo.state &&
-    shippingInfo.zipCode &&
-    shippingInfo.phone
-  );
+  // Form validation - get list of missing required fields
+  const getMissingFields = (): string[] => {
+    const missing: string[] = [];
+    if (!shippingInfo.email) missing.push('Email');
+    if (!shippingInfo.phone) missing.push('Phone');
+    if (!shippingInfo.company) missing.push('Company Name');
+    if (!shippingInfo.firstName) missing.push('First Name');
+    if (!shippingInfo.lastName) missing.push('Last Name');
+    if (!shippingInfo.address) missing.push('Street Address');
+    if (!shippingInfo.city) missing.push('City');
+    if (!shippingInfo.state) missing.push('State');
+    if (!shippingInfo.zipCode) missing.push('ZIP Code');
+    return missing;
+  };
+
+  const missingFields = getMissingFields();
+  const isFormValid = missingFields.length === 0;
 
   // Handle input changes
   const handleShippingChange = (field: keyof ShippingInfo, value: string) => {
@@ -219,18 +301,19 @@ export default function CheckoutContent() {
           shippingMethod,
           poNumber: poNumber || undefined,
           orderNotes: orderNotes || undefined,
-          embedded: true,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
+        throw new Error(data.error || 'Failed to create checkout');
       }
 
       if (data.clientSecret) {
         setClientSecret(data.clientSecret);
+        setOrderNumber(data.orderNumber);
+        setServerPricing(data.pricing);
       }
     } catch (err) {
       console.error('Checkout error:', err);
@@ -418,7 +501,7 @@ export default function CheckoutContent() {
                   </div>
                   <div className="col-span-2">
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      State
+                      State<span className="text-red-500 ml-0.5">*</span>
                     </label>
                     <select
                       value={shippingInfo.state}
@@ -668,41 +751,95 @@ export default function CheckoutContent() {
                 </div>
 
                 {!clientSecret ? (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-slate-600 mb-4">
-                      Complete the form to proceed to payment
-                    </p>
-                    <Button
-                      onClick={createCheckoutSession}
-                      disabled={!isFormValid || isCreatingSession}
-                      isLoading={isCreatingSession}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {isCreatingSession ? (
-                        'Preparing checkout...'
-                      ) : (
-                        <>
+                  <div className="py-4">
+                    {!isFormValid ? (
+                      <>
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                          <p className="text-sm font-medium text-amber-800 mb-2">
+                            Please complete the following fields:
+                          </p>
+                          <ul className="text-sm text-amber-700 space-y-1">
+                            {missingFields.map((field) => (
+                              <li key={field} className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                {field}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <Button
+                          disabled
+                          className="w-full opacity-50"
+                          size="lg"
+                        >
                           <Lock className="mr-2 h-4 w-4" />
                           Continue to Payment — {formatPrice(subtotal + actualShippingCost + totals.taxAmount)}
-                        </>
-                      )}
-                    </Button>
-                    {!isFormValid && (
-                      <p className="mt-2 text-xs text-slate-500">
-                        Please fill in all required fields
-                      </p>
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-600 mb-4 text-center">
+                          Ready to proceed to payment
+                        </p>
+                        <Button
+                          onClick={createCheckoutSession}
+                          disabled={isCreatingSession}
+                          isLoading={isCreatingSession}
+                          className="w-full"
+                          size="lg"
+                        >
+                          {isCreatingSession ? (
+                            'Preparing checkout...'
+                          ) : (
+                            <>
+                              <Lock className="mr-2 h-4 w-4" />
+                              Continue to Payment — {formatPrice(subtotal + actualShippingCost + totals.taxAmount)}
+                            </>
+                          )}
+                        </Button>
+                      </>
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-xl overflow-hidden -mx-1">
-                    <EmbeddedCheckoutProvider
-                      stripe={stripePromise}
-                      options={{ clientSecret }}
-                    >
-                      <EmbeddedCheckout />
-                    </EmbeddedCheckoutProvider>
-                  </div>
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      clientSecret,
+                      appearance: {
+                        theme: 'stripe',
+                        variables: {
+                          colorPrimary: '#EE8935',
+                          colorBackground: '#ffffff',
+                          colorText: '#1e293b',
+                          colorDanger: '#dc2626',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                          spacingUnit: '4px',
+                          borderRadius: '12px',
+                        },
+                        rules: {
+                          '.Input': {
+                            border: '1px solid #d6d3d1',
+                            boxShadow: 'none',
+                            padding: '12px 14px',
+                          },
+                          '.Input:focus': {
+                            border: '2px solid #EE8935',
+                            boxShadow: '0 0 0 3px rgba(238, 137, 53, 0.1)',
+                          },
+                          '.Label': {
+                            fontWeight: '500',
+                            fontSize: '14px',
+                            marginBottom: '6px',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    <PaymentForm 
+                      orderNumber={orderNumber || ''} 
+                      total={serverPricing?.total || (subtotal + actualShippingCost + totals.taxAmount)} 
+                    />
+                  </Elements>
                 )}
 
                 {/* Reassurance message */}

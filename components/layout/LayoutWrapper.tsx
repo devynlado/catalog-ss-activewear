@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Header } from './Header';
+import { PromoBanner } from './PromoBanner';
 import { Footer } from './Footer';
 import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -26,9 +27,13 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   }
 
   // Regular pages get full layout
+  // Show promo banner only on home page
+  const showPromoBanner = pathname === '/';
+
   return (
     <>
       <Header />
+      {showPromoBanner && <PromoBanner />}
       <main>
         {children}
       </main>

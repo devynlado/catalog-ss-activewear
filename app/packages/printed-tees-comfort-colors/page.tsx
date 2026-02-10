@@ -28,7 +28,7 @@ export default async function PrintedTeesComfortColorsPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <ScreenPrintPackageBuilder 
             colors={product?.colors || []} 
-            productStyleId={product?.styleID || 1717}
+            productStyleId={product?.styleId || 1717}
             productName={product?.title || 'Comfort Colors 1717 Garment-Dyed Heavyweight T-Shirt'}
             productSlug={productSlug}
           />
