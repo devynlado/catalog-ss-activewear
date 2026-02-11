@@ -52,6 +52,13 @@ const servicesMenu = {
     icon: Package,
     description: '500+ pieces, dedicated support',
   },
+  liveScreenPrinting: {
+    title: 'Live Printing',
+    href: '/services/live-screen-printing',
+    icon: Users,
+    description: 'On-site printing for events',
+    highlight: true,
+  },
 };
 
 // Get main navigation categories from taxonomy - using slug-based URLs
@@ -939,21 +946,22 @@ export function Header() {
                         </div>
                       </div>
 
-                      {/* Embroidery */}
+                      {/* Embroidery - Full Width */}
                       <Link
                         href={servicesMenu.embroidery.href}
                         onClick={() => setServicesOpen(false)}
-                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-stone-50 group"
+                        className="col-span-2 flex items-center gap-3 rounded-lg p-3 hover:bg-stone-50 group"
                       >
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
                           <Scissors className="h-5 w-5" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
                             {servicesMenu.embroidery.title}
                           </h3>
                           <p className="text-xs text-slate-500">{servicesMenu.embroidery.description}</p>
                         </div>
+                        <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-brand-500" />
                       </Link>
 
                       {/* Retail Finishing */}
@@ -970,6 +978,23 @@ export function Header() {
                             {servicesMenu.finishing.title}
                           </h3>
                           <p className="text-xs text-slate-500">{servicesMenu.finishing.description}</p>
+                        </div>
+                      </Link>
+
+                      {/* All-Inclusive Packages */}
+                      <Link
+                        href="/packages"
+                        onClick={() => setServicesOpen(false)}
+                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-stone-50 group"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
+                          <Star className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                            All-Inclusive Packages
+                          </h3>
+                          <p className="text-xs text-slate-500">Instant pricing, no hidden fees</p>
                         </div>
                       </Link>
 
@@ -995,36 +1020,34 @@ export function Header() {
                       <Link
                         href={servicesMenu.largeOrders.href}
                         onClick={() => setServicesOpen(false)}
-                        className="col-span-2 flex items-center gap-3 rounded-lg p-3 hover:bg-stone-50 group"
+                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-stone-50 group"
                       >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-800 text-white">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
                           <Package className="h-5 w-5" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-slate-800 group-hover:text-brand-600">
+                        <div>
+                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
                             {servicesMenu.largeOrders.title}
                           </h3>
                           <p className="text-xs text-slate-500">{servicesMenu.largeOrders.description}</p>
                         </div>
-                        <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-brand-500" />
                       </Link>
-                    </div>
 
-                    {/* Package Deals Section */}
-                    <div className="mt-4 pt-4 border-t border-stone-200">
+                      {/* Live Screen Printing */}
                       <Link
-                        href="/packages"
+                        href={servicesMenu.liveScreenPrinting.href}
                         onClick={() => setServicesOpen(false)}
-                        className="flex items-center gap-3 rounded-lg bg-brand-50 border border-brand-100 p-3 hover:bg-brand-100 group"
+                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-stone-50 group"
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white">
-                          <Star className="h-4 w-4" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                          <Users className="h-5 w-5" />
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-brand-700 text-sm">All-Inclusive Packages</h4>
-                          <p className="text-xs text-brand-600">Instant pricing, no hidden fees</p>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
+                            {servicesMenu.liveScreenPrinting.title}
+                          </h3>
+                          <p className="text-xs text-slate-500">{servicesMenu.liveScreenPrinting.description}</p>
                         </div>
-                        <ChevronRight className="h-5 w-5 text-brand-400 group-hover:text-brand-600" />
                       </Link>
                     </div>
 
@@ -1355,6 +1378,14 @@ export function Header() {
                 >
                   <Package className="h-4 w-4 text-navy-600" />
                   Large Orders (500+)
+                </Link>
+                <Link
+                  href="/services/live-screen-printing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-orange-700 hover:bg-orange-50"
+                >
+                  <Users className="h-4 w-4 text-orange-500" />
+                  Live Screen Printing
                 </Link>
                 <Link
                   href="/services"

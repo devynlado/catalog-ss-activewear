@@ -290,6 +290,32 @@ export const serviceImages: Record<string, ServiceImages> = {
     ],
   },
 
+  'live-screen-printing': {
+    hero: {
+      src: `${BASE_PATH}/live-screen-printing/live-screen-printing-event.webp`,
+      alt: 'Live screen printing at a corporate event',
+      featured: true,
+    },
+    gallery: [
+      {
+        src: `${BASE_PATH}/live-screen-printing/live-screen-printing-event.webp`,
+        alt: 'Live screen printing setup at event',
+      },
+      {
+        src: `${BASE_PATH}/live-screen-printing/on-site-screen-printing-trade-show.webp`,
+        alt: 'On-site screen printing at trade show',
+      },
+      {
+        src: `${BASE_PATH}/live-screen-printing/event-screen-printing-crowd.webp`,
+        alt: 'Guests watching live screen printing',
+      },
+      {
+        src: `${BASE_PATH}/live-screen-printing/live-printing-station.webp`,
+        alt: 'Live printing station with equipment',
+      },
+    ],
+  },
+
   'rush': {
     hero: {
       src: `${BASE_PATH}/rush-order/why-jumbo-screen-printing-is-a-game-changer-and-how-we-can-help.webp`,

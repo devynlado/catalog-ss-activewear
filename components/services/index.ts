@@ -10,3 +10,4 @@ export { ServiceQuoteForm } from './ServiceQuoteForm';
 export { ShopBlanksSection } from './ShopBlanksSection';
 export { WhyChooseSection } from './WhyChooseSection';
 export { ProjectInquiryForm } from './ProjectInquiryForm';
+export { LiveEventForm } from './LiveEventForm';
