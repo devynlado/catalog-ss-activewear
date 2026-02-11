@@ -24,6 +24,7 @@ interface SizeDistributionRowProps {
   onRemove: () => void;
   showRemoveButton?: boolean;
   hideInventory?: boolean; // Hide stock levels and allow all sizes (for LA Apparel)
+  discountPercent?: number; // Proportional discount (0-1) from Google automated discounts
 }
 
 // Stock level thresholds
@@ -50,6 +51,7 @@ export function SizeDistributionRow({
   onRemove,
   showRemoveButton = true,
   hideInventory = false,
+  discountPercent = 0,
 }: SizeDistributionRowProps) {
   const handleQuantityChange = (sizeName: string, value: string) => {
     const numValue = parseInt(value, 10);
@@ -66,18 +68,46 @@ export function SizeDistributionRow({
 
   const totalQty = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
 
-  // Calculate subtotal for this color
+  // Helper: get the effective (potentially discounted) price for a size
+  const getEffectivePrice = (size: { price: number; salePrice: number | null }) => {
+    const retail = size.salePrice || size.price;
+    if (discountPercent > 0) {
+      return Math.round(retail * (1 - discountPercent) * 100) / 100;
+    }
+    return retail;
+  };
+
+  // Helper: get the original price (before Google discount) for strikethrough
+  const getOriginalPrice = (size: { price: number; salePrice: number | null }) => {
+    return size.salePrice || size.price;
+  };
+
+  const hasDiscount = discountPercent > 0;
+
+  // Calculate subtotal for this color (uses discounted prices when active)
   const subtotal = Object.entries(quantities).reduce((sum, [sizeName, qty]) => {
     const size = color.sizes.find(s => s.name === sizeName);
     if (size && qty > 0) {
-      const unitPrice = size.salePrice || size.price;
+      const unitPrice = getEffectivePrice(size);
       return sum + (unitPrice * qty);
     }
     return sum;
   }, 0);
 
   return (
-    <div className="rounded-xl border-2 border-stone-300 bg-white overflow-hidden shadow-md">
+    <div className={cn(
+      'rounded-xl border-2 bg-white overflow-hidden shadow-md',
+      hasDiscount ? 'border-red-200' : 'border-stone-300'
+    )}>
+      {/* Special Offer banner - shown when Google discount is active */}
+      {hasDiscount && (
+        <div className="bg-gradient-to-r from-red-50 to-red-100/50 border-b border-red-200 px-4 py-1.5 flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-red-600">Extra {Math.round(discountPercent * 100)}% Off</span>
+          <span className="text-[10px] text-red-500">
+            applied to all sizes
+          </span>
+        </div>
+      )}
       {/* Inventory Notice Banner - shown when hideInventory is true */}
       {hideInventory && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800">
@@ -178,10 +208,21 @@ export function SizeDistributionRow({
                   )}
                 />
                 
-                {/* Price */}
-                <div className="mt-1 text-xs font-bold text-brand-600">
-                  {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
-                </div>
+                {/* Price - shows discounted price with strikethrough when Google discount active */}
+                {hasDiscount ? (
+                  <div className="mt-1 flex flex-col items-center">
+                    <span className="text-xs font-bold text-red-600">
+                      {formatPrice(getEffectivePrice(size))}
+                    </span>
+                    <span className="text-[10px] text-slate-400 line-through">
+                      {formatPrice(getOriginalPrice(size))}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-1 text-xs font-bold text-brand-600">
+                    {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
+                  </div>
+                )}
                 
                 {/* Stock count with indicator - hidden when hideInventory is true */}
                 {!hideInventory && (
@@ -238,10 +279,21 @@ export function SizeDistributionRow({
                   )}
                 />
                 
-                {/* Price */}
-                <div className="mt-1 text-xs font-bold text-brand-600">
-                  {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
-                </div>
+                {/* Price - shows discounted price with strikethrough when Google discount active */}
+                {hasDiscount ? (
+                  <div className="mt-1 flex flex-col items-center">
+                    <span className="text-xs font-bold text-red-600">
+                      {formatPrice(getEffectivePrice(size))}
+                    </span>
+                    <span className="text-[10px] text-slate-400 line-through">
+                      {formatPrice(getOriginalPrice(size))}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-1 text-xs font-bold text-brand-600">
+                    {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
+                  </div>
+                )}
                 
                 {/* Stock count with indicator - hidden when hideInventory is true */}
                 {!hideInventory && (

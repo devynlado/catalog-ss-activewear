@@ -30,9 +30,17 @@ function proxyImageUrl(url: string): string {
   return url;
 }
 
+// Initial variant from URL params (resolved server-side)
+interface InitialVariant {
+  colorCode: string;
+  colorName: string;
+  sizeName: string; // empty string if only color was in URL
+}
+
 interface ProductDetailClientProps {
   product: Product;
   googleDiscount?: GoogleDiscount | null;
+  initialVariant?: InitialVariant | null;
 }
 
 // Type for tracking quantities per color per size
@@ -61,18 +69,35 @@ function getPopularForTags(categories: Category[]): string[] {
 // Check if product is from LA Apparel (synthetic style IDs start with 9001xxx)
 const isLAApparel = (styleId: number) => styleId >= 9001000 && styleId < 9010000;
 
-export function ProductDetailClient({ product, googleDiscount: initialDiscount }: ProductDetailClientProps) {
+export function ProductDetailClient({ product, googleDiscount: initialDiscount, initialVariant }: ProductDetailClientProps) {
   // Check if this is an LA Apparel product (needs special handling)
   const isLAApparelProduct = isLAApparel(product.styleId);
   
   // Check if this is an Otto Cap product (needs image proxy and different display)
   const isOttoCap = product.supplier === 'otto_cap';
   
+  // Resolve initial color/size from URL params (PMax / Google Shopping landing)
+  const resolvedInitialColor = initialVariant
+    ? product.colors?.find(c => c.colorCode === initialVariant.colorCode) ?? null
+    : null;
+  
   // Track selected colors (array for multi-color support)
-  const [selectedColors, setSelectedColors] = useState<ProductColor[]>([]);
+  // Pre-select the initial variant color when landing from Google
+  const [selectedColors, setSelectedColors] = useState<ProductColor[]>(
+    resolvedInitialColor ? [resolvedInitialColor] : []
+  );
   
   // Track quantities per color: { colorCode: { sizeName: quantity } }
-  const [colorQuantities, setColorQuantities] = useState<ColorQuantities>({});
+  // Pre-fill qty 1 for the initial variant size when landing from Google
+  const [colorQuantities, setColorQuantities] = useState<ColorQuantities>(() => {
+    if (resolvedInitialColor && initialVariant?.sizeName) {
+      return { [resolvedInitialColor.colorCode]: { [initialVariant.sizeName]: 1 } };
+    }
+    return {};
+  });
+  
+  // Track whether we arrived from a Google/PMax ad with an initial variant
+  const isGoogleLanding = !!initialVariant && !!resolvedInitialColor;
   
   const [addedToQuote, setAddedToQuote] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -162,42 +187,121 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
   };
   const imageUrl = getActiveImageUrl();
   
-  // Price logic: Google discount > sale price > regular price
+  // Price logic
   const basePrice = product.salePrice || product.price;
-  const displayPrice = activeDiscount?.price ?? basePrice;
   const hasDiscount = product.salePrice && product.salePrice < product.price;
-  const hasGoogleDiscount = activeDiscount && activeDiscount.price < basePrice;
-  const originalPrice = hasGoogleDiscount ? basePrice : (hasDiscount ? product.price : null);
+
+  // Find the site-displayed price for the matched size from the URL.
+  // This enables an apples-to-apples comparison with Google's SKU-level discount price.
+  // e.g., Google discounts 3XL from $9.88 → $8.97, and our site shows 3XL at $9.45.
+  // Without this, we'd compare $8.97 against the product-level $4.93 and see no discount.
+  const { matchedSizePrice, matchedSizeRetailPrice } = useMemo(() => {
+    if (!resolvedInitialColor || !initialVariant?.sizeName) {
+      return { matchedSizePrice: null as number | null, matchedSizeRetailPrice: null as number | null };
+    }
+    const matchedSize = resolvedInitialColor.sizes.find(
+      s => s.name === initialVariant.sizeName
+    );
+    if (!matchedSize) {
+      return { matchedSizePrice: null as number | null, matchedSizeRetailPrice: null as number | null };
+    }
+    return {
+      matchedSizePrice: matchedSize.salePrice || matchedSize.price,
+      matchedSizeRetailPrice: matchedSize.price, // retail only, for strikethrough
+    };
+  }, [resolvedInitialColor, initialVariant]);
+
+  // Calculate proportional discount percentage for Google automated discounts.
+  // Compare Google's discount price against the MATCHED SIZE's site price (not product-level basePrice).
+  // e.g., if 3XL site price is $9.45 and Google discount is $8.97, discountPercent ≈ 5.08%
+  // This percentage is then applied proportionally to ALL sizes (including upcharge sizes).
+  const googleDiscountPercent = useMemo(() => {
+    if (!activeDiscount) return 0;
+    // Use matched size price for accurate comparison; fall back to basePrice
+    const referencePrice = matchedSizePrice || basePrice;
+    // Clamp: if Google's price is >= reference, there's no discount to apply
+    if (activeDiscount.price >= referencePrice) return 0;
+    return (referencePrice - activeDiscount.price) / referencePrice;
+  }, [activeDiscount, matchedSizePrice, basePrice]);
+
+  // Google discount is active when we successfully calculated a positive discount percentage
+  const hasGoogleDiscount = !!activeDiscount && googleDiscountPercent > 0;
+
+  // Hero variant-specific prices (for "Your Selection" block)
+  // Shows the Google-discounted price for the exact size the user clicked on
+  const heroDisplayPrice = hasGoogleDiscount && matchedSizePrice
+    ? activeDiscount!.price
+    : (matchedSizePrice || basePrice);
+  // Hero strikethrough: must be HIGHER than display price, otherwise hide it
+  const heroOriginalPrice = (() => {
+    if (hasGoogleDiscount && matchedSizePrice) {
+      // Google discount active: strikethrough is the regular site price for this size
+      return matchedSizePrice;
+    }
+    // No Google discount: use the matched size's retail price only if it's higher
+    const retailRef = matchedSizeRetailPrice || null;
+    if (retailRef && retailRef > heroDisplayPrice) return retailRef;
+    return null;
+  })();
 
   // Calculate base price (lowest S-XL price, excluding plus size upcharges)
+  // When landing from Google, scope to the initial color so the "From" price
+  // matches the hero and size table — no conflicting numbers on the page.
   const basePriceDisplay = useMemo(() => {
-    // Get the minimum base price across all colors (this is typically the S-XL price)
-    const allBasePrices = product.colors?.flatMap(color => 
+    // Choose which colors to consider: initial color only (Google landing) or all colors
+    const colorsToConsider = isGoogleLanding && resolvedInitialColor
+      ? [resolvedInitialColor]
+      : (product.colors || []);
+
+    // Standard size filter (exclude plus-size upcharges)
+    const isStandardSize = (sizeName: string) => {
+      const upper = sizeName.toUpperCase();
+      return !upper.includes('2X') && !upper.includes('3X') && 
+             !upper.includes('4X') && !upper.includes('5X');
+    };
+
+    // Min sale/effective price (what the site displays: salePrice ?? price)
+    const allBasePrices = colorsToConsider.flatMap(color => 
       color.sizes
-        .filter(size => {
-          // Filter to standard sizes only (exclude 2XL, 3XL, 4XL, 5XL which have upcharges)
-          const sizeName = size.name.toUpperCase();
-          return !sizeName.includes('2X') && !sizeName.includes('3X') && 
-                 !sizeName.includes('4X') && !sizeName.includes('5X');
-        })
+        .filter(size => isStandardSize(size.name))
         .map(size => size.salePrice || size.price)
-    ) || [];
+    );
+
+    // Min retail price (price only, ignoring salePrice) — for sale strikethrough
+    const allRetailPrices = colorsToConsider.flatMap(color =>
+      color.sizes
+        .filter(size => isStandardSize(size.name))
+        .map(size => size.price)
+    );
     
-    // If no standard sizes found, fall back to all sizes
+    // If no standard sizes found, fall back to all sizes for the considered colors
     const pricesToConsider = allBasePrices.length > 0 
       ? allBasePrices 
-      : (product.colors?.flatMap(color => color.sizes.map(size => size.salePrice || size.price)) || []);
+      : colorsToConsider.flatMap(color => color.sizes.map(size => size.salePrice || size.price));
+
+    const retailToConsider = allRetailPrices.length > 0
+      ? allRetailPrices
+      : colorsToConsider.flatMap(color => color.sizes.map(size => size.price));
     
     if (pricesToConsider.length === 0) {
-      return { hasPrice: false, price: 0 };
+      return { hasPrice: false, price: 0, originalMinPrice: null as number | null, originalMinRetail: null as number | null };
     }
 
     const minPrice = Math.min(...pricesToConsider);
+    const minRetailPrice = retailToConsider.length > 0 ? Math.min(...retailToConsider) : null;
+    
+    // Apply Google discount proportionally if active
+    const effectiveMinPrice = googleDiscountPercent > 0
+      ? Math.round(minPrice * (1 - googleDiscountPercent) * 100) / 100
+      : minPrice;
+
     return { 
       hasPrice: true, 
-      price: activeDiscount?.price ?? minPrice 
+      price: effectiveMinPrice,
+      originalMinPrice: googleDiscountPercent > 0 ? minPrice : null,
+      originalMinRetail: minRetailPrice, // color-scoped retail for sale strikethrough
     };
-  }, [product.colors, activeDiscount]);
+  }, [product.colors, googleDiscountPercent, isGoogleLanding, resolvedInitialColor]);
   
   // Helper to validate image URLs (must be http/https)
   const isValidImageUrl = (url: string | undefined | null): url is string => {
@@ -230,7 +334,16 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
     return count;
   }, [colorQuantities]);
 
-  // Calculate per-color subtotals and grand total
+  // Helper: calculate the effective price for a size (with proportional Google discount)
+  const getEffectivePrice = (size: { price: number; salePrice: number | null }) => {
+    const retail = size.salePrice || size.price;
+    if (googleDiscountPercent > 0) {
+      return Math.round(retail * (1 - googleDiscountPercent) * 100) / 100;
+    }
+    return retail;
+  };
+
+  // Calculate per-color subtotals and grand total (uses discounted prices when active)
   const { colorSubtotals, grandTotal } = useMemo(() => {
     const subtotals: Array<{ colorCode: string; colorName: string; pieces: number; total: number }> = [];
     let grand = 0;
@@ -243,9 +356,11 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
       Object.entries(sizeQtys).forEach(([sizeName, qty]) => {
         if (qty > 0) {
           const size = color.sizes.find((s) => s.name === sizeName);
-          const unitPrice = size?.salePrice || size?.price || 0;
-          colorPieces += qty;
-          colorTotal += unitPrice * qty;
+          if (size) {
+            const unitPrice = getEffectivePrice(size);
+            colorPieces += qty;
+            colorTotal += unitPrice * qty;
+          }
         }
       });
 
@@ -261,7 +376,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
     });
 
     return { colorSubtotals: subtotals, grandTotal: grand };
-  }, [selectedColors, colorQuantities]);
+  }, [selectedColors, colorQuantities, googleDiscountPercent]);
 
   // Handle color swatch click - toggle selection
   const handleColorClick = (color: ProductColor | null) => {
@@ -334,7 +449,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           colorCode: color.colorCode,
           sizeName,
           quantity,
-          unitPrice: sizeInfo?.price || displayPrice,
+          unitPrice: sizeInfo?.salePrice || sizeInfo?.price || basePrice,
           imageUrl: color.frontImage || product.imageUrl,
         });
       });
@@ -376,9 +491,12 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
         const sizeInfo = color.sizes.find((s) => s.name === sizeName);
         const sku = sizeInfo?.sku || `${product.styleId}-${colorCode}-${sizeName}`;
 
-        // Use discounted price if available
-        const regularPrice = sizeInfo?.price || basePrice;
-        const finalPrice = activeDiscount?.price ?? regularPrice;
+        // Use proportional discounted price per-size if Google discount is active
+        const regularPrice = sizeInfo?.salePrice || sizeInfo?.price || basePrice;
+        const finalPrice = googleDiscountPercent > 0
+          ? Math.round(regularPrice * (1 - googleDiscountPercent) * 100) / 100
+          : regularPrice;
+        const hasActiveDiscount = googleDiscountPercent > 0 && finalPrice < regularPrice;
         
         addToCart({
           sku,
@@ -391,8 +509,8 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           sizeName,
           quantity,
           unitPrice: regularPrice,
-          discountedPrice: activeDiscount ? finalPrice : undefined,
-          discountSource: activeDiscount ? 'google' : undefined,
+          discountedPrice: hasActiveDiscount ? finalPrice : undefined,
+          discountSource: hasActiveDiscount ? 'google' : undefined,
           imageUrl: color.frontImage || product.imageUrl,
           availableSizes,
         });
@@ -409,7 +527,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           sizeName,
           quantity,
           unitPrice: regularPrice,
-          discountedPrice: activeDiscount ? finalPrice : undefined,
+          discountedPrice: hasActiveDiscount ? finalPrice : undefined,
         });
       });
     });
@@ -661,19 +779,27 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                 {/* Per piece label */}
                 <span className="text-base text-slate-500 font-medium">per piece</span>
                 
-                {/* Original price if discounted */}
-                {originalPrice && (
+                {/* Original price strikethrough — must be HIGHER than displayed price */}
+                {basePriceDisplay.originalMinPrice && basePriceDisplay.originalMinPrice > basePriceDisplay.price ? (
                   <span className="text-lg text-slate-400 line-through ml-1">
-                    {formatPrice(originalPrice)}
+                    {formatPrice(basePriceDisplay.originalMinPrice)}
                   </span>
-                )}
+                ) : basePriceDisplay.originalMinRetail && basePriceDisplay.originalMinRetail > basePriceDisplay.price ? (
+                  <span className="text-lg text-slate-400 line-through ml-1">
+                    {formatPrice(basePriceDisplay.originalMinRetail)}
+                  </span>
+                ) : null}
                 
-                {/* Sale badge - simple */}
-                {(hasDiscount || hasGoogleDiscount) && (
+                {/* Sale / Extra X% Off badge — only when strikethrough is visible */}
+                {basePriceDisplay.originalMinPrice && basePriceDisplay.originalMinPrice > basePriceDisplay.price ? (
+                  <span className="ml-1 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-sm font-semibold">
+                    Extra {Math.round(googleDiscountPercent * 100)}% Off
+                  </span>
+                ) : basePriceDisplay.originalMinRetail && basePriceDisplay.originalMinRetail > basePriceDisplay.price ? (
                   <span className="ml-1 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-sm font-semibold">
                     Sale
                   </span>
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -694,14 +820,119 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
           )}
         </div>
 
+        {/* Google/PMax Landing: Your Selection hero block */}
+        {isGoogleLanding && resolvedInitialColor && (
+          <div className="rounded-2xl border-2 border-brand-200 bg-gradient-to-br from-brand-50 via-white to-brand-50/30 p-4 lg:p-6 shadow-xl shadow-brand-300/20">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
+              <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wide">
+                Your Selection
+              </h3>
+              {hasGoogleDiscount && (
+                <span className="ml-auto px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+                  Extra {Math.round(googleDiscountPercent * 100)}% Off
+                </span>
+              )}
+            </div>
+            
+            {/* Variant details row */}
+            <div className="flex items-center gap-4">
+              {/* Variant image */}
+              <div className="flex-shrink-0 w-20 h-20 lg:w-24 lg:h-24 rounded-xl overflow-hidden border border-stone-200 bg-white">
+                <Image
+                  src={isOttoCap ? proxyImageUrl(resolvedInitialColor.frontImage || product.imageUrl) : (resolvedInitialColor.frontImage || product.imageUrl)}
+                  alt={`${resolvedInitialColor.colorName}`}
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              
+              {/* Variant info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-base lg:text-lg font-bold text-slate-900 truncate">
+                  {resolvedInitialColor.colorName}
+                  {initialVariant?.sizeName && (
+                    <span className="text-slate-500 font-medium"> · {initialVariant.sizeName}</span>
+                  )}
+                </p>
+                
+                {/* Price — shows size-specific Google discount vs. site price */}
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className={cn("text-2xl font-bold", hasGoogleDiscount ? "text-red-600" : "text-slate-900")}>
+                    {formatPrice(heroDisplayPrice)}
+                  </span>
+                  <span className="text-sm text-slate-500">per piece</span>
+                  {heroOriginalPrice && (
+                    <span className="text-sm text-slate-400 line-through">
+                      {formatPrice(heroOriginalPrice)}
+                    </span>
+                  )}
+                </div>
+                
+                {/* 48h lock when discount active */}
+                {hasGoogleDiscount && (
+                  <p className="mt-1 text-xs text-brand-600 font-medium">
+                    Price locked for 48 hours
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {/* Quick Add to Cart for this variant */}
+            {initialVariant?.sizeName && (
+              <div className="mt-4 flex items-center gap-3">
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={!canAddToCart}
+                  size="lg"
+                  className={cn(
+                    'flex-1 text-base font-semibold py-3.5 rounded-xl transition-all duration-200',
+                    addedToCart 
+                      ? 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/25' 
+                      : 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30'
+                  )}
+                >
+                  {addedToCart ? (
+                    <>
+                      <Check className="mr-2 h-5 w-5" />
+                      Added to Cart
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      Add to Cart
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+            
+            {/* Secondary: Add more */}
+            <p className="mt-3 text-center text-xs text-slate-500">
+              Need other sizes or colors?{' '}
+              <button
+                onClick={() => {
+                  // Scroll to color selection
+                  document.getElementById('color-selection')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="text-brand-600 font-medium hover:text-brand-700 underline underline-offset-2"
+              >
+                Add them below
+              </button>
+            </p>
+          </div>
+        )}
+
         {/* Color Selection Card - Enhanced depth */}
         {product.colors && product.colors.length > 0 && (
-          <div className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
+          <div id="color-selection" className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
             <h3 className="text-sm lg:text-base font-bold text-slate-800">
-              Select Colors <span className="font-normal text-slate-500">({product.colors.length} available)</span>
+              {isGoogleLanding ? 'Add More Colors' : 'Select Colors'} <span className="font-normal text-slate-500">({product.colors.length} available)</span>
             </h3>
             <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
-              Click colors to add size rows below. Click again to remove.
+              {isGoogleLanding ? 'Click colors to add more size rows. Click again to remove.' : 'Click colors to add size rows below. Click again to remove.'}
             </p>
             <div className="mt-3">
               <ColorSwatches
@@ -742,6 +973,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount }
                   onRemove={() => handleRemoveColor(color.colorCode)}
                   showRemoveButton={selectedColors.length > 1}
                   hideInventory={isLAApparelProduct}
+                  discountPercent={googleDiscountPercent}
                 />
               ))}
             </div>

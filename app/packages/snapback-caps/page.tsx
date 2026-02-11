@@ -29,7 +29,7 @@ export default async function SnapbackCapsPage() {
           <EmbroideryPackageBuilder 
             colors={product?.colors || []} 
             productStyleId={product?.styleId || productStyleId}
-            productName={product?.title || 'Otto Cap 125-978 Snapback'}
+            productName={product?.title || 'Yupoong 6089M Snapback Cap'}
             config={snapbackCapsConfig}
           />
         </div>

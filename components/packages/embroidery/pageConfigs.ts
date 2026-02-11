@@ -236,7 +236,7 @@ export const truckerCapsPageConfig = {
     priceNote: 'at 100+ qty · Volume discounts available',
     image: '/images/embroidery/hero-trucker-cap.png',
     imageAlt: 'Custom Embroidered Trucker Cap',
-    colorCount: 95,
+    colorCount: 102,
     trustBadges: sharedTrustBadges,
   },
   whatsIncluded: {
@@ -269,7 +269,7 @@ export const truckerCapsPageConfig = {
   stickyMobileCta: {
     priceText: 'From $10.45/hat',
   },
-  productStyleId: 27113,
+  productStyleId: 1000312,
 };
 
 // ============================================
@@ -288,7 +288,7 @@ export const snapbackCapsPageConfig = {
     priceNote: 'at 100+ qty · Volume discounts available',
     image: '/images/embroidery/hero-snapback-cap.png',
     imageAlt: 'Custom Embroidered Snapback Cap',
-    colorCount: 24,
+    colorCount: 37,
     trustBadges: sharedTrustBadges,
   },
   whatsIncluded: {
@@ -321,7 +321,7 @@ export const snapbackCapsPageConfig = {
   stickyMobileCta: {
     priceText: 'From $14.45/hat',
   },
-  productStyleId: 1000500,
+  productStyleId: 2293,
 };
 
 // ============================================
@@ -340,7 +340,7 @@ export const dadCapsPageConfig = {
     priceNote: 'at 100+ qty · Volume discounts available',
     image: '/images/embroidery/hero-dad-cap.png',
     imageAlt: 'Custom Embroidered Dad Cap',
-    colorCount: 30,
+    colorCount: 40,
     trustBadges: sharedTrustBadges,
   },
   whatsIncluded: {
@@ -373,7 +373,7 @@ export const dadCapsPageConfig = {
   stickyMobileCta: {
     priceText: 'From $11.45/hat',
   },
-  productStyleId: 1000410,
+  productStyleId: 494,
 };
 
 // ============================================
@@ -392,7 +392,7 @@ export const beaniesPageConfig = {
     priceNote: 'at 100+ qty · Volume discounts available',
     image: '/images/embroidery/hero-beanie.png',
     imageAlt: 'Custom Embroidered Beanie',
-    colorCount: 48,
+    colorCount: 35,
     trustBadges: sharedTrustBadges,
   },
   whatsIncluded: {
@@ -425,7 +425,7 @@ export const beaniesPageConfig = {
   stickyMobileCta: {
     priceText: 'From $10.45/beanie',
   },
-  productStyleId: 1000261,
+  productStyleId: 1411,
 };
 
 // Export all configs

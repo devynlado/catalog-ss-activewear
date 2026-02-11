@@ -29,7 +29,7 @@ export default async function TruckerCapsPage() {
           <EmbroideryPackageBuilder 
             colors={product?.colors || []} 
             productStyleId={product?.styleId || productStyleId}
-            productName={product?.title || 'Richardson 112 Trucker Cap'}
+            productName={product?.title || 'OTTO 39-165 Trucker Cap'}
             config={truckerCapsConfig}
           />
         </div>

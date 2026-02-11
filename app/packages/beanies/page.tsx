@@ -29,7 +29,7 @@ export default async function BeaniesPage() {
           <EmbroideryPackageBuilder 
             colors={product?.colors || []} 
             productStyleId={product?.styleId || productStyleId}
-            productName={product?.title || 'Yupoong 1501KC Cuffed Beanie'}
+            productName={product?.title || 'Sportsman SP12 Beanie'}
             config={beaniesConfig}
           />
         </div>

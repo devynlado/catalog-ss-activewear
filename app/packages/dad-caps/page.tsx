@@ -29,7 +29,7 @@ export default async function DadCapsPage() {
           <EmbroideryPackageBuilder 
             colors={product?.colors || []} 
             productStyleId={product?.styleId || productStyleId}
-            productName={product?.title || 'Richardson 320 Dad Cap'}
+            productName={product?.title || 'Valucap VC300A Dad Cap'}
             config={dadCapsConfig}
           />
         </div>

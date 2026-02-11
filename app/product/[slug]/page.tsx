@@ -10,12 +10,21 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 import { validateDiscountToken, GoogleDiscount } from '@/lib/google-discount';
 
+// Initial variant resolved from URL params (color/size from GMC feed links)
+export interface InitialVariant {
+  colorCode: string;
+  colorName: string;
+  sizeName: string;
+}
+
 interface ProductPageProps {
   params: {
     slug: string;
   };
   searchParams: {
     pv2?: string;
+    color?: string;
+    size?: string;
     [key: string]: string | string[] | undefined;
   };
 }
@@ -249,6 +258,50 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     }
   }
 
+  // Resolve initial variant from URL params (color/size from GMC feed links)
+  // This enables single-variant-first landing for PMax / Google Shopping ads
+  let initialVariant: InitialVariant | null = null;
+  const colorParam = typeof searchParams.color === 'string' ? searchParams.color : null;
+  const sizeParam = typeof searchParams.size === 'string' ? searchParams.size : null;
+  
+  if (colorParam && product.colors && product.colors.length > 0) {
+    // Match color by name (case-insensitive) or by code
+    const matchedColor = product.colors.find(
+      c => c.colorName.toLowerCase() === colorParam.toLowerCase() ||
+           c.colorCode.toLowerCase() === colorParam.toLowerCase()
+    );
+    
+    if (matchedColor) {
+      if (sizeParam) {
+        // Match size by name (case-insensitive)
+        const matchedSize = matchedColor.sizes.find(
+          s => s.name.toLowerCase() === sizeParam.toLowerCase()
+        );
+        if (matchedSize) {
+          initialVariant = {
+            colorCode: matchedColor.colorCode,
+            colorName: matchedColor.colorName,
+            sizeName: matchedSize.name,
+          };
+        } else {
+          // Color matched but size didn't — still pre-select the color (no size pre-fill)
+          initialVariant = {
+            colorCode: matchedColor.colorCode,
+            colorName: matchedColor.colorName,
+            sizeName: '',
+          };
+        }
+      } else {
+        // Only color in URL, no size — pre-select color only
+        initialVariant = {
+          colorCode: matchedColor.colorCode,
+          colorName: matchedColor.colorName,
+          sizeName: '',
+        };
+      }
+    }
+  }
+
   // Build breadcrumb data for structured data
   const breadcrumbItems = [
     { name: 'Home', url: 'https://garmentdecor.com' },
@@ -306,7 +359,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         
         <div className="relative mx-auto max-w-7xl px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
           <Suspense fallback={<ProductDetailSkeleton />}>
-            <ProductDetailClient product={product} googleDiscount={googleDiscount} />
+            <ProductDetailClient product={product} googleDiscount={googleDiscount} initialVariant={initialVariant} />
           </Suspense>
         </div>
       </div>

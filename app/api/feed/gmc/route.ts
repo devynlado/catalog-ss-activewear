@@ -44,141 +44,245 @@ interface CachedProduct {
 }
 
 // ============================================================================
+// BASE CATEGORY → ProductCategory FALLBACK MAP
+// Maps base_category values from Supabase to GMC feed ProductCategory
+// ============================================================================
+const BASE_CATEGORY_MAP: Record<string, ProductCategory> = {
+  't-shirts': 't-shirts',
+  'tees': 't-shirts',
+  'short sleeve': 't-shirts',
+  'long sleeve': 'long-sleeve',
+  'long-sleeve': 'long-sleeve',
+  'tank tops': 'tank-tops',
+  'tank-tops': 'tank-tops',
+  'tanks': 'tank-tops',
+  'sweatshirts': 'crewneck',
+  'crewneck': 'crewneck',
+  'crewnecks': 'crewneck',
+  'fleece': 'hoodies',
+  'hoodies': 'hoodies',
+  'hoodie': 'hoodies',
+  'pullover': 'hoodies',
+  'zip hoodies': 'zip-hoodies',
+  'zip-hoodies': 'zip-hoodies',
+  'full zip': 'zip-hoodies',
+  'quarter zip': 'quarter-zip',
+  'quarter-zip': 'quarter-zip',
+  'polos': 'polos',
+  'polo': 'polos',
+  'performance': 'performance',
+  'athletic': 'performance',
+  'activewear': 'performance',
+  'headwear': 'headwear',
+  'caps': 'headwear',
+  'hats': 'headwear',
+  'beanies': 'headwear',
+  'outerwear': 'outerwear',
+  'jackets': 'outerwear',
+  'jacket': 'outerwear',
+  'youth': 'youth',
+  'kids': 'youth',
+  'womens': 'womens',
+  "women's": 'womens',
+  'ladies': 'womens',
+};
+
+/**
+ * Resolve a ProductCategory from various product fields.
+ * Priority: POPULAR_PRODUCTS match > base_category > product_type > default
+ */
+function resolveCategory(
+  product: CachedProduct,
+  popularCategoryMap: Map<number, ProductCategory>
+): ProductCategory {
+  // 1. Check if product is in POPULAR_PRODUCTS
+  const popularCategory = popularCategoryMap.get(product.style_id);
+  if (popularCategory) return popularCategory;
+  
+  // 2. Try base_category
+  if (product.base_category) {
+    const normalized = product.base_category.toLowerCase().trim();
+    if (BASE_CATEGORY_MAP[normalized]) return BASE_CATEGORY_MAP[normalized];
+    // Partial match
+    for (const [key, value] of Object.entries(BASE_CATEGORY_MAP)) {
+      if (normalized.includes(key) || key.includes(normalized)) return value;
+    }
+  }
+  
+  // 3. Try product_type (e.g. "T-Shirts > Core T-Shirts")
+  if (product.product_type) {
+    const normalized = product.product_type.toLowerCase().trim();
+    for (const [key, value] of Object.entries(BASE_CATEGORY_MAP)) {
+      if (normalized.includes(key)) return value;
+    }
+  }
+  
+  // 4. Default
+  return 't-shirts';
+}
+
+// ============================================================================
 // FETCH FROM SUPABASE CACHE (fast)
+// Now fetches ALL active products with slugs (not just popular)
 // ============================================================================
 async function fetchFromSupabase(): Promise<{
   rows: GMCFeedRow[];
   fromCache: boolean;
-  debug?: { colorRecords: number; colorProducts: number };
+  debug?: { colorRecords: number; colorProducts: number; totalProducts: number; skippedSkus: number };
 }> {
   const supabase = createServerSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
   
-  // Check if we have cached data
+  // Check if we have cached data (any active products)
   const { count } = await supabase
     .from('products')
     .select('*', { count: 'exact', head: true })
     .eq('is_active', true)
-    .eq('is_popular', true);
+    .not('slug', 'is', null);
   
   if (!count || count === 0) {
     return { rows: [], fromCache: false };
   }
   
-  // Fetch all popular products with their SKUs
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      style_id,
-      style_name,
-      slug,
-      brand_name,
-      title_raw,
-      title_optimized,
-      description_raw,
-      description_optimized,
-      primary_image_url,
-      popular_tier,
-      base_category,
-      product_type,
-      google_category_id,
-      google_category_name,
-      material,
-      gender,
-      age_group,
-      product_skus (
-        sku,
-        color_name,
-        color_code,
-        size_name,
-        cogs,
-        retail_price,
-        sale_price,
-        auto_min_price,
-        gtin,
-        piece_weight,
-        qty,
-        availability
-      )
-    `)
-    .eq('is_active', true)
-    .eq('is_popular', true);
+  // Fetch ALL active products with slugs and their SKUs
+  // Use pagination to handle large catalogs (Supabase default limit is 1000)
+  const allProducts: CachedProduct[] = [];
+  const PAGE_SIZE = 1000;
+  let page = 0;
+  let hasMore = true;
   
-  if (error || !data) {
-    console.error('[GMC Feed] Supabase query error:', error);
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        style_id,
+        style_name,
+        slug,
+        brand_name,
+        title_raw,
+        title_optimized,
+        description_raw,
+        description_optimized,
+        primary_image_url,
+        popular_tier,
+        base_category,
+        product_type,
+        google_category_id,
+        google_category_name,
+        material,
+        gender,
+        age_group,
+        product_skus (
+          sku,
+          color_name,
+          color_code,
+          size_name,
+          cogs,
+          retail_price,
+          sale_price,
+          auto_min_price,
+          gtin,
+          piece_weight,
+          qty,
+          availability
+        )
+      `)
+      .eq('is_active', true)
+      .not('slug', 'is', null)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    
+    if (error) {
+      console.error(`[GMC Feed] Supabase query error (page ${page}):`, error);
+      break;
+    }
+    
+    if (data && data.length > 0) {
+      allProducts.push(...(data as CachedProduct[]));
+      hasMore = data.length === PAGE_SIZE;
+      page++;
+    } else {
+      hasMore = false;
+    }
+  }
+  
+  if (allProducts.length === 0) {
     return { rows: [], fromCache: false };
   }
   
-  // Cast to typed array
-  const products = data as CachedProduct[];
+  console.log(`[GMC Feed] Fetched ${allProducts.length} active products with slugs`);
   
-  // Fetch color images separately (no FK relationship in Supabase)
-  const styleIds = products.map(p => p.style_id);
+  // Fetch color images separately (batch by style IDs)
+  const styleIds = allProducts.map(p => p.style_id);
   type ColorRecord = { style_id: number; color_code: string; front_image: string | null; back_image: string | null; side_image: string | null };
-  const { data: colorData } = await supabase
-    .from('product_colors')
-    .select('style_id, color_code, front_image, back_image, side_image')
-    .in('style_id', styleIds)
-    .limit(50000) as { data: ColorRecord[] | null };  // Ensure all color images are fetched
+  
+  // Fetch colors in batches to handle large catalogs
+  const allColorData: ColorRecord[] = [];
+  const COLOR_BATCH = 500;
+  for (let i = 0; i < styleIds.length; i += COLOR_BATCH) {
+    const batchIds = styleIds.slice(i, i + COLOR_BATCH);
+    const { data: colorData } = await supabase
+      .from('product_colors')
+      .select('style_id, color_code, front_image, back_image, side_image')
+      .in('style_id', batchIds)
+      .limit(50000) as { data: ColorRecord[] | null };
+    if (colorData) {
+      allColorData.push(...colorData);
+    }
+  }
   
   // Build a lookup map: style_id -> color_code -> images
   const colorImageMap = new Map<number, Map<string, { front: string | null; back: string | null; side: string | null }>>();
-  if (colorData) {
-    for (const color of colorData) {
-      if (!colorImageMap.has(color.style_id)) {
-        colorImageMap.set(color.style_id, new Map());
-      }
-      // Normalize color_code to string for consistent matching
-      colorImageMap.get(color.style_id)!.set(String(color.color_code), {
-        front: color.front_image,
-        back: color.back_image,
-        side: color.side_image,
-      });
+  for (const color of allColorData) {
+    if (!colorImageMap.has(color.style_id)) {
+      colorImageMap.set(color.style_id, new Map());
     }
+    colorImageMap.get(color.style_id)!.set(String(color.color_code), {
+      front: color.front_image,
+      back: color.back_image,
+      side: color.side_image,
+    });
   }
-  const colorDataCount = colorData?.length || 0;
-  console.log(`[GMC Feed] Loaded ${colorDataCount} color records for ${colorImageMap.size} products`);
+  console.log(`[GMC Feed] Loaded ${allColorData.length} color records for ${colorImageMap.size} products`);
   
-  // Build a map of style_id -> category from POPULAR_PRODUCTS
-  const categoryMap = new Map<number, ProductCategory>();
-  const styleIdMap = new Map<string, number>();
-  
-  // First, build a lookup of styleName -> styleId from products
-  for (const p of products) {
-    styleIdMap.set(p.style_name.toLowerCase(), p.style_id);
-  }
-  
-  // Then map popular products to their categories
+  // Build popular products category map (for products in POPULAR_PRODUCTS list)
+  const popularCategoryMap = new Map<number, ProductCategory>();
   for (const pop of POPULAR_PRODUCTS) {
-    // Try to find matching product by style name
-    const matchingProduct = products.find(p => 
+    const matchingProduct = allProducts.find(p => 
       p.style_name.toLowerCase().includes(pop.styleNumber.toLowerCase()) ||
       pop.styleNumber.toLowerCase().includes(p.style_name.toLowerCase().split(' ')[0])
     );
     if (matchingProduct) {
-      categoryMap.set(matchingProduct.style_id, pop.category);
+      popularCategoryMap.set(matchingProduct.style_id, pop.category);
     }
   }
   
   // Generate GMC rows from cached data
   const feedRows: GMCFeedRow[] = [];
-  
   let skippedProducts = 0;
-  for (const product of products) {
-    // Skip products without slugs - they would cause 404s
+  let skippedSkus = 0;
+  
+  for (const product of allProducts) {
+    // Skip products without slugs (shouldn't happen after query filter, but be safe)
     if (!product.slug) {
       skippedProducts++;
       continue;
     }
     
     const skus = product.product_skus || [];
-    const category = categoryMap.get(product.style_id) || 't-shirts' as ProductCategory;
+    const category = resolveCategory(product, popularCategoryMap);
     const tier = (product.popular_tier || 'value') as ProductTier;
     
     // Get color images for this product from the pre-built map
     const productColorMap = colorImageMap.get(product.style_id);
     
     for (const sku of skus) {
+      // Skip SKUs without valid COGS or auto_min_price
+      // These would send invalid data to Google and hurt the "valid COGS / min price" share
+      if (!sku.cogs || sku.cogs <= 0 || !sku.auto_min_price || sku.auto_min_price <= 0) {
+        skippedSkus++;
+        continue;
+      }
+      
       const variant: ProductVariant = {
         sku: sku.sku,
         styleId: product.style_id,
@@ -187,33 +291,44 @@ async function fetchFromSupabase(): Promise<{
         colorName: sku.color_name,
         colorCode: sku.color_code,
         sizeName: sku.size_name,
-        customerPrice: sku.cogs || 0,  // COGS for pricing calculation
+        customerPrice: sku.cogs,
         gtin: sku.gtin || '',
-        qty: sku.qty || 0,  // Inventory quantity
+        qty: sku.qty || 0,
         pieceWeight: sku.piece_weight || 0,
         material: product.material || '',
         colorSwatchImage: '',
         styleImage: product.primary_image_url || '',
-        slug: product.slug,  // Use database slug for correct URLs
+        slug: product.slug,
       };
       
       const row = generateFeedRow(variant, category, tier, baseUrl);
       
       // Override with cached values
       row.availability = sku.availability === 'in_stock' ? 'in_stock' : 'out_of_stock';
-      // Set quantity based on availability (0 if out of stock, actual qty or 999 if in stock)
       row.quantity = sku.availability === 'in_stock' ? String(sku.qty || 999) : '0';
       row.price = sku.retail_price ? `${sku.retail_price.toFixed(2)} USD` : row.price;
       if (sku.sale_price) {
         row.sale_price = `${sku.sale_price.toFixed(2)} USD`;
       }
-      row.cost_of_goods_sold = sku.cogs ? `${sku.cogs.toFixed(2)} USD` : '';
-      row.auto_pricing_min_price = sku.auto_min_price ? `${sku.auto_min_price.toFixed(2)} USD` : '';
+      row.cost_of_goods_sold = `${sku.cogs.toFixed(2)} USD`;
+      row.auto_pricing_min_price = `${sku.auto_min_price.toFixed(2)} USD`;
+      
+      // Use google_category_id from DB if available (more specific than the map)
+      if (product.google_category_id) {
+        row.google_product_category = String(product.google_category_id);
+      }
+      
+      // Use gender and age_group from DB if available
+      if (product.gender) {
+        row.gender = product.gender;
+      }
+      if (product.age_group) {
+        row.age_group = product.age_group;
+      }
       
       // Build additional_image_link from color images (front, back, side)
       const colorImages = productColorMap?.get(String(sku.color_code));
       if (colorImages) {
-        // Helper to normalize image URLs to CDN
         const normalizeCdnUrl = (url: string | null) => 
           url ? url.replace('www.ssactivewear.com', 'cdn.ssactivewear.com') : null;
         
@@ -222,14 +337,12 @@ async function fetchFromSupabase(): Promise<{
         const side = normalizeCdnUrl(colorImages.side);
         
         const additionalImages: string[] = [];
-        // Add back and side images if they exist
         if (back && back !== front) {
           additionalImages.push(back);
         }
         if (side && side !== front) {
           additionalImages.push(side);
         }
-        // Use color front image as primary if available
         if (front && front !== row.image_link) {
           row.image_link = front;
         }
@@ -245,11 +358,14 @@ async function fetchFromSupabase(): Promise<{
   if (skippedProducts > 0) {
     console.warn(`[GMC Feed] Skipped ${skippedProducts} products without slugs`);
   }
-  console.log(`[GMC Feed] Generated ${feedRows.length} rows from Supabase cache`);
+  if (skippedSkus > 0) {
+    console.warn(`[GMC Feed] Skipped ${skippedSkus} SKUs without valid COGS/auto_min_price`);
+  }
+  console.log(`[GMC Feed] Generated ${feedRows.length} rows from ${allProducts.length} products (Supabase cache)`);
   return { 
     rows: feedRows, 
     fromCache: true,
-    debug: { colorRecords: colorDataCount, colorProducts: colorImageMap.size }
+    debug: { colorRecords: allColorData.length, colorProducts: colorImageMap.size, totalProducts: allProducts.length, skippedSkus }
   };
 }
 
@@ -382,7 +498,7 @@ export async function GET(request: NextRequest) {
     // ========================================================================
     // TRY SUPABASE CACHE FIRST (fast: ~1-2 seconds vs 30-60 seconds)
     // ========================================================================
-    let debugInfo: { colorRecords: number; colorProducts: number } | undefined;
+    let debugInfo: { colorRecords: number; colorProducts: number; totalProducts?: number; skippedSkus?: number } | undefined;
     if (!forceRefresh) {
       try {
         const cached = await fetchFromSupabase();

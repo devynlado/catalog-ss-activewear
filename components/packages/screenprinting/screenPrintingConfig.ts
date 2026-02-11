@@ -142,7 +142,7 @@ export const printedTeesGildanPageConfig = {
     priceFrom: 4.40,
     priceUnit: 'shirt',
     priceNote: 'at 500+ qty with 2-color print · Volume discounts available',
-    image: '/images/screen-printing/hero-printed-tee.png',
+    image: '/images/packages/gildan-5000/gildan-5000-screen-printing-t-shirt.png',
     imageAlt: 'Custom Screen Printed T-Shirt',
     colorCount: 64,
     trustBadges: screenPrintingTrustBadges,
