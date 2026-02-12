@@ -93,7 +93,7 @@ export function PackageDeals() {
               <Link href={`/packages/${pkg.slug}`}>
                 <div className="bg-white rounded-2xl shadow-sm border border-stone-200/60 overflow-hidden hover:shadow-lg hover:border-brand-200 transition-all group h-full flex flex-col">
                   {/* Image */}
-                  <div className="relative bg-gradient-to-br from-stone-100 to-stone-50 p-3 aspect-square">
+                  <div className="relative bg-gradient-to-br from-stone-100 to-stone-50 p-3 aspect-square overflow-hidden">
                     <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
                       {pkg.badge && (
                         <span className="bg-brand-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">

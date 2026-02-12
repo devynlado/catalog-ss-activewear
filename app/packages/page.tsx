@@ -341,7 +341,7 @@ export default function PackagesPage() {
                 <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg shadow-stone-200/50 border border-white/60 overflow-hidden hover:shadow-xl transition-shadow group">
                   <div className="grid lg:grid-cols-2 gap-0">
                     {/* Image */}
-                    <div className="relative bg-gradient-to-br from-stone-100 to-stone-50 p-3">
+                    <div className="relative bg-gradient-to-br from-stone-100 to-stone-50 p-3 overflow-hidden">
                       <div className="absolute top-4 left-4 z-10 flex gap-2">
                         <span className="bg-brand-500/95 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
                           {featuredPackage.badge}
@@ -548,7 +548,7 @@ function PackageCard({ pkg }: { pkg: Package }) {
     <Link href={`/packages/${pkg.slug}`}>
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-stone-200/60 overflow-hidden hover:shadow-lg hover:border-brand-200 transition-all group h-full flex flex-col">
         {/* Image */}
-        <div className="relative bg-gradient-to-br from-stone-100 to-stone-50 p-3 aspect-square">
+        <div className="relative bg-gradient-to-br from-stone-100 to-stone-50 p-3 aspect-square overflow-hidden">
           <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
             {pkg.badge && (
               <span className="bg-brand-500/95 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
