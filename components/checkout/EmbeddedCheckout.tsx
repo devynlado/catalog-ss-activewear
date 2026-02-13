@@ -88,6 +88,9 @@ export function CheckoutFormWrapper({
     setIsLoading(true);
     setError(null);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
     try {
       const response = await fetch('/api/checkout/create-session', {
         method: 'POST',
@@ -99,8 +102,10 @@ export function CheckoutFormWrapper({
           poNumber,
           orderNotes,
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
 
       if (!response.ok) {
@@ -111,8 +116,13 @@ export function CheckoutFormWrapper({
         setClientSecret(data.clientSecret);
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error('Error creating checkout session:', err);
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('The request timed out. Please check your connection and try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+      }
     } finally {
       setIsLoading(false);
     }

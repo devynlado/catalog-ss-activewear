@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -188,17 +188,12 @@ function PaymentForm({ orderNumber, total }: { orderNumber: string; total: numbe
         type="submit"
         disabled={!stripe || isProcessing}
         isLoading={isProcessing}
+        loadingText="Processing payment..."
         className="w-full"
         size="lg"
       >
-        {isProcessing ? (
-          'Processing payment...'
-        ) : (
-          <>
-            <CreditCard className="mr-2 h-4 w-4" />
-            Pay {formatPrice(total)} Now
-          </>
-        )}
+        <CreditCard className="mr-2 h-4 w-4" />
+        Pay {formatPrice(total)} Now
       </Button>
       
       <p className="text-center text-xs text-slate-500">
@@ -225,6 +220,9 @@ export default function CheckoutContent() {
   const [serverPricing, setServerPricing] = useState<{ subtotal: number; tax: number; shipping: number; total: number } | null>(null);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Idempotency key to prevent duplicate orders on retry
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
 
   // Calculate totals
   const totals = calculateOrderTotals(items, shippingMethod);
@@ -281,7 +279,7 @@ export default function CheckoutContent() {
     setBillingInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  // Create checkout session
+  // Create checkout session with timeout to prevent hanging on mobile
   const createCheckoutSession = useCallback(async () => {
     if (!isFormValid) {
       setError('Please complete all required fields');
@@ -290,6 +288,9 @@ export default function CheckoutContent() {
 
     setIsCreatingSession(true);
     setError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
 
     try {
       const response = await fetch('/api/checkout/create-session', {
@@ -301,9 +302,12 @@ export default function CheckoutContent() {
           shippingMethod,
           poNumber: poNumber || undefined,
           orderNotes: orderNotes || undefined,
+          idempotencyKey: idempotencyKeyRef.current,
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
 
       if (!response.ok) {
@@ -314,10 +318,19 @@ export default function CheckoutContent() {
         setClientSecret(data.clientSecret);
         setOrderNumber(data.orderNumber);
         setServerPricing(data.pricing);
+        // Generate a new key for any future session creation (e.g. after cart changes)
+        idempotencyKeyRef.current = crypto.randomUUID();
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error('Checkout error:', err);
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('The request timed out. Please check your connection and try again.');
+        // Generate a new key so retries after timeout get a fresh attempt
+        idempotencyKeyRef.current = crypto.randomUUID();
+      } else {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+      }
     } finally {
       setIsCreatingSession(false);
     }
@@ -785,17 +798,12 @@ export default function CheckoutContent() {
                           onClick={createCheckoutSession}
                           disabled={isCreatingSession}
                           isLoading={isCreatingSession}
+                          loadingText="Preparing secure checkout..."
                           className="w-full"
                           size="lg"
                         >
-                          {isCreatingSession ? (
-                            'Preparing checkout...'
-                          ) : (
-                            <>
-                              <Lock className="mr-2 h-4 w-4" />
-                              Continue to Payment — {formatPrice(subtotal + actualShippingCost + totals.taxAmount)}
-                            </>
-                          )}
+                          <Lock className="mr-2 h-4 w-4" />
+                          Continue to Payment — {formatPrice(subtotal + actualShippingCost + totals.taxAmount)}
                         </Button>
                       </>
                     )}

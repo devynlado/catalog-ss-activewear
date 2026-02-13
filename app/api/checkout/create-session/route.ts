@@ -22,12 +22,13 @@ interface CheckoutRequest {
   shippingMethod: ShippingMethod;
   poNumber?: string;
   orderNotes?: string;
+  idempotencyKey?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, poNumber, orderNotes } = body;
+    const { items, shippingInfo, shippingMethod, poNumber, orderNotes, idempotencyKey } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -60,10 +61,6 @@ export async function POST(request: NextRequest) {
 
     // Generate order number
     const orderNumber = generateOrderNumber();
-    
-    // Get the base URL
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-                   (request.headers.get('origin') ?? 'http://localhost:3000');
 
     // Build shipping address object for database
     const shippingAddressData = {
@@ -78,15 +75,18 @@ export async function POST(request: NextRequest) {
       phone: shippingInfo.phone,
     };
 
-    // Get Supabase client
+    // Get Supabase client and auth user in parallel
     const supabase = await createSupabaseServerClient();
-    
-    // Check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Create pending order in database first
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: order, error: orderError } = await (supabase as any)
+    // Build item summary for Stripe metadata
+    const itemSummary = items.slice(0, 3).map(item => 
+      `${item.brandName} ${item.styleName} (${item.quantity})`
+    ).join(', ') + (items.length > 3 ? ` +${items.length - 3} more` : '');
+
+    // Create order in DB and Stripe PaymentIntent in parallel
+    // Both are independent at this point — the order gets the PI id updated after
+    const orderInsertPromise = (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
       .from('orders')
       .insert({
         order_number: orderNumber,
@@ -128,6 +128,39 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
+    const paymentIntentPromise = stripe.paymentIntents.create(
+      {
+        amount: toStripeCents(totalWithShipping),
+        currency: 'usd',
+        payment_method_types: ['card'],
+        metadata: {
+          order_number: orderNumber,
+          order_type: 'cart',
+          customer_email: shippingInfo.email,
+          customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+          customer_phone: shippingInfo.phone,
+          customer_company: shippingInfo.company || '',
+          shipping_method: shippingMethod,
+          item_count: items.length.toString(),
+          total_pieces: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
+          po_number: poNumber || '',
+          notes: orderNotes || '',
+        },
+        receipt_email: shippingInfo.email,
+        description: `Order ${orderNumber} - ${itemSummary}`,
+      },
+      // Use idempotency key to prevent duplicate charges on retry
+      idempotencyKey ? { idempotencyKey } : undefined,
+    );
+
+    // Wait for both to complete
+    const [orderResult, paymentIntent] = await Promise.all([
+      orderInsertPromise,
+      paymentIntentPromise,
+    ]);
+
+    const { data: order, error: orderError } = orderResult;
+
     if (orderError) {
       console.error('Error creating order:', orderError);
       return NextResponse.json(
@@ -136,70 +169,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log order creation activity
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('order_activities').insert({
-      order_id: order.id,
-      user_id: user?.id || null,
-      activity_type: 'created',
-      details: {
-        order_number: orderNumber,
-        order_type: 'cart',
-        item_count: items.length,
-        total_pieces: items.reduce((sum, item) => sum + item.quantity, 0),
-        total: totalWithShipping,
-      },
-    });
-
-    // Build item summary for Stripe metadata
-    const itemSummary = items.slice(0, 3).map(item => 
-      `${item.brandName} ${item.styleName} (${item.quantity})`
-    ).join(', ') + (items.length > 3 ? ` +${items.length - 3} more` : '');
-
-    // Create Stripe PaymentIntent with comprehensive metadata for webhook
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: toStripeCents(totalWithShipping),
-      currency: 'usd',
-      payment_method_types: ['card'],
-      metadata: {
-        order_id: order.id,
-        order_number: orderNumber,
-        order_type: 'cart',
-        customer_email: shippingInfo.email,
-        customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
-        customer_phone: shippingInfo.phone,
-        customer_company: shippingInfo.company || '',
-        shipping_method: shippingMethod,
-        item_count: items.length.toString(),
-        total_pieces: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
-        po_number: poNumber || '',
-        notes: orderNotes || '',
-      },
-      receipt_email: shippingInfo.email,
-      description: `Order ${orderNumber} - ${itemSummary}`,
-    });
-
-    // Update order with payment intent ID
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
-      .from('orders')
-      .update({
-        stripe_payment_intent_id: paymentIntent.id,
-        payment_status: 'processing',
-      })
-      .eq('id', order.id);
-
-    // Log payment processing activity
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('order_activities').insert({
-      order_id: order.id,
-      user_id: user?.id || null,
-      activity_type: 'payment_processing',
-      details: {
-        payment_intent_id: paymentIntent.id,
-        amount: totalWithShipping,
-      },
-    });
+    // Now run the follow-up DB writes in parallel (non-blocking for the response)
+    // These are: update order with PI id, log creation activity, log payment activity
+    await Promise.all([
+      // Update order with payment intent ID
+      (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .from('orders')
+        .update({
+          stripe_payment_intent_id: paymentIntent.id,
+          payment_status: 'processing',
+        })
+        .eq('id', order.id),
+      // Log order creation activity
+      (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .from('order_activities')
+        .insert({
+          order_id: order.id,
+          user_id: user?.id || null,
+          activity_type: 'created',
+          details: {
+            order_number: orderNumber,
+            order_type: 'cart',
+            item_count: items.length,
+            total_pieces: items.reduce((sum, item) => sum + item.quantity, 0),
+            total: totalWithShipping,
+          },
+        }),
+      // Log payment processing activity
+      (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .from('order_activities')
+        .insert({
+          order_id: order.id,
+          user_id: user?.id || null,
+          activity_type: 'payment_processing',
+          details: {
+            payment_intent_id: paymentIntent.id,
+            amount: totalWithShipping,
+          },
+        }),
+    ]);
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
