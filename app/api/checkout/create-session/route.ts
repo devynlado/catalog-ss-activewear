@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Now run the follow-up DB writes in parallel (non-blocking for the response)
-    // These are: update order with PI id, log creation activity, log payment activity
+    // Now run the follow-up writes in parallel
+    // These are: update order with PI id, patch PI metadata with order_id, log activities
     await Promise.all([
       // Update order with payment intent ID
       (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -180,6 +180,10 @@ export async function POST(request: NextRequest) {
           payment_status: 'processing',
         })
         .eq('id', order.id),
+      // Patch order_id into PI metadata so the webhook can link payment to order
+      stripe.paymentIntents.update(paymentIntent.id, {
+        metadata: { order_id: order.id },
+      }),
       // Log order creation activity
       (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
         .from('order_activities')

@@ -46,8 +46,9 @@ export async function POST(request: NextRequest) {
     const shippingAddress = order.shipping_address as {
       firstName?: string;
       lastName?: string;
-      address1?: string;
-      address2?: string;
+      company?: string;
+      address?: string;
+      apartment?: string;
       city?: string;
       state?: string;
       zipCode?: string;
@@ -70,8 +71,9 @@ export async function POST(request: NextRequest) {
     // Format shipping address
     const formattedAddress = shippingAddress 
       ? `${shippingAddress.firstName || ''} ${shippingAddress.lastName || ''}<br>
-         ${shippingAddress.address1 || ''}<br>
-         ${shippingAddress.address2 ? shippingAddress.address2 + '<br>' : ''}
+         ${shippingAddress.company ? shippingAddress.company + '<br>' : ''}
+         ${shippingAddress.address || ''}<br>
+         ${shippingAddress.apartment ? shippingAddress.apartment + '<br>' : ''}
          ${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.zipCode || ''}`
       : 'Address not available';
 
@@ -139,23 +141,23 @@ export async function POST(request: NextRequest) {
           <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">What's Next?</h2>
           <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
             <p style="margin: 0 0 8px; color: #475569;">
-              <strong>1. Order Processing</strong> - We're preparing your order (within 24 hours)
+              <strong>1. Order Processing</strong> — We're preparing your items for shipment (within 24 hours)
             </p>
             <p style="margin: 0 0 8px; color: #475569;">
-              <strong>2. Shipping</strong> - Your order will ship within 1-2 business days
+              <strong>2. Shipping</strong> — Your order will ship within 1-2 business days and you'll receive tracking info via email
             </p>
             <p style="margin: 0; color: #475569;">
-              <strong>3. Delivery</strong> - Expected delivery in 3-5 business days
+              <strong>3. Delivery</strong> — Expected delivery in 3-5 business days
             </p>
           </div>
 
-          <div style="text-align: center; padding: 24px; background: #fef3c7; border-radius: 8px; margin-bottom: 24px;">
-            <p style="margin: 0 0 8px; font-weight: 600; color: #92400e;">Need these decorated next time?</p>
-            <p style="margin: 0 0 16px; color: #a16207; font-size: 14px;">
-              We offer screen printing, embroidery, and more!
+          <div style="text-align: center; padding: 20px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px;">
+            <p style="margin: 0 0 4px; font-weight: 600; color: #334155;">Did you know?</p>
+            <p style="margin: 0 0 12px; color: #64748b; font-size: 14px;">
+              We also offer screen printing, embroidery, and custom decoration services.
             </p>
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/services" style="display: inline-block; background: #ea580c; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-              Explore Our Services
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/services" style="color: #ea580c; text-decoration: none; font-weight: 600; font-size: 14px;">
+              Learn more →
             </a>
           </div>
 

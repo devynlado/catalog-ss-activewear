@@ -50,10 +50,10 @@ const glassCard = "bg-white/70 backdrop-blur-sm border border-stone-200 rounded-
 
 function OrderTimeline({ currentStep = 1 }: { currentStep?: number }) {
   const steps = [
-    { label: 'Order Confirmed', sublabel: 'Now', icon: CheckCircle },
-    { label: 'Processing', sublabel: 'Within 24hrs', icon: Clock },
-    { label: 'Shipped', sublabel: 'Tracking sent', icon: Truck },
-    { label: 'Delivered', sublabel: 'Est. 3-5 days', icon: MapPin },
+    { label: 'Order Confirmed', sublabel: 'Just now', icon: CheckCircle },
+    { label: 'Preparing', sublabel: 'Within 24hrs', icon: Clock },
+    { label: 'Shipped', sublabel: 'Tracking emailed', icon: Truck },
+    { label: 'Delivered', sublabel: '3-5 business days', icon: MapPin },
   ];
 
   return (
@@ -187,10 +187,10 @@ function SuccessContent() {
             <CheckCircle className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-navy-800 mb-2">
-            Thank you for your order!
+            Order Confirmed!
           </h1>
           <p className="text-slate-600">
-            Your order has been confirmed and will be shipped soon.
+            Your order has been confirmed and is being prepared for shipment.
           </p>
         </div>
 
@@ -347,7 +347,7 @@ function SuccessContent() {
           <div className="mt-4 p-3 bg-brand-50 rounded-lg">
             <p className="text-sm text-brand-800">
               <span className="font-medium">Have questions about this order?</span>
-              {' '}Our team is here to help with customization, decoration services, or any concerns.
+              {' '}Our team is here to help with order updates, bulk pricing, or any concerns.
             </p>
           </div>
         </div>
