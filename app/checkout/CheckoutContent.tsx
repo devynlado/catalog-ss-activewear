@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -23,14 +23,14 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
-import { calculateOrderTotals, ShippingMethod } from '@/lib/stripe-utils';
+import { calculateOrderTotals, toStripeCents, ShippingMethod } from '@/lib/stripe-utils';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { OrderSummary } from './OrderSummary';
 import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
-import { trackBeginCheckout, trackAddShippingInfo, CartItem as GA4CartItem } from '@/lib/analytics';
+import { trackBeginCheckout, CartItem as GA4CartItem } from '@/lib/analytics';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -137,46 +137,192 @@ const usStates = [
 // Card styles - stronger contrast/depth
 const glassCard = "bg-white border border-stone-200 rounded-2xl shadow-xl shadow-stone-300/40";
 
-// Payment form component using Stripe Elements
-function PaymentForm({ orderNumber, total }: { orderNumber: string; total: number }) {
+// Stripe appearance configuration
+const stripeAppearance = {
+  theme: 'stripe' as const,
+  variables: {
+    colorPrimary: '#EE8935',
+    colorBackground: '#ffffff',
+    colorText: '#1e293b',
+    colorDanger: '#dc2626',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    spacingUnit: '4px',
+    borderRadius: '12px',
+  },
+  rules: {
+    '.Input': {
+      border: '1px solid #d6d3d1',
+      boxShadow: 'none',
+      padding: '12px 14px',
+    },
+    '.Input:focus': {
+      border: '2px solid #EE8935',
+      boxShadow: '0 0 0 3px rgba(238, 137, 53, 0.1)',
+    },
+    '.Label': {
+      fontWeight: '500',
+      fontSize: '14px',
+      marginBottom: '6px',
+    },
+  },
+};
+
+// ---------- Inline Payment Form (deferred intent) ----------
+// This component lives inside <Elements> and handles the full pay flow:
+// 1. Validate card via elements.submit()
+// 2. Create order + PaymentIntent on server
+// 3. Confirm payment with returned clientSecret
+// On card-declined retry, reuses the existing clientSecret to avoid duplicate orders.
+
+interface InlinePaymentFormProps {
+  items: Array<{
+    id: string;
+    sku: string;
+    styleId: number;
+    styleName: string;
+    productTitle?: string;
+    brandName: string;
+    colorCode: string;
+    colorName: string;
+    sizeName: string;
+    unitPrice: number;
+    discountedPrice?: number;
+    quantity: number;
+    imageUrl?: string;
+  }>;
+  shippingInfo: ShippingInfo;
+  shippingMethod: ShippingMethod;
+  poNumber: string;
+  orderNotes: string;
+  isFormValid: boolean;
+  missingFields: string[];
+  total: number;
+}
+
+function InlinePaymentForm({
+  items,
+  shippingInfo,
+  shippingMethod,
+  poNumber,
+  orderNotes,
+  isFormValid,
+  missingFields,
+  total,
+}: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  // Cache clientSecret + orderNumber after successful session creation
+  // so declined-card retries reuse the same PI instead of creating duplicates
+  const sessionRef = useRef<{ clientSecret: string; orderNumber: string } | null>(null);
+
+  // Invalidate cached session when cart or shipping changes
+  // (the amount would differ, so we need a fresh PaymentIntent)
+  const prevCartKey = useRef('');
+  const cartKey = JSON.stringify({ items: items.map(i => i.id + i.quantity), shippingMethod });
+  if (cartKey !== prevCartKey.current) {
+    prevCartKey.current = cartKey;
+    sessionRef.current = null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !isFormValid) {
       return;
     }
 
     setIsProcessing(true);
     setPaymentError(null);
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/checkout/success?order=${orderNumber}`,
-      },
-    });
+    try {
+      // Step 1: Validate card details with Stripe (client-side only, no server call)
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setPaymentError(submitError.message || 'Please check your payment details.');
+        setIsProcessing(false);
+        return;
+      }
 
-    // This point is only reached if there's an immediate error
-    // (e.g., card declined). If successful, Stripe redirects to return_url
-    if (error) {
-      setPaymentError(error.message || 'An error occurred during payment');
+      // Step 2: Create order + PaymentIntent on server (skip if we already have one from a prior attempt)
+      let clientSecret = sessionRef.current?.clientSecret;
+      let orderNumber = sessionRef.current?.orderNumber;
+
+      if (!clientSecret) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+        try {
+          const response = await fetch('/api/checkout/create-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items,
+              shippingInfo,
+              shippingMethod,
+              poNumber: poNumber || undefined,
+              orderNotes: orderNotes || undefined,
+            }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to create checkout');
+          }
+
+          clientSecret = data.clientSecret;
+          orderNumber = data.orderNumber;
+
+          // Cache for retry
+          sessionRef.current = { clientSecret: clientSecret!, orderNumber: orderNumber! };
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+          if (fetchErr instanceof DOMException && fetchErr.name === 'AbortError') {
+            setPaymentError('The request timed out. Please check your connection and try again.');
+          } else {
+            setPaymentError(fetchErr instanceof Error ? fetchErr.message : 'Something went wrong creating your order.');
+          }
+          setIsProcessing(false);
+          return;
+        }
+      }
+
+      // Step 3: Confirm payment with Stripe using the server-created PaymentIntent
+      const { error: confirmError } = await stripe.confirmPayment({
+        elements,
+        clientSecret: clientSecret!,
+        confirmParams: {
+          return_url: `${window.location.origin}/checkout/success?order=${orderNumber}`,
+        },
+      });
+
+      // Only reached if there's an immediate error (e.g. card declined).
+      // On success, Stripe redirects to return_url.
+      if (confirmError) {
+        setPaymentError(confirmError.message || 'Your payment was not successful. Please try again.');
+        // Don't clear sessionRef — the PI is reusable for retry after decline
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      setPaymentError('An unexpected error occurred. Please try again.');
+    } finally {
       setIsProcessing(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement 
+      <PaymentElement
         options={{
           layout: 'tabs',
         }}
       />
-      
+
       {paymentError && (
         <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
           <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
@@ -184,9 +330,25 @@ function PaymentForm({ orderNumber, total }: { orderNumber: string; total: numbe
         </div>
       )}
 
+      {!isFormValid && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-sm font-medium text-amber-800 mb-2">
+            Complete the form above to pay:
+          </p>
+          <ul className="text-sm text-amber-700 space-y-1">
+            {missingFields.map((field) => (
+              <li key={field} className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                {field}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <Button
         type="submit"
-        disabled={!stripe || isProcessing}
+        disabled={!stripe || !isFormValid || isProcessing}
         isLoading={isProcessing}
         loadingText="Processing payment..."
         className="w-full"
@@ -195,13 +357,15 @@ function PaymentForm({ orderNumber, total }: { orderNumber: string; total: numbe
         <CreditCard className="mr-2 h-4 w-4" />
         Pay {formatPrice(total)} Now
       </Button>
-      
+
       <p className="text-center text-xs text-slate-500">
         Your payment is encrypted and secure
       </p>
     </form>
   );
 }
+
+// ---------- Main Checkout Page ----------
 
 export default function CheckoutContent() {
   const { items, decoration, getDecorationTotal } = useCartStore();
@@ -214,20 +378,14 @@ export default function CheckoutContent() {
   const [poNumber, setPoNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   
-  // Checkout state
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [serverPricing, setServerPricing] = useState<{ subtotal: number; tax: number; shipping: number; total: number } | null>(null);
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  // General error state (for non-payment errors)
   const [error, setError] = useState<string | null>(null);
-  
-  // Idempotency key to prevent duplicate orders on retry
-  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
 
   // Calculate totals
   const totals = calculateOrderTotals(items, shippingMethod);
   const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
   const actualShippingCost = shippingMethod === 'economy' && subtotal >= 500 ? 0 : totals.shippingCost;
+  const orderTotal = subtotal + actualShippingCost + totals.taxAmount;
 
   // Track begin_checkout event when page loads with items
   useEffect(() => {
@@ -267,74 +425,14 @@ export default function CheckoutContent() {
   const missingFields = getMissingFields();
   const isFormValid = missingFields.length === 0;
 
-  // Handle input changes
+  // Handle input changes — no longer nullifies payment state
   const handleShippingChange = (field: keyof ShippingInfo, value: string) => {
     setShippingInfo(prev => ({ ...prev, [field]: value }));
-    if (clientSecret) {
-      setClientSecret(null);
-    }
   };
 
   const handleBillingChange = (field: keyof BillingInfo, value: string) => {
     setBillingInfo(prev => ({ ...prev, [field]: value }));
   };
-
-  // Create checkout session with timeout to prevent hanging on mobile
-  const createCheckoutSession = useCallback(async () => {
-    if (!isFormValid) {
-      setError('Please complete all required fields');
-      return;
-    }
-
-    setIsCreatingSession(true);
-    setError(null);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
-
-    try {
-      const response = await fetch('/api/checkout/create-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items,
-          shippingInfo,
-          shippingMethod,
-          poNumber: poNumber || undefined,
-          orderNotes: orderNotes || undefined,
-          idempotencyKey: idempotencyKeyRef.current,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout');
-      }
-
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret);
-        setOrderNumber(data.orderNumber);
-        setServerPricing(data.pricing);
-        // Generate a new key for any future session creation (e.g. after cart changes)
-        idempotencyKeyRef.current = crypto.randomUUID();
-      }
-    } catch (err) {
-      clearTimeout(timeoutId);
-      console.error('Checkout error:', err);
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        setError('The request timed out. Please check your connection and try again.');
-        // Generate a new key so retries after timeout get a fresh attempt
-        idempotencyKeyRef.current = crypto.randomUUID();
-      } else {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
-      }
-    } finally {
-      setIsCreatingSession(false);
-    }
-  }, [items, shippingInfo, shippingMethod, poNumber, orderNotes, isFormValid]);
 
   // Get delivery estimates - adjust for decoration if present
   const economyDelivery = decoration 
@@ -421,7 +519,7 @@ export default function CheckoutContent() {
               <h2 className="text-lg font-bold text-slate-800 mb-1">
                 Where should we send order updates?
               </h2>
-              <p className="text-sm text-slate-500 mb-4">We'll email you tracking info and delivery updates</p>
+              <p className="text-sm text-slate-500 mb-4">We&apos;ll email you tracking info and delivery updates</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="Email address"
@@ -684,7 +782,7 @@ export default function CheckoutContent() {
                 shippingMethod={shippingMethod}
                 shippingCost={actualShippingCost}
                 taxAmount={totals.taxAmount}
-                isEditable={!clientSecret} // Shows "Edit in cart" link when not in payment
+                isEditable={true}
                 decoration={decoration}
               />
 
@@ -711,10 +809,7 @@ export default function CheckoutContent() {
                           name="shipping"
                           value={option.id}
                           checked={shippingMethod === option.id}
-                          onChange={() => {
-                            setShippingMethod(option.id);
-                            if (clientSecret) setClientSecret(null);
-                          }}
+                          onChange={() => setShippingMethod(option.id)}
                           className="sr-only"
                         />
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
@@ -753,7 +848,7 @@ export default function CheckoutContent() {
                 </div>
               </div>
 
-              {/* Payment Section */}
+              {/* Payment Section — always visible, deferred intent */}
               <div className={glassCard + " p-5"}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-slate-800">Secure Payment</h3>
@@ -763,92 +858,26 @@ export default function CheckoutContent() {
                   </div>
                 </div>
 
-                {!clientSecret ? (
-                  <div className="py-4">
-                    {!isFormValid ? (
-                      <>
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                          <p className="text-sm font-medium text-amber-800 mb-2">
-                            Please complete the following fields:
-                          </p>
-                          <ul className="text-sm text-amber-700 space-y-1">
-                            {missingFields.map((field) => (
-                              <li key={field} className="flex items-center gap-2">
-                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                {field}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <Button
-                          disabled
-                          className="w-full opacity-50"
-                          size="lg"
-                        >
-                          <Lock className="mr-2 h-4 w-4" />
-                          Continue to Payment — {formatPrice(subtotal + actualShippingCost + totals.taxAmount)}
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm text-slate-600 mb-4 text-center">
-                          Ready to proceed to payment
-                        </p>
-                        <Button
-                          onClick={createCheckoutSession}
-                          disabled={isCreatingSession}
-                          isLoading={isCreatingSession}
-                          loadingText="Preparing secure checkout..."
-                          className="w-full"
-                          size="lg"
-                        >
-                          <Lock className="mr-2 h-4 w-4" />
-                          Continue to Payment — {formatPrice(subtotal + actualShippingCost + totals.taxAmount)}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <Elements
-                    stripe={stripePromise}
-                    options={{
-                      clientSecret,
-                      appearance: {
-                        theme: 'stripe',
-                        variables: {
-                          colorPrimary: '#EE8935',
-                          colorBackground: '#ffffff',
-                          colorText: '#1e293b',
-                          colorDanger: '#dc2626',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                          spacingUnit: '4px',
-                          borderRadius: '12px',
-                        },
-                        rules: {
-                          '.Input': {
-                            border: '1px solid #d6d3d1',
-                            boxShadow: 'none',
-                            padding: '12px 14px',
-                          },
-                          '.Input:focus': {
-                            border: '2px solid #EE8935',
-                            boxShadow: '0 0 0 3px rgba(238, 137, 53, 0.1)',
-                          },
-                          '.Label': {
-                            fontWeight: '500',
-                            fontSize: '14px',
-                            marginBottom: '6px',
-                          },
-                        },
-                      },
-                    }}
-                  >
-                    <PaymentForm 
-                      orderNumber={orderNumber || ''} 
-                      total={serverPricing?.total || (subtotal + actualShippingCost + totals.taxAmount)} 
-                    />
-                  </Elements>
-                )}
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    mode: 'payment',
+                    amount: toStripeCents(orderTotal),
+                    currency: 'usd',
+                    appearance: stripeAppearance,
+                  }}
+                >
+                  <InlinePaymentForm
+                    items={items}
+                    shippingInfo={shippingInfo}
+                    shippingMethod={shippingMethod}
+                    poNumber={poNumber}
+                    orderNotes={orderNotes}
+                    isFormValid={isFormValid}
+                    missingFields={missingFields}
+                    total={orderTotal}
+                  />
+                </Elements>
 
                 {/* Reassurance message */}
                 <p className="mt-4 text-center text-xs text-slate-500">
