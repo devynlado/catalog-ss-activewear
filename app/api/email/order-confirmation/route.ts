@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import {
+  generateOrderNotificationHtml,
+  generateOrderNotificationText,
+  getOrderNotificationSubject,
+  OrderNotificationProps,
+} from '@/lib/emails/order-notification';
+import { LOGO_URLS } from '@/lib/emails/components';
 
 // Lazy initialization to avoid build-time errors
 function getResend() {
@@ -18,7 +25,7 @@ export async function POST(request: NextRequest) {
   const resend = getResend();
   const supabase = getSupabase();
   try {
-    const { orderId } = await request.json();
+    const { orderId, paymentIntentId } = await request.json();
 
     if (!orderId) {
       return NextResponse.json(
@@ -42,6 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items = Array.isArray(order.items) ? order.items : [];
     const shippingAddress = order.shipping_address as {
       firstName?: string;
@@ -54,21 +62,24 @@ export async function POST(request: NextRequest) {
       zipCode?: string;
     } | null;
 
-    // Generate items HTML
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.garmentdecor.com';
+
+    // Generate items HTML for customer email
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const itemsHtml = items.map((item: any) => `
       <tr>
         <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
           <strong>${item.brandName} ${item.styleName}</strong><br>
           <span style="color: #6b7280; font-size: 14px;">${item.colorName} / ${item.sizeName}</span><br>
-          <span style="color: #6b7280; font-size: 14px;">Qty: ${item.quantity} × $${item.unitPrice?.toFixed(2)}</span>
+          <span style="color: #6b7280; font-size: 14px;">Qty: ${item.quantity} × $${(item.discountedPrice ?? item.unitPrice)?.toFixed(2)}</span>
         </td>
         <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">
-          $${(item.unitPrice * item.quantity).toFixed(2)}
+          $${((item.discountedPrice ?? item.unitPrice) * item.quantity).toFixed(2)}
         </td>
       </tr>
     `).join('');
 
-    // Format shipping address
+    // Format shipping address for customer email
     const formattedAddress = shippingAddress 
       ? `${shippingAddress.firstName || ''} ${shippingAddress.lastName || ''}<br>
          ${shippingAddress.company ? shippingAddress.company + '<br>' : ''}
@@ -77,7 +88,7 @@ export async function POST(request: NextRequest) {
          ${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.zipCode || ''}`
       : 'Address not available';
 
-    // Send customer confirmation email
+    // Send customer confirmation email (with PNG logo instead of SVG)
     await resend.emails.send({
       from: 'Garment Decor <orders@garmentdecor.com>',
       to: order.customer_email,
@@ -92,7 +103,7 @@ export async function POST(request: NextRequest) {
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px;">
           
           <div style="text-align: center; margin-bottom: 32px;">
-            <img src="${process.env.NEXT_PUBLIC_SITE_URL}/images/brand/logo.svg" alt="Garment Decor" style="height: 40px;">
+            <img src="${LOGO_URLS.wordmarkDark}" alt="Garment Decor" style="height: 40px; max-width: 180px;">
           </div>
 
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 32px;">
@@ -156,7 +167,7 @@ export async function POST(request: NextRequest) {
             <p style="margin: 0 0 12px; color: #64748b; font-size: 14px;">
               We also offer screen printing, embroidery, and custom decoration services.
             </p>
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/services" style="color: #ea580c; text-decoration: none; font-weight: 600; font-size: 14px;">
+            <a href="${siteUrl}/services" style="color: #ea580c; text-decoration: none; font-weight: 600; font-size: 14px;">
               Learn more →
             </a>
           </div>
@@ -175,20 +186,48 @@ export async function POST(request: NextRequest) {
       `,
     });
 
-    // Send team notification
+    // Build props for the new purchaser-friendly notification email
+    const notificationProps: OrderNotificationProps = {
+      orderNumber: order.order_number,
+      customerName: order.customer_name || order.customer_email,
+      customerEmail: order.customer_email,
+      customerPhone: order.customer_phone || undefined,
+      company: order.company || undefined,
+      items: items.map((item: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+        sku: item.sku || '',
+        styleId: item.styleId,
+        styleName: item.styleName || '',
+        brandName: item.brandName || '',
+        colorName: item.colorName || '',
+        colorCode: item.colorCode,
+        sizeName: item.sizeName || '',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        discountedPrice: item.discountedPrice,
+      })),
+      subtotal: order.subtotal || 0,
+      shippingCost: order.shipping_cost || 0,
+      taxAmount: order.tax_amount || 0,
+      total: order.total || 0,
+      shippingMethod: order.shipping_method || 'economy',
+      shippingAddress: shippingAddress || {},
+      poNumber: order.metadata?.po_number || order.po_number || undefined,
+      notes: order.notes || undefined,
+      paymentIntentId: paymentIntentId || order.stripe_payment_intent_id || undefined,
+      createdAt: new Date().toLocaleString('en-US', {
+        timeZone: 'America/Los_Angeles',
+        dateStyle: 'full',
+        timeStyle: 'short',
+      }),
+    };
+
+    // Send purchaser-friendly team notification
     await resend.emails.send({
       from: 'Garment Decor Orders <orders@garmentdecor.com>',
       to: process.env.TEAM_EMAIL || 'team@garmentdecor.com',
-      subject: `🎉 New Order - ${order.order_number} - $${order.total?.toFixed(2)}`,
-      html: `
-        <h2>New Order Received!</h2>
-        <p><strong>Order:</strong> ${order.order_number}</p>
-        <p><strong>Customer:</strong> ${order.customer_name || order.customer_email}</p>
-        <p><strong>Email:</strong> ${order.customer_email}</p>
-        <p><strong>Total:</strong> $${order.total?.toFixed(2)}</p>
-        <p><strong>Items:</strong> ${items.length}</p>
-        ${order.po_number ? `<p><strong>PO Number:</strong> ${order.po_number}</p>` : ''}
-      `,
+      subject: getOrderNotificationSubject(order.order_number, order.total || 0),
+      html: generateOrderNotificationHtml(notificationProps),
+      text: generateOrderNotificationText(notificationProps),
     });
 
     return NextResponse.json({ success: true });

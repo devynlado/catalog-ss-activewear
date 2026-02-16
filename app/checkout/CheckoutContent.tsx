@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -14,7 +14,6 @@ import {
   Truck, 
   Zap, 
   Lock, 
-  MapPin,
   Shield,
   BadgeCheck,
   Phone,
@@ -28,9 +27,10 @@ import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { AddressAutocomplete, loadGoogleMapsScript, ParsedAddress } from '@/components/checkout/AddressAutocomplete';
 import { OrderSummary } from './OrderSummary';
 import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
-import { trackBeginCheckout, CartItem as GA4CartItem } from '@/lib/analytics';
+import { trackBeginCheckout, trackGenerateLead, CartItem as GA4CartItem } from '@/lib/analytics';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -407,6 +407,99 @@ export default function CheckoutContent() {
     }
   }, []); // Only fire once on mount
 
+  // Load Google Maps Places API for address autocomplete
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (apiKey) {
+      loadGoogleMapsScript(apiKey).catch(() => {
+        // Graceful fallback — autocomplete will degrade to regular input
+      });
+    }
+  }, []);
+
+  // Handle address selection from Google Places autocomplete
+  const handleShippingAddressSelect = useCallback((address: ParsedAddress) => {
+    setShippingInfo(prev => ({
+      ...prev,
+      address: address.formattedAddress,
+      city: address.city,
+      state: address.state,
+      zipCode: address.zipCode,
+    }));
+  }, []);
+
+  const handleBillingAddressSelect = useCallback((address: ParsedAddress) => {
+    setBillingInfo(prev => ({
+      ...prev,
+      address: address.formattedAddress,
+      city: address.city,
+      state: address.state,
+      zipCode: address.zipCode,
+    }));
+  }, []);
+
+  // --- Lead capture: debounced fire when email + phone are filled ---
+  const leadCapturedRef = useRef<string | null>(null);
+  const leadDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Clear any pending debounce
+    if (leadDebounceRef.current) clearTimeout(leadDebounceRef.current);
+
+    const email = shippingInfo.email.trim();
+    const phone = shippingInfo.phone.replace(/\D/g, '');
+
+    // Basic validation: valid-looking email and 10+ digit phone
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const phoneValid = phone.length >= 10;
+
+    if (!emailValid || !phoneValid) return;
+
+    // Only fire once per unique email per session
+    if (leadCapturedRef.current === email) return;
+
+    leadDebounceRef.current = setTimeout(() => {
+      leadCapturedRef.current = email;
+
+      // Fire GA4 generate_lead event
+      trackGenerateLead({ source: 'checkout', value: 250 });
+
+      // Non-blocking lead capture API call
+      const cartTotal = items.reduce(
+        (sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity,
+        0
+      );
+      fetch('/api/checkout/capture-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          phone: shippingInfo.phone,
+          firstName: shippingInfo.firstName,
+          lastName: shippingInfo.lastName,
+          company: shippingInfo.company,
+          cartItems: items.map(item => ({
+            sku: item.sku,
+            styleName: item.styleName,
+            brandName: item.brandName,
+            colorName: item.colorName,
+            sizeName: item.sizeName,
+            quantity: item.quantity,
+            unitPrice: item.discountedPrice ?? item.unitPrice,
+          })),
+          cartTotal,
+          itemCount: items.length,
+        }),
+      }).catch(() => {
+        // Silent fail — never block checkout
+      });
+    }, 3000);
+
+    return () => {
+      if (leadDebounceRef.current) clearTimeout(leadDebounceRef.current);
+    };
+  }, [shippingInfo.email, shippingInfo.phone, shippingInfo.firstName, shippingInfo.lastName, shippingInfo.company, items]);
+
   // Form validation - get list of missing required fields
   const getMissingFields = (): string[] => {
     const missing: string[] = [];
@@ -577,19 +670,15 @@ export default function CheckoutContent() {
                   />
                 </div>
 
-                {/* Address with icon */}
-                <div className="relative">
-                  <Input
-                    label="Street address"
-                    value={shippingInfo.address}
-                    onChange={(e) => handleShippingChange('address', e.target.value)}
-                    placeholder="123 Main St"
-                    required
-                    autoComplete="address-line1"
-                    className="pl-10"
-                  />
-                  <MapPin className="absolute left-3 top-[2.15rem] h-4 w-4 text-slate-400" />
-                </div>
+                {/* Address with Google Places autocomplete */}
+                <AddressAutocomplete
+                  value={shippingInfo.address}
+                  onChange={(value) => handleShippingChange('address', value)}
+                  onAddressSelect={handleShippingAddressSelect}
+                  label="Street address"
+                  placeholder="Start typing your address..."
+                  required
+                />
 
                 <Input
                   label="Apt, suite, unit (optional)"
@@ -690,12 +779,12 @@ export default function CheckoutContent() {
                         />
                       </div>
 
-                      <Input
-                        label="Street address"
+                      <AddressAutocomplete
                         value={billingInfo.address}
-                        onChange={(e) => handleBillingChange('address', e.target.value)}
-                        placeholder="123 Main St"
-                        autoComplete="address-line1"
+                        onChange={(value) => handleBillingChange('address', value)}
+                        onAddressSelect={handleBillingAddressSelect}
+                        label="Street address"
+                        placeholder="Start typing your address..."
                       />
 
                       <Input

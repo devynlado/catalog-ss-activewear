@@ -177,13 +177,27 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
         await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/email/order-confirmation`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId }),
+          body: JSON.stringify({ orderId, paymentIntentId: paymentIntent.id }),
         });
       }
     } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError);
       // Don't fail the webhook for email errors
     }
+  }
+
+  // Mark checkout lead as converted (if one exists for this email)
+  const customerEmail = paymentIntent.metadata?.customer_email || paymentIntent.receipt_email;
+  if (customerEmail) {
+    await supabase
+      .from('checkout_leads')
+      .update({
+        status: 'converted',
+        converted_order_id: orderId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('email', customerEmail.toLowerCase().trim())
+      .eq('status', 'new');
   }
 
   console.log(`Payment succeeded for order ${orderNumber} (${orderId})`);

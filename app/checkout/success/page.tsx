@@ -11,14 +11,12 @@ import {
   Mail, 
   Phone, 
   Download, 
-  Calendar,
   Truck,
   Clock,
   MapPin,
   User,
   Building2,
   FileText,
-  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCartStore } from '@/lib/cart-store';
@@ -218,7 +216,16 @@ function SuccessContent() {
               </div>
               
               {/* Download Invoice Button */}
-              <Button variant="secondary" size="sm" className="hidden sm:flex">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="hidden sm:flex"
+                onClick={() => {
+                  if (orderDetails?.orderNumber) {
+                    window.open(`/api/orders/${orderDetails.orderNumber}/invoice`, '_blank');
+                  }
+                }}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Download Invoice
               </Button>
@@ -283,17 +290,19 @@ function SuccessContent() {
               </div>
             </div>
 
-            {/* Mobile Download Button */}
-            <Button variant="secondary" className="w-full sm:hidden mb-4">
+            {/* Download Invoice - Mobile */}
+            <Button 
+              variant="secondary" 
+              className="w-full sm:hidden"
+              onClick={() => {
+                if (orderDetails?.orderNumber) {
+                  window.open(`/api/orders/${orderDetails.orderNumber}/invoice`, '_blank');
+                }
+              }}
+            >
               <Download className="h-4 w-4 mr-2" />
               Download Invoice
             </Button>
-
-            {/* Add to Calendar */}
-            <button className="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-600 hover:text-brand-600 transition-colors">
-              <Calendar className="h-4 w-4" />
-              Add delivery reminder to calendar
-            </button>
           </div>
         ) : (
           <div className={glassCard + " p-6 mb-6"}>
@@ -313,14 +322,17 @@ function SuccessContent() {
         <div className={glassCard + " p-6 mb-6"}>
           <h2 className="font-semibold text-navy-800 mb-4">Your Account Representative</h2>
           <div className="flex items-center gap-4">
-            <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-200 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <User className="h-8 w-8 text-brand-600" />
-              </div>
+            <div className="relative h-16 w-16 rounded-2xl overflow-hidden flex-shrink-0">
+              <Image
+                src="/images/team/devyn-lado.png"
+                alt="Devyn Lado"
+                fill
+                className="object-cover"
+              />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-slate-800">Sales Team</p>
-              <p className="text-sm text-slate-600">Garment Decor</p>
+              <p className="font-semibold text-slate-800">Devyn Lado</p>
+              <p className="text-sm text-slate-600">Account Manager</p>
               <div className="flex items-center gap-4 mt-2">
                 <a 
                   href="tel:+18559427636" 
@@ -338,16 +350,12 @@ function SuccessContent() {
                 </a>
               </div>
             </div>
-            <Button variant="secondary" size="sm" className="hidden sm:flex">
-              <Calendar className="h-4 w-4 mr-2" />
-              Schedule Call
-            </Button>
           </div>
           
           <div className="mt-4 p-3 bg-brand-50 rounded-lg">
             <p className="text-sm text-brand-800">
               <span className="font-medium">Have questions about this order?</span>
-              {' '}Our team is here to help with order updates, bulk pricing, or any concerns.
+              {' '}I&apos;m here to help with order updates, bulk pricing, or any concerns.
             </p>
           </div>
         </div>
