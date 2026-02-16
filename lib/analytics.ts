@@ -1,9 +1,16 @@
 /**
- * GA4 Analytics Utilities
+ * GA4 + Google Ads Analytics Utilities
  * 
  * Centralized analytics tracking for Enhanced Ecommerce events.
  * Uses gtag.js directly for type-safe, code-based tracking.
+ * Purchase events include cart data for Google Ads conversion tracking
+ * with profit reporting (matches item_id to GMC feed COGS).
  */
+
+// Google Ads conversion tracking config (client-side env vars)
+const GADS_ID = process.env.NEXT_PUBLIC_GADS_ID;
+const GADS_LABEL = process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL;
+const MERCHANT_ID = process.env.NEXT_PUBLIC_GOOGLE_MERCHANT_ID;
 
 // Extend Window interface for gtag
 declare global {
@@ -236,6 +243,8 @@ export function trackPurchase(params: {
   }
 
   trackEvent('purchase', {
+    // Google Ads conversion tracking with cart data
+    ...(GADS_ID && GADS_LABEL ? { send_to: `${GADS_ID}/${GADS_LABEL}` } : {}),
     transaction_id: params.transactionId,
     currency: params.currency || 'USD',
     value: params.value,
@@ -243,6 +252,12 @@ export function trackPurchase(params: {
     tax: params.tax || 0,
     items: formatCartItemsForGA4(params.items),
     ...(params.coupon ? { coupon: params.coupon } : {}),
+    // Merchant Center fields for cart data matching (profit reporting)
+    ...(MERCHANT_ID ? {
+      aw_merchant_id: MERCHANT_ID,
+      aw_feed_country: 'US',
+      aw_feed_language: 'EN',
+    } : {}),
   });
 }
 

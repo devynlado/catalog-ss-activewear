@@ -7,6 +7,8 @@ import { OrganizationJsonLd } from '@/components/seo/JsonLd';
 
 // GA4 Measurement ID from environment
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
+// Google Ads Conversion ID
+const GADS_ID = process.env.NEXT_PUBLIC_GADS_ID;
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -88,7 +90,7 @@ export default function RootLayout({
     <html lang="en" className={dmSans.variable}>
       <head>
         <OrganizationJsonLd />
-        {/* GA4 Analytics */}
+        {/* GA4 Analytics + Google Ads Conversion Tracking */}
         {GA4_ID && (
           <>
             <Script
@@ -101,6 +103,7 @@ export default function RootLayout({
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
                 gtag('config', '${GA4_ID}'${process.env.NODE_ENV === 'development' ? ", { 'debug_mode': true }" : ''});
+                ${GADS_ID ? `gtag('config', '${GADS_ID}');` : ''}
               `}
             </Script>
           </>
