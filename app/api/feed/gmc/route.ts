@@ -283,10 +283,14 @@ async function fetchFromSupabase(): Promise<{
         continue;
       }
       
+      // Extract style number from the first token of style_name (e.g., "G500 Heavy Cotton Tee" → "G500")
+      const styleNumber = product.style_name.split(/\s+/)[0] || '';
+
       const variant: ProductVariant = {
         sku: sku.sku,
         styleId: product.style_id,
-        styleName: product.title_optimized || product.title_raw || product.style_name,
+        styleName: product.title_raw || product.style_name,
+        styleNumber,
         brandName: product.brand_name,
         colorName: sku.color_name,
         colorCode: sku.color_code,
@@ -299,6 +303,8 @@ async function fetchFromSupabase(): Promise<{
         colorSwatchImage: '',
         styleImage: product.primary_image_url || '',
         slug: product.slug,
+        titleOverride: product.title_optimized || undefined,
+        descriptionOverride: product.description_optimized || undefined,
       };
       
       const row = generateFeedRow(variant, category, tier, baseUrl);

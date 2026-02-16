@@ -1,10 +1,10 @@
 /**
  * Google Merchant Center Feed Generator
  * 
- * Generates a CSV feed matching the structure from your existing Datafeed Watch feed.
- * Uses AI-style optimized titles (clean, keyword-rich, no pipe separators).
- * 
- * Pricing: customerPrice * 1.40 (40% markup)
+ * Generates a CSV feed for Google Merchant Center / Performance Max.
+ * Titles: {Brand} {Model} {ProductName} | {Color} | Size {Size}
+ * Descriptions: Value-focused (lowest prices, fast shipping, social proof)
+ * Pricing: customerPrice * 1.40 (40% markup), auto_pricing_min at 12% markup
  */
 
 import { POPULAR_PRODUCTS, ProductCategory } from './popular-products';
@@ -56,43 +56,63 @@ function determineAgeGroup(category: ProductCategory): string {
   return 'Adult';
 }
 
-// Generate AI-style optimized title
-// Format: "Bulk {Brand} {ProductName}, {Color}, {Material}, {Size}"
+// Generate clean, pipe-separated title optimized for Google Shopping CTR
+// Format: "{Brand} {StyleNumber} {ProductName} | {Color} | Size {Size}"
 function generateOptimizedTitle(
   brand: string,
   productName: string,
   color: string,
   size: string,
-  material?: string
+  styleNumber?: string,
 ): string {
-  const parts = ['Bulk', brand, productName];
-  if (color) parts.push(color);
-  if (material) parts.push(material);
-  if (size) parts.push(size);
-  
-  return parts.join(', ').replace(/,\s*,/g, ',').replace(/,\s*$/, '');
+  // Build the product portion: "Gildan 5000 Heavy Cotton T-Shirt"
+  // If productName already contains the styleNumber, don't duplicate it
+  const nameIncludesModel = styleNumber && productName.toLowerCase().includes(styleNumber.toLowerCase());
+  const productPart = nameIncludesModel
+    ? `${brand} ${productName}`
+    : styleNumber
+      ? `${brand} ${styleNumber} ${productName}`
+      : `${brand} ${productName}`;
+
+  // Build size label — headwear/one-size items don't need "Size" prefix
+  const sizeLower = size.toLowerCase();
+  const isOneSize = sizeLower === 'one size' || sizeLower === 'osfa' || sizeLower === 'adjustable';
+  const sizeLabel = isOneSize ? size : `Size ${size}`;
+
+  return `${productPart} | ${color} | ${sizeLabel}`;
 }
 
-// Generate clean description (prose style, not HTML)
+// Generate value-focused description (no decoration/printing language)
 function generateDescription(
   brand: string,
   productName: string,
+  color: string,
+  styleNumber?: string,
   material?: string,
-  weight?: string
+  weight?: string,
 ): string {
-  let desc = `The ${brand} ${productName} is a premium blank apparel option perfect for screen printing and embroidery.`;
-  
-  if (material) {
-    desc += ` Made from ${material.toLowerCase()}, it offers excellent comfort and durability.`;
+  const fullName = styleNumber ? `${brand} ${styleNumber} ${productName}` : `${brand} ${productName}`;
+  let desc = `Shop the ${fullName} in ${color}.`;
+
+  if (material && weight) {
+    desc += ` ${material} at ${weight} for comfort and durability.`;
+  } else if (material) {
+    desc += ` Made from ${material.toLowerCase()} for comfort and durability.`;
+  } else if (weight) {
+    desc += ` ${weight} fabric for the perfect balance of quality and value.`;
   }
-  
-  if (weight) {
-    desc += ` At ${weight}, it provides the perfect balance of quality and value.`;
-  }
-  
-  desc += ' Ideal for custom apparel projects, promotional wear, and branded merchandise.';
-  
+
+  desc += ' Lowest prices on name-brand blank apparel. Free shipping on orders over $500. In stock, ships same day. Trusted by 5,000+ businesses.';
+
   return desc;
+}
+
+// Determine price bucket for custom_label_2 (PMax bid segmentation)
+function getPriceBucket(retailPrice: number): string {
+  if (retailPrice < 5) return 'under-5';
+  if (retailPrice < 10) return '5-to-10';
+  if (retailPrice < 25) return '10-to-25';
+  return '25-plus';
 }
 
 // Escape CSV field
@@ -153,6 +173,7 @@ export interface ProductVariant {
   sku: string;
   styleId: number;
   styleName: string;
+  styleNumber?: string;  // Model/style number (e.g., "5000", "3001")
   brandName: string;
   colorName: string;
   colorCode?: string;
@@ -165,6 +186,8 @@ export interface ProductVariant {
   colorSwatchImage?: string;
   styleImage?: string;
   slug?: string;  // SEO-friendly URL slug (e.g., "bella-canvas-3413")
+  titleOverride?: string;   // Manual title from Supabase (title_optimized)
+  descriptionOverride?: string;  // Manual description from Supabase (description_optimized)
 }
 
 /**
@@ -230,21 +253,22 @@ export function generateFeedRow(
   const salePrice = Math.round(costPrice * 1.40 * 100) / 100;
   const minPrice = Math.round(costPrice * 1.12 * 100) / 100;
   
-  // Generate optimized title
-  const title = generateOptimizedTitle(
+  // Use override if provided, otherwise generate
+  const title = variant.titleOverride || generateOptimizedTitle(
     variant.brandName,
     variant.styleName,
     variant.colorName,
     variant.sizeName,
-    variant.material
+    variant.styleNumber,
   );
   
-  // Generate description
-  const description = generateDescription(
+  const description = variant.descriptionOverride || generateDescription(
     variant.brandName,
     variant.styleName,
+    variant.colorName,
+    variant.styleNumber,
     variant.material,
-    variant.pieceWeight ? `${variant.pieceWeight} oz` : undefined
+    variant.pieceWeight ? `${variant.pieceWeight} oz` : undefined,
   );
   
   // Check if GTIN is valid - if so, include it; otherwise use identifier_exists=false
@@ -280,7 +304,7 @@ export function generateFeedRow(
     shipping_weight: variant.pieceWeight ? `${variant.pieceWeight} lb` : '',
     custom_label_0: tier,  // bestseller, staff-pick, value, streetwear
     custom_label_1: category,
-    custom_label_2: '',
+    custom_label_2: getPriceBucket(salePrice),  // under-5, 5-to-10, 10-to-25, 25-plus
     size_system: 'US',
     cost_of_goods_sold: `${costPrice.toFixed(2)} USD`,
     auto_pricing_min_price: `${minPrice.toFixed(2)} USD`,
