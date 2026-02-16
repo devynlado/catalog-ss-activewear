@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       {
         amount: toStripeCents(totalWithShipping),
         currency: 'usd',
-        payment_method_types: ['card'],
+        automatic_payment_methods: { enabled: true },
         metadata: {
           order_number: orderNumber,
           order_type: 'cart',
