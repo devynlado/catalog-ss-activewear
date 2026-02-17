@@ -234,7 +234,6 @@ export async function POST(request: NextRequest) {
         logo_url: logoFileUrl || '',
         notes: orderNotes || '',
       },
-      receipt_email: customerEmail,
       description: `Package Order ${orderNumber} - ${totalQuantity} Custom Embroidered Caps`,
     });
     

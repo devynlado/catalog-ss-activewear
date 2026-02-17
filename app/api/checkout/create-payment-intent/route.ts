@@ -121,7 +121,6 @@ export async function POST(request: NextRequest) {
         order_number: orderNumber,
         customer_email: customerEmail,
       },
-      receipt_email: customerEmail,
       description: `Order ${orderNumber} - ${items.length} item(s)`,
     });
 

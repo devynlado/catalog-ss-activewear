@@ -146,7 +146,6 @@ export async function POST(request: NextRequest) {
           po_number: poNumber || '',
           notes: orderNotes || '',
         },
-        receipt_email: shippingInfo.email,
         description: `Order ${orderNumber} - ${itemSummary}`,
       },
       // Use idempotency key to prevent duplicate charges on retry

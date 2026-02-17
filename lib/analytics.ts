@@ -24,7 +24,8 @@ declare global {
 // ============ Types ============
 
 export interface GA4Item {
-  item_id: string;
+  id: string;       // Google Ads cart data field (matches GMC feed id)
+  item_id: string;   // GA4 ecommerce field
   item_name: string;
   item_brand?: string;
   item_category?: string;
@@ -101,8 +102,10 @@ export function trackEvent(eventName: string, params?: Record<string, any>) {
  * Format a cart item for GA4
  */
 export function formatCartItemForGA4(item: CartItem, index?: number): GA4Item {
+  const sku = item.sku || `${item.styleId}-${item.colorName}-${item.sizeName}`;
   return {
-    item_id: item.sku || `${item.styleId}-${item.colorName}-${item.sizeName}`,
+    id: sku,        // Google Ads cart data matching (must match GMC feed `id`)
+    item_id: sku,   // GA4 ecommerce tracking
     item_name: item.productTitle || `${item.brandName} ${item.styleName}`,
     item_brand: item.brandName,
     item_variant: `${item.colorName} / ${item.sizeName}`,
@@ -304,7 +307,7 @@ export async function trackPurchase(params: {
     items: formatCartItemsForGA4(params.items),
     ...(params.coupon ? { coupon: params.coupon } : {}),
     ...(MERCHANT_ID ? {
-      aw_merchant_id: MERCHANT_ID,
+      aw_merchant_id: Number(MERCHANT_ID),
       aw_feed_country: 'US',
       aw_feed_language: 'EN',
     } : {}),
