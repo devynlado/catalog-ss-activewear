@@ -8,6 +8,7 @@
  */
 
 // Google Ads conversion tracking config (client-side env vars)
+const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
 const GADS_ID = process.env.NEXT_PUBLIC_GADS_ID;
 const GADS_LABEL = process.env.NEXT_PUBLIC_GADS_CONVERSION_LABEL;
 const MERCHANT_ID = process.env.NEXT_PUBLIC_GOOGLE_MERCHANT_ID;
@@ -57,13 +58,37 @@ function isAnalyticsReady(): boolean {
 }
 
 /**
- * Generic event tracking
+ * Wait for gtag to become available after a fresh page load.
+ * After Stripe redirects to the success page, gtag.js needs time to download
+ * and initialize. This polls every 200ms and gives up after maxWaitMs.
+ */
+function waitForGtag(maxWaitMs = 3000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (isAnalyticsReady()) {
+      resolve(true);
+      return;
+    }
+
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      if (isAnalyticsReady()) {
+        clearInterval(interval);
+        console.log(`[Analytics] gtag ready after ${Date.now() - startTime}ms`);
+        resolve(true);
+      } else if (Date.now() - startTime >= maxWaitMs) {
+        clearInterval(interval);
+        resolve(false);
+      }
+    }, 200);
+  });
+}
+
+/**
+ * Generic event tracking (fire-and-forget for non-critical events)
  */
 export function trackEvent(eventName: string, params?: Record<string, any>) {
   if (!isAnalyticsReady()) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[GA4 Debug]', eventName, params);
-    }
+    console.warn(`[Analytics] gtag not ready, dropping "${eventName}" event`);
     return;
   }
   
@@ -221,9 +246,11 @@ export function trackAddPaymentInfo(params: {
 
 /**
  * Track purchase completion
- * Includes deduplication to prevent double-firing on page refresh
+ * - Waits for gtag to load (handles fresh page loads after Stripe redirect)
+ * - Sends to both GA4 and Google Ads with conversion label
+ * - Deduplicates to prevent double-firing on page refresh
  */
-export function trackPurchase(params: {
+export async function trackPurchase(params: {
   transactionId: string;
   items: CartItem[];
   value: number;
@@ -232,19 +259,43 @@ export function trackPurchase(params: {
   currency?: string;
   coupon?: string;
 }) {
-  // Check for duplicate transaction
+  const TAG = '[Purchase Tracking]';
+
+  // ---- Env var check (surfaces missing config immediately) ----
+  if (!GA4_ID) console.warn(`${TAG} NEXT_PUBLIC_GA4_ID is not set — GA4 won't receive this event`);
+  if (!GADS_ID) console.warn(`${TAG} NEXT_PUBLIC_GADS_ID is not set — Google Ads conversion won't fire`);
+  if (!GADS_LABEL) console.warn(`${TAG} NEXT_PUBLIC_GADS_CONVERSION_LABEL is not set — Google Ads conversion won't fire`);
+  if (!MERCHANT_ID) console.warn(`${TAG} NEXT_PUBLIC_GOOGLE_MERCHANT_ID is not set — cart data matching disabled`);
+
+  // ---- Dedup check ----
   if (typeof window !== 'undefined') {
     const trackedKey = `ga4_purchase_${params.transactionId}`;
     if (sessionStorage.getItem(trackedKey)) {
-      console.log('[GA4] Duplicate purchase event prevented:', params.transactionId);
+      console.log(`${TAG} Duplicate prevented for ${params.transactionId}`);
       return;
     }
     sessionStorage.setItem(trackedKey, 'true');
   }
 
-  trackEvent('purchase', {
-    // Google Ads conversion tracking with cart data
-    ...(GADS_ID && GADS_LABEL ? { send_to: `${GADS_ID}/${GADS_LABEL}` } : {}),
+  // ---- Wait for gtag to load (critical after Stripe redirect) ----
+  const gtagReady = await waitForGtag();
+  if (!gtagReady) {
+    console.error(`${TAG} FAILED: gtag did not load within 3 seconds. Purchase event NOT sent for ${params.transactionId}`);
+    // Remove dedup flag so a page refresh can retry
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(`ga4_purchase_${params.transactionId}`);
+    }
+    return;
+  }
+
+  // ---- Build send_to: GA4 + Google Ads with conversion label ----
+  const sendTo = [
+    GA4_ID,
+    GADS_ID && GADS_LABEL ? `${GADS_ID}/${GADS_LABEL}` : null,
+  ].filter(Boolean);
+
+  const purchasePayload = {
+    ...(sendTo.length > 0 ? { send_to: sendTo } : {}),
     transaction_id: params.transactionId,
     currency: params.currency || 'USD',
     value: params.value,
@@ -252,13 +303,25 @@ export function trackPurchase(params: {
     tax: params.tax || 0,
     items: formatCartItemsForGA4(params.items),
     ...(params.coupon ? { coupon: params.coupon } : {}),
-    // Merchant Center fields for cart data matching (profit reporting)
     ...(MERCHANT_ID ? {
       aw_merchant_id: MERCHANT_ID,
       aw_feed_country: 'US',
       aw_feed_language: 'EN',
     } : {}),
+  };
+
+  console.log(`${TAG} Firing purchase event:`, {
+    transaction_id: params.transactionId,
+    value: params.value,
+    currency: params.currency || 'USD',
+    send_to: sendTo,
+    item_count: params.items.length,
+    has_merchant_id: !!MERCHANT_ID,
   });
+
+  window.gtag('event', 'purchase', purchasePayload);
+
+  console.log(`${TAG} Purchase event sent successfully for ${params.transactionId}`);
 }
 
 // ============ Custom Events ============

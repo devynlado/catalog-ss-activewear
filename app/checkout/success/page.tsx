@@ -121,18 +121,28 @@ function SuccessContent() {
         : null;
 
     if (fetchUrl) {
+      console.log('[Success Page] Fetching order data from:', fetchUrl);
       fetch(fetchUrl)
         .then((res) => res.json())
         .then((data) => {
+          console.log('[Success Page] Order API response:', {
+            orderNumber: data.orderNumber,
+            total: data.total,
+            lineItemCount: data.lineItems?.length ?? 0,
+            hasError: !!data.error,
+          });
+
           if (data.orderNumber) {
             setOrderDetails(data);
             
-            // Track GA4 purchase event (with deduplication built into trackPurchase)
+            const purchaseValue = (data.total || 0) / 100;
+            console.log('[Success Page] Calling trackPurchase — order:', data.orderNumber, 'value:', purchaseValue);
+
             trackPurchase({
               transactionId: data.orderNumber,
               items: (data.lineItems || []).map((item: GA4LineItem) => ({
                 sku: item.item_id,
-                styleId: 0, // Not available from order
+                styleId: 0,
                 styleName: item.item_name,
                 brandName: '',
                 colorName: '',
@@ -141,12 +151,16 @@ function SuccessContent() {
                 quantity: item.quantity,
                 unitPrice: item.price,
               })),
-              value: (data.total || 0) / 100,
+              value: purchaseValue,
               shipping: data.shippingCost || 0,
             });
+          } else {
+            console.warn('[Success Page] No orderNumber in API response — trackPurchase will NOT fire');
           }
         })
-        .catch(console.error)
+        .catch((err) => {
+          console.error('[Success Page] Failed to fetch order data:', err);
+        })
         .finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
