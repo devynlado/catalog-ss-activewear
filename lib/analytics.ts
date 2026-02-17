@@ -291,14 +291,9 @@ export async function trackPurchase(params: {
     return;
   }
 
-  // ---- Build send_to: GA4 + Google Ads with conversion label ----
-  const sendTo = [
-    GA4_ID,
-    GADS_ID && GADS_LABEL ? `${GADS_ID}/${GADS_LABEL}` : null,
-  ].filter(Boolean);
-
-  const purchasePayload = {
-    ...(sendTo.length > 0 ? { send_to: sendTo } : {}),
+  // ---- Event 1: GA4 purchase event (for analytics reporting) ----
+  const ga4Payload = {
+    ...(GA4_ID ? { send_to: GA4_ID } : {}),
     transaction_id: params.transactionId,
     currency: params.currency || 'USD',
     value: params.value,
@@ -306,25 +301,44 @@ export async function trackPurchase(params: {
     tax: params.tax || 0,
     items: formatCartItemsForGA4(params.items),
     ...(params.coupon ? { coupon: params.coupon } : {}),
-    ...(MERCHANT_ID ? {
-      aw_merchant_id: Number(MERCHANT_ID),
-      aw_feed_country: 'US',
-      aw_feed_language: 'EN',
-    } : {}),
   };
 
-  console.log(`${TAG} Firing purchase event:`, {
+  console.log(`${TAG} Firing GA4 purchase event:`, {
     transaction_id: params.transactionId,
     value: params.value,
-    currency: params.currency || 'USD',
-    send_to: sendTo,
+    send_to: GA4_ID,
     item_count: params.items.length,
-    has_merchant_id: !!MERCHANT_ID,
   });
 
-  window.gtag('event', 'purchase', purchasePayload);
+  window.gtag('event', 'purchase', ga4Payload);
 
-  console.log(`${TAG} Purchase event sent successfully for ${params.transactionId}`);
+  // ---- Event 2: Google Ads conversion event (matches their snippet exactly) ----
+  if (GADS_ID && GADS_LABEL) {
+    const gadsPayload = {
+      send_to: `${GADS_ID}/${GADS_LABEL}`,
+      transaction_id: params.transactionId,
+      currency: params.currency || 'USD',
+      value: params.value,
+      items: formatCartItemsForGA4(params.items),
+      ...(MERCHANT_ID ? {
+        aw_merchant_id: Number(MERCHANT_ID),
+        aw_feed_country: 'US',
+        aw_feed_language: 'EN',
+      } : {}),
+    };
+
+    console.log(`${TAG} Firing Google Ads conversion event:`, {
+      transaction_id: params.transactionId,
+      value: params.value,
+      send_to: `${GADS_ID}/${GADS_LABEL}`,
+    });
+
+    window.gtag('event', 'conversion', gadsPayload);
+  } else {
+    console.warn(`${TAG} Google Ads conversion NOT fired — missing GADS_ID or GADS_LABEL`);
+  }
+
+  console.log(`${TAG} All tracking events sent for ${params.transactionId}`);
 }
 
 // ============ Custom Events ============
