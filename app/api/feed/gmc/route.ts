@@ -128,7 +128,7 @@ function resolveCategory(
 async function fetchFromSupabase(): Promise<{
   rows: GMCFeedRow[];
   fromCache: boolean;
-  debug?: { colorRecords: number; colorProducts: number; totalProducts: number; skippedSkus: number };
+  debug?: { colorRecords: number; colorProducts: number; totalProducts: number; skippedSkus: number; debug1801?: any };
 }> {
   const supabase = createServerSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
