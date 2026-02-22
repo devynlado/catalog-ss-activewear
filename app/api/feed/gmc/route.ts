@@ -128,7 +128,7 @@ function resolveCategory(
 async function fetchFromSupabase(): Promise<{
   rows: GMCFeedRow[];
   fromCache: boolean;
-  debug?: { colorRecords: number; colorProducts: number; totalProducts: number; skippedSkus: number; debug1801?: any };
+  debug?: { colorRecords: number; colorProducts: number; totalProducts: number; skippedSkus: number };
 }> {
   const supabase = createServerSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
@@ -218,15 +218,35 @@ async function fetchFromSupabase(): Promise<{
   // Fetch colors in batches to handle large catalogs
   const allColorData: ColorRecord[] = [];
   const COLOR_BATCH = 500;
+  const failedBatchIds: number[] = [];
   for (let i = 0; i < styleIds.length; i += COLOR_BATCH) {
     const batchIds = styleIds.slice(i, i + COLOR_BATCH);
-    const { data: colorData } = await supabase
+    const { data: colorData, error: batchError } = await supabase
       .from('product_colors')
       .select('style_id, color_code, front_image, back_image, side_image')
       .in('style_id', batchIds)
-      .limit(50000) as { data: ColorRecord[] | null };
-    if (colorData) {
-      allColorData.push(...colorData);
+      .limit(50000);
+    if (batchError) {
+      console.warn(`[GMC Feed] Color batch ${i / COLOR_BATCH} failed: ${batchError.message}`);
+      failedBatchIds.push(...batchIds);
+    } else if (colorData) {
+      allColorData.push(...(colorData as ColorRecord[]));
+    }
+  }
+  
+  // Retry failed batches individually to recover dropped records
+  if (failedBatchIds.length > 0) {
+    console.log(`[GMC Feed] Retrying ${failedBatchIds.length} style IDs from failed batches`);
+    for (let i = 0; i < failedBatchIds.length; i += 100) {
+      const retryIds = failedBatchIds.slice(i, i + 100);
+      const { data: retryData } = await supabase
+        .from('product_colors')
+        .select('style_id, color_code, front_image, back_image, side_image')
+        .in('style_id', retryIds)
+        .limit(50000);
+      if (retryData) {
+        allColorData.push(...(retryData as ColorRecord[]));
+      }
     }
   }
   
@@ -242,6 +262,30 @@ async function fetchFromSupabase(): Promise<{
       side: color.side_image,
     });
   }
+  
+  // Fill gaps: query any products that should have colors but weren't in the map
+  const missingStyleIds = styleIds.filter(id => !colorImageMap.has(id));
+  if (missingStyleIds.length > 0 && missingStyleIds.length < styleIds.length) {
+    const { data: gapData } = await supabase
+      .from('product_colors')
+      .select('style_id, color_code, front_image, back_image, side_image')
+      .in('style_id', missingStyleIds.filter(id => id >= 9001000))
+      .limit(50000);
+    if (gapData && gapData.length > 0) {
+      console.log(`[GMC Feed] Recovered ${gapData.length} color records for ${new Set(gapData.map((c: any) => c.style_id)).size} products`);
+      for (const color of gapData as ColorRecord[]) {
+        if (!colorImageMap.has(color.style_id)) {
+          colorImageMap.set(color.style_id, new Map());
+        }
+        colorImageMap.get(color.style_id)!.set(String(color.color_code), {
+          front: color.front_image,
+          back: color.back_image,
+          side: color.side_image,
+        });
+      }
+    }
+  }
+  
   console.log(`[GMC Feed] Loaded ${allColorData.length} color records for ${colorImageMap.size} products`);
   
   // Build popular products category map (for products in POPULAR_PRODUCTS list)
@@ -369,22 +413,10 @@ async function fetchFromSupabase(): Promise<{
   }
   console.log(`[GMC Feed] Generated ${feedRows.length} rows from ${allProducts.length} products (Supabase cache)`);
   
-  // Debug: trace why 1801GD color images are missing
-  const inStyleIds = styleIds.includes(9001801);
-  const colorDataFor1801 = allColorData.filter(c => c.style_id === 9001801);
-  const debug1801 = colorImageMap.get(9001801);
-  const debug1801Info = {
-    inStyleIds,
-    colorDataCount: colorDataFor1801.length,
-    colorDataSample: colorDataFor1801.slice(0, 2).map(c => ({ code: c.color_code, front: c.front_image?.split('/').pop()?.slice(0, 30) })),
-    inMap: !!debug1801,
-    mapSize: debug1801?.size || 0,
-  };
-
   return { 
     rows: feedRows, 
     fromCache: true,
-    debug: { colorRecords: allColorData.length, colorProducts: colorImageMap.size, totalProducts: allProducts.length, skippedSkus, debug1801: debug1801Info }
+    debug: { colorRecords: allColorData.length, colorProducts: colorImageMap.size, totalProducts: allProducts.length, skippedSkus }
   };
 }
 
