@@ -368,10 +368,17 @@ async function fetchFromSupabase(): Promise<{
     console.warn(`[GMC Feed] Skipped ${skippedSkus} SKUs without valid COGS/auto_min_price`);
   }
   console.log(`[GMC Feed] Generated ${feedRows.length} rows from ${allProducts.length} products (Supabase cache)`);
+  
+  // Debug: check 1801GD color image resolution
+  const debug1801 = colorImageMap.get(9001801);
+  const debug1801Info = debug1801 
+    ? { colorCount: debug1801.size, sample: Array.from(debug1801.entries()).slice(0, 2).map(([code, imgs]) => ({ code, front: imgs.front?.split('/').pop() })) }
+    : 'not_in_map';
+
   return { 
     rows: feedRows, 
     fromCache: true,
-    debug: { colorRecords: allColorData.length, colorProducts: colorImageMap.size, totalProducts: allProducts.length, skippedSkus }
+    debug: { colorRecords: allColorData.length, colorProducts: colorImageMap.size, totalProducts: allProducts.length, skippedSkus, debug1801: debug1801Info }
   };
 }
 
