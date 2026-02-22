@@ -63,7 +63,7 @@ function isAnalyticsReady(): boolean {
  * After Stripe redirects to the success page, gtag.js needs time to download
  * and initialize. This polls every 200ms and gives up after maxWaitMs.
  */
-function waitForGtag(maxWaitMs = 3000): Promise<boolean> {
+function waitForGtag(maxWaitMs = 5000): Promise<boolean> {
   return new Promise((resolve) => {
     if (isAnalyticsReady()) {
       resolve(true);
@@ -327,13 +327,9 @@ export async function trackPurchase(params: {
       } : {}),
     };
 
-    console.log(`${TAG} Firing Google Ads conversion event:`, {
-      transaction_id: params.transactionId,
-      value: params.value,
-      send_to: `${GADS_ID}/${GADS_LABEL}`,
-    });
+    console.log(`${TAG} Firing Google Ads purchase event (full payload):`, gadsPayload);
 
-    window.gtag('event', 'conversion', gadsPayload);
+    window.gtag('event', 'purchase', gadsPayload);
   } else {
     console.warn(`${TAG} Google Ads conversion NOT fired — missing GADS_ID or GADS_LABEL`);
   }
