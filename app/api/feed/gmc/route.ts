@@ -369,11 +369,17 @@ async function fetchFromSupabase(): Promise<{
   }
   console.log(`[GMC Feed] Generated ${feedRows.length} rows from ${allProducts.length} products (Supabase cache)`);
   
-  // Debug: check 1801GD color image resolution
+  // Debug: trace why 1801GD color images are missing
+  const inStyleIds = styleIds.includes(9001801);
+  const colorDataFor1801 = allColorData.filter(c => c.style_id === 9001801);
   const debug1801 = colorImageMap.get(9001801);
-  const debug1801Info = debug1801 
-    ? { colorCount: debug1801.size, sample: Array.from(debug1801.entries()).slice(0, 2).map(([code, imgs]) => ({ code, front: imgs.front?.split('/').pop() })) }
-    : 'not_in_map';
+  const debug1801Info = {
+    inStyleIds,
+    colorDataCount: colorDataFor1801.length,
+    colorDataSample: colorDataFor1801.slice(0, 2).map(c => ({ code: c.color_code, front: c.front_image?.split('/').pop()?.slice(0, 30) })),
+    inMap: !!debug1801,
+    mapSize: debug1801?.size || 0,
+  };
 
   return { 
     rows: feedRows, 
