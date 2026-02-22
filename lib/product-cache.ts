@@ -879,6 +879,7 @@ function transformProductWithSkus(row: any): Product {
       .map((s: any) => ({
         name: s.size_name,
         code: s.size_code || s.size_name,
+        sku: s.sku || '',
         price: s.retail_price || 0,
         salePrice: s.sale_price || null,
         qty: s.qty || 0,
