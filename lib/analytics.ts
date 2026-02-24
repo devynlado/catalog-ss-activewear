@@ -312,6 +312,15 @@ export async function trackPurchase(params: {
 
   window.gtag('event', 'purchase', ga4Payload);
 
+  // ---- Calculate order-level discount from per-item savings ----
+  const totalDiscount = params.items.reduce((sum, item) => {
+    if (item.discountedPrice && item.discountedPrice < item.unitPrice) {
+      return sum + (item.unitPrice - item.discountedPrice) * item.quantity;
+    }
+    return sum;
+  }, 0);
+  const roundedDiscount = Math.round(totalDiscount * 100) / 100;
+
   // ---- Event 2: Google Ads conversion event (matches their snippet exactly) ----
   if (GADS_ID && GADS_LABEL) {
     const gadsPayload = {
@@ -319,6 +328,7 @@ export async function trackPurchase(params: {
       transaction_id: params.transactionId,
       currency: params.currency || 'USD',
       value: params.value,
+      discount: roundedDiscount,
       items: formatCartItemsForGA4(params.items),
       ...(MERCHANT_ID ? {
         aw_merchant_id: Number(MERCHANT_ID),
@@ -332,6 +342,37 @@ export async function trackPurchase(params: {
     window.gtag('event', 'purchase', gadsPayload);
   } else {
     console.warn(`${TAG} Google Ads conversion NOT fired — missing GADS_ID or GADS_LABEL`);
+  }
+
+  // ---- Event 3: GTM dataLayer push (for GTM-based Google Ads conversion with cart data) ----
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({ ecommerce: null });
+
+    const gtmPayload = {
+      event: 'purchase_complete',
+      transaction_id: params.transactionId,
+      value: params.value,
+      currency: params.currency || 'USD',
+      shipping: params.shipping || 0,
+      tax: params.tax || 0,
+      discount: roundedDiscount,
+      ...(params.coupon ? { coupon: params.coupon } : {}),
+      aw_merchant_id: MERCHANT_ID ? Number(MERCHANT_ID) : undefined,
+      aw_feed_country: 'US',
+      aw_feed_language: 'EN',
+      items: params.items.map(item => {
+        const sku = item.sku || `${item.styleId}-${item.colorName}-${item.sizeName}`;
+        return {
+          id: sku,
+          price: item.unitPrice,
+          quantity: item.quantity,
+        };
+      }),
+    };
+
+    console.log(`${TAG} Pushing GTM dataLayer purchase_complete:`, gtmPayload);
+
+    window.dataLayer.push(gtmPayload);
   }
 
   console.log(`${TAG} All tracking events sent for ${params.transactionId}`);
