@@ -1,7 +1,6 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Building2, Globe, MapPin, FileCheck, BadgeCheck } from 'lucide-react';
-import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { VerificationActions } from './VerificationActions';
 
 export const metadata = {
@@ -22,19 +21,6 @@ const businessTypeLabels: Record<string, string> = {
 
 export default async function VerificationsPage() {
   const supabase = await createSupabaseServerClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { profile } = await getServerProfile();
-  
-  // Security: Only admins can access this page
-  if (!profile || profile.role !== 'admin') {
-    redirect('/dashboard');
-  }
 
   // Get pending verifications
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

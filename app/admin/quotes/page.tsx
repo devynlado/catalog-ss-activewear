@@ -1,8 +1,6 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowLeft, Search, Filter } from 'lucide-react';
-import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { ArrowLeft, Search } from 'lucide-react';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { QuoteCard } from './QuoteCard';
 import { QuoteFilters } from './QuoteFilters';
 
@@ -17,19 +15,6 @@ export default async function QuotesPage({
   searchParams: { status?: string; search?: string };
 }) {
   const supabase = await createSupabaseServerClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { profile } = await getServerProfile();
-  
-  // Security: Only admins and sales reps can access
-  if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
-    redirect('/dashboard');
-  }
 
   // Build query
   let query = supabase

@@ -1,7 +1,6 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Search, Users } from 'lucide-react';
-import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { CustomerCard } from './CustomerCard';
 import { CustomerFilters } from './CustomerFilters';
 
@@ -16,19 +15,6 @@ export default async function CustomersPage({
   searchParams: { type?: string; search?: string };
 }) {
   const supabase = await createSupabaseServerClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { profile } = await getServerProfile();
-  
-  // Security: Only admins can access
-  if (!profile || profile.role !== 'admin') {
-    redirect('/dashboard');
-  }
 
   // Get sales reps for assignment dropdown
   const { data: salesReps } = await supabase
