@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard } from 'lucide-react';
+import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 interface OrderItem {
@@ -61,8 +62,53 @@ const paymentConfig: Record<string, { label: string; variant: 'default' | 'succe
   refunded: { label: 'Refunded', variant: 'default' },
 };
 
+const carriers = [
+  { id: 'ups', label: 'UPS' },
+  { id: 'fedex', label: 'FedEx' },
+  { id: 'usps', label: 'USPS' },
+  { id: 'dhl', label: 'DHL' },
+  { id: 'other', label: 'Other' },
+];
+
 export function OrderCard({ order }: { order: Order }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [carrier, setCarrier] = useState(order.carrier || '');
+  const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [trackingSaved, setTrackingSaved] = useState(!!order.tracking_number);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleTrackingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!carrier || !trackingNumber.trim()) {
+      setError('Both carrier and tracking number are required');
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrier,
+          tracking_number: trackingNumber.trim(),
+          status: 'shipped',
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to save tracking');
+      }
+      setTrackingSaved(true);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const items = Array.isArray(order.items) ? order.items : [];
   const itemCount = items.length;
@@ -165,7 +211,7 @@ export function OrderCard({ order }: { order: Order }) {
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-semibold text-navy-800">Shipping</h4>
+              <h4 className="mb-3 text-sm font-semibold text-navy-800">Shipping &amp; Tracking</h4>
               <div className="space-y-2">
                 {addressLine && (
                   <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -173,17 +219,48 @@ export function OrderCard({ order }: { order: Order }) {
                     {addressLine}
                   </div>
                 )}
-                {order.tracking_number && (
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Truck className="h-4 w-4 text-slate-400" />
-                    {order.carrier?.toUpperCase() || 'Carrier'}: {order.tracking_number}
-                  </div>
-                )}
                 {order.payment_method && (
                   <div className="flex items-center gap-2 text-sm text-slate-600">
                     <CreditCard className="h-4 w-4 text-slate-400" />
                     {order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1)}
                   </div>
+                )}
+                {trackingSaved ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Truck className="h-4 w-4 text-slate-400" />
+                    {(carrier || order.carrier)?.toUpperCase() || 'Carrier'}: {trackingNumber || order.tracking_number}
+                  </div>
+                ) : (
+                  <form onSubmit={handleTrackingSubmit} onClick={(e) => e.stopPropagation()} className="mt-2 space-y-2">
+                    <div className="flex gap-2">
+                      <select
+                        value={carrier}
+                        onChange={(e) => setCarrier(e.target.value)}
+                        className="rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      >
+                        <option value="">Carrier</option>
+                        {carriers.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={trackingNumber}
+                        onChange={(e) => setTrackingNumber(e.target.value)}
+                        placeholder="Tracking number"
+                        className="flex-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !carrier || !trackingNumber.trim()}
+                        className="flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                      >
+                        {isSubmitting ? '...' : <><Check className="h-3 w-3" /> Ship</>}
+                      </button>
+                    </div>
+                    {error && <p className="text-xs text-red-600">{error}</p>}
+                    <p className="text-xs text-slate-400">Saves tracking and emails the customer.</p>
+                  </form>
                 )}
               </div>
             </div>
