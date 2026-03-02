@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, generateOrderNumber, calculateOrderTotals, toStripeCents, ShippingMethod } from '@/lib/stripe';
+import { stripe, generateOrderNumber, toStripeCents, ShippingMethod } from '@/lib/stripe';
 import { CartItem } from '@/lib/database.types';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase';
+import { validateCoupon, calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
 
 interface ShippingInfo {
   email: string;
@@ -23,12 +25,13 @@ interface CheckoutRequest {
   poNumber?: string;
   orderNotes?: string;
   idempotencyKey?: string;
+  couponCode?: string | null;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, poNumber, orderNotes, idempotencyKey } = body;
+    const { items, shippingInfo, shippingMethod, poNumber, orderNotes, idempotencyKey, couponCode } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -44,20 +47,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate totals
-    const totals = calculateOrderTotals(items, shippingMethod);
     const subtotal = items.reduce(
       (sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity,
       0
     );
-    
-    // Determine actual shipping cost (free economy over $500)
-    const actualShippingCost = shippingMethod === 'economy' && subtotal >= 500 
-      ? 0 
-      : totals.shippingCost;
+    const roundedSubtotal = Math.round(subtotal * 100) / 100;
 
-    // Calculate total with shipping
-    const totalWithShipping = subtotal + actualShippingCost + totals.taxAmount;
+    let discountAmount = 0;
+    let actualShippingCost: number;
+    let taxAmount: number;
+    let totalWithShipping: number;
+    let couponId: string | null = null;
+    let appliedCouponCode: string | null = null;
+
+    const authClient = await createSupabaseServerClient();
+    const { data: { user } } = await authClient.auth.getUser();
+
+    if (couponCode && couponCode.trim()) {
+      const supabaseService = createServerSupabaseClient();
+      const result = await validateCoupon(supabaseService, {
+        code: couponCode.trim(),
+        subtotal: roundedSubtotal,
+        context: 'cart',
+        customerId: user?.id ?? undefined,
+        customerEmail: user?.email ?? shippingInfo.email ?? undefined,
+      });
+      if (result.valid) {
+        couponId = result.coupon.id;
+        appliedCouponCode = result.coupon.code;
+        discountAmount = result.discountAmount;
+        const withCoupon = calculateOrderTotalsWithCoupon(
+          roundedSubtotal,
+          shippingMethod,
+          { discountAmount: result.discountAmount, freeShipping: result.freeShipping }
+        );
+        actualShippingCost = withCoupon.shippingCost;
+        taxAmount = withCoupon.taxAmount;
+        totalWithShipping = withCoupon.total;
+      } else {
+        return NextResponse.json(
+          { error: result.message || 'Coupon is not valid' },
+          { status: 400 }
+        );
+      }
+    } else {
+      const withCoupon = calculateOrderTotalsWithCoupon(roundedSubtotal, shippingMethod, null);
+      actualShippingCost = withCoupon.shippingCost;
+      taxAmount = withCoupon.taxAmount;
+      totalWithShipping = withCoupon.total;
+    }
 
     // Generate order number
     const orderNumber = generateOrderNumber();
@@ -75,9 +113,7 @@ export async function POST(request: NextRequest) {
       phone: shippingInfo.phone,
     };
 
-    // Get Supabase client and auth user in parallel
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = authClient;
 
     // Build item summary for Stripe metadata
     const itemSummary = items.slice(0, 3).map(item => 
@@ -109,10 +145,13 @@ export async function POST(request: NextRequest) {
           discountedPrice: item.discountedPrice,
           imageUrl: item.imageUrl,
         })),
-        subtotal: Math.round(subtotal * 100) / 100,
+        subtotal: roundedSubtotal,
         shipping_cost: actualShippingCost,
-        tax_amount: totals.taxAmount,
+        tax_amount: taxAmount,
+        discount_amount: discountAmount,
         total: Math.round(totalWithShipping * 100) / 100,
+        coupon_id: couponId,
+        coupon_code: appliedCouponCode,
         shipping_address: shippingAddressData,
         billing_address: shippingAddressData,
         shipping_method: shippingMethod,
@@ -218,9 +257,10 @@ export async function POST(request: NextRequest) {
       orderId: order.id,
       orderNumber,
       pricing: {
-        subtotal: Math.round(subtotal * 100) / 100,
-        tax: totals.taxAmount,
+        subtotal: roundedSubtotal,
+        tax: taxAmount,
         shipping: actualShippingCost,
+        discount: discountAmount,
         total: Math.round(totalWithShipping * 100) / 100,
       },
     });

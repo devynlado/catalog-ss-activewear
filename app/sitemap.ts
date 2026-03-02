@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { POPULAR_PRODUCTS } from '@/lib/popular-products';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { getProjectSlugs } from '@/lib/sanity';
 
 // Generate slug from brand and style number (matches product-sync.ts logic)
 function generateSlug(brand: string, styleNumber: string): string {
@@ -122,15 +123,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  // Portfolio pages
-  const portfolioProjects = [
-    'jumbo-screen-printing-black-wall-street',
-    'puff-print-hoodies-awful-cloth',
-    'puff-embroidery-hats',
-    'otto-cap-embroidery-cactus-club',
-    'born-raised-online-ceramics',
-  ];
-  
+  // Portfolio pages (from Sanity CMS)
+  let portfolioSlugs: string[] = [];
+  try {
+    portfolioSlugs = await getProjectSlugs();
+  } catch {
+    // fallback if Sanity unavailable
+  }
   const portfolioPages: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/portfolio`,
@@ -138,8 +137,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     },
-    ...portfolioProjects.map(project => ({
-      url: `${baseUrl}/portfolio/${project}`,
+    {
+      url: `${baseUrl}/portfolio/archive`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.65,
+    },
+    ...portfolioSlugs.map((slug) => ({
+      url: `${baseUrl}/portfolio/${slug}`,
       lastModified: new Date(),
       changeFrequency: 'monthly' as const,
       priority: 0.6,

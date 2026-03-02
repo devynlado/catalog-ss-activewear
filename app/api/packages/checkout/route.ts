@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, generateOrderNumber, toStripeCents } from '@/lib/stripe';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import { calculatePackagePrice, validatePackageOrder } from '@/lib/package-pricing';
+import { validateCoupon } from '@/lib/coupon-utils';
 
 export interface PackageCheckoutRequest {
   // Customer info
@@ -41,6 +43,7 @@ export interface PackageCheckoutRequest {
   // Optional
   logoFileUrl?: string;
   orderNotes?: string;
+  couponCode?: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -62,6 +65,7 @@ export async function POST(request: NextRequest) {
       totalQuantity,
       logoFileUrl,
       orderNotes,
+      couponCode,
     } = body;
     
     // Validate required fields
@@ -117,16 +121,45 @@ export async function POST(request: NextRequest) {
       embroideryLocations,
       has3DPuff,
     });
-    
+
+    let discountAmount = 0;
+    let couponId: string | null = null;
+    let appliedCouponCode: string | null = null;
+    let finalSubtotal = pricing.subtotal;
+    let finalShipping = pricing.shipping;
+    let finalTax = pricing.tax;
+    let finalTotal = pricing.total;
+
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (couponCode && couponCode.trim()) {
+      const supabaseService = createServerSupabaseClient();
+      const result = await validateCoupon(supabaseService, {
+        code: couponCode.trim(),
+        subtotal: pricing.subtotal,
+        context: 'packages',
+        customerId: user?.id ?? undefined,
+        customerEmail: user?.email ?? customerEmail ?? undefined,
+      });
+      if (result.valid) {
+        couponId = result.coupon.id;
+        appliedCouponCode = result.coupon.code;
+        discountAmount = result.discountAmount;
+        finalShipping = result.freeShipping ? 0 : pricing.shipping;
+        finalTax = Math.round((pricing.subtotal - discountAmount) * 0.0825 * 100) / 100;
+        finalTotal = Math.round((pricing.subtotal - discountAmount + finalShipping + finalTax) * 100) / 100;
+      } else {
+        return NextResponse.json(
+          { error: result.message || 'Coupon is not valid for this order' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Generate order number
     const orderNumber = generateOrderNumber();
-    
-    // Get Supabase client
-    const supabase = await createSupabaseServerClient();
-    
-    // Check if user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    
+
     // Create package order metadata
     const packageMetadata = {
       order_type: 'package',
@@ -169,10 +202,13 @@ export async function POST(request: NextRequest) {
           pricePerHat: pricing.pricePerHat,
           subtotal: pricing.subtotal,
         }],
-        subtotal: pricing.subtotal,
-        shipping_cost: pricing.shipping,
-        tax_amount: pricing.tax,
-        total: pricing.total,
+        subtotal: finalSubtotal,
+        shipping_cost: finalShipping,
+        tax_amount: finalTax,
+        discount_amount: discountAmount,
+        total: finalTotal,
+        coupon_id: couponId,
+        coupon_code: appliedCouponCode,
         shipping_address: shippingAddress,
         billing_address: shippingAddress,
         payment_method: 'card',
@@ -215,7 +251,7 @@ export async function POST(request: NextRequest) {
     
     // Create Stripe PaymentIntent with comprehensive metadata for webhook
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: toStripeCents(pricing.total),
+      amount: toStripeCents(finalTotal),
       currency: 'usd',
       payment_method_types: ['card'],
       metadata: {
@@ -255,20 +291,21 @@ export async function POST(request: NextRequest) {
       activity_type: 'payment_processing',
       details: {
         payment_intent_id: paymentIntent.id,
-        amount: pricing.total,
+        amount: finalTotal,
       },
     });
-    
+
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       orderId: order.id,
       orderNumber: order.order_number,
       pricing: {
-        subtotal: pricing.subtotal,
-        tax: pricing.tax,
-        shipping: pricing.shipping,
-        total: pricing.total,
+        subtotal: finalSubtotal,
+        tax: finalTax,
+        shipping: finalShipping,
+        total: finalTotal,
+        discount: discountAmount,
         pricePerHat: pricing.pricePerHat,
         tierLabel: pricing.tierLabel,
       },

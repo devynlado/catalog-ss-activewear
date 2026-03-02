@@ -138,11 +138,16 @@ export default function CartPage() {
     decoration,
     hasHydrated,
     openDecorationModal,
+    appliedCoupon,
+    setAppliedCoupon,
+    clearCoupon,
   } = useCartStore();
-  
+
   const [promoCode, setPromoCode] = useState('');
   const [promoExpanded, setPromoExpanded] = useState(false);
-  
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+
   const subtotal = getSubtotal();
   const totalUnits = getTotalUnits();
   const freeShippingThreshold = 500;
@@ -219,6 +224,45 @@ export default function CartPage() {
     group.sizes.forEach((sizeData) => {
       removeItem(sizeData.id);
     });
+  };
+
+  const handleApplyPromo = async () => {
+    const code = promoCode.trim();
+    if (!code) return;
+    setPromoError(null);
+    setPromoLoading(true);
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          items: items.map((i) => ({
+            unitPrice: i.unitPrice,
+            quantity: i.quantity,
+            discountedPrice: i.discountedPrice,
+          })),
+          context: 'cart',
+        }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedCoupon({
+          code: data.code,
+          couponId: data.couponId,
+          discountAmount: data.discountAmount,
+          freeShipping: data.freeShipping,
+        });
+        setPromoCode('');
+        setPromoExpanded(false);
+      } else {
+        setPromoError(data.message || 'Invalid or expired code.');
+      }
+    } catch {
+      setPromoError('Something went wrong. Please try again.');
+    } finally {
+      setPromoLoading(false);
+    }
   };
 
   // Show loading
@@ -504,23 +548,60 @@ export default function CartPage() {
 
             {/* Promo Code Section */}
             <div className={glassCard + " p-4"}>
-              <button
-                onClick={() => setPromoExpanded(!promoExpanded)}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <span className="text-sm font-medium text-slate-700">Have a promo code?</span>
-                <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${promoExpanded ? 'rotate-180' : ''}`} />
-              </button>
-              {promoExpanded && (
-                <div className="mt-3 flex gap-2">
-                  <Input
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    placeholder="Enter code"
-                    className="flex-1"
-                  />
-                  <Button variant="secondary" size="sm">Apply</Button>
+              {appliedCoupon ? (
+                <div className="rounded-lg border border-green-200 bg-green-50/80 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-green-800">
+                        You&apos;re saving {formatPrice(appliedCoupon.discountAmount)} with {appliedCoupon.code}
+                      </p>
+                      {appliedCoupon.freeShipping && (
+                        <p className="text-xs text-green-700 mt-0.5">Free economy shipping applied</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-600 hover:text-slate-800"
+                      onClick={() => { clearCoupon(); setPromoError(null); }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setPromoExpanded(!promoExpanded); setPromoError(null); }}
+                    className="flex items-center justify-between w-full text-left"
+                  >
+                    <span className="text-sm font-medium text-slate-700">Have a promo code?</span>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${promoExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  {promoExpanded && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          value={promoCode}
+                          onChange={(e) => { setPromoCode(e.target.value); setPromoError(null); }}
+                          placeholder="Enter code"
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleApplyPromo}
+                          disabled={promoLoading || !promoCode.trim()}
+                        >
+                          {promoLoading ? 'Applying…' : 'Apply'}
+                        </Button>
+                      </div>
+                      {promoError && (
+                        <p className="text-sm text-red-600">{promoError}</p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -535,7 +616,13 @@ export default function CartPage() {
                   <span className="text-slate-600">Subtotal ({totalUnits} pieces)</span>
                   <span className="font-medium text-slate-800">{formatPrice(subtotal)}</span>
                 </div>
-                {hasDiscounts && (
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 font-medium">Discount ({appliedCoupon.code})</span>
+                    <span className="font-medium text-green-600">-{formatPrice(appliedCoupon.discountAmount)}</span>
+                  </div>
+                )}
+                {hasDiscounts && !appliedCoupon && (
                   <div className="flex justify-between text-sm">
                     <span className="text-green-600 font-medium">Discount applied</span>
                     <span className="font-medium text-green-600">Included</span>
@@ -571,7 +658,9 @@ export default function CartPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Shipping</span>
                   <span className="font-medium">
-                    {qualifiesForFreeShipping ? (
+                    {appliedCoupon?.freeShipping ? (
+                      <span className="text-green-600 font-bold">FREE (promo)</span>
+                    ) : qualifiesForFreeShipping ? (
                       <span className="text-green-600 font-bold">FREE</span>
                     ) : (
                       'Calculated at checkout'
@@ -586,7 +675,9 @@ export default function CartPage() {
 
               <div className="flex justify-between items-center py-4">
                 <span className="text-lg font-bold text-slate-800">Estimated Total</span>
-                <span className="text-2xl font-bold text-brand-600">{formatPrice(getGrandTotal())}</span>
+                <span className="text-2xl font-bold text-brand-600">
+                  {formatPrice(getGrandTotal() - (appliedCoupon?.discountAmount ?? 0))}
+                </span>
               </div>
 
               <Link href="/checkout">

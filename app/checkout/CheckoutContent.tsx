@@ -23,6 +23,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
 import { calculateOrderTotals, toStripeCents, ShippingMethod } from '@/lib/stripe-utils';
+import { calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -264,6 +265,7 @@ function InlinePaymentForm({
               shippingMethod,
               poNumber: poNumber || undefined,
               orderNotes: orderNotes || undefined,
+              couponCode: appliedCoupon?.code ?? undefined,
             }),
             signal: controller.signal,
           });
@@ -368,7 +370,7 @@ function InlinePaymentForm({
 // ---------- Main Checkout Page ----------
 
 export default function CheckoutContent() {
-  const { items, decoration, getDecorationTotal } = useCartStore();
+  const { items, decoration, getDecorationTotal, appliedCoupon } = useCartStore();
   
   // Form state
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(initialShippingInfo);
@@ -381,11 +383,21 @@ export default function CheckoutContent() {
   // General error state (for non-payment errors)
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate totals
-  const totals = calculateOrderTotals(items, shippingMethod);
+  // Calculate totals (with optional coupon)
   const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
-  const actualShippingCost = shippingMethod === 'economy' && subtotal >= 500 ? 0 : totals.shippingCost;
-  const orderTotal = subtotal + actualShippingCost + totals.taxAmount;
+  const roundedSubtotal = Math.round(subtotal * 100) / 100;
+  const couponResult = appliedCoupon
+    ? { discountAmount: appliedCoupon.discountAmount, freeShipping: appliedCoupon.freeShipping }
+    : null;
+  const totalsWithCoupon = calculateOrderTotalsWithCoupon(
+    roundedSubtotal,
+    shippingMethod,
+    couponResult
+  );
+  const totals = calculateOrderTotals(items, shippingMethod);
+  const actualShippingCost = totalsWithCoupon.shippingCost;
+  const taxAmount = totalsWithCoupon.taxAmount;
+  const orderTotal = totalsWithCoupon.total;
 
   // Track begin_checkout event when page loads with items
   useEffect(() => {
@@ -403,7 +415,7 @@ export default function CheckoutContent() {
         unitPrice: item.unitPrice,
         discountedPrice: item.discountedPrice,
       }));
-      trackBeginCheckout({ items: ga4Items, value: totals.total });
+      trackBeginCheckout({ items: ga4Items, value: orderTotal });
     }
   }, []); // Only fire once on mount
 
@@ -870,9 +882,11 @@ export default function CheckoutContent() {
                 items={items}
                 shippingMethod={shippingMethod}
                 shippingCost={actualShippingCost}
-                taxAmount={totals.taxAmount}
+                taxAmount={taxAmount}
                 isEditable={true}
                 decoration={decoration}
+                couponDiscount={appliedCoupon?.discountAmount}
+                couponCode={appliedCoupon?.code}
               />
 
               {/* Shipping Method */}

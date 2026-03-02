@@ -1,54 +1,42 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, Phone } from 'lucide-react';
+import { PortfolioCardImage } from './PortfolioCardImage';
+import { getProjects, getProjectsFiltered, getCategories } from '@/lib/sanity';
+import { PortfolioSearch } from './PortfolioSearch';
+import { getDecorationTitle } from '@/sanity/schema/decorationOptions';
 
 export const metadata: Metadata = {
   title: 'Portfolio | Custom Apparel Projects | Garment Decor',
-  description: 'Explore our portfolio of custom screen printing, embroidery, and apparel decoration projects. See the quality of our work for brands, businesses, and events.',
+  description:
+    'Explore our portfolio of custom screen printing, embroidery, and apparel decoration projects. See the quality of our work for brands, businesses, and events.',
 };
 
-// Portfolio projects data (simplified for listing)
-const projects = [
-  {
-    slug: 'jumbo-screen-printing-black-wall-street',
-    title: 'Jumbo Screen Printing for LA Apparel 1801GD: Black Wall Street T-Shirts',
-    category: 'Jumbo Screen Printing',
-    client: 'New Haven Festivals Inc.',
-    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=800',
-  },
-  {
-    slug: 'puff-print-hoodies-awful-cloth',
-    title: 'Custom Puff Screen Printed Independent SS4500 Hoodies',
-    category: 'Puff Screen Printing',
-    client: 'Awful Cloth',
-    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=800',
-  },
-  {
-    slug: 'puff-embroidery-hats',
-    title: 'Custom 3D Puff Embroidery on Caps: YP Classics, OTTO, and Flexfit',
-    category: 'Embroidery',
-    image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?q=80&w=800',
-  },
-  {
-    slug: 'otto-cap-embroidery-cactus-club',
-    title: 'Custom 3D Puff Embroidered OTTO CAP 31-069 for The Cactus Club',
-    category: 'Embroidery',
-    client: 'Saguaro Street',
-    image: 'https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?q=80&w=800',
-  },
-  {
-    slug: 'born-raised-online-ceramics',
-    title: 'Custom Screen Printed IND420XD Hoodies for Born & Raised x Online Ceramics',
-    category: 'Screen Printing',
-    client: 'Born & Raised',
-    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=800',
-  },
-];
+export const revalidate = 60;
 
-const categories = ['All', 'Screen Printing', 'Jumbo Screen Printing', 'Puff Screen Printing', 'Embroidery'];
+type PageProps = { searchParams: Promise<{ category?: string; q?: string }> };
 
-export default function PortfolioPage() {
+export default async function PortfolioPage({ searchParams }: PageProps) {
+  const { category: categorySlug, q: searchQ } = await searchParams;
+  const hasSearch = searchQ != null && searchQ.trim().length > 0;
+
+  const [projects, categories] = await Promise.all([
+    hasSearch
+      ? getProjectsFiltered({ search: (searchQ ?? '').trim(), limit: 500 })
+      : getProjects(),
+    getCategories(),
+  ]);
+
+  const filtered =
+    categorySlug && categorySlug.trim()
+      ? projects.filter((p) => p.category?.slug === categorySlug.trim())
+      : projects;
+
+  const categoryOptions = [
+    { slug: '', title: 'All' },
+    ...categories.map((c) => ({ slug: c.slug, title: c.title })),
+  ];
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -58,7 +46,8 @@ export default function PortfolioPage() {
             Our Work
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
-            Explore real projects we&apos;ve crafted for brands, businesses, events, and creative collaborations.
+            Explore real projects we&apos;ve crafted for brands, businesses, events, and creative
+            collaborations.
           </p>
         </div>
       </section>
@@ -90,64 +79,112 @@ export default function PortfolioPage() {
       {/* Projects Grid */}
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Category Filter (visual only for now) */}
+          {/* Search - same as archive page */}
+          <div className="mb-8">
+            <PortfolioSearch initialQ={searchQ?.trim() ?? ''} />
+          </div>
+          {/* Category Filter */}
           <div className="mb-12 flex flex-wrap gap-2 justify-center">
-            {categories.map((category, index) => (
-              <button
-                key={category}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  index === 0
-                    ? 'bg-navy-800 text-white'
-                    : 'bg-stone-100 text-slate-600 hover:bg-stone-200'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+            {categoryOptions.map((cat) => {
+              const isActive =
+                (cat.slug === '' && !categorySlug) ||
+                (cat.slug !== '' && categorySlug === cat.slug);
+              return (
+                <Link
+                  key={cat.slug || 'all'}
+                  href={cat.slug ? `/portfolio?category=${cat.slug}` : '/portfolio'}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-navy-700 text-white hover:bg-navy-800'
+                      : 'bg-stone-100 text-slate-600 hover:bg-stone-200'
+                  }`}
+                >
+                  {cat.title}
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Projects */}
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Link
-                key={project.slug}
-                href={`/portfolio/${project.slug}`}
-                className="group rounded-2xl bg-white overflow-hidden shadow-sm ring-1 ring-stone-200 hover:shadow-lg hover:ring-brand-200 transition-all"
-              >
-                <div className="relative aspect-[4/3] bg-stone-100">
-                  <Image
-                    src={project.image}
-                    alt={project.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="inline-flex items-center gap-1 text-white font-medium text-sm">
-                      View Project
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <p className="text-xs font-medium text-brand-600 mb-2">{project.category}</p>
-                  <h3 className="font-semibold text-slate-900 line-clamp-2 group-hover:text-brand-600 transition-colors">
-                    {project.title}
-                  </h3>
-                  {project.client && (
-                    <p className="mt-2 text-sm text-slate-500">Client: {project.client}</p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+          {filtered.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50/50 p-12 text-center">
+              <p className="text-slate-600">
+                {hasSearch
+                  ? 'No projects match your search. Try a different term or clear the search.'
+                  : categorySlug
+                    ? 'No projects in this category yet.'
+                    : 'No projects published yet. Check back soon or '}
+                {!categorySlug && !hasSearch && (
+                  <>
+                    <Link href="/quote" className="font-medium text-brand-600 hover:text-brand-700">
+                      request a quote
+                    </Link>
+                    .
+                  </>
+                )}
+              </p>
+              {(categorySlug || hasSearch) && (
+                <Link href="/portfolio" className="mt-2 inline-block text-brand-600 font-medium hover:text-brand-700">
+                  View all projects
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((project) => {
+                const imageUrl =
+                  project.featuredImage || (project.gallery && project.gallery[0]) || null;
+                const decorationLabel = getDecorationTitle(project.decoration);
+                return (
+                  <Link
+                    key={project._id}
+                    href={`/portfolio/${project.slug}`}
+                    className="group rounded-2xl bg-white overflow-hidden shadow-sm ring-1 ring-stone-200 hover:shadow-lg hover:ring-brand-200 transition-all"
+                  >
+                    <div className="relative aspect-[4/3] bg-stone-100">
+                      {imageUrl ? (
+                        <PortfolioCardImage
+                          src={imageUrl}
+                          alt={project.title}
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-stone-400 text-sm">
+                          No image
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="inline-flex items-center gap-1 text-white font-medium text-sm">
+                          View Project
+                          <ArrowRight className="h-4 w-4" />
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <p className="text-xs font-medium text-brand-600 mb-2">
+                        {project.category?.title ?? decorationLabel}
+                      </p>
+                      <h3 className="font-semibold text-slate-900 line-clamp-2 group-hover:text-brand-600 transition-colors">
+                        {project.title}
+                      </h3>
+                      {project.client && (
+                        <p className="mt-2 text-sm text-slate-500">{project.client}</p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
       {/* CTA */}
       <section className="py-16 sm:py-20 bg-brand-500">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-white sm:text-3xl">Ready to Start Your Project?</h2>
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">
+            Ready to Start Your Project?
+          </h2>
           <p className="mt-4 text-lg text-white/90">
             Get a quote in 2 hours or less. We&apos;ll help bring your vision to life.
           </p>

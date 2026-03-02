@@ -16,6 +16,8 @@ interface OrderSummaryProps {
   taxAmount?: number;
   isEditable?: boolean;
   decoration?: DecorationSelection | null;
+  couponDiscount?: number;
+  couponCode?: string;
 }
 
 // Standard size order for consistent display
@@ -111,19 +113,21 @@ function getOrderedSizes(sizes: Map<string, any>): string[] {
   return SIZE_ORDER.filter(size => sizeKeys.includes(size));
 }
 
-export function OrderSummary({ 
-  items, 
+export function OrderSummary({
+  items,
   shippingMethod,
   shippingCost,
   taxAmount,
   isEditable = true,
-  decoration
+  decoration,
+  couponDiscount = 0,
+  couponCode,
 }: OrderSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  
+
   // Group items
   const groupedItems = useMemo(() => groupItemsByStyleColor(items), [items]);
-  
+
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
   const decorationTotal = decoration?.totalPrice ?? 0;
@@ -133,11 +137,11 @@ export function OrderSummary({
     }
     return sum;
   }, 0);
-  
+
   // Calculate tax (8.25% estimate if not provided) - include decoration in taxable amount
-  const taxableAmount = subtotal + decorationTotal;
-  const calculatedTax = taxAmount ?? taxableAmount * 0.0825;
-  const total = subtotal + decorationTotal + shippingCost + calculatedTax;
+  const taxableAmount = subtotal + decorationTotal - couponDiscount;
+  const calculatedTax = taxAmount ?? Math.max(0, taxableAmount * 0.0825);
+  const total = subtotal + decorationTotal - couponDiscount + shippingCost + calculatedTax;
   
   // Get delivery estimate - adjust for decoration if present
   const deliveryEstimate = decoration 
@@ -319,6 +323,13 @@ export function OrderSummary({
             <div className="flex justify-between text-sm">
               <span className="text-green-600 font-medium">Discount Savings</span>
               <span className="text-green-600 font-medium">-{formatPrice(totalSavings)}</span>
+            </div>
+          )}
+
+          {couponDiscount > 0 && couponCode && (
+            <div className="flex justify-between text-sm">
+              <span className="text-green-600 font-medium">Discount ({couponCode})</span>
+              <span className="text-green-600 font-medium">-{formatPrice(couponDiscount)}</span>
             </div>
           )}
 

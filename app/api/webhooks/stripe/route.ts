@@ -18,6 +18,7 @@ import {
   PackageOrderEmailProps,
   DecorationMethod,
 } from '@/lib/emails/components';
+import { syncOrderToMedusa } from '@/lib/medusa';
 
 // Lazy initialization for Resend
 function getResend() {
@@ -130,6 +131,26 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
     throw updateError;
   }
 
+  // Increment coupon used_count if order used a coupon
+  const { data: orderWithCoupon } = await supabase
+    .from('orders')
+    .select('coupon_id')
+    .eq('id', orderId)
+    .single();
+  if (orderWithCoupon?.coupon_id) {
+    const { data: coupon } = await supabase
+      .from('coupons')
+      .select('used_count')
+      .eq('id', orderWithCoupon.coupon_id)
+      .single();
+    if (coupon) {
+      await supabase
+        .from('coupons')
+        .update({ used_count: (coupon.used_count ?? 0) + 1 })
+        .eq('id', orderWithCoupon.coupon_id);
+    }
+  }
+
   // Log payment to payments table
   await supabase.from('payments').insert({
     order_id: orderId,
@@ -198,6 +219,22 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
       })
       .eq('email', customerEmail.toLowerCase().trim())
       .eq('status', 'new');
+  }
+
+  // Sync order to Medusa for order management (fire-and-forget)
+  try {
+    const { data: orderForSync } = await supabase
+      .from('orders')
+      .select('id, order_number, customer_email, customer_name, customer_phone, company, items, subtotal, shipping_cost, tax_amount, total, shipping_address, billing_address, payment_status, metadata')
+      .eq('id', orderId)
+      .single();
+    if (orderForSync) {
+      syncOrderToMedusa(orderForSync as Parameters<typeof syncOrderToMedusa>[0]).catch((err) =>
+        console.error('[Medusa] Sync failed after payment:', err)
+      );
+    }
+  } catch (syncErr) {
+    console.error('[Medusa] Failed to fetch order for sync:', syncErr);
   }
 
   console.log(`Payment succeeded for order ${orderNumber} (${orderId})`);

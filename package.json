@@ -9,9 +9,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed:portfolio": "tsx scripts/seed-portfolio-projects.ts",
+    "fix:gallery-keys": "tsx scripts/fix-portfolio-gallery-keys.ts"
   },
   "dependencies": {
+    "@portabletext/react": "^6.0.2",
     "@stripe/react-stripe-js": "^5.6.0",
     "@stripe/stripe-js": "^8.7.0",
     "@supabase/ssr": "^0.8.0",
@@ -22,11 +25,14 @@
     "jspdf": "^4.1.0",
     "lucide-react": "^0.303.0",
     "next": "^14.2.28",
+    "next-sanity": "^9.9.9",
     "puppeteer": "^24.36.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "resend": "^6.8.0",
+    "sanity": "^3.59.0",
     "stripe": "^20.3.0",
+    "styled-components": "^6.3.11",
     "tailwind-merge": "^2.2.0",
     "zustand": "^4.5.0"
   },

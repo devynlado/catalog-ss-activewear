@@ -631,6 +631,8 @@ export interface Database {
           tax_amount: number;
           discount_amount: number;
           total: number;
+          coupon_id: string | null;
+          coupon_code: string | null;
           shipping_address: Json | null;
           billing_address: Json | null;
           payment_method: 'card' | 'ach' | 'invoice' | null;
@@ -663,6 +665,8 @@ export interface Database {
           tax_amount?: number;
           discount_amount?: number;
           total: number;
+          coupon_id?: string | null;
+          coupon_code?: string | null;
           shipping_address?: Json | null;
           billing_address?: Json | null;
           payment_method?: 'card' | 'ach' | 'invoice' | null;
@@ -695,6 +699,8 @@ export interface Database {
           tax_amount?: number;
           discount_amount?: number;
           total?: number;
+          coupon_id?: string | null;
+          coupon_code?: string | null;
           shipping_address?: Json | null;
           billing_address?: Json | null;
           payment_method?: 'card' | 'ach' | 'invoice' | null;
@@ -711,6 +717,65 @@ export interface Database {
           risk_score?: number | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      coupons: {
+        Row: {
+          id: string;
+          code: string;
+          description: string | null;
+          discount_type: 'percent_cart' | 'fixed_cart' | 'free_shipping';
+          amount: number;
+          free_shipping: boolean;
+          min_cart_amount: number | null;
+          max_discount_amount: number | null;
+          applies_to: 'cart_and_packages' | 'products_only';
+          starts_at: string | null;
+          expires_at: string | null;
+          usage_limit: number | null;
+          used_count: number;
+          usage_limit_per_customer: number | null;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          description?: string | null;
+          discount_type: 'percent_cart' | 'fixed_cart' | 'free_shipping';
+          amount?: number;
+          free_shipping?: boolean;
+          min_cart_amount?: number | null;
+          max_discount_amount?: number | null;
+          applies_to?: 'cart_and_packages' | 'products_only';
+          starts_at?: string | null;
+          expires_at?: string | null;
+          usage_limit?: number | null;
+          used_count?: number;
+          usage_limit_per_customer?: number | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          description?: string | null;
+          discount_type?: 'percent_cart' | 'fixed_cart' | 'free_shipping';
+          amount?: number;
+          free_shipping?: boolean;
+          min_cart_amount?: number | null;
+          max_discount_amount?: number | null;
+          applies_to?: 'cart_and_packages' | 'products_only';
+          starts_at?: string | null;
+          expires_at?: string | null;
+          usage_limit?: number | null;
+          used_count?: number;
+          usage_limit_per_customer?: number | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
         };
       };
       payments: {

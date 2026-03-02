@@ -1,0 +1,130 @@
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Package } from 'lucide-react';
+import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { formatPrice } from '@/lib/utils';
+
+export const metadata = {
+  title: 'Orders',
+  description: 'View and manage orders',
+};
+
+export default async function OrdersPage() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { profile } = await getServerProfile();
+  if (!profile || profile.role !== 'admin') {
+    redirect('/dashboard');
+  }
+
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('id, order_number, customer_email, customer_name, subtotal, shipping_cost, tax_amount, discount_amount, total, coupon_code, payment_status, status, created_at')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  return (
+    <div className="min-h-screen bg-stone-50">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <Link
+          href="/admin"
+          className="mb-6 inline-flex items-center text-sm text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Admin Dashboard
+        </Link>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-navy-800 sm:text-3xl">Orders</h1>
+          <p className="mt-1 text-slate-600">View order history and details.</p>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+          {!orders || orders.length === 0 ? (
+            <div className="p-12 text-center text-slate-500">No orders yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-stone-200">
+                <thead className="bg-stone-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Order
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Customer
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Total
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Discount
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Coupon
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-200 bg-white">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-stone-50">
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span className="font-mono text-sm font-medium text-navy-800">
+                          {order.order_number}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-700">
+                        <div>{order.customer_name || '—'}</div>
+                        <div className="text-slate-500">{order.customer_email}</div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">
+                        {formatPrice(Number(order.total))}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
+                        {order.discount_amount != null && Number(order.discount_amount) > 0 ? (
+                          <span className="text-green-600">-{formatPrice(Number(order.discount_amount))}</span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        {order.coupon_code ? (
+                          <span className="font-mono text-slate-700">{order.coupon_code}</span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                          order.payment_status === 'paid'
+                            ? 'bg-green-100 text-green-800'
+                            : order.payment_status === 'failed'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {order.payment_status}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-500">
+                        {new Date(order.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

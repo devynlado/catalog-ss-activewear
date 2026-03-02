@@ -35,6 +35,12 @@ const nextConfig = {
         hostname: 'drive.usercontent.google.com',
         pathname: '/**',
       },
+      // Sanity CDN (portfolio images)
+      {
+        protocol: 'https',
+        hostname: 'cdn.sanity.io',
+        pathname: '/**',
+      },
     ],
   },
   async redirects() {
