@@ -76,9 +76,12 @@ export default async function OrdersPage() {
                   {orders.map((order) => (
                     <tr key={order.id} className="hover:bg-stone-50">
                       <td className="whitespace-nowrap px-4 py-3">
-                        <span className="font-mono text-sm font-medium text-navy-800">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-mono text-sm font-medium text-navy-800 hover:text-brand-600 hover:underline"
+                        >
                           {order.order_number}
-                        </span>
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-700">
                         <div>{order.customer_name || '—'}</div>
