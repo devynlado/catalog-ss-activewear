@@ -19,6 +19,8 @@ import {
   Phone,
   CreditCard,
   AlertCircle,
+  Tag,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
@@ -33,8 +35,11 @@ import { OrderSummary } from './OrderSummary';
 import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
 import { trackBeginCheckout, trackGenerateLead, CartItem as GA4CartItem } from '@/lib/analytics';
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Initialize Stripe only when publishable key is set (avoids runtime error)
+const stripePublishableKey = typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === 'string'
+  ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  : '';
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 interface ShippingInfo {
   email: string;
@@ -198,6 +203,7 @@ interface InlinePaymentFormProps {
   isFormValid: boolean;
   missingFields: string[];
   total: number;
+  appliedCoupon: { code: string; couponId: string; discountAmount: number; freeShipping: boolean } | null;
 }
 
 function InlinePaymentForm({
@@ -209,6 +215,7 @@ function InlinePaymentForm({
   isFormValid,
   missingFields,
   total,
+  appliedCoupon,
 }: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -370,7 +377,7 @@ function InlinePaymentForm({
 // ---------- Main Checkout Page ----------
 
 export default function CheckoutContent() {
-  const { items, decoration, getDecorationTotal, appliedCoupon } = useCartStore();
+  const { items, decoration, getDecorationTotal, appliedCoupon, setAppliedCoupon, clearCoupon } = useCartStore();
   
   // Form state
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(initialShippingInfo);
@@ -380,8 +387,90 @@ export default function CheckoutContent() {
   const [poNumber, setPoNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  
   // General error state (for non-payment errors)
   const [error, setError] = useState<string | null>(null);
+  // $0 order: completing without payment
+  const [freeOrderSubmitting, setFreeOrderSubmitting] = useState(false);
+  const [freeOrderError, setFreeOrderError] = useState<string | null>(null);
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return;
+    setPromoError(null);
+    setPromoLoading(true);
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          items: items.map((i) => ({
+            unitPrice: i.unitPrice,
+            quantity: i.quantity,
+            discountedPrice: i.discountedPrice,
+          })),
+          context: 'checkout',
+        }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedCoupon({
+          code: data.code,
+          couponId: data.couponId,
+          discountAmount: data.discountAmount,
+          freeShipping: data.freeShipping,
+        });
+        setCouponCode('');
+        setPromoExpanded(false);
+      } else {
+        setPromoError(data.message || 'Invalid or expired code.');
+      }
+    } catch {
+      setPromoError('Something went wrong. Please try again.');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleCompleteFreeOrder = async () => {
+    if (!isFormValid || orderTotal >= 0.01) return;
+    setFreeOrderError(null);
+    setFreeOrderSubmitting(true);
+    try {
+      const res = await fetch('/api/checkout/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          shippingInfo,
+          shippingMethod,
+          poNumber: poNumber || undefined,
+          orderNotes: orderNotes || undefined,
+          couponCode: appliedCoupon?.code ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFreeOrderError(data.error || 'Failed to complete order');
+        return;
+      }
+      if (data.freeOrder && data.orderNumber) {
+        window.location.href = `/checkout/success?order=${encodeURIComponent(data.orderNumber)}`;
+        return;
+      }
+      setFreeOrderError('Something went wrong. Please try again.');
+    } catch {
+      setFreeOrderError('Something went wrong. Please try again.');
+    } finally {
+      setFreeOrderSubmitting(false);
+    }
+  };
 
   // Calculate totals (with optional coupon)
   const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
@@ -889,6 +978,69 @@ export default function CheckoutContent() {
                 couponCode={appliedCoupon?.code}
               />
 
+              {/* Coupon code */}
+              <div className={glassCard + ' p-4'}>
+                {appliedCoupon ? (
+                  <div className="rounded-lg border border-green-200 bg-green-50/80 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-green-600 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-green-800">
+                            {appliedCoupon.code} — {formatPrice(appliedCoupon.discountAmount)} off
+                          </p>
+                          {appliedCoupon.freeShipping && (
+                            <p className="text-xs text-green-700 mt-0.5">Free economy shipping applied</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-600 hover:text-slate-800 shrink-0"
+                        onClick={() => { clearCoupon(); setPromoError(null); }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setPromoExpanded(!promoExpanded); setPromoError(null); }}
+                      className="flex w-full items-center justify-between text-left"
+                    >
+                      <span className="text-sm font-medium text-slate-700">Have a promo code?</span>
+                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${promoExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {promoExpanded && (
+                      <div className="mt-3 space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            value={couponCode}
+                            onChange={(e) => { setCouponCode(e.target.value); setPromoError(null); }}
+                            placeholder="Enter code"
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleApplyCoupon}
+                            disabled={promoLoading || !couponCode.trim()}
+                          >
+                            {promoLoading ? 'Applying…' : 'Apply'}
+                          </Button>
+                        </div>
+                        {promoError && (
+                          <p className="text-sm text-red-600">{promoError}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
               {/* Shipping Method */}
               <div className={glassCard + " p-5"}>
                 <h3 className="font-bold text-slate-800 mb-4">Shipping Method</h3>
@@ -951,36 +1103,73 @@ export default function CheckoutContent() {
                 </div>
               </div>
 
-              {/* Payment Section — always visible, deferred intent */}
+              {/* Payment Section — $0 = no payment; otherwise Stripe or config message */}
               <div className={glassCard + " p-5"}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-800">Secure Payment</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <Lock className="h-3.5 w-3.5 text-green-600" />
-                    Secured by Stripe
-                  </div>
-                </div>
-
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    mode: 'payment',
-                    amount: toStripeCents(orderTotal),
-                    currency: 'usd',
-                    appearance: stripeAppearance,
-                  }}
-                >
-                  <InlinePaymentForm
-                    items={items}
-                    shippingInfo={shippingInfo}
-                    shippingMethod={shippingMethod}
-                    poNumber={poNumber}
-                    orderNotes={orderNotes}
-                    isFormValid={isFormValid}
-                    missingFields={missingFields}
-                    total={orderTotal}
-                  />
-                </Elements>
+                {orderTotal < 0.01 ? (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-slate-800">Complete your order</h3>
+                      <span className="text-sm font-medium text-green-600">No payment required</span>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Your order total is $0. Fill in your details above and click below to place the order.
+                    </p>
+                    {freeOrderError && (
+                      <p className="text-sm text-red-600 mb-3">{freeOrderError}</p>
+                    )}
+                    <Button
+                      size="lg"
+                      className="w-full"
+                      onClick={handleCompleteFreeOrder}
+                      disabled={!isFormValid || freeOrderSubmitting}
+                    >
+                      {freeOrderSubmitting ? 'Placing order…' : 'Complete order'}
+                    </Button>
+                  </>
+                ) : stripePromise ? (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-slate-800">Secure Payment</h3>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <Lock className="h-3.5 w-3.5 text-green-600" />
+                        Secured by Stripe
+                      </div>
+                    </div>
+                    <Elements
+                      stripe={stripePromise}
+                      options={{
+                        mode: 'payment',
+                        amount: toStripeCents(orderTotal),
+                        currency: 'usd',
+                        appearance: stripeAppearance,
+                      }}
+                    >
+                      <InlinePaymentForm
+                        items={items}
+                        shippingInfo={shippingInfo}
+                        shippingMethod={shippingMethod}
+                        poNumber={poNumber}
+                        orderNotes={orderNotes}
+                        isFormValid={isFormValid}
+                        missingFields={missingFields}
+                        total={orderTotal}
+                        appliedCoupon={appliedCoupon}
+                      />
+                    </Elements>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-slate-800">Secure Payment</h3>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-medium text-amber-800">Payment is not configured.</p>
+                      <p className="mt-1 text-xs text-amber-700">
+                        Add <code className="rounded bg-amber-100 px-1 font-mono">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to your <code className="rounded bg-amber-100 px-1 font-mono">.env.local</code> (from your Stripe dashboard) and restart the dev server.
+                      </p>
+                    </div>
+                  </>
+                )}
 
                 {/* Reassurance message */}
                 <p className="mt-4 text-center text-xs text-slate-500">

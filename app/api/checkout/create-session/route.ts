@@ -114,9 +114,103 @@ export async function POST(request: NextRequest) {
     };
 
     const supabase = authClient;
+    const roundedTotal = Math.round(totalWithShipping * 100) / 100;
 
-    // Build item summary for Stripe metadata
-    const itemSummary = items.slice(0, 3).map(item => 
+    // --- $0 orders (e.g. 100% discount + free shipping): no payment, complete immediately ---
+    if (roundedTotal < 0.01) {
+      const { data: order, error: orderError } = await (supabase as any)
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_id: user?.id || null,
+          customer_email: shippingInfo.email,
+          customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+          customer_phone: shippingInfo.phone,
+          company: shippingInfo.company || null,
+          items: items.map((item: CartItem) => ({
+            type: 'product',
+            sku: item.sku,
+            styleId: item.styleId,
+            styleName: item.styleName,
+            brandName: item.brandName,
+            colorName: item.colorName,
+            colorCode: item.colorCode,
+            sizeName: item.sizeName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discountedPrice: item.discountedPrice,
+            imageUrl: item.imageUrl,
+          })),
+          subtotal: roundedSubtotal,
+          shipping_cost: actualShippingCost,
+          tax_amount: taxAmount,
+          discount_amount: discountAmount,
+          total: roundedTotal,
+          coupon_id: couponId,
+          coupon_code: appliedCouponCode,
+          shipping_address: shippingAddressData,
+          billing_address: shippingAddressData,
+          shipping_method: shippingMethod,
+          payment_method: 'card',
+          payment_status: 'paid',
+          status: 'pending',
+          notes: orderNotes || null,
+          metadata: {
+            order_type: 'cart',
+            po_number: poNumber || null,
+            free_order: true,
+          },
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('Error creating free order:', orderError);
+        return NextResponse.json(
+          { error: 'Failed to create order' },
+          { status: 500 }
+        );
+      }
+
+      await (supabase as any).from('order_activities').insert({
+        order_id: order.id,
+        user_id: user?.id || null,
+        activity_type: 'created',
+        details: {
+          order_number: orderNumber,
+          order_type: 'cart',
+          item_count: items.length,
+          total_pieces: items.reduce((sum, item) => sum + item.quantity, 0),
+          total: roundedTotal,
+          free_order: true,
+        },
+      });
+
+      await (supabase as any).from('payments').insert({
+        order_id: order.id,
+        amount: 0,
+        currency: 'usd',
+        type: 'charge',
+        status: 'succeeded',
+        metadata: { free_order: true },
+      });
+
+      return NextResponse.json({
+        orderId: order.id,
+        orderNumber,
+        freeOrder: true,
+        pricing: {
+          subtotal: roundedSubtotal,
+          tax: taxAmount,
+          shipping: actualShippingCost,
+          discount: discountAmount,
+          total: roundedTotal,
+        },
+      });
+    }
+
+    // --- Paid orders: create order + Stripe PaymentIntent ---
+    const itemSummary = items.slice(0, 3).map(item =>
       `${item.brandName} ${item.styleName} (${item.quantity})`
     ).join(', ') + (items.length > 3 ? ` +${items.length - 3} more` : '');
 

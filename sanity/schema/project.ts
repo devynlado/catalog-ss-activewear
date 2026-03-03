@@ -61,7 +61,7 @@ export const projectType = defineType({
       group: 'details',
       description: 'Printing/embroidery service – links to the service page on the site',
       options: {
-        list: DECORATION_OPTIONS,
+        list: [...DECORATION_OPTIONS],
         layout: 'dropdown',
       },
       validation: (Rule) => Rule.required(),

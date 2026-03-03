@@ -9,8 +9,11 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { ArrowLeft, Loader2, Check, Upload, X, FileImage, AlertCircle, Shield, Lock, Clock, Phone, RefreshCw, Palette, Package, Truck, BadgeCheck } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Initialize Stripe only when publishable key is set
+const stripePublishableKey = typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === 'string'
+  ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  : '';
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 // US States for dropdown
 const US_STATES = [
@@ -586,7 +589,7 @@ export function PackageCheckoutClient() {
                 <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-stone-200/60">
                   <h2 className="text-lg font-semibold text-navy-900 mb-4">Complete Payment</h2>
                   
-                  {clientSecret && (
+                  {clientSecret && stripePromise ? (
                     <Elements
                       stripe={stripePromise}
                       options={{
@@ -616,7 +619,14 @@ export function PackageCheckoutClient() {
                         total={serverPricing?.total || packageData.subtotal}
                       />
                     </Elements>
-                  )}
+                  ) : clientSecret && !stripePromise ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-medium text-amber-800">Payment is not configured.</p>
+                      <p className="mt-1 text-xs text-amber-700">
+                        Add <code className="rounded bg-amber-100 px-1 font-mono">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to <code className="rounded bg-amber-100 px-1 font-mono">.env.local</code> and restart.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
                 
                 {/* Reassurance below payment */}

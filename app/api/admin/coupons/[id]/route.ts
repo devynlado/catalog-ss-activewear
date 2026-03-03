@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getServerProfile } from '@/lib/supabase-server';
 import { normalizeCouponCode } from '@/lib/coupon-utils';
-
 async function requireAdmin() {
   const { profile } = await getServerProfile();
   if (!profile || profile.role !== 'admin') {
@@ -79,12 +78,8 @@ export async function PATCH(
   if (usage_limit_per_customer !== undefined) updates.usage_limit_per_customer = usage_limit_per_customer == null ? null : Number(usage_limit_per_customer);
 
   const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from('coupons')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  // @ts-expect-error - Supabase schema cache can infer never for coupons table
+  const { data, error } = await supabase.from('coupons').update(updates).eq('id', id).select().single();
 
   if (error) {
     if (error.code === '23505') {

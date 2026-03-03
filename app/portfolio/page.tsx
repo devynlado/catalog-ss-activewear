@@ -14,10 +14,21 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-type PageProps = { searchParams: Promise<{ category?: string; q?: string }> };
+const PER_PAGE = 9;
+
+type PageProps = { searchParams: Promise<{ category?: string; q?: string; page?: string }> };
+
+function buildPortfolioUrl(params: { category?: string; q?: string; page?: number }) {
+  const search = new URLSearchParams();
+  if (params.category?.trim()) search.set('category', params.category.trim());
+  if (params.q?.trim()) search.set('q', params.q.trim());
+  if (params.page != null && params.page > 1) search.set('page', String(params.page));
+  const qs = search.toString();
+  return `/portfolio${qs ? `?${qs}` : ''}`;
+}
 
 export default async function PortfolioPage({ searchParams }: PageProps) {
-  const { category: categorySlug, q: searchQ } = await searchParams;
+  const { category: categorySlug, q: searchQ, page: pageParam } = await searchParams;
   const hasSearch = searchQ != null && searchQ.trim().length > 0;
 
   const [projects, categories] = await Promise.all([
@@ -31,6 +42,16 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
     categorySlug && categorySlug.trim()
       ? projects.filter((p) => p.category?.slug === categorySlug.trim())
       : projects;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const currentPage = Math.min(
+    totalPages,
+    Math.max(1, parseInt(String(pageParam ?? '1'), 10) || 1)
+  );
+  const paginatedProjects = filtered.slice(
+    (currentPage - 1) * PER_PAGE,
+    currentPage * PER_PAGE
+  );
 
   const categoryOptions = [
     { slug: '', title: 'All' },
@@ -129,8 +150,9 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
               )}
             </div>
           ) : (
+            <>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((project) => {
+              {paginatedProjects.map((project) => {
                 const imageUrl =
                   project.featuredImage || (project.gallery && project.gallery[0]) || null;
                 const decorationLabel = getDecorationTitle(project.decoration);
@@ -175,6 +197,37 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
                 );
               })}
             </div>
+
+            {totalPages > 1 && (
+              <nav
+                className="mt-12 flex flex-wrap items-center justify-center gap-2"
+                aria-label="Portfolio pagination"
+              >
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                  const isActive = pageNum === currentPage;
+                  const href = buildPortfolioUrl({
+                    category: categorySlug ?? undefined,
+                    q: searchQ ?? undefined,
+                    page: pageNum,
+                  });
+                  return (
+                    <Link
+                      key={pageNum}
+                      href={href}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`min-w-[2.5rem] rounded-lg px-3 py-2 text-center text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-navy-700 text-white hover:bg-navy-800'
+                          : 'bg-stone-100 text-slate-600 hover:bg-stone-200 hover:text-slate-900'
+                      }`}
+                    >
+                      {pageNum}
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
+            </>
           )}
         </div>
       </section>
