@@ -5,19 +5,47 @@ import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-ser
 import { formatPrice } from '@/lib/utils';
 import type { Order } from '@/lib/database.types';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Order Details',
   description: 'View order details',
 };
 
+/** Format address for display. Supports checkout shape (firstName, lastName, address, apartment, city, state, zipCode) and legacy keys. */
 function formatAddress(addr: Record<string, unknown> | null): string {
   if (!addr || typeof addr !== 'object') return '—';
-  const parts = [
-    addr.name,
-    addr.street || addr.address_line1 || addr.addressLine1,
-    [addr.city, addr.state, addr.postal_code || addr.postalCode || addr.zip].filter(Boolean).join(', '),
-    addr.country,
-  ].filter(Boolean);
+  const name =
+    [addr.firstName, addr.lastName].filter(Boolean).join(' ') ||
+    (addr.name as string) ||
+    '';
+  const street =
+    (addr.address as string) ||
+    (addr.street as string) ||
+    (addr.address_line1 as string) ||
+    (addr.addressLine1 as string) ||
+    '';
+  const apartment = (addr.apartment as string) || (addr.address_line2 as string) || '';
+  const city = (addr.city as string) || '';
+  const state = (addr.state as string) || '';
+  const zip =
+    (addr.zipCode as string) ||
+    (addr.postal_code as string) ||
+    (addr.postalCode as string) ||
+    (addr.zip as string) ||
+    '';
+  const country = (addr.country as string) || '';
+  const company = (addr.company as string) || '';
+
+  const parts: string[] = [];
+  if (name) parts.push(name);
+  if (company) parts.push(company);
+  if (street) parts.push(street);
+  if (apartment) parts.push(apartment);
+  const cityStateZip = [city, state, zip].filter(Boolean).join(', ');
+  if (cityStateZip) parts.push(cityStateZip);
+  if (country) parts.push(country);
+
   return parts.length ? parts.join('\n') : '—';
 }
 
