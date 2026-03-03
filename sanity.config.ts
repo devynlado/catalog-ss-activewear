@@ -11,6 +11,9 @@ export default defineConfig({
   projectId,
   dataset,
   basePath: '/studio',
+  auth: {
+    loginMethod: 'token',
+  },
   plugins: [structureTool()],
   schema: {
     types: schemaTypes,
