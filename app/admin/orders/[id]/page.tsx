@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import { formatPrice } from '@/lib/utils';
 import type { Order } from '@/lib/database.types';
+import { OrderRefundUI } from './OrderRefundUI';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,12 +78,20 @@ export default async function OrderDetailPage({
   const shippingAddr = orderData.shipping_address as Record<string, unknown> | null;
   const billingAddr = orderData.billing_address as Record<string, unknown> | null;
   const rawItems = (orderData.items as Array<Record<string, unknown>>) ?? [];
-  const items = rawItems.map((item) => {
+  const items = rawItems.map((item, index) => {
     const qty = Number(item.quantity ?? 0);
     const unitPrice = Number(item.discountedPrice ?? item.unitPrice ?? 0);
     const name = [item.styleName, item.brandName, item.colorName, item.sizeName].filter(Boolean).join(' · ') || String(item.sku ?? '—');
-    return { name, quantity: qty, unitPrice, total: qty * unitPrice };
+    return { index, name, quantity: qty, unitPrice, total: qty * unitPrice };
   });
+
+  const serviceSupabase = createServerSupabaseClient();
+  const { data: refundPayments } = await serviceSupabase
+    .from('payments')
+    .select('amount')
+    .eq('order_id', id)
+    .eq('type', 'refund');
+  const totalRefunded = (refundPayments ?? []).reduce((sum, p) => sum + Number((p as { amount: number }).amount), 0);
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -94,47 +104,63 @@ export default async function OrderDetailPage({
           Back to Orders
         </Link>
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-navy-800 sm:text-3xl">
-            Order {orderData.order_number}
-          </h1>
-          <p className="mt-1 text-slate-600">
-            Placed {new Date(orderData.created_at).toLocaleString('en-US', {
-              month: 'short',
+        <div className="mb-6">
+          <p className="text-sm text-slate-600">
+            {new Date(orderData.created_at).toLocaleString('en-US', {
+              weekday: 'long',
+              month: 'long',
               day: 'numeric',
               year: 'numeric',
               hour: 'numeric',
               minute: '2-digit',
             })}
           </p>
+          <p className="mt-1 text-xs text-slate-500 font-mono">{orderData.order_number}</p>
         </div>
 
         <div className="space-y-6">
           {/* Customer */}
           <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-navy-800 mb-4">Customer</h2>
-            <dl className="grid gap-2 text-sm">
-              <div><dt className="text-slate-500">Name</dt><dd className="font-medium text-slate-900">{orderData.customer_name || '—'}</dd></div>
-              <div><dt className="text-slate-500">Email</dt><dd className="font-medium text-slate-900">{orderData.customer_email}</dd></div>
-              {orderData.customer_phone && <div><dt className="text-slate-500">Phone</dt><dd className="font-medium text-slate-900">{orderData.customer_phone}</dd></div>}
-              {orderData.company && <div><dt className="text-slate-500">Company</dt><dd className="font-medium text-slate-900">{orderData.company}</dd></div>}
-            </dl>
+            <h2 className="text-lg font-semibold text-navy-800 mb-4 flex items-center gap-2">
+              <User className="h-5 w-5 text-slate-500" />
+              Customer
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+              <div className="space-y-1">
+                <p className="text-slate-500">Name</p>
+                <p className="font-medium text-slate-900">{orderData.customer_name || '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-slate-500">Email</p>
+                <p className="font-medium text-slate-900">{orderData.customer_email}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-slate-500">Phone</p>
+                <p className="font-medium text-slate-900">{orderData.customer_phone || '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-slate-500">Company</p>
+                <p className="font-medium text-slate-900">{orderData.company || '—'}</p>
+              </div>
+            </div>
           </section>
 
-          {/* Shipping address */}
+          {/* Shipping & Billing address — same container, 2 columns */}
           <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-navy-800 mb-4">Shipping address</h2>
-            <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans">
-              {formatAddress(shippingAddr)}
-            </pre>
-          </section>
-
-          {/* Billing address */}
-          <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-navy-800 mb-4">Billing address</h2>
-            <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans">
-              {formatAddress(billingAddr)}
-            </pre>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h2 className="text-lg font-semibold text-navy-800 mb-4">Shipping address</h2>
+                <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans">
+                  {formatAddress(shippingAddr)}
+                </pre>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-navy-800 mb-4">Billing address</h2>
+                <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans">
+                  {formatAddress(billingAddr)}
+                </pre>
+              </div>
+            </div>
           </section>
 
           {/* Line items */}
@@ -151,8 +177,8 @@ export default async function OrderDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, i) => (
-                    <tr key={i} className="border-b border-stone-100">
+                  {items.map((item) => (
+                    <tr key={item.index} className="border-b border-stone-100">
                       <td className="py-3 pr-4 font-medium text-slate-900">{item.name}</td>
                       <td className="py-3 pr-4 text-right">{item.quantity}</td>
                       <td className="py-3 pr-4 text-right">{formatPrice(item.unitPrice)}</td>
@@ -166,22 +192,28 @@ export default async function OrderDetailPage({
 
           {/* Totals */}
           <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-navy-800 mb-4">Totals</h2>
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between"><dt className="text-slate-600">Subtotal</dt><dd>{formatPrice(Number(orderData.subtotal))}</dd></div>
-              {Number(orderData.shipping_cost) > 0 && <div className="flex justify-between"><dt className="text-slate-600">Shipping</dt><dd>{formatPrice(Number(orderData.shipping_cost))}</dd></div>}
-              {Number(orderData.tax_amount) > 0 && <div className="flex justify-between"><dt className="text-slate-600">Tax</dt><dd>{formatPrice(Number(orderData.tax_amount))}</dd></div>}
-              {Number(orderData.discount_amount) > 0 && <div className="flex justify-between"><dt className="text-slate-600">Discount</dt><dd className="text-green-600">-{formatPrice(Number(orderData.discount_amount))}</dd></div>}
-              {orderData.coupon_code && <div className="flex justify-between"><dt className="text-slate-600">Coupon</dt><dd className="font-mono">{orderData.coupon_code}</dd></div>}
-              <div className="flex justify-between pt-2 border-t border-stone-200 font-semibold text-base"><dt>Total</dt><dd>{formatPrice(Number(orderData.total))}</dd></div>
-            </dl>
+            <h2 className="text-lg font-bold text-navy-800 mb-4">Totals</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span>{formatPrice(Number(orderData.subtotal))}</span></div>
+              {Number(orderData.shipping_cost) > 0 && <div className="flex justify-between"><span className="text-slate-600">Shipping</span><span>{formatPrice(Number(orderData.shipping_cost))}</span></div>}
+              {Number(orderData.tax_amount) > 0 && <div className="flex justify-between"><span className="text-slate-600">Tax</span><span>{formatPrice(Number(orderData.tax_amount))}</span></div>}
+              {Number(orderData.discount_amount) > 0 && <div className="flex justify-between"><span className="text-slate-600">Discount</span><span className="text-green-600">-{formatPrice(Number(orderData.discount_amount))}</span></div>}
+              {orderData.coupon_code && <div className="flex justify-between"><span className="text-slate-600">Coupon</span><span className="font-mono">{orderData.coupon_code}</span></div>}
+              <div className="flex justify-between pt-2 border-t border-stone-200 font-bold text-base"><span>Total</span><span>{formatPrice(Number(orderData.total))}</span></div>
+            </div>
             <p className="mt-3 text-xs text-slate-500">Payment: {orderData.payment_status} · Status: {orderData.status}</p>
           </section>
 
-          {/* Refund note */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-800">
-            <strong>Refunds:</strong> To process refunds for this order, merge or deploy the <strong>Refund</strong> branch so the refund UI and API are available on this site.
-          </div>
+          {/* Refund */}
+          <OrderRefundUI
+            orderId={orderData.id}
+            orderNumber={orderData.order_number}
+            orderTotal={Number(orderData.total)}
+            paymentStatus={orderData.payment_status}
+            items={items}
+            totalRefunded={totalRefunded}
+            hasStripeCharge={Boolean(orderData.stripe_charge_id)}
+          />
         </div>
       </div>
     </div>
