@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerProfile } from '@/lib/supabase-server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Returns the Sanity API token only for authenticated admins.
  * Used by the embedded Studio at /studio to auto-login without Sanity's login screen.

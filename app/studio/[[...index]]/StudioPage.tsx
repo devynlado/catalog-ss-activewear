@@ -18,7 +18,7 @@ export function StudioPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/sanity-studio-token');
+        const res = await fetch('/api/sanity-studio-token', { credentials: 'include' });
         if (cancelled) return;
         if (res.ok) {
           const { token } = await res.json();
@@ -26,12 +26,12 @@ export function StudioPage() {
             try {
               localStorage.setItem(STORAGE_KEY, token);
             } catch {
-              // localStorage may be unavailable (e.g. private window)
+              // localStorage may be unavailable
             }
           }
         }
       } catch {
-        // Network error: continue without token; Studio will show login
+        // Network error: Studio will show login
       } finally {
         if (!cancelled) setReady(true);
       }

@@ -12,5 +12,25 @@ export default async function StudioRoute() {
   if (!profile || profile.role !== 'admin') {
     redirect('/dashboard');
   }
-  return <StudioPage />;
+
+  const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
+  const token = process.env.SANITY_API_WRITE_TOKEN;
+
+  // Set token in localStorage before any client JS runs so Studio sees it on first read
+  const injectScript =
+    projectId &&
+    token &&
+    `(function(){try{var k='__sanity_auth_token_'+${JSON.stringify(projectId)};var t=${JSON.stringify(token)};if(t)localStorage.setItem(k,t);}catch(e){}})();`;
+
+  return (
+    <>
+      {injectScript ? (
+        <script
+          dangerouslySetInnerHTML={{ __html: injectScript }}
+          suppressHydrationWarning
+        />
+      ) : null}
+      <StudioPage />
+    </>
+  );
 }
