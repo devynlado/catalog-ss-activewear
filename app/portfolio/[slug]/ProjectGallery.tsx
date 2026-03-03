@@ -45,8 +45,8 @@ export function ProjectGallery({ images, title }: Props) {
     if (lightboxIndex == null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i + 1) % images.length);
-      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i - 1 + images.length) % images.length);
+      if (e.key === 'ArrowRight') setLightboxIndex((i) => ((i ?? 0) + 1) % images.length);
+      if (e.key === 'ArrowLeft') setLightboxIndex((i) => ((i ?? 0) - 1 + images.length) % images.length);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -172,7 +172,7 @@ export function ProjectGallery({ images, title }: Props) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setLightboxIndex((i) => (i - 1 + images.length) % images.length);
+                  setLightboxIndex((i) => ((i ?? 0) - 1 + images.length) % images.length);
                 }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors"
                 aria-label="Previous image"
@@ -183,7 +183,7 @@ export function ProjectGallery({ images, title }: Props) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setLightboxIndex((i) => (i + 1) % images.length);
+                  setLightboxIndex((i) => ((i ?? 0) + 1) % images.length);
                 }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors"
                 aria-label="Next image"

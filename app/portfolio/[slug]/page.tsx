@@ -224,7 +224,7 @@ export default async function PortfolioProjectPage({ params }: Props) {
               {project.longDescription && project.longDescription.length > 0 && (
                 <div className="prose prose-slate prose-lg max-w-none">
                   <h2 className="text-2xl font-bold text-slate-900 mb-4">The Story</h2>
-                  <PortableText value={project.longDescription} />
+                  <PortableText value={project.longDescription as import('@portabletext/types').PortableTextBlock[]} />
                 </div>
               )}
             </div>

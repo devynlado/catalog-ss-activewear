@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
     created_by: user?.id ?? null,
   };
 
-  const { data, error } = await supabase.from('coupons').insert(insert).select().single();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await supabase.from('coupons').insert(insert as any).select().single();
 
   if (error) {
     if (error.code === '23505') {

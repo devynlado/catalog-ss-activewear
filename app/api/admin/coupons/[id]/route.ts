@@ -79,12 +79,8 @@ export async function PATCH(
   if (usage_limit_per_customer !== undefined) updates.usage_limit_per_customer = usage_limit_per_customer == null ? null : Number(usage_limit_per_customer);
 
   const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from('coupons')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  // Coupons table may be missing from generated DB types
+  const { data, error } = await (supabase as any).from('coupons').update(updates).eq('id', id).select().single();
 
   if (error) {
     if (error.code === '23505') {

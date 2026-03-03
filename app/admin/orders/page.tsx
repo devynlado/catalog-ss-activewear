@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, Package } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { formatPrice } from '@/lib/utils';
+import type { Order } from '@/lib/database.types';
 
 export const metadata = {
   title: 'Orders',
@@ -19,11 +20,12 @@ export default async function OrdersPage() {
     redirect('/dashboard');
   }
 
-  const { data: orders } = await supabase
+  const { data: ordersData } = await supabase
     .from('orders')
     .select('id, order_number, customer_email, customer_name, subtotal, shipping_cost, tax_amount, discount_amount, total, coupon_code, payment_status, status, created_at')
     .order('created_at', { ascending: false })
     .limit(100);
+  const orders = (ordersData ?? []) as Order[];
 
   return (
     <div className="min-h-screen bg-stone-50">

@@ -198,6 +198,7 @@ interface InlinePaymentFormProps {
   isFormValid: boolean;
   missingFields: string[];
   total: number;
+  appliedCoupon?: { code: string; discountAmount: number; freeShipping?: boolean } | null;
 }
 
 function InlinePaymentForm({
@@ -209,6 +210,7 @@ function InlinePaymentForm({
   isFormValid,
   missingFields,
   total,
+  appliedCoupon,
 }: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -979,6 +981,7 @@ export default function CheckoutContent() {
                     isFormValid={isFormValid}
                     missingFields={missingFields}
                     total={orderTotal}
+                    appliedCoupon={appliedCoupon}
                   />
                 </Elements>
 
