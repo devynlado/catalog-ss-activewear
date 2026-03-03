@@ -1,6 +1,13 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+/** Lazy Resend client so build can succeed without RESEND_API_KEY (only created at request time). */
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    throw new Error('Missing API key. Set RESEND_API_KEY in your environment.');
+  }
+  return new Resend(key);
+}
 
 const FROM_EMAIL = 'Garment Decor <noreply@garmentdecor.com>';
 
@@ -92,6 +99,7 @@ export async function sendApplicationReceivedEmail(to: string, companyName: stri
   `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -147,6 +155,7 @@ export async function sendApplicationApprovedEmail(to: string, companyName: stri
   `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -215,6 +224,7 @@ export async function sendApplicationDeniedEmail(to: string, companyName: string
   `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -270,6 +280,7 @@ export async function sendNewMessageEmail(
   `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -343,6 +354,7 @@ export async function sendQuoteStatusEmail(
   `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -416,6 +428,7 @@ export async function sendRepAssignmentEmail(
   `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
