@@ -1,28 +1,14 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Users, FileText, ShieldCheck, TrendingUp, Clock, CheckCircle, Tag, Package, Eye, Layout } from 'lucide-react';
-import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { Users, FileText, ShieldCheck, TrendingUp, Clock, CheckCircle, Eye, Package } from 'lucide-react';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
 export const metadata = {
   title: 'Admin Dashboard',
-  description: 'Manage customers, quotes, and verification requests',
+  description: 'Manage orders, customers, quotes, and verification requests',
 };
 
 export default async function AdminDashboardPage() {
   const supabase = await createSupabaseServerClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { profile } = await getServerProfile();
-  
-  // Security: Only admins can access this page
-  if (!profile || profile.role !== 'admin') {
-    redirect('/dashboard');
-  }
 
   // Get stats
   const { count: totalCustomers } = await supabase
@@ -52,6 +38,16 @@ export default async function AdminDashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('verification_status', 'pending');
 
+  // Order stats
+  const { count: totalOrders } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: activeOrders } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['confirmed', 'in_production']);
+
   return (
     <div className="min-h-screen bg-stone-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -61,12 +57,42 @@ export default async function AdminDashboardPage() {
             Admin Dashboard
           </h1>
           <p className="mt-1 text-slate-600">
-            Manage customers, quotes, and verification requests.
+            Manage orders, customers, quotes, and verifications.
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Link
+            href="/admin/orders"
+            className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-brand-300"
+          >
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-brand-100 p-3">
+                <Package className="h-5 w-5 text-brand-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-navy-800">{totalOrders || 0}</p>
+                <p className="text-sm text-slate-600">Total Orders</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/orders?status=confirmed"
+            className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-amber-300"
+          >
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-amber-100 p-3">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-navy-800">{activeOrders || 0}</p>
+                <p className="text-sm text-slate-600">Active Orders</p>
+              </div>
+            </div>
+          </Link>
+
           <Link
             href="/admin/customers"
             className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
@@ -93,21 +119,6 @@ export default async function AdminDashboardPage() {
               <div>
                 <p className="text-2xl font-bold text-navy-800">{totalQuotes || 0}</p>
                 <p className="text-sm text-slate-600">Total Quotes</p>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/quotes?status=new"
-            className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-amber-300"
-          >
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-amber-100 p-3">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-navy-800">{newQuotes || 0}</p>
-                <p className="text-sm text-slate-600">New Quotes</p>
               </div>
             </div>
           </Link>
@@ -168,20 +179,6 @@ export default async function AdminDashboardPage() {
               >
                 <TrendingUp className="h-5 w-5 text-brand-500" />
                 <span className="font-medium text-slate-700">Analytics</span>
-              </Link>
-              <Link
-                href="/admin/coupons"
-                className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
-              >
-                <Tag className="h-5 w-5 text-brand-500" />
-                <span className="font-medium text-slate-700">Coupons</span>
-              </Link>
-              <Link
-                href="/studio"
-                className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
-              >
-                <Layout className="h-5 w-5 text-brand-500" />
-                <span className="font-medium text-slate-700">Portfolio CMS</span>
               </Link>
             </div>
           </div>

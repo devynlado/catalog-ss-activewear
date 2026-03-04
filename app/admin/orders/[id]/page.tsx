@@ -1,101 +1,80 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User } from 'lucide-react';
-import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
-import { createServerSupabaseClient } from '@/lib/supabase';
-import { formatPrice } from '@/lib/utils';
-import type { Order } from '@/lib/database.types';
-import { OrderRefundUI } from './OrderRefundUI';
-
-export const dynamic = 'force-dynamic';
+import { ArrowLeft, Package, User, Building2, Mail, Phone, MapPin, CreditCard, ExternalLink, Download } from 'lucide-react';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { Badge } from '@/components/ui/Badge';
+import { OrderStatusActions } from './OrderStatusActions';
+import { ShippingForm } from './ShippingForm';
+import { OrderActivityLog } from './OrderActivityLog';
 
 export const metadata = {
   title: 'Order Details',
-  description: 'View order details',
+  description: 'View and manage order details',
 };
 
-/** Format address for display. Supports checkout shape (firstName, lastName, address, apartment, city, state, zipCode) and legacy keys. */
-function formatAddress(addr: Record<string, unknown> | null): string {
-  if (!addr || typeof addr !== 'object') return '—';
-  const name =
-    [addr.firstName, addr.lastName].filter(Boolean).join(' ') ||
-    (addr.name as string) ||
-    '';
-  const street =
-    (addr.address as string) ||
-    (addr.street as string) ||
-    (addr.address_line1 as string) ||
-    (addr.addressLine1 as string) ||
-    '';
-  const apartment = (addr.apartment as string) || (addr.address_line2 as string) || '';
-  const city = (addr.city as string) || '';
-  const state = (addr.state as string) || '';
-  const zip =
-    (addr.zipCode as string) ||
-    (addr.postal_code as string) ||
-    (addr.postalCode as string) ||
-    (addr.zip as string) ||
-    '';
-  const country = (addr.country as string) || '';
-  const company = (addr.company as string) || '';
+const statusConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
+  pending: { label: 'Pending', variant: 'warning' },
+  confirmed: { label: 'Confirmed', variant: 'info' },
+  in_production: { label: 'In Production', variant: 'brand' },
+  shipped: { label: 'Shipped', variant: 'info' },
+  delivered: { label: 'Delivered', variant: 'success' },
+  cancelled: { label: 'Cancelled', variant: 'error' },
+};
 
-  const parts: string[] = [];
-  if (name) parts.push(name);
-  if (company) parts.push(company);
-  if (street) parts.push(street);
-  if (apartment) parts.push(apartment);
-  const cityStateZip = [city, state, zip].filter(Boolean).join(', ');
-  if (cityStateZip) parts.push(cityStateZip);
-  if (country) parts.push(country);
-
-  return parts.length ? parts.join('\n') : '—';
-}
+const paymentConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
+  pending: { label: 'Unpaid', variant: 'warning' },
+  processing: { label: 'Processing', variant: 'info' },
+  paid: { label: 'Paid', variant: 'success' },
+  failed: { label: 'Failed', variant: 'error' },
+  refunded: { label: 'Refunded', variant: 'default' },
+};
 
 export default async function OrderDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = await params;
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) notFound();
 
-  const { profile } = await getServerProfile();
-  if (!profile || profile.role !== 'admin') {
-    notFound();
-  }
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: order, error } = await supabase
     .from('orders')
     .select('*')
-    .eq('id', id)
-    .single();
+    .eq('id', params.id)
+    .single() as { data: any; error: any };
 
-  if (error || !order) notFound();
-  const orderData = order as Order;
+  if (error || !order) {
+    notFound();
+  }
 
-  const shippingAddr = orderData.shipping_address as Record<string, unknown> | null;
-  const billingAddr = orderData.billing_address as Record<string, unknown> | null;
-  const rawItems = (orderData.items as Array<Record<string, unknown>>) ?? [];
-  const items = rawItems.map((item, index) => {
-    const qty = Number(item.quantity ?? 0);
-    const unitPrice = Number(item.discountedPrice ?? item.unitPrice ?? 0);
-    const name = [item.styleName, item.brandName, item.colorName, item.sizeName].filter(Boolean).join(' · ') || String(item.sku ?? '—');
-    return { index, name, quantity: qty, unitPrice, total: qty * unitPrice };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items: any[] = Array.isArray(order.items) ? order.items : [];
+  const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const shippingAddr = order.shipping_address as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const billingAddr = order.billing_address as any;
+
+  const createdDate = new Date(order.created_at).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 
-  const serviceSupabase = createServerSupabaseClient();
-  const { data: refundPayments } = await serviceSupabase
-    .from('payments')
-    .select('amount')
-    .eq('order_id', id)
-    .eq('type', 'refund');
-  const totalRefunded = (refundPayments ?? []).reduce((sum, p) => sum + Number((p as { amount: number }).amount), 0);
+  const status = statusConfig[order.status] || statusConfig.pending;
+  const payment = paymentConfig[order.payment_status] || paymentConfig.pending;
+
+  const stripeUrl = order.stripe_payment_intent_id
+    ? `https://dashboard.stripe.com/payments/${order.stripe_payment_intent_id}`
+    : null;
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <Link
           href="/admin/orders"
           className="mb-6 inline-flex items-center text-sm text-slate-600 hover:text-slate-900"
@@ -104,116 +83,298 @@ export default async function OrderDetailPage({
           Back to Orders
         </Link>
 
-        <div className="mb-6">
-          <p className="text-sm text-slate-600">
-            {new Date(orderData.created_at).toLocaleString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })}
-          </p>
-          <p className="mt-1 text-xs text-slate-500 font-mono">{orderData.order_number}</p>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-navy-800 sm:text-3xl">
+                {order.order_number}
+              </h1>
+              <Badge variant={payment.variant}>{payment.label}</Badge>
+              <Badge variant={status.variant}>{status.label}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-slate-600">
+              Placed {createdDate}
+            </p>
+          </div>
+
+          <OrderStatusActions
+            orderId={order.id}
+            currentStatus={order.status}
+            hasTracking={!!order.tracking_number}
+          />
         </div>
 
-        <div className="space-y-6">
-          {/* Customer */}
-          <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-navy-800 mb-4 flex items-center gap-2">
-              <User className="h-5 w-5 text-slate-500" />
-              Customer
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
-              <div className="space-y-1">
-                <p className="text-slate-500">Name</p>
-                <p className="font-medium text-slate-900">{orderData.customer_name || '—'}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-slate-500">Email</p>
-                <p className="font-medium text-slate-900">{orderData.customer_email}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-slate-500">Phone</p>
-                <p className="font-medium text-slate-900">{orderData.customer_phone || '—'}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-slate-500">Company</p>
-                <p className="font-medium text-slate-900">{orderData.company || '—'}</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Shipping & Billing address — same container, 2 columns */}
-          <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h2 className="text-lg font-semibold text-navy-800 mb-4">Shipping address</h2>
-                <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans">
-                  {formatAddress(shippingAddr)}
-                </pre>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-navy-800 mb-4">Billing address</h2>
-                <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans">
-                  {formatAddress(billingAddr)}
-                </pre>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            {/* Customer */}
+            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-navy-800">Customer</h2>
+              <div className="flex items-start gap-4">
+                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-lg font-semibold text-brand-600">
+                  {(order.customer_name || order.customer_email)?.[0]?.toUpperCase() || '?'}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-navy-800">
+                    {order.customer_name || 'Guest'}
+                  </h3>
+                  <div className="mt-2 space-y-1">
+                    {order.company && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Building2 className="h-4 w-4 text-slate-400" />
+                        {order.company}
+                      </div>
+                    )}
+                    <a
+                      href={`mailto:${order.customer_email}`}
+                      className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+                    >
+                      <Mail className="h-4 w-4" />
+                      {order.customer_email}
+                    </a>
+                    {order.customer_phone && (
+                      <a
+                        href={`tel:${order.customer_phone}`}
+                        className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+                      >
+                        <Phone className="h-4 w-4" />
+                        {order.customer_phone}
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </section>
 
-          {/* Line items */}
-          <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-navy-800 mb-4">Items</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-stone-200 text-left text-slate-500">
-                    <th className="pb-2 pr-4">Product</th>
-                    <th className="pb-2 pr-4 text-right">Qty</th>
-                    <th className="pb-2 pr-4 text-right">Unit price</th>
-                    <th className="pb-2 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.index} className="border-b border-stone-100">
-                      <td className="py-3 pr-4 font-medium text-slate-900">{item.name}</td>
-                      <td className="py-3 pr-4 text-right">{item.quantity}</td>
-                      <td className="py-3 pr-4 text-right">{formatPrice(item.unitPrice)}</td>
-                      <td className="py-3 text-right font-medium">{formatPrice(item.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Items */}
+            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-navy-800">
+                Items ({items.length})
+              </h2>
+              <div className="space-y-3">
+                {items.map((item, index) => {
+                  const name = item.packageDisplayName
+                    || `${item.brandName || ''} ${item.styleName || item.productTitle || ''}`.trim()
+                    || 'Item';
+                  const price = item.discountedPrice ?? item.unitPrice ?? 0;
+
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 rounded-lg border border-stone-100 bg-stone-50 p-4"
+                    >
+                      <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+                        <Package className="h-6 w-6 text-stone-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-800">{name}</p>
+                        <p className="text-sm text-slate-500">
+                          {[item.colorName, item.sizeName].filter(Boolean).join(' \u00B7 ')}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          Qty: {item.quantity} &times; ${price.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-navy-800">
+                          ${(price * (item.quantity || 0)).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 space-y-2 border-t border-stone-200 pt-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Subtotal ({totalQuantity} pcs)</span>
+                  <span className="text-slate-800">${order.subtotal?.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Tax</span>
+                  <span className="text-slate-800">${order.tax_amount?.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Shipping</span>
+                  <span className="text-slate-800">
+                    {order.shipping_cost === 0 ? 'FREE' : `$${order.shipping_cost?.toFixed(2)}`}
+                  </span>
+                </div>
+                {order.discount_amount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-green-600">Discount</span>
+                    <span className="text-green-600">-${order.discount_amount?.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between border-t border-stone-200 pt-2">
+                  <span className="text-lg font-semibold text-navy-800">Total</span>
+                  <span className="text-xl font-bold text-navy-800">${order.total?.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
-          </section>
 
-          {/* Totals */}
-          <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-navy-800 mb-4">Totals</h2>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span>{formatPrice(Number(orderData.subtotal))}</span></div>
-              {Number(orderData.shipping_cost) > 0 && <div className="flex justify-between"><span className="text-slate-600">Shipping</span><span>{formatPrice(Number(orderData.shipping_cost))}</span></div>}
-              {Number(orderData.tax_amount) > 0 && <div className="flex justify-between"><span className="text-slate-600">Tax</span><span>{formatPrice(Number(orderData.tax_amount))}</span></div>}
-              {Number(orderData.discount_amount) > 0 && <div className="flex justify-between"><span className="text-slate-600">Discount</span><span className="text-green-600">-{formatPrice(Number(orderData.discount_amount))}</span></div>}
-              {orderData.coupon_code && <div className="flex justify-between"><span className="text-slate-600">Coupon</span><span className="font-mono">{orderData.coupon_code}</span></div>}
-              <div className="flex justify-between pt-2 border-t border-stone-200 font-bold text-base"><span>Total</span><span>{formatPrice(Number(orderData.total))}</span></div>
+            {/* Addresses */}
+            {(shippingAddr || billingAddr) && (
+              <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-navy-800">Addresses</h2>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {shippingAddr && (
+                    <div>
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <MapPin className="h-4 w-4 text-slate-400" />
+                        Shipping
+                      </h3>
+                      <div className="rounded-lg bg-stone-50 p-4 text-sm text-slate-600">
+                        {[shippingAddr.firstName, shippingAddr.lastName].filter(Boolean).join(' ') && (
+                          <p className="font-medium text-slate-800">
+                            {[shippingAddr.firstName, shippingAddr.lastName].filter(Boolean).join(' ')}
+                          </p>
+                        )}
+                        {shippingAddr.company && <p>{shippingAddr.company}</p>}
+                        <p>{shippingAddr.address1 || shippingAddr.address || shippingAddr.street}</p>
+                        {shippingAddr.address2 && <p>{shippingAddr.address2}</p>}
+                        <p>
+                          {shippingAddr.city}, {shippingAddr.state} {shippingAddr.zipCode || shippingAddr.zip}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {billingAddr && (
+                    <div>
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <CreditCard className="h-4 w-4 text-slate-400" />
+                        Billing
+                      </h3>
+                      <div className="rounded-lg bg-stone-50 p-4 text-sm text-slate-600">
+                        {[billingAddr.firstName, billingAddr.lastName].filter(Boolean).join(' ') && (
+                          <p className="font-medium text-slate-800">
+                            {[billingAddr.firstName, billingAddr.lastName].filter(Boolean).join(' ')}
+                          </p>
+                        )}
+                        {billingAddr.company && <p>{billingAddr.company}</p>}
+                        <p>{billingAddr.address1 || billingAddr.address || billingAddr.street}</p>
+                        {billingAddr.address2 && <p>{billingAddr.address2}</p>}
+                        <p>
+                          {billingAddr.city}, {billingAddr.state} {billingAddr.zipCode || billingAddr.zip}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Payment */}
+            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-navy-800">Payment</h2>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Status</span>
+                  <Badge variant={payment.variant}>{payment.label}</Badge>
+                </div>
+                {order.payment_method && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Method</span>
+                    <span className="text-sm font-medium text-slate-800">
+                      {order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1)}
+                    </span>
+                  </div>
+                )}
+                {order.po_number && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">PO Number</span>
+                    <span className="text-sm font-medium text-slate-800">{order.po_number}</span>
+                  </div>
+                )}
+                {order.paid_at && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Paid</span>
+                    <span className="text-sm text-slate-800">
+                      {new Date(order.paid_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                )}
+                {stripeUrl && (
+                  <a
+                    href={stripeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    View in Stripe Dashboard
+                  </a>
+                )}
+              </div>
             </div>
-            <p className="mt-3 text-xs text-slate-500">Payment: {orderData.payment_status} · Status: {orderData.status}</p>
-          </section>
+          </div>
 
-          {/* Refund */}
-          <OrderRefundUI
-            orderId={orderData.id}
-            orderNumber={orderData.order_number}
-            orderTotal={Number(orderData.total)}
-            paymentStatus={orderData.payment_status}
-            items={items}
-            totalRefunded={totalRefunded}
-            hasStripeCharge={Boolean(orderData.stripe_charge_id)}
-          />
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Shipping & Tracking */}
+            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-navy-800">Shipping &amp; Tracking</h2>
+              {order.tracking_number ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">Carrier</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {order.carrier?.toUpperCase() || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">Tracking Number</p>
+                    <p className="break-all text-sm font-medium text-slate-800">{order.tracking_number}</p>
+                  </div>
+                  {order.shipped_at && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500">Shipped</p>
+                      <p className="text-sm text-slate-800">
+                        {new Date(order.shipped_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <ShippingForm orderId={order.id} />
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-navy-800">Quick Actions</h2>
+              <div className="space-y-2">
+                <a
+                  href={`/api/orders/${order.order_number}/invoice`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-stone-50"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Invoice
+                </a>
+                <a
+                  href={`mailto:${order.customer_email}`}
+                  className="flex w-full items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-stone-50"
+                >
+                  <Mail className="h-4 w-4" />
+                  Email Customer
+                </a>
+              </div>
+            </div>
+
+            {/* Activity Log */}
+            <OrderActivityLog orderId={order.id} />
+          </div>
         </div>
       </div>
     </div>
