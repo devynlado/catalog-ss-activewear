@@ -1,0 +1,924 @@
+[
+  {
+    "id": "oversized-heavyweight-t-shirt-custom-screen-printed-men-vint",
+    "title": "Oversized Heavyweight T-shirt Custom Screen Printed Men Vintage Washed Raw Hem Boxy Double Collar Tshirt",
+    "category": "tshirts",
+    "image": "tshirts/oversized-heavyweight-t-shirt-custom-screen-printed-men-vint.webp",
+    "baseCost": 13.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Heavyweight",
+      "Oversized",
+      "Raw Hem",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "short-sleeve-100-cotton-heavyweight-tshirts-custom-screen-pr",
+    "title": "Short Sleeve 100% Cotton Heavyweight Tshirts Custom Screen Printing Men Acid Wash Sunfaded Raw Hem Boxy Cropped T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/short-sleeve-100-cotton-heavyweight-tshirts-custom-screen-pr.webp",
+    "baseCost": 13.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Acid Wash",
+      "Boxy Fit",
+      "Cropped",
+      "Heavyweight",
+      "Sun Faded"
+    ]
+  },
+  {
+    "id": "cotton-vintage-washed-unisex-oversized-t-shirt-short-sleeve",
+    "title": "Cotton Vintage Washed Unisex Oversized T-shirt Short Sleeve Men Custom Printed Sunfaded Raw Hem Boxy Cropped T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/cotton-vintage-washed-unisex-oversized-t-shirt-short-sleeve.webp",
+    "baseCost": 13.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Cropped",
+      "Oversized",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "short-sleeve-comfort-colors-t-shirts-embroidery-logo-mens-ov",
+    "title": "Short Sleeve comfort Colors t Shirts Embroidery logo Mens Oversized Crochet Knit Boxy Tshirts",
+    "category": "tshirts",
+    "image": "tshirts/short-sleeve-comfort-colors-t-shirts-embroidery-logo-mens-ov.webp",
+    "baseCost": 18.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Embroidery",
+      "Oversized"
+    ]
+  },
+  {
+    "id": "custom-dtg-printed-t-shirts-short-sleeve-heavyweight-cotton",
+    "title": "Custom Dtg Printed T-shirts Short Sleeve Heavyweight Cotton Men v Neck Embroidery logo Boxy Cropped T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/custom-dtg-printed-t-shirts-short-sleeve-heavyweight-cotton.webp",
+    "baseCost": 13.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Cropped",
+      "Embroidery",
+      "Heavyweight"
+    ]
+  },
+  {
+    "id": "custom-screen-printing-heavyweight-cotton-t-shirt-men-short",
+    "title": "Custom Screen Printing Heavyweight Cotton T Shirt Men Short Sleeve Vintage Washed Sunfaded Boxy Fit T-shirt",
+    "category": "tshirts",
+    "image": "tshirts/custom-screen-printing-heavyweight-cotton-t-shirt-men-short.webp",
+    "baseCost": 14.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Heavyweight",
+      "Screen Print",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "custom-100-cotton-heavyweight-oversized-t-shirt-embroidery-l",
+    "title": "Custom 100% Cotton Heavyweight Oversized T-shirt Embroidery logo Men Color Block Raw Hem Boxy Long Sleeve T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/custom-100-cotton-heavyweight-oversized-t-shirt-embroidery-l.webp",
+    "baseCost": 15.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Embroidery",
+      "Heavyweight",
+      "Oversized",
+      "Raw Hem"
+    ]
+  },
+  {
+    "id": "custom-screen-printed-graphic-t-shirts-short-sleeve-men-260",
+    "title": "Custom Screen Printed Graphic T-shirts Short Sleeve Men 260 Gsm Heavy Weight Cotton Oversized Boxy T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/custom-screen-printed-graphic-t-shirts-short-sleeve-men-260.webp",
+    "baseCost": 14.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Graphic",
+      "Oversized",
+      "Screen Print"
+    ]
+  },
+  {
+    "id": "unisex-oversized-fit-boxy-cropped-t-shirt-screen-printing-me",
+    "title": "Unisex Oversized Fit Boxy Cropped T-Shirt Screen Printing Men Raw Hem 100% Cotton Hevayweight Box T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/unisex-oversized-fit-boxy-cropped-t-shirt-screen-printing-me.webp",
+    "baseCost": 12.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Cropped",
+      "Oversized",
+      "Raw Hem",
+      "Screen Print"
+    ]
+  },
+  {
+    "id": "custom-screen-printing-camo-graphic-tshirts-heavyweight-cott",
+    "title": "Custom Screen Printing Camo Graphic Tshirts Heavyweight Cotton Men Double Layer Long Sleeve T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/custom-screen-printing-camo-graphic-tshirts-heavyweight-cott.webp",
+    "baseCost": 12.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Camo",
+      "Double Layer",
+      "Heavyweight",
+      "Long Sleeve",
+      "Screen Print"
+    ]
+  },
+  {
+    "id": "printing-reversed-stitching-spliced-panel-unisex-streetwear",
+    "title": "Printing Reversed Stitching Spliced Panel Unisex Streetwear Boxy Tshirts Custom Thick Cotton Men Raw Hem Cropped T Shirts",
+    "category": "tshirts",
+    "image": "tshirts/printing-reversed-stitching-spliced-panel-unisex-streetwear.webp",
+    "baseCost": 15.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Cropped",
+      "Raw Hem"
+    ]
+  },
+  {
+    "id": "thick-cotton-oversized-tshirts-custom-vintage-washed-men-scr",
+    "title": "Thick Cotton Oversized Tshirts Custom Vintage Washed Men Screen Printed Rhinestone Short Sleeve Sun Faded T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/thick-cotton-oversized-tshirts-custom-vintage-washed-men-scr.webp",
+    "baseCost": 17.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Oversized",
+      "Rhinestone",
+      "Screen Print",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "screen-printing-vintage-graphic-t-shirts-custom-thick-cotton",
+    "title": "Screen Printing Vintage Graphic T-shirts Custom Thick Cotton Men Boxy Fit Heavyweight Long Sleeve French Terry Tshirts",
+    "category": "tshirts",
+    "image": "tshirts/screen-printing-vintage-graphic-t-shirts-custom-thick-cotton.webp",
+    "baseCost": 15.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "French Terry",
+      "Heavyweight",
+      "Long Sleeve",
+      "Screen Print"
+    ]
+  },
+  {
+    "id": "100-cotton-screen-printing-graphic-tshirt-cut-edge-raw-hem-m",
+    "title": "100% Cotton Screen Printing Graphic Tshirt Cut Edge Raw Hem Men Oversized Fit Short Sleeve Rhinestone T Shirt",
+    "category": "tshirts",
+    "image": "tshirts/100-cotton-screen-printing-graphic-tshirt-cut-edge-raw-hem-m.webp",
+    "baseCost": 15.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "100% Cotton",
+      "Oversized",
+      "Raw Hem",
+      "Rhinestone",
+      "Screen Print"
+    ]
+  },
+  {
+    "id": "custom-100-cotton-oversized-fit-short-sleeve-tee-vintage-sun",
+    "title": "Custom 100% Cotton Oversized Fit Short Sleeve Tee Vintage Sunfaded Washed Men Screen Printing Graphic T Shirts",
+    "category": "tshirts",
+    "image": "tshirts/custom-100-cotton-oversized-fit-short-sleeve-tee-vintage-sun.webp",
+    "baseCost": 15.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "100% Cotton",
+      "Oversized",
+      "Screen Print",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "oversized-fit-unisex-heavyweight-zip-up-hoodie-custom-screen",
+    "title": "Oversized Fit Unisex Heavyweight Zip up Hoodie Custom Screen Print Men Distressed Washed Vintage Sun Faded Graphic Hoodies",
+    "category": "hoodies",
+    "image": "hoodies/oversized-fit-unisex-heavyweight-zip-up-hoodie-custom-screen.webp",
+    "baseCost": 23.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Distressed",
+      "Heavyweight",
+      "Oversized",
+      "Screen Print",
+      "Sun Faded"
+    ]
+  },
+  {
+    "id": "all-over-printed-unisex-streetwear-hoodies-heavyweight-cotto",
+    "title": "All Over Printed Unisex Streetwear Hoodies Heavyweight Cotton Men Custom logo Print Mens Vintage Graphic Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/all-over-printed-unisex-streetwear-hoodies-heavyweight-cotto.webp",
+    "baseCost": 23.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "All-Over Print",
+      "Graphic",
+      "Heavyweight"
+    ]
+  },
+  {
+    "id": "custom-allover-printed-heavyweight-cotton-graphic-hoodie-vin",
+    "title": "Custom Allover Printed Heavyweight Cotton Graphic Hoodie Vintage Washed Men 420 Gsm French Terry Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/custom-allover-printed-heavyweight-cotton-graphic-hoodie-vin.webp",
+    "baseCost": 23.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "All-Over Print",
+      "French Terry",
+      "Graphic",
+      "Heavyweight",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "100-cotton-heavyweight-hoodie-custom-allover-printed-zipper",
+    "title": "100% Cotton Heavyweight Hoodie Custom Allover Printed Zipper up Men Vintage Graffiti Graphic Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/100-cotton-heavyweight-hoodie-custom-allover-printed-zipper.webp",
+    "baseCost": 22.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "100% Cotton",
+      "All-Over Print",
+      "Graphic",
+      "Heavyweight",
+      "Zip Up"
+    ]
+  },
+  {
+    "id": "heavyweight-cotton-french-terry-hoodies-custom-screen-printe",
+    "title": "Heavyweight Cotton French Terry Hoodies Custom Screen Printed Mens Oversized Fit Boxy Vintage Graphic Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/heavyweight-cotton-french-terry-hoodies-custom-screen-printe.webp",
+    "baseCost": 23.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "French Terry",
+      "Heavyweight",
+      "Oversized",
+      "Screen Print"
+    ]
+  },
+  {
+    "id": "heavyweight-french-terry-thick-cotton-hoodies-pullover-men-c",
+    "title": "Heavyweight French Terry Thick Cotton Hoodies Pullover Men Custom logo Printed Vintage Washed Sunfaded Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/heavyweight-french-terry-thick-cotton-hoodies-pullover-men-c.webp",
+    "baseCost": 21.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "French Terry",
+      "Heavyweight",
+      "Pullover",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "heavy-weight-cotton-pullover-hoodie-custom-screen-printing-e",
+    "title": "Heavy Weight Cotton Pullover Hoodie Custom Screen Printing Embroidered Graphic Oversized Fit Hot Selling Graphic",
+    "category": "hoodies",
+    "image": "hoodies/heavy-weight-cotton-pullover-hoodie-custom-screen-printing-e.webp",
+    "baseCost": 21.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Embroidery",
+      "Graphic",
+      "Oversized",
+      "Pullover",
+      "Screen Print"
+    ]
+  },
+  {
+    "id": "450-gsm-heavyweight-oversized-zip-up-hoodie-custom-distresse",
+    "title": "450 Gsm Heavyweight Oversized Zip up Hoodie Custom Distressed Washed Men Screen Printed Vintage Graphic Hoodies",
+    "category": "hoodies",
+    "image": "hoodies/450-gsm-heavyweight-oversized-zip-up-hoodie-custom-distresse.webp",
+    "baseCost": 22.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Distressed",
+      "Heavyweight",
+      "Oversized",
+      "Screen Print",
+      "Zip Up"
+    ]
+  },
+  {
+    "id": "heavyweight-cotton-unisex-oversized-hoodie-custom-logo-print",
+    "title": "Heavyweight Cotton Unisex Oversized Hoodie Custom logo Printed Men Striped Sleeve Vintage Washed Sun Faded Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/heavyweight-cotton-unisex-oversized-hoodie-custom-logo-print.webp",
+    "baseCost": 22.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Heavyweight",
+      "Oversized",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "custom-embroidery-logo-zip-up-hoodies-men-distressed-vintage",
+    "title": "Custom Embroidery logo Zip up Hoodies Men Distressed Vintage Washed 400 Gsm Heavyweight Sunfaded Boxy Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/custom-embroidery-logo-zip-up-hoodies-men-distressed-vintage.webp",
+    "baseCost": 21.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Boxy Fit",
+      "Distressed",
+      "Heavyweight",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "450gsm-french-terry-thick-cotton-zip-up-hoodies-men-customs",
+    "title": "450Gsm French Terry Thick Cotton Zip up Hoodies Men Customs Creen Printing Vintage Washed Rhinestone Sunfaded Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/450gsm-french-terry-thick-cotton-zip-up-hoodies-men-customs.webp",
+    "baseCost": 26.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "French Terry",
+      "Rhinestone",
+      "Sun Faded",
+      "Vintage Wash",
+      "Zip Up"
+    ]
+  },
+  {
+    "id": "custom-screen-printed-heavy-weight-hoodie-men-pullover-frenc",
+    "title": "Custom Screen Printed Heavy Weight Hoodie Men Pullover French Terry Hoodies Vintage Washed Oversized Mens Graphic Hoodie",
+    "category": "hoodies",
+    "image": "hoodies/custom-screen-printed-heavy-weight-hoodie-men-pullover-frenc.webp",
+    "baseCost": 25.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "French Terry",
+      "Oversized",
+      "Pullover",
+      "Screen Print",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "custom-logo-printed-y2k-streetwear-mens-oversized-hoodie-ful",
+    "title": "Custom Logo Printed Y2K Streetwear Men's Oversized Hoodie Full Face Zip-up Graphic French Terry for Winter",
+    "category": "hoodies",
+    "image": "hoodies/custom-logo-printed-y2k-streetwear-mens-oversized-hoodie-ful.webp",
+    "baseCost": 23.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "French Terry",
+      "Graphic",
+      "Oversized"
+    ]
+  },
+  {
+    "id": "vintage-sunfaded-wash-two-piece-tracksuits-sweatsuits-custom",
+    "title": "Vintage Sunfaded Wash Two Piece Tracksuits Sweatsuits Custom Logo Printed Men Rhinestone Hoodies Distressed Sweatpants Set",
+    "category": "hoodies",
+    "image": "hoodies/vintage-sunfaded-wash-two-piece-tracksuits-sweatsuits-custom.webp",
+    "baseCost": 49.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Distressed",
+      "Rhinestone",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "420-gsm-heavyweight-cotton-hoodie-custom-all-over-printed-zi",
+    "title": "420 Gsm Heavyweight Cotton Hoodie Custom All Over Printed Zip up Men Oversized Fit Graphic Hoodies",
+    "category": "hoodies",
+    "image": "hoodies/420-gsm-heavyweight-cotton-hoodie-custom-all-over-printed-zi.webp",
+    "baseCost": 23.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "All-Over Print",
+      "Graphic",
+      "Heavyweight",
+      "Oversized",
+      "Zip Up"
+    ]
+  },
+  {
+    "id": "custom-logo-printed-streetwear-loose-jogger-sweatpants-overs",
+    "title": "Custom logo Printed Streetwear Loose Jogger Sweatpants Oversized Fit Men Striped Trimmed Wide Leg Baggy Thick Sweatpants",
+    "category": "pants",
+    "image": "pants/custom-logo-printed-streetwear-loose-jogger-sweatpants-overs.webp",
+    "baseCost": 20.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Oversized",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "heavyweight-cotton-vintage-washed-wide-leg-sewatpants-custom",
+    "title": "Heavyweight Cotton Vintage Washed Wide Leg Sewatpants Custom Embroidery logo Men Striped Trimmed Sunfaded Baggy Sweatpants",
+    "category": "pants",
+    "image": "pants/heavyweight-cotton-vintage-washed-wide-leg-sewatpants-custom.webp",
+    "baseCost": 22.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Embroidery",
+      "Heavyweight",
+      "Sun Faded",
+      "Vintage Wash",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "screen-printed-logo-heavy-cotton-wide-leg-sweatpants-custom",
+    "title": "Screen Printed logo Heavy Cotton Wide Leg Sweatpants Custom Vintage Washed Men Sun Faded Raw Hem Baggy Fit Sweatpants",
+    "category": "pants",
+    "image": "pants/screen-printed-logo-heavy-cotton-wide-leg-sweatpants-custom.webp",
+    "baseCost": 21.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Raw Hem",
+      "Screen Print",
+      "Sun Faded",
+      "Vintage Wash",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "distressed-washed-embroidery-logo-track-jogger-pants-mens-he",
+    "title": "Distressed Washed Embroidery Logo Track Jogger Pants Mens Heavyweight Cotton Custom Rhinestone Baggy Wide Leg Sweatpants",
+    "category": "pants",
+    "image": "pants/distressed-washed-embroidery-logo-track-jogger-pants-mens-he.webp",
+    "baseCost": 28.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Distressed",
+      "Embroidery",
+      "Heavyweight",
+      "Rhinestone",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "wide-leg-cargo-track-pants-men-custom-allover-printed-detach",
+    "title": "Wide Leg Cargo Track Pants Men Custom Allover Printed Detachable Leg Tactical Camo Work Cargo Pants",
+    "category": "pants",
+    "image": "pants/wide-leg-cargo-track-pants-men-custom-allover-printed-detach.webp",
+    "baseCost": 20.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "All-Over Print",
+      "Camo",
+      "Cargo",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "heavyweight-cotton-vintage-sunfaded-washed-sweat-pants-custo",
+    "title": "Heavyweight Cotton Vintage Sunfaded Washed Sweat Pants Custom Embroidery Logo Men 3D Puff Printed Rhinestone Sweatpants",
+    "category": "pants",
+    "image": "pants/heavyweight-cotton-vintage-sunfaded-washed-sweat-pants-custo.webp",
+    "baseCost": 20.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Heavyweight",
+      "Puff Print",
+      "Rhinestone",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "unisex-oversized-wide-leg-track-pants-custom-allover-printed",
+    "title": "Unisex Oversized Wide Leg Track Pants Custom Allover Printed French Terry Men Raw Hem Pink Camo Sweatpants",
+    "category": "pants",
+    "image": "pants/unisex-oversized-wide-leg-track-pants-custom-allover-printed.webp",
+    "baseCost": 21.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "All-Over Print",
+      "French Terry",
+      "Oversized",
+      "Raw Hem",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "vintage-monkey-washed-sunfaded-sweat-pants-oversized-fit-men",
+    "title": "Vintage Monkey Washed Sunfaded Sweat Pants Oversized Fit Mens Custom Logo Printing Striped Wide Leg Sweatpants",
+    "category": "pants",
+    "image": "pants/vintage-monkey-washed-sunfaded-sweat-pants-oversized-fit-men.webp",
+    "baseCost": 21.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Oversized",
+      "Sun Faded",
+      "Vintage Wash",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "heavyweight-french-terry-track-pants-custom-embroidery-logo",
+    "title": "Heavyweight French Terry Track Pants Custom Embroidery Logo Mens Wide Leg Striped Trimmed Sweatpants",
+    "category": "pants",
+    "image": "pants/heavyweight-french-terry-track-pants-custom-embroidery-logo.webp",
+    "baseCost": 20.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Embroidery",
+      "French Terry",
+      "Heavyweight",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "heavyweight-cotton-french-terry-track-jogger-pants-custom-vi",
+    "title": "Heavyweight Cotton French Terry Track Jogger Pants Custom Vintage Washed Sunfaded Men Embroidery Logo Striped Sweatpants",
+    "category": "pants",
+    "image": "pants/heavyweight-cotton-french-terry-track-jogger-pants-custom-vi.webp",
+    "baseCost": 22.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Embroidery",
+      "French Terry",
+      "Heavyweight",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "embroidery-logo-rhinestone-sweat-pants-men-custom-vintage-mo",
+    "title": "Embroidery Logo Rhinestone Sweat Pants Men Custom Vintage Monkey Washed Heavyweight French Terry Sunfaded Sweatpants",
+    "category": "pants",
+    "image": "pants/embroidery-logo-rhinestone-sweat-pants-men-custom-vintage-mo.webp",
+    "baseCost": 22.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Embroidery",
+      "Heavyweight",
+      "Rhinestone",
+      "Sun Faded",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "heavyweight-french-terry-joggers-pants-vintage-washed-casual",
+    "title": "Heavyweight French Terry Joggers Pants Vintage Washed Casual Mid Sweatpants Custom Striped Trimmed Side Graffiti",
+    "category": "pants",
+    "image": "pants/heavyweight-french-terry-joggers-pants-vintage-washed-casual.webp",
+    "baseCost": 22.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "French Terry",
+      "Heavyweight",
+      "Vintage Wash"
+    ]
+  },
+  {
+    "id": "heavyweight-french-terry-sewat-pants-custom-embroidery-logo",
+    "title": "Heavyweight French Terry Sewat Pants Custom Embroidery Logo Mens Oversized Fit Striped Wide Leg Sweatpants",
+    "category": "pants",
+    "image": "pants/heavyweight-french-terry-sewat-pants-custom-embroidery-logo.webp",
+    "baseCost": 21.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Embroidery",
+      "French Terry",
+      "Heavyweight",
+      "Oversized",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "vintage-washed-thick-cotton-french-terry-sweat-pants-mens-cu",
+    "title": "Vintage Washed Thick Cotton French Terry Sweat Pants Mens Custom Side Rhinestone Wide Leg Sunfaded Sweatpants",
+    "category": "pants",
+    "image": "pants/vintage-washed-thick-cotton-french-terry-sweat-pants-mens-cu.webp",
+    "baseCost": 23.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "French Terry",
+      "Rhinestone",
+      "Sun Faded",
+      "Vintage Wash",
+      "Wide Leg"
+    ]
+  },
+  {
+    "id": "streetwear-cargo-pants-men-custom-heavy-cotton-vintage-wash",
+    "title": "Streetwear Cargo Pants Men Custom Heavy Cotton Vintage Wash Work Pants Utility Tactical Cargo Pants for Men",
+    "category": "pants",
+    "image": "pants/streetwear-cargo-pants-men-custom-heavy-cotton-vintage-wash.webp",
+    "baseCost": 20.8,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL"
+    ],
+    "features": [
+      "Cargo",
+      "Vintage Wash"
+    ]
+  }
+]

@@ -882,6 +882,28 @@ export function Header() {
                         </Link>
                       </div>
                     </div>
+
+                    {/* Cut & Sew Sourcing — Featured CTA */}
+                    <div className="mt-4 border-t border-stone-200 pt-4">
+                      <Link
+                        href="/streetwear"
+                        onClick={() => setShopOpen(false)}
+                        className="flex items-center gap-3 rounded-lg bg-stone-50 p-3 transition-all hover:bg-stone-100 group"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-200 text-stone-600 group-hover:bg-stone-300">
+                          <Scissors className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-slate-900">
+                            Cut &amp; Sew Sourcing
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            Custom manufacturing — 130+ styles, 100pc minimums
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-stone-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-600" />
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1333,6 +1355,16 @@ export function Header() {
                   </Link>
                 ))}
               </div>
+
+              {/* Cut & Sew Sourcing — Mobile */}
+              <Link
+                href="/streetwear"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 rounded-lg my-2 px-3 py-2.5 text-sm font-medium text-slate-700 bg-stone-100 hover:bg-stone-200"
+              >
+                <Scissors className="h-4 w-4 text-stone-500" />
+                Cut &amp; Sew Sourcing
+              </Link>
 
               {/* Services Section - Prominent */}
               <div className="border-t border-stone-100 pt-3 mt-3">
