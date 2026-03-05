@@ -56,16 +56,19 @@ export interface PortfolioCategory {
 }
 
 export async function getProjects(): Promise<ProjectListItem[]> {
+  if (!client) return [];
   const data = await client.fetch<ProjectListItem[]>(projectListQuery);
   return data ?? [];
 }
 
 export async function getProjectBySlug(slug: string): Promise<ProjectDetail | null> {
+  if (!client) return null;
   const data = await client.fetch<ProjectDetail | null>(projectBySlugQuery, { slug });
   return data ?? null;
 }
 
 export async function getProjectSlugs(): Promise<string[]> {
+  if (!client) return [];
   const data = await client.fetch<string[]>(projectSlugsQuery);
   return data ?? [];
 }
@@ -74,6 +77,7 @@ export async function getRelatedProjects(
   decoration: string,
   currentSlug: string
 ): Promise<RelatedProject[]> {
+  if (!client) return [];
   const data = await client.fetch<RelatedProject[]>(relatedProjectsQuery, {
     decoration,
     currentSlug,
@@ -82,6 +86,7 @@ export async function getRelatedProjects(
 }
 
 export async function getCategories(): Promise<PortfolioCategory[]> {
+  if (!client) return [];
   const data = await client.fetch<PortfolioCategory[]>(categoriesQuery);
   return data ?? [];
 }
@@ -110,6 +115,7 @@ export async function getProjectsFiltered(
   // When filtering by product category we need to fetch more then filter in memory
   const fetchLimit =
     productCategorySlugs && productCategorySlugs.length > 0 ? 200 : limit;
+  if (!client) return [];
   const data = await client.fetch<ProjectListItem[]>(projectArchiveFilterQuery, {
     limit: fetchLimit,
     decorationSlugs: decorationSlugs && decorationSlugs.length > 0 ? decorationSlugs : [],
