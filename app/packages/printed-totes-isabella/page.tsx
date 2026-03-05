@@ -3,6 +3,8 @@ import { getProductBySlug } from '@/lib/product-cache';
 import { PackageHero, WhatsIncluded, BenefitsRow, FAQSection, StickyMobileCTA } from '@/components/packages/shared';
 import { ToteBagPackageBuilder, printedTotesIsabellaPageConfig } from '@/components/packages/screenprinting';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Custom Printed Tote Bags - Isabella Canvas Tote | All-Inclusive Pricing | Garment Decor',
   description: 'Get custom printed canvas tote bags with all-inclusive pricing. Up to 2 colors included, no setup fees, no art charges. Free shipping on orders $500+. 5-7 day production.',

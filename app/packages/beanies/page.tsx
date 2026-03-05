@@ -3,6 +3,8 @@ import { getProductByStyleId } from '@/lib/product-cache';
 import { PackageHero, WhatsIncluded, BenefitsRow, FAQSection, StickyMobileCTA } from '@/components/packages/shared';
 import { EmbroideryPackageBuilder, beaniesConfig, beaniesPageConfig } from '@/components/packages/embroidery';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Custom Embroidered Beanies - All-Inclusive Pricing | Garment Decor',
   description: 'Get custom embroidered beanies from $11.95/beanie at 100+. All-inclusive pricing includes embroidery, digitizing, and pre-production sample. Mix colors at no extra charge. 10-day turnaround.',

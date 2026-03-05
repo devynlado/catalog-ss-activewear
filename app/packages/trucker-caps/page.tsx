@@ -3,6 +3,8 @@ import { getProductByStyleId } from '@/lib/product-cache';
 import { PackageHero, WhatsIncluded, BenefitsRow, FAQSection, StickyMobileCTA } from '@/components/packages/shared';
 import { EmbroideryPackageBuilder, truckerCapsConfig, truckerCapsPageConfig } from '@/components/packages/embroidery';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Custom Embroidered Trucker Caps - All-Inclusive Pricing | Garment Decor',
   description: 'Get custom embroidered trucker caps from $11.95/hat at 100+. All-inclusive pricing includes embroidery, digitizing, and pre-production sample. Mix colors at no extra charge. 10-day turnaround.',
