@@ -1,6 +1,12 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 
 const FROM_EMAIL = 'Garment Decor <noreply@garmentdecor.com>';
 
@@ -92,7 +98,7 @@ export async function sendApplicationReceivedEmail(to: string, companyName: stri
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: 'Trade Pricing Application Received - Garment Decor',
@@ -147,7 +153,7 @@ export async function sendApplicationApprovedEmail(to: string, companyName: stri
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: '🎉 Trade Pricing Approved - Welcome to Garment Decor',
@@ -215,7 +221,7 @@ export async function sendApplicationDeniedEmail(to: string, companyName: string
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: 'Let\'s Connect About Your Trade Application - Garment Decor',
@@ -270,7 +276,7 @@ export async function sendNewMessageEmail(
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: `New message from ${senderName} - Garment Decor`,
@@ -343,7 +349,7 @@ export async function sendQuoteStatusEmail(
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: `${status.emoji} ${status.title} - Quote #${quoteId}`,
@@ -416,7 +422,7 @@ export async function sendRepAssignmentEmail(
   `;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: `Meet ${repName}, Your Dedicated Account Manager - Garment Decor`,
