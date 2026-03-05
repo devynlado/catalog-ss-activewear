@@ -40,7 +40,7 @@ jobs:
           echo "Starting $sync_type sync..."
           
           # Use a longer timeout for full sync
-          response=$(curl -s -w "\n%{http_code}" -X POST \
+          response=$(curl -s -L --post308 -w "\n%{http_code}" -X POST \
             --max-time 7200 \
             "${{ secrets.SITE_URL }}/api/sync?type=$sync_type" \
             -H "Content-Type: application/json" \
