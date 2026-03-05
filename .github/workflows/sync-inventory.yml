@@ -21,7 +21,8 @@ jobs:
         run: |
           echo "Starting inventory sync..."
           
-          response=$(curl -s -L --post308 -w "\n%{http_code}" -X POST \
+          response=$(curl -s -L -w "\n%{http_code}" \
+            -X POST \
             "${{ secrets.SITE_URL }}/api/sync?type=inventory" \
             -H "Content-Type: application/json" \
             -H "x-api-key: ${{ secrets.SYNC_API_KEY }}")
