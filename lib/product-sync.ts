@@ -651,6 +651,9 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       batches.push(styleIds.slice(i, i + BATCH_SIZE));
     }
     
+    const allSkuUpdates: { sku: string; qty: number; availability: string }[] = [];
+    const colorAvailability = new Map<string, boolean>();
+
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex += MAX_PARALLEL_BATCHES) {
       const batchGroup = batches.slice(batchIndex, batchIndex + MAX_PARALLEL_BATCHES);
       
@@ -658,25 +661,13 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
         try {
           const skuData = await fetchSkuData(batch);
           
-          // Batch update inventory
           for (const sku of skuData) {
-            const { error } = await (supabase as any)
-              .from('product_skus')
-              .update({
-                qty: sku.qty || 0,
-                availability: (sku.qty || 0) > 0 ? 'in_stock' : 'out_of_stock',
-                last_inventory_sync: new Date().toISOString(),
-              })
-              .eq('sku', sku.sku);
+            allSkuUpdates.push({
+              sku: sku.sku,
+              qty: sku.qty || 0,
+              availability: (sku.qty || 0) > 0 ? 'in_stock' : 'out_of_stock',
+            });
             
-            if (!error) {
-              skusProcessed++;
-            }
-          }
-          
-          // Also update color-level availability
-          const colorAvailability = new Map<string, boolean>();
-          for (const sku of skuData) {
             const colorId = `${sku.styleID}-${sku.colorCode}`;
             if (!colorAvailability.has(colorId)) {
               colorAvailability.set(colorId, false);
@@ -684,15 +675,6 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
             if ((sku.qty || 0) > 0) {
               colorAvailability.set(colorId, true);
             }
-          }
-          
-          for (const [colorId, hasStock] of colorAvailability) {
-            await (supabase as any)
-              .from('product_colors')
-              .update({
-                availability: hasStock ? 'in_stock' : 'out_of_stock',
-              })
-              .eq('id', colorId);
           }
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -702,7 +684,39 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       }));
       
       const progress = Math.min((batchIndex + MAX_PARALLEL_BATCHES) * BATCH_SIZE, styleIds.length);
-      console.log(`[Sync] Inventory progress: ${progress}/${styleIds.length} styles`);
+      console.log(`[Sync] Fetched inventory: ${progress}/${styleIds.length} styles`);
+    }
+
+    console.log(`[Sync] Updating ${allSkuUpdates.length} SKUs and ${colorAvailability.size} colors...`);
+    const now = new Date().toISOString();
+    const PARALLEL_CHUNK = 100;
+
+    for (let i = 0; i < allSkuUpdates.length; i += PARALLEL_CHUNK) {
+      const chunk = allSkuUpdates.slice(i, i + PARALLEL_CHUNK);
+      await Promise.all(chunk.map(update =>
+        (supabase as any)
+          .from('product_skus')
+          .update({
+            qty: update.qty,
+            availability: update.availability,
+            last_inventory_sync: now,
+          })
+          .eq('sku', update.sku)
+      ));
+      skusProcessed += chunk.length;
+    }
+
+    const colorEntries = Array.from(colorAvailability.entries());
+    for (let i = 0; i < colorEntries.length; i += PARALLEL_CHUNK) {
+      const chunk = colorEntries.slice(i, i + PARALLEL_CHUNK);
+      await Promise.all(chunk.map(([colorId, hasStock]) =>
+        (supabase as any)
+          .from('product_colors')
+          .update({
+            availability: hasStock ? 'in_stock' : 'out_of_stock',
+          })
+          .eq('id', colorId)
+      ));
     }
     
     await logSyncComplete(logId, { products: 0, colors: 0, skus: skusProcessed });
