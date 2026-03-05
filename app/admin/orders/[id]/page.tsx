@@ -59,11 +59,9 @@ export default async function OrderDetailPage({
     .eq('type', 'refund')
     .eq('status', 'succeeded')
     .order('created_at', { ascending: false });
-  const totalRefunded = (refundPayments ?? []).reduce(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (sum: number, p: any) => sum + Number(p.amount), 0
-  );
-  const lastRefundedAt = (refundPayments ?? [])[0]?.created_at ?? null;
+  const refunds = (refundPayments ?? []) as { amount: number; created_at?: string }[];
+  const totalRefunded = refunds.reduce((sum, p) => sum + Number(p.amount), 0);
+  const lastRefundedAt = refunds[0]?.created_at ?? null;
   const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
