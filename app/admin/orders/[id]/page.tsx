@@ -51,17 +51,19 @@ export default async function OrderDetailPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = Array.isArray(order.items) ? order.items : [];
 
-  // Fetch total refunded for this order
+  // Fetch refund payments for this order (amount + created_at for activity log backfill)
   const { data: refundPayments } = await supabase
     .from('payments')
-    .select('amount')
+    .select('amount, created_at')
     .eq('order_id', order.id)
     .eq('type', 'refund')
-    .eq('status', 'succeeded');
+    .eq('status', 'succeeded')
+    .order('created_at', { ascending: false });
   const totalRefunded = (refundPayments ?? []).reduce(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (sum: number, p: any) => sum + Number(p.amount), 0
   );
+  const lastRefundedAt = (refundPayments ?? [])[0]?.created_at ?? null;
   const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -414,7 +416,22 @@ export default async function OrderDetailPage({
             </div>
 
             {/* Activity Log */}
-            <OrderActivityLog orderId={order.id} />
+            <OrderActivityLog
+              orderId={order.id}
+              orderCreatedAt={order.created_at}
+              orderSummary={{
+                created_at: order.created_at,
+                status: order.status,
+                payment_status: order.payment_status,
+                paid_at: order.paid_at ?? null,
+                shipped_at: order.shipped_at ?? null,
+                tracking_number: order.tracking_number ?? null,
+                carrier: order.carrier ?? null,
+                order_number: order.order_number ?? null,
+                refunded_at: lastRefundedAt,
+                total_refunded: totalRefunded > 0 ? totalRefunded : undefined,
+              }}
+            />
           </div>
         </div>
       </div>

@@ -164,7 +164,7 @@ export function OrderCard({ order }: { order: Order }) {
             <Badge variant={status.variant} size="sm">{status.label}</Badge>
           </div>
           <span className="text-lg font-semibold text-navy-800">
-            ${order.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+            ${typeof order.total === 'number' ? order.total.toFixed(2) : (order.total ?? 0).toFixed(2)}
           </span>
         </div>
 

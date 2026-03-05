@@ -14,10 +14,21 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-type PageProps = { searchParams: Promise<{ category?: string; q?: string }> };
+const ITEMS_PER_PAGE = 9;
+
+type PageProps = { searchParams: Promise<{ category?: string; q?: string; page?: string }> };
+
+function buildQueryString(params: { category?: string; q?: string; page?: number }) {
+  const sp = new URLSearchParams();
+  if (params.category?.trim()) sp.set('category', params.category.trim());
+  if (params.q?.trim()) sp.set('q', params.q.trim());
+  if (params.page != null && params.page > 1) sp.set('page', String(params.page));
+  const s = sp.toString();
+  return s ? `?${s}` : '';
+}
 
 export default async function PortfolioPage({ searchParams }: PageProps) {
-  const { category: categorySlug, q: searchQ } = await searchParams;
+  const { category: categorySlug, q: searchQ, page: pageParam } = await searchParams;
   const hasSearch = searchQ != null && searchQ.trim().length > 0;
 
   const [projects, categories] = await Promise.all([
@@ -32,10 +43,20 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
       ? projects.filter((p) => p.category?.slug === categorySlug.trim())
       : projects;
 
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const rawPage = Math.max(1, parseInt(String(pageParam ?? '1'), 10) || 1);
+  const currentPage = Math.min(rawPage, totalPages);
+  const pageItems = filtered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const categoryOptions = [
     { slug: '', title: 'All' },
     ...categories.map((c) => ({ slug: c.slug, title: c.title })),
   ];
+  const baseQuery = { category: categorySlug ?? undefined, q: searchQ ?? undefined };
 
   return (
     <div className="min-h-screen bg-white">
@@ -89,10 +110,14 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
               const isActive =
                 (cat.slug === '' && !categorySlug) ||
                 (cat.slug !== '' && categorySlug === cat.slug);
+              const href =
+                cat.slug === ''
+                  ? buildQueryString({ q: baseQuery.q, page: 1 })
+                  : buildQueryString({ ...baseQuery, category: cat.slug, page: 1 });
               return (
                 <Link
                   key={cat.slug || 'all'}
-                  href={cat.slug ? `/portfolio?category=${cat.slug}` : '/portfolio'}
+                  href={href || '/portfolio'}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-navy-700 text-white hover:bg-navy-800'
@@ -129,8 +154,9 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
               )}
             </div>
           ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((project) => {
+            <>
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {pageItems.map((project) => {
                 const imageUrl =
                   project.featuredImage || (project.gallery && project.gallery[0]) || null;
                 const decorationLabel = getDecorationTitle(project.decoration);
@@ -174,7 +200,34 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
                   </Link>
                 );
               })}
-            </div>
+              </div>
+              {/* Pagination - numbered page buttons when more than one page */}
+              {totalPages > 1 && (
+                <nav
+                  className="mt-12 flex flex-wrap items-center justify-center gap-2"
+                  aria-label="Portfolio pagination"
+                >
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    const isCurrent = p === currentPage;
+                    const href = buildQueryString({ ...baseQuery, page: p });
+                    return (
+                      <Link
+                        key={p}
+                        href={href || '/portfolio'}
+                        className={`min-w-[2.25rem] rounded-lg px-3 py-2 text-center text-sm font-medium transition-colors ${
+                          isCurrent
+                            ? 'bg-navy-800 text-white hover:bg-navy-900'
+                            : 'bg-stone-100 text-slate-600 hover:bg-stone-200'
+                        }`}
+                        aria-current={isCurrent ? 'page' : undefined}
+                      >
+                        {p}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              )}
+            </>
           )}
         </div>
       </section>

@@ -14,6 +14,8 @@ import {
   Plus,
   CheckCircle,
   XCircle,
+  Mail,
+  AlertCircle,
 } from 'lucide-react';
 
 interface Activity {
@@ -27,8 +29,28 @@ interface Activity {
   } | null;
 }
 
+/** Order summary used to backfill missing activity logs (e.g. paid, confirmed, shipped, refunded) for legacy orders */
+export interface OrderActivityLogOrderSummary {
+  created_at: string;
+  status: string;
+  payment_status: string;
+  paid_at?: string | null;
+  shipped_at?: string | null;
+  tracking_number?: string | null;
+  carrier?: string | null;
+  order_number?: string | null;
+  /** When payment_status is refunded: date of the (latest) refund for synthetic log */
+  refunded_at?: string | null;
+  /** Total amount refunded; used for synthetic refund activity text */
+  total_refunded?: number;
+}
+
 interface OrderActivityLogProps {
   orderId: string;
+  /** When provided and there are no activities, show a fallback "Order placed" line for legacy orders */
+  orderCreatedAt?: string;
+  /** When provided, synthetic activities are added for paid, confirmed, shipped so legacy orders show full history */
+  orderSummary?: OrderActivityLogOrderSummary | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -52,9 +74,152 @@ const activityIcons: Record<string, React.ReactNode> = {
   refunded: <RotateCcw className="h-4 w-4" />,
   note: <MessageSquare className="h-4 w-4" />,
   cancelled: <Ban className="h-4 w-4" />,
+  email_sent: <Mail className="h-4 w-4" />,
+  system_error: <AlertCircle className="h-4 w-4" />,
 };
 
-export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
+function normalizeDetails(details: unknown): Record<string, unknown> {
+  if (details && typeof details === 'object' && !Array.isArray(details)) {
+    return details as Record<string, unknown>;
+  }
+  if (typeof details === 'string') {
+    try {
+      const parsed = JSON.parse(details) as Record<string, unknown>;
+      return parsed ?? {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+/** Format as "Mar 3, 2026 10:20 am" for consistent server/client and full date+time */
+function formatActivityTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+/** Synthetic activity for backfilling when DB has no row */
+interface SyntheticActivity extends Activity {
+  id: string;
+  _synthetic?: true;
+}
+
+function buildMergedActivities(
+  activities: Activity[],
+  orderSummary: OrderActivityLogOrderSummary | null | undefined
+): (Activity | SyntheticActivity)[] {
+  if (!orderSummary) return activities;
+
+  const hasType = (type: string) => activities.some((a) => a.activity_type === type);
+  const hasStatusChangeTo = (to: string) =>
+    activities.some(
+      (a) => a.activity_type === 'status_change' && (a.details as Record<string, unknown>)?.to === to
+    );
+  const hasShipped =
+    hasType('shipped') || hasStatusChangeTo('shipped');
+
+  const synthetic: SyntheticActivity[] = [];
+
+  if (!hasType('created') && orderSummary.created_at) {
+    synthetic.push({
+      id: 'synthetic-created',
+      activity_type: 'created',
+      details: orderSummary.order_number ? { order_number: orderSummary.order_number } : {},
+      created_at: orderSummary.created_at,
+      user: null,
+      _synthetic: true,
+    });
+  }
+
+  if (
+    (orderSummary.payment_status === 'paid' || orderSummary.payment_status === 'refunded') &&
+    !hasType('payment_received') &&
+    orderSummary.paid_at
+  ) {
+    synthetic.push({
+      id: 'synthetic-paid',
+      activity_type: 'payment_received',
+      details: { amount: null, payment_method: 'Stripe' },
+      created_at: orderSummary.paid_at,
+      user: null,
+      _synthetic: true,
+    });
+  }
+
+  if (
+    orderSummary.status !== 'pending' &&
+    orderSummary.status !== 'cancelled' &&
+    !hasType('confirmed') &&
+    (orderSummary.paid_at || orderSummary.created_at)
+  ) {
+    const at = orderSummary.paid_at || orderSummary.created_at;
+    if (at) {
+      synthetic.push({
+        id: 'synthetic-confirmed',
+        activity_type: 'confirmed',
+        details: {},
+        created_at: at,
+        user: null,
+        _synthetic: true,
+      });
+    }
+  }
+
+  if (
+    orderSummary.status === 'shipped' &&
+    orderSummary.shipped_at &&
+    !hasShipped
+  ) {
+    synthetic.push({
+      id: 'synthetic-shipped',
+      activity_type: 'status_change',
+      details: {
+        from: 'confirmed',
+        to: 'shipped',
+        tracking_number: orderSummary.tracking_number,
+        carrier: orderSummary.carrier,
+      },
+      created_at: orderSummary.shipped_at,
+      user: null,
+      _synthetic: true,
+    });
+  }
+
+  if (
+    orderSummary.payment_status === 'refunded' &&
+    !hasType('refunded') &&
+    orderSummary.refunded_at
+  ) {
+    const at = orderSummary.refunded_at;
+    const amount = orderSummary.total_refunded ?? 0;
+    synthetic.push({
+      id: 'synthetic-refunded',
+      activity_type: 'refunded',
+      details: {
+        amount,
+        full_refund: true,
+      },
+      created_at: at,
+      user: null,
+      _synthetic: true,
+    });
+  }
+
+  const merged = [...activities, ...synthetic].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  return merged;
+}
+
+export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary }: OrderActivityLogProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -70,7 +235,13 @@ export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
       const response = await fetch(`/api/admin/orders/${orderId}/activities`);
       if (response.ok) {
         const data = await response.json();
-        setActivities(data.activities || []);
+        const raw = data.activities || [];
+        setActivities(
+          raw.map((a: Activity & { details?: unknown }) => ({
+            ...a,
+            details: normalizeDetails(a.details),
+          }))
+        );
       }
     } catch (error) {
       console.error('Failed to fetch activities:', error);
@@ -78,6 +249,8 @@ export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
       setIsLoading(false);
     }
   };
+
+  const mergedActivities = buildMergedActivities(activities, orderSummary);
 
   const handleAddNote = async () => {
     if (!newNote.trim() || isSubmitting) return;
@@ -95,7 +268,11 @@ export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setActivities([data.activity, ...activities]);
+        const activity = data.activity as Activity & { details?: unknown };
+        setActivities([
+          { ...activity, details: normalizeDetails(activity.details) },
+          ...activities,
+        ]);
         setNewNote('');
         setShowNoteForm(false);
       }
@@ -106,62 +283,93 @@ export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
     }
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getActivityDescription = (activity: Activity) => {
+  const getActivityDescription = (activity: Activity | SyntheticActivity, summary?: OrderActivityLogOrderSummary | null) => {
     const d = activity.details;
     switch (activity.activity_type) {
       case 'created':
-        return 'Order created';
+        return d.order_number
+          ? `Order placed (${d.order_number as string})`
+          : 'Order placed';
       case 'payment_processing':
-        return 'Payment processing started';
+        return 'Payment processing started (customer completing payment via Stripe)';
       case 'payment_received':
-        return d.amount ? `Payment of $${Number(d.amount).toFixed(2)} received` : 'Payment received';
+        if (d.amount != null) {
+          return `Payment made via Stripe ($${Number(d.amount).toFixed(2)})`;
+        }
+        return 'Payment made via Stripe — customer has paid for the order';
       case 'payment_failed':
-        return d.error_message ? `Payment failed: ${d.error_message}` : 'Payment failed';
+        return d.error_message
+          ? `Order payment failed: ${d.error_message as string}`
+          : 'Order payment failed — there was an error in the customer\'s payment process';
       case 'confirmed':
         return 'Order confirmed';
-      case 'status_change':
+      case 'status_change': {
+        const from = statusLabels[d.from as string] || String(d.from);
+        const to = statusLabels[d.to as string] || String(d.to);
+        const tracking = (d.tracking_number as string) || summary?.tracking_number;
+        const carrier = (d.carrier as string) || summary?.carrier;
+        if (d.to === 'shipped' && (tracking || carrier)) {
+          const carrierLabel = carrier ? String(carrier).toUpperCase() : 'Carrier';
+          return (
+            <span>
+              Order status changed from <span className="font-medium">{from}</span> to{' '}
+              <span className="font-medium">{to}</span>.{' '}
+              {tracking ? (
+                <>Order shipped with {carrierLabel}, tracking number {tracking}</>
+              ) : (
+                <>Order shipped with {carrierLabel}</>
+              )}
+            </span>
+          );
+        }
         return (
           <span>
-            Status changed from{' '}
-            <span className="font-medium">{statusLabels[d.from as string] || String(d.from)}</span>
-            {' '}to{' '}
-            <span className="font-medium">{statusLabels[d.to as string] || String(d.to)}</span>
+            Order status changed from <span className="font-medium">{from}</span> to{' '}
+            <span className="font-medium">{to}</span>
           </span>
         );
+      }
       case 'shipped':
-        return 'Order shipped';
+        return d.tracking_number
+          ? `Order shipped with ${(d.carrier as string) || 'carrier'}, tracking ${d.tracking_number as string}`
+          : 'Order shipped';
       case 'delivered':
         return 'Order delivered';
       case 'refunded':
-        return d.amount
-          ? `Refund of $${Number(d.amount).toFixed(2)} processed${d.full_refund ? ' (full)' : ' (partial)'}`
+        return d.amount != null
+          ? `Refund of $${Number(d.amount).toFixed(2)} processed${d.full_refund ? ' (full refund)' : ' (partial refund)'}`
           : 'Refund processed';
       case 'note':
         return (
           <span>
-            Note: <span className="text-slate-600">&ldquo;{d.content as string}&rdquo;</span>
+            Internal note: <span className="text-slate-600">&ldquo;{d.content as string}&rdquo;</span>
           </span>
         );
       case 'cancelled':
         return 'Order cancelled';
+      case 'email_sent': {
+        const emailType = d.email_type as string;
+        const label =
+          emailType === 'order_confirmation'
+            ? 'Order confirmation email sent to customer'
+            : emailType === 'order_shipped'
+              ? 'Shipping / tracking email sent to customer (tracking number and shipment info)'
+              : emailType === 'refund_confirmation'
+                ? 'Refund confirmation email sent to customer'
+                : emailType === 'package_order_confirmation'
+                  ? 'Package order confirmation email sent to customer'
+                  : 'Email sent to customer';
+        const recipient = d.recipient ? ` (${d.recipient as string})` : '';
+        return `${label}${recipient}`;
+      }
+      case 'system_error':
+        return (
+          <span>
+            System error{d.error_message ? `: ${d.error_message as string}` : ''}
+          </span>
+        );
       default:
-        return activity.activity_type.replace(/_/g, ' ');
+        return String(activity.activity_type).replace(/_/g, ' ');
     }
   };
 
@@ -209,14 +417,14 @@ export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
         <div className="flex items-center justify-center py-8">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
         </div>
-      ) : activities.length === 0 ? (
+      ) : mergedActivities.length === 0 ? (
         <div className="py-8 text-center">
           <Clock className="mx-auto h-8 w-8 text-stone-300" />
           <p className="mt-2 text-sm text-slate-500">No activity yet</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {activities.map((activity) => (
+          {mergedActivities.map((activity) => (
             <div key={activity.id} className="flex gap-3">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-slate-500">
                 {activityIcons[activity.activity_type] || <FileText className="h-4 w-4" />}
@@ -224,13 +432,13 @@ export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
               <div className="flex-1 pt-0.5">
                 <p className="text-sm text-slate-700">
                   {activity.user && (
-                    <span className="font-medium">{activity.user.full_name || 'System'} </span>
+                    <span className="font-medium">{activity.user.full_name || 'System'} · </span>
                   )}
-                  {!activity.user && <span className="font-medium">System </span>}
-                  {getActivityDescription(activity)}
+                  {!activity.user && <span className="font-medium">System · </span>}
+                  {getActivityDescription(activity, orderSummary)}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  {formatTime(activity.created_at)}
+                  {formatActivityTime(activity.created_at)}
                 </p>
               </div>
             </div>

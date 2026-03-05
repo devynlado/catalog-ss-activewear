@@ -102,9 +102,14 @@ export async function PATCH(
       updates.delivered_at = new Date().toISOString();
     }
 
+    const statusChangeDetails: Record<string, unknown> = { from: order.status, to: status };
+    if (status === 'shipped') {
+      statusChangeDetails.tracking_number = tracking_number || order.tracking_number;
+      statusChangeDetails.carrier = carrier || order.carrier;
+    }
     activities.push({
       activity_type: 'status_change',
-      details: { from: order.status, to: status },
+      details: statusChangeDetails,
     });
   }
 
@@ -179,13 +184,27 @@ export async function PATCH(
 
       const customerEmail = updatedOrder.customer_email;
       if (customerEmail) {
-        await resend.emails.send({
+        const { error: sendErr } = await resend.emails.send({
           from: 'Garment Decor <noreply@garmentdecor.com>',
           to: customerEmail,
           subject: getOrderShippedSubject(updatedOrder.order_number),
           html: generateOrderShippedHtml(emailProps),
           text: generateOrderShippedText(emailProps),
         });
+        if (!sendErr) {
+          await serviceSupabase.from('order_activities').insert({
+            order_id: params.id,
+            user_id: user.id,
+            activity_type: 'email_sent',
+            details: {
+              email_type: 'order_shipped',
+              subject: getOrderShippedSubject(updatedOrder.order_number),
+              recipient: customerEmail,
+              tracking_number: finalTrackingNumber,
+              carrier: finalCarrier,
+            },
+          });
+        }
       }
     } catch (emailError) {
       console.error('Failed to send shipped email:', emailError);

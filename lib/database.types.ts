@@ -830,7 +830,7 @@ export interface Database {
           id: string;
           order_id: string;
           user_id: string | null;
-          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled' | 'email_sent' | 'system_error';
           details: Json;
           created_at: string;
         };
@@ -838,7 +838,7 @@ export interface Database {
           id?: string;
           order_id: string;
           user_id?: string | null;
-          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled' | 'email_sent' | 'system_error';
           details?: Json;
           created_at?: string;
         };
@@ -846,7 +846,7 @@ export interface Database {
           id?: string;
           order_id?: string;
           user_id?: string | null;
-          activity_type?: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          activity_type?: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled' | 'email_sent' | 'system_error';
           details?: Json;
           created_at?: string;
         };
