@@ -4,7 +4,8 @@ import {
   syncInventoryOnly, 
   syncFullCatalog,
   syncCategoriesOnly,
-  getLatestSyncStatus 
+  getLatestSyncStatus,
+  getActiveProductCount,
 } from '@/lib/product-sync';
 
 /**
@@ -62,6 +63,14 @@ export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const syncType = searchParams.get('type') || 'inventory';
   const resumeId = searchParams.get('resume');
+  const offsetParam = searchParams.get('offset');
+  const limitParam = searchParams.get('limit');
+  
+  // Support GET /api/sync?type=inventory&count=true to get total product count
+  if (searchParams.get('count') === 'true') {
+    const total = await getActiveProductCount();
+    return NextResponse.json({ totalProducts: total });
+  }
   
   if (resumeId) {
     console.log(`[Sync API] Resuming ${syncType} sync from log ID ${resumeId}...`);
@@ -87,7 +96,11 @@ export async function POST(request: NextRequest) {
         break;
       case 'inventory':
       default:
-        result = await syncInventoryOnly();
+        if (offsetParam !== null && limitParam !== null) {
+          result = await syncInventoryOnly(parseInt(offsetParam, 10), parseInt(limitParam, 10));
+        } else {
+          result = await syncInventoryOnly();
+        }
         break;
     }
     
@@ -98,6 +111,10 @@ export async function POST(request: NextRequest) {
       skusProcessed: result.skusProcessed,
       duration: `${Math.round(result.duration / 1000)}s`,
     };
+    
+    if ('totalProducts' in result) {
+      responseStats.totalProducts = result.totalProducts;
+    }
     
     // Include logId for full sync so user can resume if needed
     if (logId !== undefined) {

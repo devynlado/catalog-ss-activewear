@@ -602,34 +602,58 @@ export async function syncPopularProducts(): Promise<SyncResult> {
 }
 
 /**
- * Sync inventory only (qty and availability)
- * Faster daily sync - only updates inventory columns
+ * Get total count of active products (for batch orchestration)
  */
-export async function syncInventoryOnly(): Promise<SyncResult> {
+export async function getActiveProductCount(): Promise<number> {
+  const supabase = createServerSupabaseClient();
+  const { count, error } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true);
+  
+  if (error) throw new Error(`Failed to count active products: ${error.message}`);
+  return count || 0;
+}
+
+/**
+ * Sync inventory only (qty and availability)
+ * Supports offset/limit for chunked processing within serverless time limits.
+ * When called without offset/limit, processes all products (for environments with longer timeouts).
+ */
+export async function syncInventoryOnly(offset?: number, limit?: number): Promise<SyncResult & { totalProducts: number }> {
   const startTime = Date.now();
-  const logId = await logSyncStart('inventory');
+  const isChunked = offset !== undefined && limit !== undefined;
+  const logId = isChunked ? -1 : await logSyncStart('inventory');
   const errors: string[] = [];
   
   let skusProcessed = 0;
   
-  console.log('[Sync] Starting inventory-only sync...');
+  console.log(`[Sync] Starting inventory sync${isChunked ? ` (offset=${offset}, limit=${limit})` : ''}...`);
   
   try {
     const supabase = createServerSupabaseClient();
     
-    // Get all active style IDs from our cache
-    const { data: activeProducts, error: fetchError } = await supabase
+    let query = supabase
       .from('products')
       .select('style_id')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .order('style_id', { ascending: true });
+    
+    if (isChunked) {
+      query = query.range(offset!, offset! + limit! - 1);
+    }
+    
+    const { data: activeProducts, error: fetchError } = await query;
     
     if (fetchError) {
       throw new Error(`Failed to fetch active products: ${fetchError.message}`);
     }
     
     const products = activeProducts as Array<{ style_id: number }> | null;
+    const totalProducts = isChunked ? await getActiveProductCount() : (products?.length || 0);
+    
     if (!products || products.length === 0) {
-      console.log('[Sync] No active products to sync inventory for');
+      console.log('[Sync] No products in this batch');
       return {
         success: true,
         syncType: 'inventory',
@@ -639,13 +663,14 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
         categoriesLinked: 0,
         errors: [],
         duration: Date.now() - startTime,
+        totalProducts,
       };
     }
     
     const styleIds = products.map(p => p.style_id);
     console.log(`[Sync] Syncing inventory for ${styleIds.length} products`);
     
-    // Process in batches
+    // Fetch all SKU data from SS API
     const batches: number[][] = [];
     for (let i = 0; i < styleIds.length; i += BATCH_SIZE) {
       batches.push(styleIds.slice(i, i + BATCH_SIZE));
@@ -682,11 +707,9 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
           console.error(`[Sync] Inventory batch error:`, error);
         }
       }));
-      
-      const progress = Math.min((batchIndex + MAX_PARALLEL_BATCHES) * BATCH_SIZE, styleIds.length);
-      console.log(`[Sync] Fetched inventory: ${progress}/${styleIds.length} styles`);
     }
 
+    // Batch update Supabase in parallel chunks
     console.log(`[Sync] Updating ${allSkuUpdates.length} SKUs and ${colorAvailability.size} colors...`);
     const now = new Date().toISOString();
     const PARALLEL_CHUNK = 100;
@@ -719,25 +742,29 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       ));
     }
     
-    await logSyncComplete(logId, { products: 0, colors: 0, skus: skusProcessed });
+    if (!isChunked) {
+      await logSyncComplete(logId, { products: 0, colors: 0, skus: skusProcessed });
+    }
     
     const duration = Date.now() - startTime;
-    console.log(`[Sync] Inventory sync complete in ${Math.round(duration / 1000)}s`);
-    console.log(`[Sync] SKUs updated: ${skusProcessed}`);
+    console.log(`[Sync] Inventory sync complete in ${Math.round(duration / 1000)}s — ${skusProcessed} SKUs updated`);
     
     return {
       success: errors.length === 0,
       syncType: 'inventory',
-      productsProcessed: 0,
-      colorsProcessed: 0,
+      productsProcessed: styleIds.length,
+      colorsProcessed: colorEntries.length,
       skusProcessed,
       categoriesLinked: 0,
       errors,
       duration,
+      totalProducts,
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
-    await logSyncFailed(logId, errMsg);
+    if (!isChunked) {
+      await logSyncFailed(logId, errMsg);
+    }
     
     return {
       success: false,
@@ -748,6 +775,7 @@ export async function syncInventoryOnly(): Promise<SyncResult> {
       categoriesLinked: 0,
       errors: [errMsg],
       duration: Date.now() - startTime,
+      totalProducts: 0,
     };
   }
 }
