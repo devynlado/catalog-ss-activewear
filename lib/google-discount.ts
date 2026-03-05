@@ -35,6 +35,8 @@ export interface GoogleDiscount {
   expiresAt: number;      // When discount expires (now + 48h for persistence)
   jwtExp: number;         // Original JWT expiration
   merchantId: string;
+  styleId?: number;        // Product style ID — enables lookup on return visits without URL params
+  discountPercent?: number; // Proportional discount (0–1) computed on initial landing, persisted for reuse
 }
 
 // Validation result
