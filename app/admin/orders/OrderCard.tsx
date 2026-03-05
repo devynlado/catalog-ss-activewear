@@ -164,7 +164,7 @@ export function OrderCard({ order }: { order: Order }) {
             <Badge variant={status.variant} size="sm">{status.label}</Badge>
           </div>
           <span className="text-lg font-semibold text-navy-800">
-            ${typeof order.total === 'number' ? order.total.toFixed(2) : (order.total ?? 0).toFixed(2)}
+            ${Number(order.total ?? 0).toFixed(2)}
           </span>
         </div>
 
