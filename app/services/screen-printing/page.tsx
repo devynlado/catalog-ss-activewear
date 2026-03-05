@@ -284,6 +284,38 @@ export default function ScreenPrintingPage() {
         items={portfolioItems}
       />
 
+      {/* Most Popular Blank for Screen Printing */}
+      <section className="py-12 lg:py-16 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-brand-200 bg-gradient-to-r from-brand-50 to-white overflow-hidden">
+            <div className="grid md:grid-cols-5 gap-0">
+              <div className="md:col-span-2 relative h-48 md:h-auto">
+                <img
+                  src="/images/services/screen-printing/custom-screen-printing-for-la-apparel-1801gd-elevate-streetwear-style.webp"
+                  alt="Custom screen printing on LA Apparel 1801GD"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="md:col-span-3 p-6 lg:p-8 flex flex-col justify-center">
+                <span className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-2">Most Popular Blank for Screen Printing</span>
+                <h3 className="text-xl font-bold text-navy-800 mb-2">Los Angeles Apparel 1801GD</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Our #1 selling blank. 6.5oz garment-dyed heavyweight cotton made in LA — the gold standard for premium screen printing. Dense fabric, zero bleed-through, incredible hand-feel.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/blanks/los-angeles-apparel-1801gd" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700">
+                    Customize the 1801GD <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                  <Link href="/product/los-angeles-apparel-1801gd" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-800">
+                    Buy blanks <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Tips */}
       <TipsSection
         title="5 Tips for a Successful Screen Print Order"

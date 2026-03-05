@@ -21,6 +21,7 @@ interface DiscountStore {
   addDiscount: (discount: GoogleDiscount) => void;
   getDiscount: (offerId: string) => GoogleDiscount | null;
   getDiscountByStyleId: (styleId: number | string) => GoogleDiscount | null;
+  getDiscountBySlug: (slug: string) => GoogleDiscount | null;
   removeDiscount: (offerId: string) => void;
   clearExpired: () => void;
   clearAll: () => void;
@@ -72,13 +73,21 @@ export const useDiscountStore = create<DiscountStore>()(
       discounts: {},
       
       addDiscount: (discount: GoogleDiscount) => {
-        set((state) => ({
-          discounts: {
-            ...state.discounts,
-            [discount.offerId]: discount,
-          },
-        }));
-        // Sync to cookie for persistence
+        set((state) => {
+          // Evict stale entries for the same product before adding the new one.
+          // This prevents multiple discounts accumulating under different offerIds
+          // (e.g., different SKUs of the same style) which causes find() to pick
+          // the wrong one.
+          const cleaned: Record<string, GoogleDiscount> = {};
+          Object.entries(state.discounts).forEach(([id, existing]) => {
+            const sameProduct =
+              (discount.styleId && existing.styleId && existing.styleId === discount.styleId) ||
+              (discount.productSlug && existing.productSlug && existing.productSlug === discount.productSlug);
+            if (sameProduct && id !== discount.offerId) return; // evict
+            cleaned[id] = existing;
+          });
+          return { discounts: { ...cleaned, [discount.offerId]: discount } };
+        });
         get().syncToCookie();
       },
       
@@ -101,16 +110,30 @@ export const useDiscountStore = create<DiscountStore>()(
         
         // Look for a discount where offerId matches styleId or contains styleId
         const discount = discounts.find((d) => {
-          // Exact match
           if (d.offerId === styleIdStr) return true;
-          // Offer ID might be SKU format: "STYLE-COLOR-SIZE" or just the style ID
           if (d.offerId.startsWith(styleIdStr)) return true;
+          // Also match on the stored styleId field (enriched on first landing)
+          if (d.styleId !== undefined && String(d.styleId) === styleIdStr) return true;
           return false;
         });
         
         if (!discount) return null;
         
         // Check if discount is still valid
+        if (!isDiscountValid(discount)) {
+          get().removeDiscount(discount.offerId);
+          return null;
+        }
+        
+        return discount;
+      },
+      
+      getDiscountBySlug: (slug: string) => {
+        const discounts = Object.values(get().discounts);
+        const discount = discounts.find((d) => d.productSlug === slug);
+        
+        if (!discount) return null;
+        
         if (!isDiscountValid(discount)) {
           get().removeDiscount(discount.offerId);
           return null;
