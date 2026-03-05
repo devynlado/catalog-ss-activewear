@@ -1,38 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { getServerProfile } from '@/lib/supabase-server';
-import { stripe, toStripeCents } from '@/lib/stripe';
-import { sendRefundConfirmationEmail } from '@/lib/emails/refund-confirmation';
+import { stripe } from '@/lib/stripe';
+import { toStripeCents } from '@/lib/stripe-utils';
+import {
+  generateRefundConfirmationHtml,
+  generateRefundConfirmationText,
+  getRefundConfirmationSubject,
+  type RefundConfirmationProps,
+} from '@/lib/emails/refund-confirmation';
+import { Resend } from 'resend';
 
-async function requireAdmin() {
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+type OrderItem = {
+  type?: string;
+  sku?: string;
+  styleId?: number;
+  styleName?: string;
+  brandName?: string;
+  colorName?: string;
+  sizeName?: string;
+  quantity?: number;
+  unitPrice?: number;
+  discountedPrice?: number;
+};
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: orderId } = await params;
   const { profile } = await getServerProfile();
+
   if (!profile || profile.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  return null;
-}
 
-/** POST /api/admin/orders/[id]/refund – process full or partial refund */
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const unauth = await requireAdmin();
-  if (unauth) return unauth;
+  const supabase = getSupabase();
 
-  const { id: orderId } = await context.params;
-  if (!orderId) {
-    return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
-  }
-
-  let body: { fullRefund?: boolean; lineItemIndices?: number[]; reason?: string; internalNote?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const supabase = createServerSupabaseClient();
+  const body = await request.json().catch(() => ({}));
+  const fullOrder = body.fullOrder === true;
+  const lineIndices = Array.isArray(body.lineIndices) ? body.lineIndices as number[] : [];
+  const reason = typeof body.reason === 'string' ? body.reason : undefined;
+  const note = typeof body.note === 'string' ? body.note : undefined;
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -44,138 +64,157 @@ export async function POST(
     return NextResponse.json({ error: 'Order not found' }, { status: 404 });
   }
 
-  const chargeId = (order as { stripe_charge_id: string | null }).stripe_charge_id;
-  if (!chargeId) {
+  if (!order.stripe_charge_id) {
     return NextResponse.json(
-      { error: 'This order has no Stripe charge (e.g. $0 order). Refunds cannot be processed via Stripe.' },
+      { error: 'Order has no charge to refund' },
       { status: 400 }
     );
   }
 
-  if ((order as { payment_status: string }).payment_status === 'refunded') {
-    return NextResponse.json({ error: 'Order is already fully refunded' }, { status: 400 });
+  if (order.payment_status === 'refunded') {
+    return NextResponse.json(
+      { error: 'Order is already fully refunded' },
+      { status: 400 }
+    );
   }
 
   const { data: refundPayments } = await supabase
     .from('payments')
     .select('amount')
     .eq('order_id', orderId)
-    .eq('type', 'refund');
+    .eq('type', 'refund')
+    .eq('status', 'succeeded');
 
-  const totalRefunded = (refundPayments ?? []).reduce((sum, p) => sum + Number((p as { amount: number }).amount), 0);
-  const orderTotal = Number((order as { total: number }).total);
-  const maxRefundable = Math.round((orderTotal - totalRefunded) * 100) / 100;
+  const totalRefunded = (refundPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
+  const maxRefundable = Number(order.total) - totalRefunded;
 
   if (maxRefundable <= 0) {
-    return NextResponse.json({ error: 'No amount left to refund' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'No amount left to refund' },
+      { status: 400 }
+    );
   }
 
   let refundAmount: number;
-  const fullRefund = body.fullRefund === true;
 
-  if (fullRefund) {
-    refundAmount = maxRefundable;
-  } else if (Array.isArray(body.lineItemIndices) && body.lineItemIndices.length > 0) {
-    const items = ((order as { items: Array<Record<string, unknown>> }).items ?? []) as Array<{
-      quantity?: number;
-      unitPrice?: number;
-      discountedPrice?: number;
-    }>;
-    let sum = 0;
-    for (const idx of body.lineItemIndices) {
-      if (idx >= 0 && idx < items.length) {
-        const qty = Number(items[idx].quantity ?? 0);
-        const unit = Number(items[idx].discountedPrice ?? items[idx].unitPrice ?? 0);
-        sum += qty * unit;
+  if (fullOrder) {
+    refundAmount = Math.round(maxRefundable * 100) / 100;
+  } else if (lineIndices.length > 0) {
+    const items = (order.items as OrderItem[]) ?? [];
+    refundAmount = 0;
+    for (const i of lineIndices) {
+      if (i >= 0 && i < items.length) {
+        const item = items[i];
+        const price = item.discountedPrice ?? item.unitPrice ?? 0;
+        const qty = item.quantity ?? 1;
+        refundAmount += price * qty;
       }
     }
-    refundAmount = Math.round(sum * 100) / 100;
+    refundAmount = Math.round(refundAmount * 100) / 100;
     if (refundAmount <= 0) {
-      return NextResponse.json({ error: 'Selected items amount is zero' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Selected items total $0' },
+        { status: 400 }
+      );
     }
     if (refundAmount > maxRefundable) {
-      refundAmount = maxRefundable;
+      return NextResponse.json(
+        { error: 'Refund amount exceeds remaining refundable amount' },
+        { status: 400 }
+      );
     }
   } else {
     return NextResponse.json(
-      { error: 'Provide fullRefund: true or lineItemIndices: number[]' },
+      { error: 'Provide fullOrder: true or lineIndices array' },
       { status: 400 }
     );
   }
 
   const amountCents = toStripeCents(refundAmount);
   if (amountCents < 1) {
-    return NextResponse.json({ error: 'Refund amount too small' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Refund amount too small' },
+      { status: 400 }
+    );
   }
 
   try {
     const refund = await stripe.refunds.create({
-      charge: chargeId,
+      charge: order.stripe_charge_id,
       amount: amountCents,
-      reason: 'requested_by_customer',
       metadata: {
         order_id: orderId,
-        order_number: (order as { order_number: string }).order_number,
-        full_refund: String(fullRefund),
+        order_number: order.order_number,
+        admin_id: profile.id ?? '',
       },
     });
 
-    await (supabase as any).from('payments').insert({
+    await supabase.from('payments').insert({
       order_id: orderId,
       amount: refundAmount,
       currency: 'usd',
       type: 'refund',
       status: 'succeeded',
-      stripe_charge_id: chargeId,
+      stripe_charge_id: order.stripe_charge_id,
       stripe_refund_id: refund.id,
       metadata: {
-        full_refund: fullRefund,
-        reason: body.reason ?? null,
-        internal_note: body.internalNote ?? null,
+        full_refund: fullOrder,
+        reason,
+        note,
+        admin_id: profile.id ?? '',
       },
     });
 
-    const isNowFullyRefunded = fullRefund || Math.abs(refundAmount - maxRefundable) < 0.01;
-    if (isNowFullyRefunded) {
-      await (supabase as any).from('orders').update({ payment_status: 'refunded' }).eq('id', orderId);
-    }
+    const isFullRefund = fullOrder && Math.abs(refundAmount - maxRefundable) < 0.01;
 
-    await (supabase as any).from('order_activities').insert({
+    await supabase
+      .from('orders')
+      .update({
+        payment_status: isFullRefund ? 'refunded' : 'paid',
+      })
+      .eq('id', orderId);
+
+    await supabase.from('order_activities').insert({
       order_id: orderId,
+      user_id: profile.id ?? null,
       activity_type: 'refunded',
       details: {
         amount: refundAmount,
-        full_refund: fullRefund,
+        full_refund: isFullRefund,
+        reason,
+        note,
         stripe_refund_id: refund.id,
-        reason: body.reason ?? null,
       },
     });
 
-    const customerEmail = (order as { customer_email: string }).customer_email;
-    const customerName = (order as { customer_name: string | null }).customer_name ?? 'Customer';
-    const orderNumber = (order as { order_number: string }).order_number;
+    const emailProps: RefundConfirmationProps = {
+      orderNumber: order.order_number,
+      customerName: order.customer_name,
+      customerEmail: order.customer_email,
+      refundAmount,
+      isFullRefund,
+    };
 
-    try {
-      await sendRefundConfirmationEmail({
-        to: customerEmail,
-        customerName: customerName,
-        orderNumber,
-        refundAmount,
-        isFullRefund: fullRefund,
-      });
-    } catch (emailErr) {
-      console.error('Refund confirmation email failed:', emailErr);
-    }
-
-    return NextResponse.json({
-      success: true,
-      refundId: refund.id,
-      amount: refundAmount,
-      fullRefund: fullRefund,
+    const resend = getResend();
+    await resend.emails.send({
+      from: 'Garment Decor <orders@garmentdecor.com>',
+      to: order.customer_email,
+      subject: getRefundConfirmationSubject(order.order_number, refundAmount),
+      html: generateRefundConfirmationHtml(emailProps),
+      text: generateRefundConfirmationText(emailProps),
     });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Stripe refund failed';
-    console.error('Refund error:', err);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (err) {
+    console.error('Refund failed:', err);
+    const message = err instanceof Error ? err.message : 'Refund failed';
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
   }
+
+  return NextResponse.json({
+    success: true,
+    refundAmount,
+    fullRefund: fullOrder,
+  });
 }

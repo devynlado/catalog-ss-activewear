@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { OrderStatusActions } from './OrderStatusActions';
 import { ShippingForm } from './ShippingForm';
 import { OrderActivityLog } from './OrderActivityLog';
+import { OrderRefundUI } from './OrderRefundUI';
 
 export const metadata = {
   title: 'Order Details',
@@ -49,6 +50,18 @@ export default async function OrderDetailPage({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = Array.isArray(order.items) ? order.items : [];
+
+  // Fetch total refunded for this order
+  const { data: refundPayments } = await supabase
+    .from('payments')
+    .select('amount')
+    .eq('order_id', order.id)
+    .eq('type', 'refund')
+    .eq('status', 'succeeded');
+  const totalRefunded = (refundPayments ?? []).reduce(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (sum: number, p: any) => sum + Number(p.amount), 0
+  );
   const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -299,6 +312,20 @@ export default async function OrderDetailPage({
                     </span>
                   </div>
                 )}
+                {totalRefunded > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total Refunded</span>
+                    <span className="text-sm font-medium text-red-600">
+                      -${totalRefunded.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {order.coupon_code && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Coupon</span>
+                    <span className="text-sm font-mono font-medium text-slate-800">{order.coupon_code}</span>
+                  </div>
+                )}
                 {stripeUrl && (
                   <a
                     href={stripeUrl}
@@ -311,6 +338,20 @@ export default async function OrderDetailPage({
                   </a>
                 )}
               </div>
+            </div>
+
+            {/* Refund Management */}
+            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-navy-800">Refund Management</h2>
+              <OrderRefundUI
+                orderId={order.id}
+                orderNumber={order.order_number}
+                total={Number(order.total)}
+                totalRefunded={totalRefunded}
+                items={items}
+                paymentStatus={order.payment_status}
+                stripeChargeId={order.stripe_charge_id ?? null}
+              />
             </div>
           </div>
 

@@ -8,8 +8,10 @@ import {
 } from '@stripe/react-stripe-js';
 import { Loader2 } from 'lucide-react';
 
-// Initialize Stripe with publishable key
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePublishableKey = typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === 'string'
+  ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  : '';
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 interface EmbeddedCheckoutFormProps {
   clientSecret: string;
@@ -21,6 +23,16 @@ interface EmbeddedCheckoutFormProps {
  * Renders an inline payment form with card, Apple Pay, and Google Pay support
  */
 export function EmbeddedCheckoutForm({ clientSecret, onComplete }: EmbeddedCheckoutFormProps) {
+  if (!stripePromise) {
+    return (
+      <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center">
+        <p className="text-sm text-amber-800">
+          Stripe is not configured. Please set <code className="font-mono text-xs">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> in your environment.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl overflow-hidden">
       <EmbeddedCheckoutProvider

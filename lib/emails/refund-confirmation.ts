@@ -1,98 +1,110 @@
 /**
- * Refund confirmation email to customer.
- * Follows EMAIL-SYSTEM-GUIDELINES and uses shared components.
+ * Refund confirmation email – customer notification after admin issues a refund.
+ * Follows docs/EMAIL-SYSTEM-GUIDELINES.md (color palette, structure, footer).
  */
 
-import { Resend } from 'resend';
 import {
   emailWrapper,
   emailHeader,
   emailFooter,
+  emailCard,
   emailAccentCard,
-  formatPrice,
   EMAIL_COLORS,
   EMAIL_FONTS,
   COMPANY_INFO,
 } from './components';
 
 export interface RefundConfirmationProps {
-  to: string;
-  customerName: string;
   orderNumber: string;
+  customerName: string | null;
+  customerEmail: string;
   refundAmount: number;
   isFullRefund: boolean;
 }
 
-function getResend() {
-  return new Resend(process.env.RESEND_API_KEY);
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+  }).format(amount);
 }
 
-export function getRefundConfirmationSubject(orderNumber: string): string {
-  return `Refund processed for order ${orderNumber}`;
+export function getRefundConfirmationSubject(orderNumber: string, refundAmount: number): string {
+  return `Order ${orderNumber} refunded – ${formatCurrency(refundAmount)}`;
+}
+
+export function getRefundConfirmationPreheader(orderNumber: string, refundAmount: number): string {
+  return `Your refund of ${formatCurrency(refundAmount)} for order ${orderNumber} has been processed. It will appear in 5–10 business days.`;
 }
 
 export function generateRefundConfirmationHtml(props: RefundConfirmationProps): string {
-  const { customerName, orderNumber, refundAmount, isFullRefund } = props;
+  const { orderNumber, customerName, customerEmail, refundAmount, isFullRefund } = props;
+  const greeting = customerName ? `Hi ${customerName.split(/\s+/)[0]},` : 'Hi there,';
+
   const content = `
     ${emailHeader(
       'Refund Processed',
       `Order ${orderNumber}`,
-      { iconEmoji: '✓', backgroundColor: EMAIL_COLORS.success }
+      { iconEmoji: '✓', showLogo: true }
     )}
     <tr>
-      <td style="padding: 24px 32px;">
-        <p style="margin: 0 0 16px; color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONTS.stack};">
-          Hi ${customerName},
+      <td style="padding: 32px;">
+        <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.6; color: ${EMAIL_COLORS.textBody}; font-family: ${EMAIL_FONTS.stack};">
+          ${greeting}
         </p>
-        <p style="margin: 0 0 20px; color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONTS.stack};">
-          We've processed your refund for order <strong>${orderNumber}</strong>.
+        <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: ${EMAIL_COLORS.textBody}; font-family: ${EMAIL_FONTS.stack};">
+          We've processed ${isFullRefund ? 'a full refund' : 'a partial refund'} for your order.
         </p>
+
         ${emailAccentCard(
           `
-          <p style="margin: 0 0 8px; color: ${EMAIL_COLORS.textDark}; font-size: 14px; font-weight: 600; font-family: ${EMAIL_FONTS.stack};">Refund amount</p>
-          <p style="margin: 0; color: ${EMAIL_COLORS.textBody}; font-size: 24px; font-weight: 700; font-family: ${EMAIL_FONTS.stack};">${formatPrice(refundAmount)}</p>
-          <p style="margin: 8px 0 0; color: ${EMAIL_COLORS.textMuted}; font-size: 12px; font-family: ${EMAIL_FONTS.stack};">
-            ${isFullRefund ? 'Full order refund.' : 'Partial refund. The amount will appear on your original payment method within 5–10 business days.'}
-          </p>
+          <p style="margin: 0 0 8px; font-size: 14px; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Order</p>
+          <p style="margin: 0 0 12px; font-size: 20px; font-weight: 700; color: ${EMAIL_COLORS.textDark}; font-family: ${EMAIL_FONTS.stack};">${orderNumber}</p>
+          <p style="margin: 0 0 4px; font-size: 14px; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">Refund amount</p>
+          <p style="margin: 0; font-size: 22px; font-weight: 700; color: ${EMAIL_COLORS.primary}; font-family: ${EMAIL_FONTS.stack};">${formatCurrency(refundAmount)}</p>
           `,
           'success'
         )}
-        <p style="margin: 20px 0 0; color: ${EMAIL_COLORS.textMuted}; font-size: 14px; line-height: 1.6; font-family: ${EMAIL_FONTS.stack};">
-          If you have any questions, reply to this email or call us at ${COMPANY_INFO.phone}.
+
+        ${emailCard(
+          `
+          <p style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: ${EMAIL_COLORS.textDark}; font-family: ${EMAIL_FONTS.stack};">What happens next?</p>
+          <p style="margin: 0; font-size: 14px; line-height: 1.6; color: ${EMAIL_COLORS.textBody}; font-family: ${EMAIL_FONTS.stack};">
+            The refund has been sent to your original payment method. It typically appears within <strong>5–10 business days</strong>, depending on your bank or card issuer.
+          </p>
+          `,
+          { backgroundColor: EMAIL_COLORS.borderLight }
+        )}
+
+        <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">
+          Questions? Contact us at <a href="mailto:${COMPANY_INFO.email}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">${COMPANY_INFO.email}</a> or call <a href="tel:${COMPANY_INFO.phone.replace(/[^0-9+]/g, '')}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">${COMPANY_INFO.phone}</a>.
         </p>
       </td>
     </tr>
-    ${emailFooter(false)}
+    ${emailFooter(true)}
   `;
-  return emailWrapper(content);
+
+  const preheader = getRefundConfirmationPreheader(orderNumber, refundAmount);
+  return emailWrapper(content, preheader);
 }
 
 export function generateRefundConfirmationText(props: RefundConfirmationProps): string {
-  const { customerName, orderNumber, refundAmount, isFullRefund } = props;
-  return [
-    `Hi ${customerName},`,
-    '',
-    `We've processed your refund for order ${orderNumber}.`,
-    '',
-    `Refund amount: ${formatPrice(refundAmount)}`,
-    isFullRefund ? 'Full order refund.' : 'Partial refund. The amount will appear on your original payment method within 5–10 business days.',
-    '',
-    `Questions? Reply to this email or call ${COMPANY_INFO.phone}.`,
-    '',
-    `— ${COMPANY_INFO.name}`,
-  ].join('\n');
-}
+  const { orderNumber, customerName, refundAmount, isFullRefund } = props;
+  const greeting = customerName ? `Hi ${customerName.split(/\s+/)[0]},` : 'Hi there,';
 
-export async function sendRefundConfirmationEmail(props: RefundConfirmationProps): Promise<void> {
-  const resend = getResend();
-  const html = generateRefundConfirmationHtml(props);
-  const text = generateRefundConfirmationText(props);
-  const subject = getRefundConfirmationSubject(props.orderNumber);
-  await resend.emails.send({
-    from: 'Garment Decor <noreply@garmentdecor.com>',
-    to: props.to,
-    subject,
-    html,
-    text,
-  });
+  return [
+    greeting,
+    '',
+    `We've processed ${isFullRefund ? 'a full refund' : 'a partial refund'} for your order ${orderNumber}.`,
+    '',
+    `Refund amount: ${formatCurrency(refundAmount)}`,
+    '',
+    'The refund has been sent to your original payment method. It typically appears within 5–10 business days, depending on your bank or card issuer.',
+    '',
+    `Questions? Contact us at ${COMPANY_INFO.email} or ${COMPANY_INFO.phone}.`,
+    '',
+    COMPANY_INFO.name,
+    COMPANY_INFO.address,
+  ].join('\n');
 }
