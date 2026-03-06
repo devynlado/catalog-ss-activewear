@@ -149,22 +149,8 @@ export async function POST(
       },
     });
 
-    await supabase.from('payments').insert({
-      order_id: orderId,
-      amount: refundAmount,
-      currency: 'usd',
-      type: 'refund',
-      status: 'succeeded',
-      stripe_charge_id: order.stripe_charge_id,
-      stripe_refund_id: refund.id,
-      metadata: {
-        full_refund: fullOrder,
-        reason,
-        note,
-        admin_id: profile.id ?? '',
-      },
-    });
-
+    // Do not insert into payments or order_activities here. The Stripe charge.refunded
+    // webhook will record the refund once; recording here too would double-count.
     const isFullRefund = fullOrder && Math.abs(refundAmount - maxRefundable) < 0.01;
 
     await supabase
@@ -173,19 +159,6 @@ export async function POST(
         payment_status: isFullRefund ? 'refunded' : 'paid',
       })
       .eq('id', orderId);
-
-    await supabase.from('order_activities').insert({
-      order_id: orderId,
-      user_id: profile.id ?? null,
-      activity_type: 'refunded',
-      details: {
-        amount: refundAmount,
-        full_refund: isFullRefund,
-        reason,
-        note,
-        stripe_refund_id: refund.id,
-      },
-    });
 
     const emailProps: RefundConfirmationProps = {
       orderNumber: order.order_number,
@@ -196,13 +169,26 @@ export async function POST(
     };
 
     const resend = getResend();
-    await resend.emails.send({
+    const { error: refundEmailError } = await resend.emails.send({
       from: 'Garment Decor <orders@garmentdecor.com>',
       to: order.customer_email,
       subject: getRefundConfirmationSubject(order.order_number, refundAmount),
       html: generateRefundConfirmationHtml(emailProps),
       text: generateRefundConfirmationText(emailProps),
     });
+    if (!refundEmailError) {
+      await supabase.from('order_activities').insert({
+        order_id: orderId,
+        user_id: profile.id ?? null,
+        activity_type: 'email_sent',
+        details: {
+          email_type: 'refund_confirmation',
+          subject: getRefundConfirmationSubject(order.order_number, refundAmount),
+          recipient: order.customer_email,
+          refund_amount: refundAmount,
+        },
+      });
+    }
   } catch (err) {
     console.error('Refund failed:', err);
     const message = err instanceof Error ? err.message : 'Refund failed';

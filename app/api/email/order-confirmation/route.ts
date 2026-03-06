@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       : 'Address not available';
 
     // Send customer confirmation email (with PNG logo instead of SVG)
-    await resend.emails.send({
+    const { error: customerSendError } = await resend.emails.send({
       from: 'Garment Decor <orders@garmentdecor.com>',
       to: order.customer_email,
       subject: `Order Confirmed - ${order.order_number}`,
@@ -185,6 +185,18 @@ export async function POST(request: NextRequest) {
         </html>
       `,
     });
+
+    if (!customerSendError) {
+      await supabase.from('order_activities').insert({
+        order_id: orderId,
+        activity_type: 'email_sent',
+        details: {
+          email_type: 'order_confirmation',
+          subject: `Order Confirmed - ${order.order_number}`,
+          recipient: order.customer_email,
+        },
+      });
+    }
 
     // Build props for the new purchaser-friendly notification email
     const notificationProps: OrderNotificationProps = {

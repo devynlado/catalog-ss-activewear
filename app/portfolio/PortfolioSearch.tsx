@@ -29,6 +29,7 @@ export function PortfolioSearch({ initialQ }: Props) {
       const params = new URLSearchParams(searchParams.toString());
       if (q.trim()) params.set('q', q.trim());
       else params.delete('q');
+      params.delete('page'); // reset to page 1 when search changes
       const query = params.toString();
       router.push(query ? `/portfolio?${query}` : '/portfolio');
     }, DEBOUNCE_MS);
