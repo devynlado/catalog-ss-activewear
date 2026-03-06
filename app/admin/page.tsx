@@ -46,7 +46,7 @@ export default async function AdminDashboardPage() {
   const { count: activeOrders } = await supabase
     .from('orders')
     .select('*', { count: 'exact', head: true })
-    .in('status', ['confirmed', 'in_production']);
+    .in('status', ['awaiting_purchasing', 'ordered', 'in_production']);
 
   return (
     <div className="min-h-screen bg-stone-50">

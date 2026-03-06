@@ -8,15 +8,17 @@ import {
   getOrderShippedSubject,
 } from '@/lib/emails/order-shipped';
 
-const VALID_STATUSES = ['pending', 'confirmed', 'in_production', 'shipped', 'delivered', 'cancelled'] as const;
+const VALID_STATUSES = ['pending', 'confirmed', 'awaiting_purchasing', 'ordered', 'in_production', 'shipped', 'delivered', 'cancelled'] as const;
 type OrderStatus = typeof VALID_STATUSES[number];
 
 const STATUS_ORDER: Record<OrderStatus, number> = {
   pending: 0,
   confirmed: 1,
-  in_production: 2,
-  shipped: 3,
-  delivered: 4,
+  awaiting_purchasing: 1,
+  ordered: 2,
+  in_production: 3,
+  shipped: 4,
+  delivered: 5,
   cancelled: 99,
 };
 
@@ -55,7 +57,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { status, tracking_number, carrier } = body;
+  const { status, tracking_number, carrier, actual_shipping_cost } = body;
 
   const serviceSupabase = getServiceSupabase();
 
@@ -96,7 +98,9 @@ export async function PATCH(
 
     updates.status = status;
 
-    if (status === 'shipped') {
+    if (status === 'ordered') {
+      updates.ordered_at = new Date().toISOString();
+    } else if (status === 'shipped') {
       updates.shipped_at = new Date().toISOString();
     } else if (status === 'delivered') {
       updates.delivered_at = new Date().toISOString();
@@ -114,6 +118,14 @@ export async function PATCH(
 
   if (carrier) {
     updates.carrier = carrier;
+  }
+
+  if (actual_shipping_cost !== undefined) {
+    const cost = parseFloat(actual_shipping_cost);
+    if (isNaN(cost) || cost < 0) {
+      return NextResponse.json({ error: 'Invalid shipping cost' }, { status: 400 });
+    }
+    updates.actual_shipping_cost = cost;
   }
 
   if (Object.keys(updates).length === 0) {

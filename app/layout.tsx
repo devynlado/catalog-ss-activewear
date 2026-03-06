@@ -3,6 +3,7 @@ import { DM_Sans } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { LayoutWrapper } from '@/components/layout/LayoutWrapper';
+import { AttributionCapture } from '@/components/AttributionCapture';
 import { OrganizationJsonLd } from '@/components/seo/JsonLd';
 
 // GA4 Measurement ID from environment
@@ -133,6 +134,7 @@ export default function RootLayout({
             />
           </noscript>
         )}
+        <AttributionCapture />
         <LayoutWrapper>
           {children}
         </LayoutWrapper>

@@ -115,14 +115,32 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
     return;
   }
 
+  // Retrieve the charge with balance_transaction to get exact Stripe fee
+  let stripeFee: number | null = null;
+  const chargeId = paymentIntent.latest_charge as string;
+  if (chargeId) {
+    try {
+      const charge = await stripe.charges.retrieve(chargeId, {
+        expand: ['balance_transaction'],
+      });
+      const bt = charge.balance_transaction;
+      if (bt && typeof bt === 'object' && 'fee' in bt) {
+        stripeFee = bt.fee / 100;
+      }
+    } catch (feeErr) {
+      console.error('Failed to retrieve Stripe fee:', feeErr);
+    }
+  }
+
   // Update order status
   const { error: updateError } = await supabase
     .from('orders')
     .update({
       payment_status: 'paid',
-      status: 'confirmed',
-      stripe_charge_id: paymentIntent.latest_charge as string,
+      status: 'awaiting_purchasing',
+      stripe_charge_id: chargeId,
       paid_at: new Date().toISOString(),
+      ...(stripeFee !== null ? { stripe_fee: stripeFee } : {}),
     })
     .eq('id', orderId);
 
@@ -159,9 +177,10 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
     type: 'charge',
     status: 'succeeded',
     stripe_payment_intent_id: paymentIntent.id,
-    stripe_charge_id: paymentIntent.latest_charge as string,
+    stripe_charge_id: chargeId,
     metadata: {
       order_number: orderNumber,
+      ...(stripeFee !== null ? { stripe_fee: stripeFee } : {}),
     },
   });
 
@@ -175,10 +194,10 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
     },
   });
 
-  // Log confirmed activity
+  // Log awaiting_purchasing activity
   await supabase.from('order_activities').insert({
     order_id: orderId,
-    activity_type: 'confirmed',
+    activity_type: 'awaiting_purchasing',
     details: {
       order_number: orderNumber,
     },

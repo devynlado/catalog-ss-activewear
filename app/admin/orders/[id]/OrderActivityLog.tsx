@@ -34,6 +34,8 @@ interface OrderActivityLogProps {
 const statusLabels: Record<string, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
+  awaiting_purchasing: 'Awaiting Purchasing',
+  ordered: 'Ordered',
   in_production: 'In Production',
   shipped: 'Shipped',
   delivered: 'Delivered',
@@ -135,6 +137,10 @@ export function OrderActivityLog({ orderId }: OrderActivityLogProps) {
         return d.error_message ? `Payment failed: ${d.error_message}` : 'Payment failed';
       case 'confirmed':
         return 'Order confirmed';
+      case 'awaiting_purchasing':
+        return 'Order ready — awaiting purchasing';
+      case 'ordered':
+        return 'Blanks ordered from supplier';
       case 'status_change':
         return (
           <span>

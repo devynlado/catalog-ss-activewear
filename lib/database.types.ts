@@ -641,7 +641,7 @@ export interface Database {
           stripe_charge_id: string | null;
           po_number: string | null;
           paid_at: string | null;
-          status: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          status: 'pending' | 'confirmed' | 'awaiting_purchasing' | 'ordered' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
           tracking_number: string | null;
           carrier: string | null;
           shipped_at: string | null;
@@ -675,7 +675,7 @@ export interface Database {
           stripe_charge_id?: string | null;
           po_number?: string | null;
           paid_at?: string | null;
-          status?: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          status?: 'pending' | 'confirmed' | 'awaiting_purchasing' | 'ordered' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
           tracking_number?: string | null;
           carrier?: string | null;
           shipped_at?: string | null;
@@ -709,7 +709,7 @@ export interface Database {
           stripe_charge_id?: string | null;
           po_number?: string | null;
           paid_at?: string | null;
-          status?: 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+          status?: 'pending' | 'confirmed' | 'awaiting_purchasing' | 'ordered' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
           tracking_number?: string | null;
           carrier?: string | null;
           shipped_at?: string | null;
@@ -830,7 +830,7 @@ export interface Database {
           id: string;
           order_id: string;
           user_id: string | null;
-          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'awaiting_purchasing' | 'ordered' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled' | 'email_sent';
           details: Json;
           created_at: string;
         };
@@ -838,7 +838,7 @@ export interface Database {
           id?: string;
           order_id: string;
           user_id?: string | null;
-          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled';
+          activity_type: 'created' | 'payment_processing' | 'payment_received' | 'payment_failed' | 'confirmed' | 'awaiting_purchasing' | 'ordered' | 'status_change' | 'shipped' | 'delivered' | 'refunded' | 'note' | 'cancelled' | 'email_sent';
           details?: Json;
           created_at?: string;
         };

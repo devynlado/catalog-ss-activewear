@@ -11,7 +11,8 @@ interface OrderStatusActionsProps {
 }
 
 const statuses = [
-  { id: 'confirmed', label: 'Confirmed', color: 'bg-blue-500' },
+  { id: 'awaiting_purchasing', label: 'Awaiting Purchasing', color: 'bg-brand-500' },
+  { id: 'ordered', label: 'Ordered', color: 'bg-blue-500' },
   { id: 'in_production', label: 'In Production', color: 'bg-orange-500' },
   { id: 'shipped', label: 'Shipped', color: 'bg-indigo-500' },
   { id: 'delivered', label: 'Delivered', color: 'bg-green-500' },
@@ -21,9 +22,11 @@ const statuses = [
 const STATUS_ORDER: Record<string, number> = {
   pending: 0,
   confirmed: 1,
-  in_production: 2,
-  shipped: 3,
-  delivered: 4,
+  awaiting_purchasing: 1,
+  ordered: 2,
+  in_production: 3,
+  shipped: 4,
+  delivered: 5,
   cancelled: 99,
 };
 

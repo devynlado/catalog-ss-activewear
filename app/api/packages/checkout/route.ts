@@ -44,6 +44,10 @@ export interface PackageCheckoutRequest {
   logoFileUrl?: string;
   orderNotes?: string;
   couponCode?: string | null;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  gclid?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -66,6 +70,10 @@ export async function POST(request: NextRequest) {
       logoFileUrl,
       orderNotes,
       couponCode,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      gclid,
     } = body;
     
     // Validate required fields
@@ -157,6 +165,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Look up average blank COGS for this product style
+    const supabaseService = createServerSupabaseClient();
+    const { data: skuCosts } = await supabaseService
+      .from('product_skus')
+      .select('cogs')
+      .eq('style_id', productStyleId)
+      .not('cogs', 'is', null) as { data: { cogs: number }[] | null };
+    const avgBlankCogs = skuCosts && skuCosts.length > 0
+      ? skuCosts.reduce((sum, s) => sum + Number(s.cogs), 0) / skuCosts.length
+      : null;
+    const totalCogs = avgBlankCogs !== null
+      ? Math.round(avgBlankCogs * totalQuantity * 100) / 100
+      : null;
+
     // Generate order number
     const orderNumber = generateOrderNumber();
 
@@ -201,12 +223,15 @@ export async function POST(request: NextRequest) {
           has3DPuff,
           pricePerHat: pricing.pricePerHat,
           subtotal: pricing.subtotal,
+          blankCogs: avgBlankCogs,
         }],
         subtotal: finalSubtotal,
         shipping_cost: finalShipping,
         tax_amount: finalTax,
         discount_amount: discountAmount,
         total: finalTotal,
+        total_cogs: totalCogs,
+        cogs_source: 'live',
         coupon_id: couponId,
         coupon_code: appliedCouponCode,
         shipping_address: shippingAddress,
@@ -215,6 +240,10 @@ export async function POST(request: NextRequest) {
         payment_status: 'pending',
         status: 'pending',
         notes: orderNotes || null,
+        utm_source: utm_source || null,
+        utm_medium: utm_medium || null,
+        utm_campaign: utm_campaign || null,
+        gclid: gclid || null,
         metadata: packageMetadata,
       })
       .select()
