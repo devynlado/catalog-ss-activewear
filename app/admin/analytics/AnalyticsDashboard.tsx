@@ -176,7 +176,7 @@ function MarginBadge({ margin }: { margin: number }) {
 
 // ---- Main Component ----
 export function AnalyticsDashboard() {
-  const [period, setPeriod] = useState<Period>('30d');
+  const [period, setPeriod] = useState<Period>('7d');
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAdSpendForm, setShowAdSpendForm] = useState(false);
@@ -422,46 +422,7 @@ export function AnalyticsDashboard() {
         </div>
       )}
 
-      {/* Search Campaign Performance */}
-      {search && search.spend > 0 && (
-        <div className="rounded-xl border border-stone-200 bg-gradient-to-r from-stone-50 to-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="rounded-lg bg-stone-100 p-1.5">
-              <BarChart3 className="h-4 w-4 text-stone-600" />
-            </div>
-            <h3 className="text-sm font-semibold text-navy-800">Search Campaign — Service Marketing</h3>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Search Spend</p>
-              <p className="mt-1 text-2xl font-bold text-navy-800">{formatCurrency(search.spend)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-500">Impressions / Clicks</p>
-              <p className="mt-1 text-2xl font-bold text-navy-800">
-                {search.impressions.toLocaleString()} <span className="text-base text-slate-400">/</span> {search.clicks.toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-500">Avg CPC</p>
-              <p className="mt-1 text-2xl font-bold text-navy-800">
-                {search.cpc !== null ? formatCurrency(search.cpc) : 'N/A'}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">Service leads — not tied to e-commerce revenue</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Combined Ad Spend Total */}
-      {kpis.adSpend > 0 && pmax && search && (pmax.spend > 0 && search.spend > 0) && (
-        <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-slate-600">Total Ad Spend (All Campaigns)</span>
-            <span className="font-bold text-navy-800">{formatCurrency(kpis.adSpend)}</span>
-          </div>
-        </div>
-      )}
+      {/* Search campaign data is tracked but displayed on the service/quotes dashboard */}
 
       {/* Cost Breakdown Bar */}
       <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -527,7 +488,7 @@ export function AnalyticsDashboard() {
       {dailySeries.some(d => d.pmaxSpend > 0 || d.searchSpend > 0) && (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
           <div className="border-b border-stone-200 px-5 py-4">
-            <h3 className="text-sm font-semibold text-navy-800">Daily Ad Spend vs Revenue</h3>
+            <h3 className="text-sm font-semibold text-navy-800">Daily Profitability & Ad Spend</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -535,24 +496,35 @@ export function AnalyticsDashboard() {
                 <tr className="border-b border-stone-100 text-left text-xs font-medium text-slate-500">
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3 text-right">Revenue</th>
+                  <th className="px-4 py-3 text-right">Profit</th>
                   <th className="px-4 py-3 text-right">PMax Spend</th>
+                  <th className="px-4 py-3 text-right">Profit After PMax</th>
                   <th className="px-4 py-3 text-right">PMax ROAS</th>
-                  <th className="px-4 py-3 text-right">Search Spend</th>
-                  <th className="px-4 py-3 text-right">Total Spend</th>
                   <th className="px-4 py-3 text-right">Orders</th>
                 </tr>
               </thead>
               <tbody>
                 {[...dailySeries].reverse().slice(0, 14).map(day => {
                   const dayRoas = day.pmaxSpend > 0 ? day.revenue / day.pmaxSpend : null;
+                  const profitAfterPmax = day.profit - day.pmaxSpend;
                   return (
                     <tr key={day.date} className="border-b border-stone-50 hover:bg-stone-50">
                       <td className="px-4 py-2.5 font-medium text-slate-700">
                         {new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-slate-800">{formatCurrency(day.revenue)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-600">{formatCurrency(day.revenue)}</td>
+                      <td className={`px-4 py-2.5 text-right font-medium ${day.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(day.profit)}
+                      </td>
                       <td className="px-4 py-2.5 text-right text-slate-600">
                         {day.pmaxSpend > 0 ? formatCurrency(day.pmaxSpend) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        {day.pmaxSpend > 0 ? (
+                          <span className={`font-medium ${profitAfterPmax >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(profitAfterPmax)}
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         {dayRoas !== null ? (
@@ -560,12 +532,6 @@ export function AnalyticsDashboard() {
                             {dayRoas.toFixed(2)}x
                           </span>
                         ) : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-slate-600">
-                        {day.searchSpend > 0 ? formatCurrency(day.searchSpend) : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-slate-700">
-                        {day.adSpend > 0 ? formatCurrency(day.adSpend) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-4 py-2.5 text-right text-slate-600">{day.orders}</td>
                     </tr>
