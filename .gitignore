@@ -27,6 +27,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# GA4 service account key (keep credentials out of repo)
+/keys/
+
 # Vercel
 .vercel
 

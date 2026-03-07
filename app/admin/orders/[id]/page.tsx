@@ -417,6 +417,7 @@ export default async function OrderDetailPage({
             <OrderActivityLog
               orderId={order.id}
               orderCreatedAt={order.created_at}
+              adminNote={order.admin_note ?? null}
               orderSummary={{
                 created_at: order.created_at,
                 status: order.status,

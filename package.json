@@ -14,6 +14,7 @@
     "fix:gallery-keys": "tsx scripts/fix-portfolio-gallery-keys.ts"
   },
   "dependencies": {
+    "@google-analytics/data": "^5.2.1",
     "@portabletext/react": "^6.0.2",
     "@stripe/react-stripe-js": "^5.6.0",
     "@stripe/stripe-js": "^8.7.0",

@@ -11,7 +11,6 @@ import {
   Ban,
   RotateCcw,
   FileText,
-  Plus,
   CheckCircle,
   XCircle,
   Mail,
@@ -51,6 +50,8 @@ interface OrderActivityLogProps {
   orderCreatedAt?: string;
   /** When provided, synthetic activities are added for paid, confirmed, shipped so legacy orders show full history */
   orderSummary?: OrderActivityLogOrderSummary | null;
+  /** Current internal admin note for this order; shown and editable below the activity list */
+  adminNote?: string | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -219,16 +220,24 @@ function buildMergedActivities(
   return merged;
 }
 
-export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary }: OrderActivityLogProps) {
+export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary, adminNote: initialAdminNote }: OrderActivityLogProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showNoteForm, setShowNoteForm] = useState(false);
-  const [newNote, setNewNote] = useState('');
+  const [adminNote, setAdminNote] = useState<string | null>(initialAdminNote ?? null);
+  const [showNoteForm, setShowNoteForm] = useState(!(initialAdminNote && initialAdminNote.trim()));
+  const [noteDraft, setNoteDraft] = useState(initialAdminNote ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchActivities();
   }, [orderId]);
+
+  useEffect(() => {
+    const v = initialAdminNote ?? null;
+    setAdminNote(v);
+    setNoteDraft(v ?? '');
+    setShowNoteForm(!(v && v.trim()));
+  }, [initialAdminNote]);
 
   const fetchActivities = async () => {
     try {
@@ -252,32 +261,34 @@ export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary }: Orde
 
   const mergedActivities = buildMergedActivities(activities, orderSummary);
 
-  const handleAddNote = async () => {
-    if (!newNote.trim() || isSubmitting) return;
+  const handleSaveNote = async () => {
+    const content = noteDraft.trim();
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/activities`, {
-        method: 'POST',
+      const response = await fetch(`/api/admin/orders/${orderId}/note`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          activity_type: 'note',
-          details: { content: newNote.trim() },
-        }),
+        body: JSON.stringify({ admin_note: content || null }),
       });
+      const data = await response.json();
 
-      if (response.ok) {
-        const data = await response.json();
-        const activity = data.activity as Activity & { details?: unknown };
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save note');
+      }
+
+      setAdminNote(content || null);
+      setShowNoteForm(false);
+      if (data.activity) {
+        const act = data.activity as Activity & { details?: unknown };
         setActivities([
-          { ...activity, details: normalizeDetails(activity.details) },
+          { ...act, details: normalizeDetails(act.details), user: data.user ? { full_name: data.user.full_name, avatar_url: data.user?.avatar_url ?? null } : null },
           ...activities,
         ]);
-        setNewNote('');
-        setShowNoteForm(false);
       }
     } catch (error) {
-      console.error('Failed to add note:', error);
+      console.error('Failed to save note:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -375,43 +386,7 @@ export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary }: Orde
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-navy-800">Activity</h2>
-        <button
-          onClick={() => setShowNoteForm(!showNoteForm)}
-          className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Note
-        </button>
-      </div>
-
-      {showNoteForm && (
-        <div className="mb-4 rounded-lg border border-stone-200 bg-stone-50 p-3">
-          <textarea
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            placeholder="Add an internal note about this order..."
-            rows={3}
-            className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-          />
-          <div className="mt-2 flex justify-end gap-2">
-            <button
-              onClick={() => { setShowNoteForm(false); setNewNote(''); }}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-stone-100"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAddNote}
-              disabled={!newNote.trim() || isSubmitting}
-              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-            >
-              Save Note
-            </button>
-          </div>
-        </div>
-      )}
+      <h2 className="mb-4 text-lg font-semibold text-navy-800">Activity</h2>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
@@ -445,6 +420,63 @@ export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary }: Orde
           ))}
         </div>
       )}
+
+      <div className="mt-6 border-t border-stone-200 pt-4">
+        <h3 className="mb-2 text-sm font-semibold text-navy-800">Internal note</h3>
+        {showNoteForm ? (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              placeholder="Add an internal note about this order..."
+              rows={3}
+              className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+            <div className="mt-2 flex justify-end gap-2">
+              {adminNote != null && adminNote !== '' && (
+                <button
+                  type="button"
+                  onClick={() => { setShowNoteForm(false); setNoteDraft(adminNote ?? ''); }}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-stone-100"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSaveNote}
+                disabled={isSubmitting}
+                className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Saving…' : 'Save note'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+            {adminNote && adminNote.trim() ? (
+              <>
+                <p className="whitespace-pre-wrap text-sm text-slate-700">{adminNote}</p>
+                <button
+                  type="button"
+                  onClick={() => { setShowNoteForm(true); setNoteDraft(adminNote); }}
+                  className="mt-2 text-xs font-medium text-brand-600 hover:text-brand-700"
+                >
+                  Edit
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNoteForm(true)}
+                className="text-sm text-slate-500 hover:text-slate-700"
+              >
+                Add a note…
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

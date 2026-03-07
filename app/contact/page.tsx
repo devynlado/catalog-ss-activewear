@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
-import { trackContactFormSubmit, trackPhoneClick } from '@/lib/analytics';
+import { trackContactFormSubmit, trackPhoneClick, trackContactEmailClick, trackContactLocationClick } from '@/lib/analytics';
 
 // Service name mapping for pre-filling the message
 const serviceNames: Record<string, string> = {
@@ -17,11 +17,31 @@ const serviceNames: Record<string, string> = {
   'rush': 'Rush Turnaround',
 };
 
+/** Get source page path from document.referrer for CTA attribution (same-origin only). */
+function getContactSourcePage(): string {
+  if (typeof document === 'undefined' || !document.referrer) return '';
+  try {
+    const u = new URL(document.referrer);
+    const siteHost = typeof window !== 'undefined' ? window.location.host : '';
+    if (u.origin === (typeof window !== 'undefined' ? window.location.origin : '') || u.host === siteHost) {
+      return u.pathname || '/';
+    }
+    return ''; // external referrer: no path
+  } catch {
+    return '';
+  }
+}
+
 // Inner component that uses useSearchParams
 function ContactForm() {
   const searchParams = useSearchParams();
   const serviceParam = searchParams.get('service');
-  
+  const [sourcePage, setSourcePage] = useState('');
+
+  useEffect(() => {
+    setSourcePage(getContactSourcePage());
+  }, []);
+
   const [formState, setFormState] = useState({
     name: '',
     email: '',
@@ -70,6 +90,7 @@ function ContactForm() {
         service: serviceParam ? serviceNames[serviceParam] : undefined,
         hasPhone: !!formState.phone,
         hasCompany: !!formState.company,
+        contact_source_page: sourcePage || '(direct)',
       });
 
       setIsSubmitted(true);
@@ -290,7 +311,7 @@ function ContactForm() {
                 {/* Phone */}
                 <a
                   href="tel:+18559427636"
-                  onClick={() => trackPhoneClick({ source: 'contact_page' })}
+                  onClick={() => trackPhoneClick({ source: 'contact_page', contact_source_page: sourcePage || '(direct)' })}
                   className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition-all hover:shadow-md hover:ring-brand-200"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
@@ -306,6 +327,7 @@ function ContactForm() {
                 {/* Email */}
                 <a
                   href="mailto:sales@garmentdecor.com"
+                  onClick={() => trackContactEmailClick({ contact_source_page: sourcePage || undefined })}
                   className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition-all hover:shadow-md hover:ring-brand-200"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
@@ -320,9 +342,10 @@ function ContactForm() {
 
                 {/* Address */}
                 <a
-                  href="https://maps.google.com/?q=4778+W+Mission+Blvd+Montclair+CA+91762"
+                  href="https://www.google.com/maps?q=4778+W+Mission+Blvd+Montclair+CA+91762"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackContactLocationClick({ contact_source_page: sourcePage || '(direct)' })}
                   className="group flex items-start gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition-all hover:shadow-md hover:ring-brand-200"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 interface OrderItem {
@@ -43,6 +43,7 @@ interface Order {
   carrier: string | null;
   shipping_address: Record<string, string> | null;
   created_at: string;
+  admin_note?: string | null;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
@@ -77,6 +78,9 @@ export function OrderCard({ order }: { order: Order }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [trackingSaved, setTrackingSaved] = useState(!!order.tracking_number);
   const [error, setError] = useState<string | null>(null);
+  const [noteValue, setNoteValue] = useState(order.admin_note ?? '');
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
   const router = useRouter();
 
   const handleTrackingSubmit = async (e: React.FormEvent) => {
@@ -107,6 +111,30 @@ export function OrderCard({ order }: { order: Order }) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setNoteSaving(true);
+    setNoteSaved(false);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}/note`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_note: noteValue.trim() || null }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to save note');
+      setNoteSaved(true);
+      setNoteValue(data.admin_note ?? '');
+      setTimeout(() => setNoteSaved(false), 2500);
+      router.refresh();
+    } catch {
+      setError('Failed to save note');
+    } finally {
+      setNoteSaving(false);
     }
   };
 
@@ -338,6 +366,31 @@ export function OrderCard({ order }: { order: Order }) {
                 Call
               </a>
             )}
+            <div onClick={(e) => e.stopPropagation()} className="w-full border-t border-stone-200 pt-4 mt-4">
+              <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-navy-800">
+                <MessageSquare className="h-4 w-4 text-slate-500" />
+                Internal note
+              </h4>
+              <form onSubmit={handleSaveNote} className="grid grid-cols-[8fr_2fr] gap-2 items-center">
+                <input
+                  type="text"
+                  value={noteValue}
+                  onChange={(e) => setNoteValue(e.target.value)}
+                  placeholder="Add an internal note…"
+                  className="min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    type="submit"
+                    disabled={noteSaving}
+                    className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {noteSaving ? '...' : <><Check className="h-3 w-3" /> Save</>}
+                  </button>
+                  {noteSaved && <span className="text-xs text-green-600">Saved</span>}
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

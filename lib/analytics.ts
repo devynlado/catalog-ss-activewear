@@ -162,6 +162,7 @@ export function trackAddToCart(params: {
   trackEvent('add_to_cart', {
     currency: params.currency || 'USD',
     value: params.value,
+    cart_value: params.value, // for GA4 custom metric "Value added to cart"
     items: formatCartItemsForGA4(params.items),
   });
 }
@@ -208,6 +209,7 @@ export function trackBeginCheckout(params: {
   trackEvent('begin_checkout', {
     currency: params.currency || 'USD',
     value: params.value,
+    checkout_value: params.value, // for GA4 custom metric "Value at checkout"
     items: formatCartItemsForGA4(params.items),
     ...(params.coupon ? { coupon: params.coupon } : {}),
   });
@@ -461,27 +463,59 @@ export function trackCustomQuoteRequest(params: {
 export function trackPhoneClick(params?: {
   phoneNumber?: string;
   source?: string;
+  contact_source_page?: string;
 }) {
   trackEvent('phone_click', {
     phone_number: params?.phoneNumber || '(855) 942-7636',
     source: params?.source || 'website',
     link_url: `tel:${params?.phoneNumber || '+18559427636'}`,
+    ...(params?.contact_source_page != null && params.contact_source_page !== ''
+      ? { contact_source_page: params.contact_source_page }
+      : {}),
+  });
+  trackEvent('contact_phone_click', {
+    contact_source_page: params?.contact_source_page != null && params.contact_source_page !== '' ? params.contact_source_page : '(direct)',
   });
 }
 
 /**
- * Track contact form submission
+ * Track contact form submission (and contact_form_submit for CTA report)
  */
 export function trackContactFormSubmit(params?: {
   service?: string;
   hasPhone?: boolean;
   hasCompany?: boolean;
+  contact_source_page?: string;
 }) {
   trackEvent('generate_lead', {
     source: 'contact_form',
     service: params?.service || 'general',
     has_phone: params?.hasPhone || false,
     has_company: params?.hasCompany || false,
+    ...(params?.contact_source_page != null && params.contact_source_page !== ''
+      ? { contact_source_page: params.contact_source_page }
+      : {}),
+  });
+  trackEvent('contact_form_submit', {
+    contact_source_page: params?.contact_source_page != null && params.contact_source_page !== '' ? params.contact_source_page : '(direct)',
+  });
+}
+
+/**
+ * Track email link click on contact page (for CTA report)
+ */
+export function trackContactEmailClick(params?: { contact_source_page?: string }) {
+  trackEvent('contact_email_click', {
+    contact_source_page: params?.contact_source_page && params.contact_source_page !== '' ? params.contact_source_page : '(direct)',
+  });
+}
+
+/**
+ * Track location/maps link click on contact page (for CTA report)
+ */
+export function trackContactLocationClick(params?: { contact_source_page?: string }) {
+  trackEvent('contact_location_click', {
+    contact_source_page: params?.contact_source_page && params.contact_source_page !== '' ? params.contact_source_page : '(direct)',
   });
 }
 

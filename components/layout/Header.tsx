@@ -651,6 +651,19 @@ export function Header() {
                 {resourcesOpen && (
                   <div className="absolute right-0 top-full z-[60] mt-2 w-64 rounded-lg bg-white p-3 shadow-xl ring-1 ring-stone-200">
                     <Link
+                      href="/portfolio"
+                      onClick={() => setResourcesOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-stone-50 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                        <LayoutDashboard className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Portfolio</span>
+                        <span className="text-xs text-slate-500">Our work & projects</span>
+                      </div>
+                    </Link>
+                    <Link
                       href="/resources/screen-printing-guide"
                       onClick={() => setResourcesOpen(false)}
                       className="flex items-start gap-3 rounded-lg p-2 hover:bg-stone-50 group"
@@ -1463,6 +1476,14 @@ export function Header() {
                 <p className="py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Resources
                 </p>
+                <Link
+                  href="/portfolio"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
+                >
+                  <LayoutDashboard className="h-4 w-4 text-amber-500" />
+                  Portfolio
+                </Link>
                 <Link
                   href="/resources/screen-printing-guide"
                   onClick={() => setMobileMenuOpen(false)}
