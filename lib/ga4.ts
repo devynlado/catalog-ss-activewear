@@ -24,6 +24,15 @@ interface RunReportResult {
   rows?: RunReportRow[];
 }
 
+/** Wrapper so runReport return type is usable (library types intersect with void). */
+async function runReport(
+  client: BetaAnalyticsDataClient,
+  request: Parameters<BetaAnalyticsDataClient['runReport']>[0]
+): Promise<RunReportResult> {
+  const tuple = (await client.runReport(request)) as [RunReportResult, unknown, unknown];
+  return tuple[0];
+}
+
 export interface PageVisitorRow {
   pagePath: string;
   pageTitle?: string;
@@ -109,7 +118,7 @@ export async function fetchTopPageVisitorsByChannel(
 
   const client = getClient();
 
-  const [response] = await client.runReport({
+  const response = await runReport(client, {
     property,
     dateRanges: [{ startDate: startStr, endDate: endStr }],
     dimensions: [
@@ -207,7 +216,7 @@ export async function fetchTopUSCitiesDemographics(
   const usaValues = ['United States', 'United States of America', 'USA'];
   const isUSA = (v: string) => usaValues.some((u) => v.toLowerCase().includes(u.toLowerCase()));
 
-  const [report1] = await client.runReport({
+  const report1 = await runReport(client, {
     property,
     dateRanges: [{ startDate: startStr, endDate: endStr }],
     dimensions: [{ name: 'city' }, { name: 'country' }],
@@ -235,7 +244,7 @@ export async function fetchTopUSCitiesDemographics(
     report1Rows.map((r) => (r.dimensionValues?.[0]?.value ?? '').trim()).filter(Boolean)
   );
 
-  const [report2] = await client.runReport({
+  const report2 = await runReport(client, {
     property,
     dateRanges: [{ startDate: startStr, endDate: endStr }],
     dimensions: [{ name: 'city' }, { name: 'country' }, { name: 'sessionDefaultChannelGroup' }],
@@ -310,7 +319,7 @@ export async function fetchHomepagePathTree(
   const endStr = endDate.toISOString().slice(0, 10);
   const client = getClient();
 
-  const [report1] = await client.runReport({
+  const report1 = await runReport(client, {
     property,
     dateRanges: [{ startDate: startStr, endDate: endStr }],
     dimensions: [{ name: 'landingPage' }, { name: 'pagePath' }],
@@ -476,7 +485,7 @@ export async function fetchSalesByVisitorSource(
   let report: RunReportResult;
 
   try {
-    const [r] = await client.runReport({
+    report = await runReport(client, {
       property,
       dateRanges: [{ startDate: startStr, endDate: endStr }],
       dimensions: [{ name: 'sessionDefaultChannelGroup' }],
@@ -484,13 +493,12 @@ export async function fetchSalesByVisitorSource(
       metrics: [...SALES_METRICS_WITH_VALUES],
       limit: 20,
     });
-    report = r;
   } catch (err) {
     const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
     const isMetricError =
       msg.includes('metric') || msg.includes('invalid') || msg.includes('customevent') || msg.includes('400');
     if (!isMetricError) throw err;
-    const [r] = await client.runReport({
+    report = await runReport(client, {
       property,
       dateRanges: [{ startDate: startStr, endDate: endStr }],
       dimensions: [{ name: 'sessionDefaultChannelGroup' }],
@@ -498,7 +506,6 @@ export async function fetchSalesByVisitorSource(
       metrics: [...SALES_METRICS_STANDARD],
       limit: 20,
     });
-    report = r;
   }
 
   const bySource = new Map<string, SalesBySourceRow>();
@@ -590,7 +597,7 @@ export async function fetchContactCTAReport(
   const endStr = endDate.toISOString().slice(0, 10);
   const client = getClient();
 
-  const [viewsReport] = await client.runReport({
+  const viewsReport = await runReport(client, {
     property,
     dateRanges: [{ startDate: startStr, endDate: endStr }],
     dimensions: [{ name: 'pageReferrer' }],
@@ -623,7 +630,7 @@ export async function fetchContactCTAReport(
   }
 
   try {
-    const [eventsReport] = await client.runReport({
+    const eventsReport = await runReport(client, {
       property,
       dateRanges: [{ startDate: startStr, endDate: endStr }],
       dimensions: [
@@ -746,7 +753,7 @@ export async function fetchLeadsByVisitorSource(
   const endStr = endDate.toISOString().slice(0, 10);
   const client = getClient();
 
-  const [report] = await client.runReport({
+  const report = await runReport(client, {
     property,
     dateRanges: [{ startDate: startStr, endDate: endStr }],
     dimensions: [
@@ -917,7 +924,7 @@ export async function fetchPageEngagement(
 
   let report1: RunReportResult;
   try {
-    const [r] = await client.runReport({
+    report1 = await runReport(client, {
       property,
       dateRanges: [{ startDate: startStr, endDate: endStr }],
       dimensions: [{ name: 'pagePath' }],
@@ -929,12 +936,11 @@ export async function fetchPageEngagement(
       ],
       limit: 100,
     });
-    report1 = r;
   } catch (err) {
     const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
     if (msg.includes('invalid') || msg.includes('400')) {
       try {
-        const [r] = await client.runReport({
+        report1 = await runReport(client, {
           property,
           dateRanges: [{ startDate: startStr, endDate: endStr }],
           dimensions: [{ name: 'pagePath' }],
@@ -946,9 +952,8 @@ export async function fetchPageEngagement(
           ],
           limit: 100,
         });
-        report1 = r;
       } catch (err2) {
-        const [r] = await client.runReport({
+        report1 = await runReport(client, {
           property,
           dateRanges: [{ startDate: startStr, endDate: endStr }],
           dimensions: [{ name: 'pagePath' }],
@@ -956,7 +961,6 @@ export async function fetchPageEngagement(
           metrics: [{ name: 'screenPageViews' }, { name: 'activeUsers' }],
           limit: 100,
         });
-        report1 = r;
       }
     } else {
       throw err;
@@ -1001,7 +1005,7 @@ export async function fetchPageEngagement(
   }
 
   try {
-    const [report2] = await client.runReport({
+    const report2 = await runReport(client, {
       property,
       dateRanges: [{ startDate: startStr, endDate: endStr }],
       dimensions: [{ name: 'pagePath' }, { name: 'eventName' }],
