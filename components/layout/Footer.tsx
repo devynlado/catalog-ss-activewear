@@ -202,6 +202,11 @@ export function Footer() {
                 </li>
               ))}
               <li>
+                <Link href="/blanks/los-angeles-apparel-1801gd" className="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+                  LA Apparel 1801GD
+                </Link>
+              </li>
+              <li>
                 <Link href="/guides" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
                   Product Guides
                 </Link>

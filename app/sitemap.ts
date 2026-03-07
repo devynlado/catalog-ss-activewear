@@ -1,24 +1,38 @@
 import { MetadataRoute } from 'next';
-import { POPULAR_PRODUCTS } from '@/lib/popular-products';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getProjectSlugs } from '@/lib/sanity';
 
-// Generate slug from brand and style number (matches product-sync.ts logic)
-function generateSlug(brand: string, styleNumber: string): string {
-  return `${brand}-${styleNumber}`
-    .toLowerCase()
-    .replace(/[^a-z0-9\-\s]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
+async function getProductSlugs(): Promise<string[]> {
+  try {
+    const supabase = createServerSupabaseClient();
+    const allSlugs: string[] = [];
+    const PAGE_SIZE = 1000;
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('slug')
+        .eq('is_active', true)
+        .not('slug', 'is', null)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        allSlugs.push(...(data as { slug: string }[]).map(p => p.slug).filter(Boolean));
+        hasMore = data.length === PAGE_SIZE;
+        page++;
+      }
+    }
+
+    return allSlugs;
+  } catch {
+    return [];
+  }
 }
 
-// Get unique product slugs from popular products for product pages
-const popularProductSlugs = [...new Set(
-  POPULAR_PRODUCTS.map(p => generateSlug(p.brand, p.styleNumber))
-)];
-
-// Fetch guides from database
 async function getGuides(): Promise<string[]> {
   try {
     const supabase = createServerSupabaseClient();
@@ -151,6 +165,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
+  // Blanks landing pages (product-specific SEO pages)
+  const blanksPages: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/blanks/los-angeles-apparel-1801gd`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    },
+  ];
+
   // Catalog category pages
   const categories = [
     't-shirts',
@@ -181,8 +205,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  // Product pages (popular products only) - using SEO-friendly slugs
-  const productPages: MetadataRoute.Sitemap = popularProductSlugs.map(slug => ({
+  // Product pages — sourced from Supabase (same slugs used by GMC feed and product pages)
+  const productSlugs = await getProductSlugs();
+  const productPages: MetadataRoute.Sitemap = productSlugs.map(slug => ({
     url: `${baseUrl}/product/${slug}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
@@ -212,6 +237,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...locationPages,
     ...resourcePages,
     ...portfolioPages,
+    ...blanksPages,
     ...catalogPages,
     ...productPages,
     ...guidePages,

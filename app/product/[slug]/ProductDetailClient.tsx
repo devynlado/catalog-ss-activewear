@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight, Lock } from 'lucide-react';
 import { Product, ProductColor, Category } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
@@ -81,6 +81,17 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
     ? product.colors?.find(c => c.colorCode === initialVariant.colorCode) ?? null
     : null;
   
+  // Track restored variant from persisted discount (return visits without URL params)
+  const [restoredVariant, setRestoredVariant] = useState<InitialVariant | null>(null);
+  const [restoredColor, setRestoredColor] = useState<ProductColor | null>(null);
+  const [hasAttemptedRestore, setHasAttemptedRestore] = useState(!!initialVariant);
+  
+  // Unified variant: URL params take priority, then restored from store
+  const effectiveVariant = initialVariant || restoredVariant;
+  const effectiveResolvedColor = resolvedInitialColor || restoredColor;
+  const isDiscountLanding = !!effectiveVariant && !!effectiveResolvedColor;
+  const isReturnVisit = !initialVariant && !!restoredVariant;
+  
   // Track selected colors (array for multi-color support)
   // Pre-select the initial variant color when landing from Google
   const [selectedColors, setSelectedColors] = useState<ProductColor[]>(
@@ -95,9 +106,6 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
     }
     return {};
   });
-  
-  // Track whether we arrived from a Google/PMax ad with an initial variant
-  const isGoogleLanding = !!initialVariant && !!resolvedInitialColor;
   
   const [addedToQuote, setAddedToQuote] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -118,17 +126,50 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
   const { addItem: addToCart } = useCartStore();
   
   // Google automated discounts
-  const { addDiscount, getDiscountByStyleId } = useDiscountStore();
+  const { addDiscount, getDiscountByStyleId, getDiscountBySlug } = useDiscountStore();
   
-  // Store the discount from URL param in the store for persistence
+  // Store the discount from URL param in the store for persistence, enriched with variant context
   useEffect(() => {
     if (initialDiscount) {
-      addDiscount(initialDiscount);
+      addDiscount({
+        ...initialDiscount,
+        styleId: product.styleId,
+        productSlug: product.slug,
+        colorCode: initialVariant?.colorCode,
+        colorName: initialVariant?.colorName,
+        sizeName: initialVariant?.sizeName,
+      });
     }
-  }, [initialDiscount, addDiscount]);
+  }, [initialDiscount, addDiscount, product.styleId, product.slug, initialVariant]);
+  
+  // Restore variant from persisted discount on return visits (no URL params)
+  useEffect(() => {
+    if (initialVariant || hasAttemptedRestore) return;
+    setHasAttemptedRestore(true);
+    
+    const stored = getDiscountByStyleId(product.styleId) || getDiscountBySlug(product.slug);
+    if (!stored?.colorCode || !stored?.sizeName) return;
+    
+    const color = product.colors?.find(c => c.colorCode === stored.colorCode);
+    if (!color) return;
+    
+    const size = color.sizes.find(s => s.name === stored.sizeName);
+    if (!size) return;
+    
+    const variant: InitialVariant = {
+      colorCode: stored.colorCode,
+      colorName: stored.colorName || color.colorName,
+      sizeName: stored.sizeName,
+    };
+    
+    setRestoredVariant(variant);
+    setRestoredColor(color);
+    setSelectedColors([color]);
+    setColorQuantities({ [color.colorCode]: { [stored.sizeName]: 1 } });
+  }, [initialVariant, hasAttemptedRestore, getDiscountByStyleId, getDiscountBySlug, product.styleId, product.slug, product.colors]);
   
   // Get active discount (from store, which persists across navigation)
-  const activeDiscount = getDiscountByStyleId(product.styleId) || initialDiscount;
+  const activeDiscount = getDiscountByStyleId(product.styleId) || getDiscountBySlug(product.slug) || initialDiscount;
   
   // Track view_item event on page load
   useEffect(() => {
@@ -196,20 +237,20 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
   // e.g., Google discounts 3XL from $9.88 → $8.97, and our site shows 3XL at $9.45.
   // Without this, we'd compare $8.97 against the product-level $4.93 and see no discount.
   const { matchedSizePrice, matchedSizeRetailPrice } = useMemo(() => {
-    if (!resolvedInitialColor || !initialVariant?.sizeName) {
+    if (!effectiveResolvedColor || !effectiveVariant?.sizeName) {
       return { matchedSizePrice: null as number | null, matchedSizeRetailPrice: null as number | null };
     }
-    const matchedSize = resolvedInitialColor.sizes.find(
-      s => s.name === initialVariant.sizeName
+    const matchedSize = effectiveResolvedColor.sizes.find(
+      s => s.name === effectiveVariant.sizeName
     );
     if (!matchedSize) {
       return { matchedSizePrice: null as number | null, matchedSizeRetailPrice: null as number | null };
     }
     return {
       matchedSizePrice: matchedSize.salePrice || matchedSize.price,
-      matchedSizeRetailPrice: matchedSize.price, // retail only, for strikethrough
+      matchedSizeRetailPrice: matchedSize.price,
     };
-  }, [resolvedInitialColor, initialVariant]);
+  }, [effectiveResolvedColor, effectiveVariant]);
 
   // Calculate proportional discount percentage for Google automated discounts.
   // Compare Google's discount price against the MATCHED SIZE's site price (not product-level basePrice).
@@ -248,9 +289,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
   // When landing from Google, scope to the initial color so the "From" price
   // matches the hero and size table — no conflicting numbers on the page.
   const basePriceDisplay = useMemo(() => {
-    // Choose which colors to consider: initial color only (Google landing) or all colors
-    const colorsToConsider = isGoogleLanding && resolvedInitialColor
-      ? [resolvedInitialColor]
+    // Choose which colors to consider: initial color only (discount landing) or all colors
+    const colorsToConsider = isDiscountLanding && effectiveResolvedColor
+      ? [effectiveResolvedColor]
       : (product.colors || []);
 
     // Standard size filter (exclude plus-size upcharges)
@@ -301,7 +342,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
       originalMinPrice: googleDiscountPercent > 0 ? minPrice : null,
       originalMinRetail: minRetailPrice, // color-scoped retail for sale strikethrough
     };
-  }, [product.colors, googleDiscountPercent, isGoogleLanding, resolvedInitialColor]);
+  }, [product.colors, googleDiscountPercent, isDiscountLanding, effectiveResolvedColor]);
   
   // Helper to validate image URLs (must be http/https)
   const isValidImageUrl = (url: string | undefined | null): url is string => {
@@ -820,14 +861,26 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           )}
         </div>
 
-        {/* Google/PMax Landing: Your Selection hero block */}
-        {isGoogleLanding && resolvedInitialColor && (
+        {/* Google/PMax Landing or Return Visit: discount hero block */}
+        {isDiscountLanding && effectiveResolvedColor && (() => {
+          const remainingMs = (activeDiscount?.expiresAt ?? 0) - Date.now();
+          const remainingHours = Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60)));
+          const remainingMinutes = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60)));
+          const timeLabel = remainingHours > 0
+            ? `Price valid for ${remainingHours}h remaining`
+            : `Price valid for ${remainingMinutes}m remaining`;
+
+          return (
           <div className="rounded-2xl border-2 border-brand-200 bg-gradient-to-br from-brand-50 via-white to-brand-50/30 p-4 lg:p-6 shadow-xl shadow-brand-300/20">
             {/* Header */}
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
+              {isReturnVisit ? (
+                <Lock className="h-4 w-4 text-brand-500" />
+              ) : (
+                <div className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
+              )}
               <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wide">
-                Your Selection
+                {isReturnVisit ? 'Your Saved Price' : 'Your Selection'}
               </h3>
               {hasGoogleDiscount && (
                 <span className="ml-auto px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
@@ -841,8 +894,8 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
               {/* Variant image */}
               <div className="flex-shrink-0 w-20 h-20 lg:w-24 lg:h-24 rounded-xl overflow-hidden border border-stone-200 bg-white">
                 <Image
-                  src={isOttoCap ? proxyImageUrl(resolvedInitialColor.frontImage || product.imageUrl) : (resolvedInitialColor.frontImage || product.imageUrl)}
-                  alt={`${resolvedInitialColor.colorName}`}
+                  src={isOttoCap ? proxyImageUrl(effectiveResolvedColor.frontImage || product.imageUrl) : (effectiveResolvedColor.frontImage || product.imageUrl)}
+                  alt={`${effectiveResolvedColor.colorName}`}
                   width={96}
                   height={96}
                   className="w-full h-full object-contain"
@@ -852,9 +905,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
               {/* Variant info */}
               <div className="flex-1 min-w-0">
                 <p className="text-base lg:text-lg font-bold text-slate-900 truncate">
-                  {resolvedInitialColor.colorName}
-                  {initialVariant?.sizeName && (
-                    <span className="text-slate-500 font-medium"> · {initialVariant.sizeName}</span>
+                  {effectiveResolvedColor.colorName}
+                  {effectiveVariant?.sizeName && (
+                    <span className="text-slate-500 font-medium"> · {effectiveVariant.sizeName}</span>
                   )}
                 </p>
                 
@@ -871,17 +924,24 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                   )}
                 </div>
                 
-                {/* 48h lock when discount active */}
+                {/* Time-based lock text */}
                 {hasGoogleDiscount && (
                   <p className="mt-1 text-xs text-brand-600 font-medium">
-                    Price locked for 48 hours
+                    {isReturnVisit ? timeLabel : 'Price locked for 48 hours'}
+                  </p>
+                )}
+                
+                {/* Google Shopping attribution */}
+                {hasGoogleDiscount && (
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Exclusive price via Google Shopping
                   </p>
                 )}
               </div>
             </div>
             
             {/* Quick Add to Cart for this variant */}
-            {initialVariant?.sizeName && (
+            {effectiveVariant?.sizeName && (
               <div className="mt-4 flex items-center gap-3">
                 <Button
                   onClick={handleAddToCart}
@@ -914,7 +974,6 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
               Need other sizes or colors?{' '}
               <button
                 onClick={() => {
-                  // Scroll to color selection
                   document.getElementById('color-selection')?.scrollIntoView({ behavior: 'smooth' });
                 }}
                 className="text-brand-600 font-medium hover:text-brand-700 underline underline-offset-2"
@@ -923,16 +982,17 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
               </button>
             </p>
           </div>
-        )}
+          );
+        })()}
 
         {/* Color Selection Card - Enhanced depth */}
         {product.colors && product.colors.length > 0 && (
           <div id="color-selection" className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
             <h3 className="text-sm lg:text-base font-bold text-slate-800">
-              {isGoogleLanding ? 'Add More Colors' : 'Select Colors'} <span className="font-normal text-slate-500">({product.colors.length} available)</span>
+              {isDiscountLanding ? 'Add More Colors' : 'Select Colors'} <span className="font-normal text-slate-500">({product.colors.length} available)</span>
             </h3>
             <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
-              {isGoogleLanding ? 'Click colors to add more size rows. Click again to remove.' : 'Click colors to add size rows below. Click again to remove.'}
+              {isDiscountLanding ? 'Click colors to add more size rows. Click again to remove.' : 'Click colors to add size rows below. Click again to remove.'}
             </p>
             <div className="mt-3">
               <ColorSwatches
@@ -1134,28 +1194,53 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           </details>
 
           {/* Subtle Decoration Hint */}
-          <div className="mt-4 rounded-xl border border-brand-100 bg-gradient-to-r from-brand-50 to-white p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100">
-                <Palette className="h-4 w-4 text-brand-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-700">
-                  Need these decorated?
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Add screen printing or embroidery at checkout.
-                </p>
-                <Link 
-                  href="/services" 
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
-                >
-                  Learn about decoration
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
+          {product.styleName === '1801GD' ? (
+            <div className="mt-4 rounded-xl border border-brand-200 bg-gradient-to-r from-brand-50 to-white p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100">
+                  <Palette className="h-4 w-4 text-brand-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-700">
+                    Need the 1801GD customized?
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Screen printing from $0.90/pc, embroidery from $3.00/pc. Factory-direct pricing, 50pc minimum.
+                  </p>
+                  <Link
+                    href="/blanks/los-angeles-apparel-1801gd"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
+                  >
+                    View decoration options &amp; get a quote
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-brand-100 bg-gradient-to-r from-brand-50 to-white p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100">
+                  <Palette className="h-4 w-4 text-brand-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-700">
+                    Need these decorated?
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Add screen printing or embroidery at checkout.
+                  </p>
+                  <Link 
+                    href="/services" 
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
+                  >
+                    Learn about decoration
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
