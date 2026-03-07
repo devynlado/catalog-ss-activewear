@@ -27,9 +27,9 @@ interface RunReportResult {
 /** Wrapper so runReport return type is usable (library types intersect with void). */
 async function runReport(
   client: BetaAnalyticsDataClient,
-  request: Parameters<BetaAnalyticsDataClient['runReport']>[0]
+  request: Record<string, unknown>
 ): Promise<RunReportResult> {
-  const tuple = (await client.runReport(request)) as [RunReportResult, unknown, unknown];
+  const tuple = (await client.runReport(request as Parameters<BetaAnalyticsDataClient['runReport']>[0])) as [RunReportResult, unknown, unknown];
   return tuple[0];
 }
 
@@ -472,12 +472,12 @@ export async function fetchSalesByVisitorSource(
   const dimensionFilter = {
     orGroup: {
       expressions: [
-        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT', value: 'Paid Search' } } },
-        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT', value: 'Organic Search' } } },
-        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT', value: 'Organic Social' } } },
-        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT', value: 'Organic Shopping' } } },
-        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT', value: 'Referral' } } },
-        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT', value: 'Cross-Network' } } },
+        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT' as const, value: 'Paid Search' } } },
+        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT' as const, value: 'Organic Search' } } },
+        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT' as const, value: 'Organic Social' } } },
+        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT' as const, value: 'Organic Shopping' } } },
+        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT' as const, value: 'Referral' } } },
+        { filter: { fieldName: 'sessionDefaultChannelGroup', stringFilter: { matchType: 'EXACT' as const, value: 'Cross-Network' } } },
       ],
     },
   };
@@ -807,7 +807,7 @@ export async function fetchLeadsByVisitorSource(
       custom_quote_request: 0,
     };
     for (const key of eventKeys) {
-      (row as Record<string, number>)[key] = entry.events[key] ?? 0;
+      (row as unknown as Record<string, number>)[key] = entry.events[key] ?? 0;
     }
     return row;
   });
