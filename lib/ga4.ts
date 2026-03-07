@@ -14,6 +14,16 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { tmpdir } from 'os';
 
+/** Shape of the first element of runReport() result (avoids library ReturnType issues). */
+interface RunReportRow {
+  dimensionValues?: Array<{ value?: string }>;
+  metricValues?: Array<{ value?: string }>;
+}
+interface RunReportResult {
+  metricHeaders?: Array<{ name?: string }>;
+  rows?: RunReportRow[];
+}
+
 export interface PageVisitorRow {
   pagePath: string;
   pageTitle?: string;
@@ -463,8 +473,7 @@ export async function fetchSalesByVisitorSource(
     },
   };
 
-  type ReportResult = Awaited<ReturnType<BetaAnalyticsDataClient['runReport']>>[0];
-  let report: ReportResult;
+  let report: RunReportResult;
 
   try {
     const [r] = await client.runReport({
@@ -906,7 +915,7 @@ export async function fetchPageEngagement(
     });
   }
 
-  let report1: Awaited<ReturnType<BetaAnalyticsDataClient['runReport']>>[0];
+  let report1: RunReportResult;
   try {
     const [r] = await client.runReport({
       property,
