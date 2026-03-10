@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Users, FileText, ShieldCheck, TrendingUp, Clock, CheckCircle, Eye, Package, Tag } from 'lucide-react';
+import { Users, FileText, ShieldCheck, TrendingUp, Clock, CheckCircle, Eye, Package, Tag, Filter } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 
 export const metadata = {
@@ -183,13 +183,22 @@ export default async function AdminDashboardPage() {
                 <span className="font-medium text-slate-700">Coupons</span>
               </Link>
               {isAdmin && (
-                <Link
-                  href="/admin/analytics"
-                  className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
-                >
-                  <TrendingUp className="h-5 w-5 text-brand-500" />
-                  <span className="font-medium text-slate-700">Analytics</span>
-                </Link>
+                <>
+                  <Link
+                    href="/admin/analytics"
+                    className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                  >
+                    <TrendingUp className="h-5 w-5 text-brand-500" />
+                    <span className="font-medium text-slate-700">Analytics</span>
+                  </Link>
+                  <Link
+                    href="/admin/sales-funnel"
+                    className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                  >
+                    <Filter className="h-5 w-5 text-brand-500" />
+                    <span className="font-medium text-slate-700">Sales Funnel</span>
+                  </Link>
+                </>
               )}
             </div>
           </div>

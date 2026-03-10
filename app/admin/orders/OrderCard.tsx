@@ -495,31 +495,6 @@ export function OrderCard({ order }: { order: Order }) {
                 Call
               </a>
             )}
-            <div onClick={(e) => e.stopPropagation()} className="w-full border-t border-stone-200 pt-4 mt-4">
-              <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-navy-800">
-                <MessageSquare className="h-4 w-4 text-slate-500" />
-                Internal note
-              </h4>
-              <form onSubmit={handleSaveNote} className="grid grid-cols-[8fr_2fr] gap-2 items-center">
-                <input
-                  type="text"
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="Add an internal note…"
-                  className="min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                />
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    type="submit"
-                    disabled={isSavingNote}
-                    className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {isSavingNote ? '...' : <><Check className="h-3 w-3" /> Save</>}
-                  </button>
-                  {savedNote !== null && <span className="text-xs text-green-600">Saved</span>}
-                </div>
-              </form>
-            </div>
           </div>
         </div>
       )}
