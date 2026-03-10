@@ -6,40 +6,49 @@ export type { PageEngagementRow };
 
 /** GET: Page engagement metrics for a fixed list of paths. Admin-only. */
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { profile } = await getServerProfile();
-  if (!profile || profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-  }
-
-  const propertyId = process.env.GA4_PROPERTY_ID;
-  const hasCredentials =
-    !!process.env.GA4_SERVICE_ACCOUNT_JSON || !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
-  if (propertyId && hasCredentials) {
-    try {
-      const rows = await fetchPageEngagement(propertyId, 30);
-      return NextResponse.json({ rows, source: 'ga4' });
-    } catch (err) {
-      console.error('[Analytics] GA4 page engagement fetch failed:', err);
-      return NextResponse.json(
-        {
-          error: 'Failed to load page engagement from GA4',
-          details: err instanceof Error ? err.message : String(err),
-        },
-        { status: 502 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: 'Please log in to view analytics.', code: 'UNAUTHORIZED' }, { status: 401 });
     }
-  }
 
-  const rows = getMockPageEngagement();
-  return NextResponse.json({ rows, source: 'mock' });
+    const { profile } = await getServerProfile();
+    if (!profile || profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required. Please log in as an admin.', code: 'FORBIDDEN' }, { status: 403 });
+    }
+
+    const propertyId = process.env.GA4_PROPERTY_ID;
+    const hasCredentials =
+      !!process.env.GA4_SERVICE_ACCOUNT_JSON || !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+    if (propertyId && hasCredentials) {
+      try {
+        const rows = await fetchPageEngagement(propertyId, 30);
+        return NextResponse.json({ rows, source: 'ga4' });
+      } catch (err) {
+        console.error('[Analytics] GA4 page engagement fetch failed:', err);
+        return NextResponse.json(
+          {
+            error: 'Analytics service unavailable. Set GA4 env vars in Vercel for real data, or leave unset for sample data.',
+            code: 'GA4_ERROR',
+            details: err instanceof Error ? err.message : String(err),
+          },
+          { status: 502 }
+        );
+      }
+    }
+
+    const rows = getMockPageEngagement();
+    return NextResponse.json({ rows, source: 'mock' });
+  } catch (err) {
+    console.error('[Analytics] page-engagement route error:', err);
+    return NextResponse.json(
+      { error: 'Could not load analytics. Please try again or log in as an admin.', code: 'SERVER_ERROR' },
+      { status: 500 }
+    );
+  }
 }
 
 const MOCK_PATHS = [

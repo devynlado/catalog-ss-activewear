@@ -56,6 +56,18 @@ And set `GA4_PROPERTY_ID` as above. The code will use the file when `GA4_SERVICE
 
 Restart the Next.js dev server (or redeploy) so the new env vars are loaded.
 
+### 4b. Production (Vercel)
+
+On the **live site**, Sales Funnel charts will show "Could not load analytics" or "Failed to load" unless:
+
+1. **You are logged in as an admin.** The analytics API requires an authenticated admin user. Log in at your production site, then open `/admin/sales-funnel`.
+2. **Either** leave GA4 unset in Vercel (the API returns **sample/mock data** so charts still render), **or** add GA4 for real data:
+   - In **Vercel** → your project → **Settings** → **Environment Variables**
+   - Add `GA4_PROPERTY_ID` (e.g. `123456789`) and `GA4_SERVICE_ACCOUNT_JSON` (minified one-line JSON of your service account key) for the **Production** environment.
+   - Redeploy after changing env vars.
+
+If you see an error on production, the in-app message now includes a short hint: log in as admin and/or configure GA4 in Vercel.
+
 ### 5. (Optional) Custom metrics for “Value added to cart” and “Value at checkout”
 
 The **Sales by visitor source** section can show **Value added to cart** and **Value at checkout** if you create two custom metrics in GA4. The site sends the event parameters `cart_value` (with `add_to_cart`) and `checkout_value` (with `begin_checkout`).

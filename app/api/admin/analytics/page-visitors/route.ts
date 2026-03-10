@@ -9,40 +9,59 @@ export type { PageVisitorRow };
 
 /** GET: Top 20 most visited pages with visitor origins by channel. Admin-only. */
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { profile } = await getServerProfile();
-  if (!profile || profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-  }
-
-  const propertyId = process.env.GA4_PROPERTY_ID;
-  const hasCredentials =
-    !!process.env.GA4_SERVICE_ACCOUNT_JSON || !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
-  if (propertyId && hasCredentials) {
-    try {
-      const pages = await fetchTopPageVisitorsByChannel(propertyId, 20, 30);
-      return NextResponse.json({ pages, source: 'ga4' });
-    } catch (err) {
-      console.error('[Analytics] GA4 fetch failed:', err);
+    if (!user) {
       return NextResponse.json(
-        {
-          error: 'Failed to load analytics from GA4',
-          details: err instanceof Error ? err.message : String(err),
-        },
-        { status: 502 }
+        { error: 'Please log in to view analytics.', code: 'UNAUTHORIZED' },
+        { status: 401 }
       );
     }
-  }
 
-  const pages = getMockPageVisitorData();
-  return NextResponse.json({ pages, source: 'mock' });
+    const { profile } = await getServerProfile();
+    if (!profile || profile.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Admin access required. Please log in as an admin.', code: 'FORBIDDEN' },
+        { status: 403 }
+      );
+    }
+
+    const propertyId = process.env.GA4_PROPERTY_ID;
+    const hasCredentials =
+      !!process.env.GA4_SERVICE_ACCOUNT_JSON || !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+    if (propertyId && hasCredentials) {
+      try {
+        const pages = await fetchTopPageVisitorsByChannel(propertyId, 20, 30);
+        return NextResponse.json({ pages, source: 'ga4' });
+      } catch (err) {
+        console.error('[Analytics] GA4 fetch failed:', err);
+        return NextResponse.json(
+          {
+            error: 'Analytics service unavailable. In Vercel, set GA4_PROPERTY_ID and GA4_SERVICE_ACCOUNT_JSON for real data, or leave them unset to use sample data.',
+            code: 'GA4_ERROR',
+            details: err instanceof Error ? err.message : String(err),
+          },
+          { status: 502 }
+        );
+      }
+    }
+
+    const pages = getMockPageVisitorData();
+    return NextResponse.json({ pages, source: 'mock' });
+  } catch (err) {
+    console.error('[Analytics] page-visitors route error:', err);
+    return NextResponse.json(
+      {
+        error: 'Could not load analytics. Please try again or check that you are logged in as an admin.',
+        code: 'SERVER_ERROR',
+        details: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 }
+    );
+  }
 }
 
 /** Mock data when GA4 is not configured (missing GA4_PROPERTY_ID or GA4_SERVICE_ACCOUNT_JSON). */
