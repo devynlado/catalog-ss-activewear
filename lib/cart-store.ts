@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CartItem } from './database.types';
 import { DecorationSelection } from './decoration-pricing';
+import { hasTieredPricing, getTieredPrice, getNextTierInfo, getEffectiveItemPrice } from './tiered-pricing';
 
 export interface AppliedCoupon {
   code: string;
@@ -47,6 +48,11 @@ interface CartStore {
   getTotalUnits: () => number;
   getDecorationTotal: () => number;
   getGrandTotal: () => number;
+
+  // Tiered pricing helpers
+  getTieredUnitPrice: (item: CartItem) => number;
+  getStyleQuantity: (styleId: number) => number;
+  getTierUpsell: (styleId: number) => ReturnType<typeof getNextTierInfo>;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -151,10 +157,17 @@ export const useCartStore = create<CartStore>()(
       },
       
       getSubtotal: () => {
-        return get().items.reduce(
-          (sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity,
-          0
-        );
+        const items = get().items;
+        const styleQtys = new Map<number, number>();
+        for (const item of items) {
+          if (hasTieredPricing(item.styleId)) {
+            styleQtys.set(item.styleId, (styleQtys.get(item.styleId) || 0) + item.quantity);
+          }
+        }
+        return items.reduce((sum, item) => {
+          const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
+          return sum + getEffectiveItemPrice(item, totalStyleQty) * item.quantity;
+        }, 0);
       },
       
       getTotalUnits: () => {
@@ -168,6 +181,22 @@ export const useCartStore = create<CartStore>()(
       
       getGrandTotal: () => {
         return get().getSubtotal() + get().getDecorationTotal();
+      },
+
+      getTieredUnitPrice: (item: CartItem) => {
+        const totalQty = get().getStyleQuantity(item.styleId);
+        return getEffectiveItemPrice(item, totalQty);
+      },
+
+      getStyleQuantity: (styleId: number) => {
+        return get().items
+          .filter((i) => i.styleId === styleId)
+          .reduce((sum, i) => sum + i.quantity, 0);
+      },
+
+      getTierUpsell: (styleId: number) => {
+        const totalQty = get().getStyleQuantity(styleId);
+        return getNextTierInfo(styleId, totalQty);
       },
     }),
     {

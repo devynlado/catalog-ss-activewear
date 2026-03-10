@@ -33,6 +33,7 @@ import { OrderSummary } from './OrderSummary';
 import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
 import { trackBeginCheckout, trackGenerateLead, CartItem as GA4CartItem } from '@/lib/analytics';
 import { getAttribution } from '@/lib/attribution';
+import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -387,8 +388,17 @@ export default function CheckoutContent() {
   // General error state (for non-payment errors)
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate totals (with optional coupon)
-  const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
+  // Calculate totals (with optional coupon) — apply tiered pricing where applicable
+  const styleQtyMap = new Map<number, number>();
+  for (const item of items) {
+    if (hasTieredPricing(item.styleId)) {
+      styleQtyMap.set(item.styleId, (styleQtyMap.get(item.styleId) || 0) + item.quantity);
+    }
+  }
+  const subtotal = items.reduce((sum, item) => {
+    const totalStyleQty = styleQtyMap.get(item.styleId) ?? 0;
+    return sum + getEffectiveItemPrice(item, totalStyleQty) * item.quantity;
+  }, 0);
   const roundedSubtotal = Math.round(subtotal * 100) / 100;
   const couponResult = appliedCoupon
     ? { discountAmount: appliedCoupon.discountAmount, freeShipping: appliedCoupon.freeShipping }

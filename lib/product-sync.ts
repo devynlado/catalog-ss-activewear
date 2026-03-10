@@ -12,6 +12,7 @@
 import { createServerSupabaseClient } from './supabase';
 import { SSProduct, SSProductSku } from './types';
 import { POPULAR_PRODUCTS, ProductCategory, PopularProduct } from './popular-products';
+import { getTieredStyleIds } from './tiered-pricing';
 
 // ============================================================================
 // CONFIGURATION
@@ -494,6 +495,9 @@ export async function syncPopularProducts(): Promise<SyncResult> {
               });
               
               // Collect SKUs
+              const tieredIds = getTieredStyleIds();
+              const isTiered = tieredIds.has(style.styleID);
+
               for (const sku of colorSkus) {
                 // COGS = your wholesale cost (for margin tracking / Google Merchant)
                 const cogs = sku.customerPrice || sku.piecePrice || 0;
@@ -510,8 +514,10 @@ export async function syncPopularProducts(): Promise<SyncResult> {
                 
                 // Auto-min price for Google auto-pricing (floor based on your cost)
                 const autoMinPrice = Math.round(cogs * AUTO_MIN_MARKUP * 100) / 100;
-                
-                allSkus.push({
+
+                // For tiered-pricing products, omit retail_price / sale_price so the
+                // upsert keeps the manually-set tier-1 base prices in the DB.
+                const skuRow: Record<string, unknown> = {
                   sku: sku.sku,
                   style_id: style.styleID,
                   color_id: colorId,
@@ -521,15 +527,20 @@ export async function syncPopularProducts(): Promise<SyncResult> {
                   size_code: sku.sizeCode,
                   size_order: sku.sizeOrder,
                   cogs: cogs,
-                  retail_price: retailPrice,
-                  sale_price: salePrice,
                   auto_min_price: autoMinPrice,
                   gtin: sku.gtin || '',
                   piece_weight: sku.unitWeight || 0,
                   qty: sku.qty || 0,
                   availability: (sku.qty || 0) > 0 ? 'in_stock' : 'out_of_stock',
                   last_inventory_sync: new Date().toISOString(),
-                });
+                };
+
+                if (!isTiered) {
+                  skuRow.retail_price = retailPrice;
+                  skuRow.sale_price = salePrice;
+                }
+                
+                allSkus.push(skuRow);
               }
             }
           }
@@ -981,6 +992,9 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
                 availability: hasStock ? 'in_stock' : 'out_of_stock',
               });
               
+              const tieredIds = getTieredStyleIds();
+              const isTiered = tieredIds.has(style.styleID);
+
               for (const sku of colorSkus) {
                 // COGS = your wholesale cost (for margin tracking / Google Merchant)
                 const cogs = sku.customerPrice || sku.piecePrice || 0;
@@ -997,8 +1011,8 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
                 
                 // Auto-min price for Google auto-pricing (floor based on your cost)
                 const autoMinPrice = Math.round(cogs * AUTO_MIN_MARKUP * 100) / 100;
-                
-                allSkus.push({
+
+                const skuRow: Record<string, unknown> = {
                   sku: sku.sku,
                   style_id: style.styleID,
                   color_id: colorId,
@@ -1008,15 +1022,20 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
                   size_code: sku.sizeCode,
                   size_order: sku.sizeOrder,
                   cogs: cogs,
-                  retail_price: retailPrice,
-                  sale_price: salePrice,
                   auto_min_price: autoMinPrice,
                   gtin: sku.gtin || '',
                   piece_weight: sku.unitWeight || 0,
                   qty: sku.qty || 0,
                   availability: (sku.qty || 0) > 0 ? 'in_stock' : 'out_of_stock',
                   last_inventory_sync: new Date().toISOString(),
-                });
+                };
+
+                if (!isTiered) {
+                  skuRow.retail_price = retailPrice;
+                  skuRow.sale_price = salePrice;
+                }
+
+                allSkus.push(skuRow);
               }
             }
           }

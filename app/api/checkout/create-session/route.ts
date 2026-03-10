@@ -4,6 +4,7 @@ import { CartItem } from '@/lib/database.types';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { validateCoupon, calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
+import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 
 interface ShippingInfo {
   email: string;
@@ -51,10 +52,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const subtotal = items.reduce(
-      (sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity,
-      0
-    );
+    // Apply tiered pricing on the server side (min of volume tier vs Google discount)
+    const styleQtyMap = new Map<number, number>();
+    for (const item of items) {
+      if (hasTieredPricing(item.styleId)) {
+        styleQtyMap.set(item.styleId, (styleQtyMap.get(item.styleId) || 0) + item.quantity);
+      }
+    }
+    const subtotal = items.reduce((sum, item) => {
+      const totalStyleQty = styleQtyMap.get(item.styleId) ?? 0;
+      return sum + getEffectiveItemPrice(item, totalStyleQty) * item.quantity;
+    }, 0);
     const roundedSubtotal = Math.round(subtotal * 100) / 100;
 
     let discountAmount = 0;

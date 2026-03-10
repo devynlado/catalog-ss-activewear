@@ -8,6 +8,7 @@ import { CartItem } from '@/lib/database.types';
 import { formatPrice, cn } from '@/lib/utils';
 import { ShippingMethod, getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
 import { DecorationSelection } from '@/lib/decoration-pricing';
+import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 
 interface OrderSummaryProps {
   items: CartItem[];
@@ -61,11 +62,20 @@ interface GroupedItem {
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
+  const styleQtys = new Map<number, number>();
+  for (const item of items) {
+    if (hasTieredPricing(item.styleId)) {
+      styleQtys.set(item.styleId, (styleQtys.get(item.styleId) || 0) + item.quantity);
+    }
+  }
+
   const groups = new Map<string, GroupedItem>();
 
   for (const item of items) {
     const key = `${item.styleId}-${item.colorCode}`;
     const normalizedSize = normalizeSize(item.sizeName);
+    const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
+    const effectivePrice = getEffectiveItemPrice(item, totalStyleQty);
     
     if (!groups.has(key)) {
       groups.set(key, {
@@ -80,13 +90,12 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         sizes: new Map(),
         totalQuantity: 0,
         totalPrice: 0,
-        unitPrice: item.discountedPrice ?? item.unitPrice,
+        unitPrice: effectivePrice,
         hasDiscount: !!(item.discountedPrice && item.discountedPrice < item.unitPrice),
       });
     }
 
     const group = groups.get(key)!;
-    const effectivePrice = item.discountedPrice ?? item.unitPrice;
     
     // Add or update size
     const existingSize = group.sizes.get(normalizedSize);
@@ -129,7 +138,19 @@ export function OrderSummary({
   const groupedItems = useMemo(() => groupItemsByStyleColor(items), [items]);
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
+  const styleQtyMap = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const item of items) {
+      if (hasTieredPricing(item.styleId)) {
+        m.set(item.styleId, (m.get(item.styleId) || 0) + item.quantity);
+      }
+    }
+    return m;
+  }, [items]);
+  const subtotal = items.reduce((sum, item) => {
+    const totalStyleQty = styleQtyMap.get(item.styleId) ?? 0;
+    return sum + getEffectiveItemPrice(item, totalStyleQty) * item.quantity;
+  }, 0);
   const decorationTotal = decoration?.totalPrice ?? 0;
   const totalSavings = items.reduce((sum, item) => {
     if (item.discountedPrice && item.discountedPrice < item.unitPrice) {

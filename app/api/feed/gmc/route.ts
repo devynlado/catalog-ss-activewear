@@ -7,6 +7,7 @@ import {
   ProductVariant 
 } from '@/lib/gmc-feed';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { hasTieredPricing, getBaseTierPrice } from '@/lib/tiered-pricing';
 
 // Type for cached product from Supabase
 interface CachedProduct {
@@ -356,9 +357,18 @@ async function fetchFromSupabase(): Promise<{
       // Override with cached values
       row.availability = sku.availability === 'in_stock' ? 'in_stock' : 'out_of_stock';
       row.quantity = sku.availability === 'in_stock' ? String(sku.qty || 999) : '0';
-      row.price = sku.retail_price ? `${sku.retail_price.toFixed(2)} USD` : row.price;
-      if (sku.sale_price) {
-        row.sale_price = `${sku.sale_price.toFixed(2)} USD`;
+
+      // For tiered-pricing products, use the tier-1 base price; no sale price
+      const tierBasePrice = hasTieredPricing(product.style_id)
+        ? getBaseTierPrice(product.style_id, sku.size_name)
+        : null;
+      if (tierBasePrice != null) {
+        row.price = `${tierBasePrice.toFixed(2)} USD`;
+      } else {
+        row.price = sku.retail_price ? `${sku.retail_price.toFixed(2)} USD` : row.price;
+        if (sku.sale_price) {
+          row.sale_price = `${sku.sale_price.toFixed(2)} USD`;
+        }
       }
       row.cost_of_goods_sold = `${sku.cogs.toFixed(2)} USD`;
       row.auto_pricing_min_price = `${sku.auto_min_price.toFixed(2)} USD`;
