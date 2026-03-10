@@ -26,12 +26,16 @@ interface CheckoutRequest {
   orderNotes?: string;
   idempotencyKey?: string;
   couponCode?: string | null;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  gclid?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, poNumber, orderNotes, idempotencyKey, couponCode } = body;
+    const { items, shippingInfo, shippingMethod, poNumber, orderNotes, idempotencyKey, couponCode, utm_source, utm_medium, utm_campaign, gclid } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -120,6 +124,21 @@ export async function POST(request: NextRequest) {
       `${item.brandName} ${item.styleName} (${item.quantity})`
     ).join(', ') + (items.length > 3 ? ` +${items.length - 3} more` : '');
 
+    // Batch-fetch COGS for all SKUs to snapshot cost at time of purchase
+    const supabaseService = createServerSupabaseClient();
+    const skus = items.map(i => i.sku);
+    const { data: skuCosts } = await supabaseService
+      .from('product_skus')
+      .select('sku, cogs')
+      .in('sku', skus) as { data: { sku: string; cogs: number | null }[] | null };
+    const cogsMap: Record<string, number | null> = Object.fromEntries(
+      (skuCosts || []).map(s => [s.sku, s.cogs])
+    );
+
+    const totalCogs = items.reduce(
+      (sum, item) => sum + (cogsMap[item.sku] ?? 0) * item.quantity, 0
+    );
+
     // Create order in DB and Stripe PaymentIntent in parallel
     // Both are independent at this point — the order gets the PI id updated after
     const orderInsertPromise = (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -144,12 +163,15 @@ export async function POST(request: NextRequest) {
           unitPrice: item.unitPrice,
           discountedPrice: item.discountedPrice,
           imageUrl: item.imageUrl,
+          cogs: cogsMap[item.sku] ?? null,
         })),
         subtotal: roundedSubtotal,
         shipping_cost: actualShippingCost,
         tax_amount: taxAmount,
         discount_amount: discountAmount,
         total: Math.round(totalWithShipping * 100) / 100,
+        total_cogs: Math.round(totalCogs * 100) / 100,
+        cogs_source: 'live',
         coupon_id: couponId,
         coupon_code: appliedCouponCode,
         shipping_address: shippingAddressData,
@@ -159,6 +181,10 @@ export async function POST(request: NextRequest) {
         payment_status: 'pending',
         status: 'pending',
         notes: orderNotes || null,
+        utm_source: utm_source || null,
+        utm_medium: utm_medium || null,
+        utm_campaign: utm_campaign || null,
+        gclid: gclid || null,
         metadata: {
           order_type: 'cart',
           po_number: poNumber || null,

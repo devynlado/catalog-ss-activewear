@@ -3,6 +3,8 @@ import { getProductBySlug } from '@/lib/product-cache';
 import { PackageHero, WhatsIncluded, BenefitsRow, FAQSection, StickyMobileCTA } from '@/components/packages/shared';
 import { ScreenPrintPackageBuilder, printedTeesComfortColorsPageConfig } from '@/components/packages/screenprinting';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Custom Printed Comfort Colors 1717 T-Shirts | All-Inclusive Pricing | Garment Decor',
   description: 'Get custom printed Comfort Colors 1717 garment-dyed t-shirts with all-inclusive pricing. Premium vintage feel, up to 2 colors included, no setup fees. Free shipping on orders $500+.',

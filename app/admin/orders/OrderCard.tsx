@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check, MessageSquare } from 'lucide-react';
+import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check, Loader2, MessageSquare, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 interface OrderItem {
@@ -49,8 +49,10 @@ interface Order {
 const statusConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
   pending: { label: 'Pending', variant: 'warning' },
   confirmed: { label: 'Confirmed', variant: 'info' },
+  awaiting_purchasing: { label: 'Awaiting Purchasing', variant: 'brand' },
+  ordered: { label: 'Ordered', variant: 'info' },
   in_production: { label: 'In Production', variant: 'brand' },
-  shipped: { label: 'Shipped', variant: 'info' },
+  shipped: { label: 'Shipped', variant: 'success' },
   delivered: { label: 'Delivered', variant: 'success' },
   cancelled: { label: 'Cancelled', variant: 'error' },
 };
@@ -75,13 +77,80 @@ export function OrderCard({ order }: { order: Order }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [carrier, setCarrier] = useState(order.carrier || '');
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
+  const [actualShippingCost, setActualShippingCost] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [trackingSaved, setTrackingSaved] = useState(!!order.tracking_number);
   const [error, setError] = useState<string | null>(null);
-  const [noteValue, setNoteValue] = useState(order.admin_note ?? '');
-  const [noteSaving, setNoteSaving] = useState(false);
-  const [noteSaved, setNoteSaved] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(order.status);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [noteText, setNoteText] = useState(order.admin_note ?? '');
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
   const router = useRouter();
+
+  const nextStatusMap: Record<string, { id: string; label: string }> = {
+    awaiting_purchasing: { id: 'ordered', label: 'Mark as Ordered' },
+    ordered: { id: 'shipped', label: 'Mark as Shipped' },
+  };
+
+  const handleStatusAdvance = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = nextStatusMap[currentStatus];
+    if (!next) return;
+
+    if (next.id === 'shipped' && !trackingSaved) {
+      setError('Add tracking info before marking as shipped');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update status');
+      }
+      setCurrentStatus(next.id);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!noteText.trim() || isSavingNote) return;
+
+    setIsSavingNote(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activity_type: 'note',
+          details: { content: noteText.trim() },
+        }),
+      });
+      if (res.ok) {
+        setSavedNote(noteText.trim());
+        setNoteText('');
+      }
+    } catch (err) {
+      console.error('Failed to add note:', err);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
 
   const handleTrackingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +168,7 @@ export function OrderCard({ order }: { order: Order }) {
           carrier,
           tracking_number: trackingNumber.trim(),
           status: 'shipped',
+          ...(actualShippingCost ? { actual_shipping_cost: actualShippingCost } : {}),
         }),
       });
       if (!response.ok) {
@@ -117,24 +187,24 @@ export function OrderCard({ order }: { order: Order }) {
   const handleSaveNote = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setNoteSaving(true);
-    setNoteSaved(false);
+    setIsSavingNote(true);
+    setSavedNote(null);
     try {
       const response = await fetch(`/api/admin/orders/${order.id}/note`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ admin_note: noteValue.trim() || null }),
+        body: JSON.stringify({ admin_note: noteText.trim() || null }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to save note');
-      setNoteSaved(true);
-      setNoteValue(data.admin_note ?? '');
-      setTimeout(() => setNoteSaved(false), 2500);
+      setSavedNote('saved');
+      setNoteText(data.admin_note ?? '');
+      setTimeout(() => setSavedNote(null), 2500);
       router.refresh();
     } catch {
       setError('Failed to save note');
     } finally {
-      setNoteSaving(false);
+      setIsSavingNote(false);
     }
   };
 
@@ -153,7 +223,7 @@ export function OrderCard({ order }: { order: Order }) {
     minute: '2-digit',
   });
 
-  const status = statusConfig[order.status] || statusConfig.pending;
+  const status = statusConfig[currentStatus] || statusConfig.pending;
   const payment = paymentConfig[order.payment_status] || paymentConfig.pending;
 
   const shippingAddr = order.shipping_address;
@@ -286,6 +356,21 @@ export function OrderCard({ order }: { order: Order }) {
                         {isSubmitting ? '...' : <><Check className="h-3 w-3" /> Ship</>}
                       </button>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={actualShippingCost}
+                          onChange={(e) => setActualShippingCost(e.target.value)}
+                          placeholder="0.00"
+                          className="w-28 rounded-lg border border-stone-200 bg-white py-1.5 pl-5 pr-2.5 text-xs placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                        />
+                      </div>
+                      <span className="text-[11px] text-slate-400">Actual shipping cost (optional)</span>
+                    </div>
                     {error && <p className="text-xs text-red-600">{error}</p>}
                     <p className="text-xs text-slate-400">Saves tracking and emails the customer.</p>
                   </form>
@@ -343,7 +428,51 @@ export function OrderCard({ order }: { order: Order }) {
             </span>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-stone-200 pt-4">
+          <div className="mt-4 border-t border-stone-200 pt-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
+              <span className="text-xs font-medium text-slate-500">Internal Note</span>
+            </div>
+            {savedNote && (
+              <div className="mb-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-slate-700">
+                &ldquo;{savedNote}&rdquo;
+                <span className="ml-1 text-slate-400">— just now</span>
+              </div>
+            )}
+            <form onSubmit={handleAddNote} className="flex gap-2">
+              <input
+                type="text"
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Add a note (e.g. ordered via SS, backordered, etc.)"
+                className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+              <button
+                type="submit"
+                disabled={isSavingNote || !noteText.trim()}
+                className="flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-stone-50 disabled:opacity-50"
+              >
+                {isSavingNote ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                Save
+              </button>
+            </form>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-stone-200 pt-4">
+            {nextStatusMap[currentStatus] && (
+              <button
+                onClick={handleStatusAdvance}
+                disabled={isUpdatingStatus}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-navy-800 px-4 py-2 text-sm font-medium text-white hover:bg-navy-900 disabled:opacity-50"
+              >
+                {isUpdatingStatus ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                {nextStatusMap[currentStatus].label}
+              </button>
+            )}
             <Link
               href={`/admin/orders/${order.id}`}
               className="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
@@ -374,20 +503,20 @@ export function OrderCard({ order }: { order: Order }) {
               <form onSubmit={handleSaveNote} className="grid grid-cols-[8fr_2fr] gap-2 items-center">
                 <input
                   type="text"
-                  value={noteValue}
-                  onChange={(e) => setNoteValue(e.target.value)}
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
                   placeholder="Add an internal note…"
                   className="min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 />
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     type="submit"
-                    disabled={noteSaving}
+                    disabled={isSavingNote}
                     className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50 whitespace-nowrap"
                   >
-                    {noteSaving ? '...' : <><Check className="h-3 w-3" /> Save</>}
+                    {isSavingNote ? '...' : <><Check className="h-3 w-3" /> Save</>}
                   </button>
-                  {noteSaved && <span className="text-xs text-green-600">Saved</span>}
+                  {savedNote !== null && <span className="text-xs text-green-600">Saved</span>}
                 </div>
               </form>
             </div>

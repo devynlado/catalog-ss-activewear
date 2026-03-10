@@ -3,8 +3,7 @@ import { Suspense } from 'react';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { GuidesClient } from '@/components/guides/GuidesClient';
 
-// Cache for 5 minutes (300 seconds) instead of force-dynamic
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Product Guides | Garment Decor',

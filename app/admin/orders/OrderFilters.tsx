@@ -10,8 +10,8 @@ interface OrderFiltersProps {
   statusCounts: {
     all: number;
     pending: number;
-    confirmed: number;
-    in_production: number;
+    awaiting_purchasing: number;
+    ordered: number;
     shipped: number;
     delivered: number;
   };
@@ -19,11 +19,11 @@ interface OrderFiltersProps {
 
 const statusTabs = [
   { id: 'all', label: 'All' },
-  { id: 'confirmed', label: 'Confirmed' },
-  { id: 'in_production', label: 'In Production' },
+  { id: 'awaiting_purchasing', label: 'Awaiting Purchasing' },
+  { id: 'ordered', label: 'Ordered' },
   { id: 'shipped', label: 'Shipped' },
   { id: 'delivered', label: 'Delivered' },
-  { id: 'pending', label: 'Pending' },
+  { id: 'pending', label: 'Pending', dimmed: true },
 ];
 
 export function OrderFilters({ currentStatus, currentSearch, statusCounts }: OrderFiltersProps) {
@@ -83,6 +83,7 @@ export function OrderFilters({ currentStatus, currentSearch, statusCounts }: Ord
         {statusTabs.map((tab) => {
           const count = statusCounts[tab.id as keyof typeof statusCounts];
           const isActive = currentStatus === tab.id;
+          const isDimmed = 'dimmed' in tab && tab.dimmed;
 
           return (
             <button
@@ -91,14 +92,18 @@ export function OrderFilters({ currentStatus, currentSearch, statusCounts }: Ord
               className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-navy-800 text-white'
-                  : 'bg-white text-slate-600 hover:bg-stone-100 border border-stone-200'
+                  : isDimmed
+                    ? 'bg-stone-50 text-slate-400 hover:bg-stone-100 border border-stone-200/60'
+                    : 'bg-white text-slate-600 hover:bg-stone-100 border border-stone-200'
               }`}
             >
               {tab.label}
               <span className={`rounded-full px-2 py-0.5 text-xs ${
                 isActive
                   ? 'bg-white/20 text-white'
-                  : 'bg-stone-100 text-slate-500'
+                  : isDimmed
+                    ? 'bg-stone-100 text-slate-400'
+                    : 'bg-stone-100 text-slate-500'
               }`}>
                 {count}
               </span>

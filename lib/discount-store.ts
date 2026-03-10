@@ -106,11 +106,15 @@ export const useDiscountStore = create<DiscountStore>()(
       
       getDiscountByStyleId: (styleId: number | string) => {
         const styleIdStr = String(styleId);
+        const styleIdNum = typeof styleId === 'number' ? styleId : parseInt(styleId, 10);
         const discounts = Object.values(get().discounts);
         
-        // Look for a discount where offerId matches styleId or contains styleId
         const discount = discounts.find((d) => {
+          // Match on stored styleId (set when discount is persisted from a product page)
+          if (d.styleId && !isNaN(styleIdNum) && d.styleId === styleIdNum) return true;
+          // Fallback: exact offerId match
           if (d.offerId === styleIdStr) return true;
+          // Fallback: offerId prefix match (legacy SKU format)
           if (d.offerId.startsWith(styleIdStr)) return true;
           // Also match on the stored styleId field (enriched on first landing)
           if (d.styleId !== undefined && String(d.styleId) === styleIdStr) return true;

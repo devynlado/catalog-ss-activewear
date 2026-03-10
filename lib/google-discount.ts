@@ -36,11 +36,12 @@ export interface GoogleDiscount {
   jwtExp: number;         // Original JWT expiration
   merchantId: string;
   // Variant context for persistence across navigation (return visits)
-  styleId?: number;
+  styleId?: number;        // Product style ID — enables lookup on return visits without URL params
   productSlug?: string;
   colorCode?: string;
   colorName?: string;
   sizeName?: string;
+  discountPercent?: number; // Proportional discount (0–1) computed on initial landing, persisted for reuse
 }
 
 // Validation result

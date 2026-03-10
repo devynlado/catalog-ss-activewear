@@ -8,6 +8,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { ArrowLeft, Loader2, Check, Upload, X, FileImage, AlertCircle, Shield, Lock, Clock, Phone, RefreshCw, Palette, Package, Truck, BadgeCheck } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
+import { getAttribution } from '@/lib/attribution';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -212,6 +213,7 @@ export function PackageCheckoutClient() {
           totalQuantity: packageData.totalQuantity,
           logoFileUrl: logoUrl,
           orderNotes,
+          ...getAttribution(),
         }),
       });
       

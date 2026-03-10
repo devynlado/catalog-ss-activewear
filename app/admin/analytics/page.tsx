@@ -9,10 +9,11 @@ import { PathTreeDiagram } from './PathTreeDiagram';
 import { SalesBySourceSection } from './SalesBySourceSection';
 import { LeadBySourceTable } from './LeadBySourceTable';
 import { ContactCTATable } from './ContactCTATable';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 export const metadata = {
   title: 'Garment Decor Analytics',
-  description: 'Page visitor and analytics for garmentdecor.com',
+  description: 'Page visitor, traffic, and profitability analytics for garmentdecor.com',
 };
 
 export default async function AnalyticsPage() {
@@ -39,9 +40,19 @@ export default async function AnalyticsPage() {
             Garment Decor Analytics
           </h1>
           <p className="mt-1 text-slate-600">
-            Visitor and traffic analytics for garmentdecor.com
+            Visitor, traffic, and profitability analytics for garmentdecor.com
           </p>
         </div>
+
+        <section className="mb-12">
+          <h2 className="mb-4 text-lg font-semibold text-navy-800">
+            Profitability & Ad Spend
+          </h2>
+          <p className="mb-4 text-sm text-slate-600">
+            Revenue, COGS, margins, and ad performance across orders.
+          </p>
+          <AnalyticsDashboard />
+        </section>
 
         <section className="mb-12">
           <h2 className="mb-4 text-lg font-semibold text-navy-800">

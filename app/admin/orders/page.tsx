@@ -23,6 +23,8 @@ export default async function OrdersPage({
 
   if (searchParams.status && searchParams.status !== 'all') {
     query = query.eq('status', searchParams.status);
+  } else if (!searchParams.status || searchParams.status === 'all') {
+    query = query.neq('status', 'pending');
   }
 
   if (searchParams.payment && searchParams.payment !== 'all') {
@@ -40,17 +42,18 @@ export default async function OrdersPage({
 
   const { count: allCount } = await supabase
     .from('orders')
-    .select('*', { count: 'exact', head: true });
+    .select('*', { count: 'exact', head: true })
+    .neq('status', 'pending');
 
-  const { count: confirmedCount } = await supabase
+  const { count: awaitingPurchasingCount } = await supabase
     .from('orders')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 'confirmed');
+    .eq('status', 'awaiting_purchasing');
 
-  const { count: inProductionCount } = await supabase
+  const { count: orderedCount } = await supabase
     .from('orders')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 'in_production');
+    .eq('status', 'ordered');
 
   const { count: shippedCount } = await supabase
     .from('orders')
@@ -70,8 +73,8 @@ export default async function OrdersPage({
   const statusCounts = {
     all: allCount || 0,
     pending: pendingCount || 0,
-    confirmed: confirmedCount || 0,
-    in_production: inProductionCount || 0,
+    awaiting_purchasing: awaitingPurchasingCount || 0,
+    ordered: orderedCount || 0,
     shipped: shippedCount || 0,
     delivered: deliveredCount || 0,
   };
