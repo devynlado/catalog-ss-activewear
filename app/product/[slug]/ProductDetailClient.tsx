@@ -253,17 +253,34 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
   }, [effectiveResolvedColor, effectiveVariant]);
 
   // Calculate proportional discount percentage for Google automated discounts.
-  // Compare Google's discount price against the MATCHED SIZE's site price (not product-level basePrice).
-  // e.g., if 3XL site price is $9.45 and Google discount is $8.97, discountPercent ≈ 5.08%
-  // This percentage is then applied proportionally to ALL sizes (including upcharge sizes).
+  // On initial landing (URL has pv2 + color + size): compute from the matched size's site price.
+  // On return visits (no URL params): use the stored discountPercent from the persisted discount.
   const googleDiscountPercent = useMemo(() => {
     if (!activeDiscount) return 0;
-    // Use matched size price for accurate comparison; fall back to basePrice
+    // Prefer stored percent from a previous visit (avoids fallback to wrong base price)
+    if (activeDiscount.discountPercent && activeDiscount.discountPercent > 0) {
+      return activeDiscount.discountPercent;
+    }
+    // Fresh computation for initial landing: use matched size price for accuracy
     const referencePrice = matchedSizePrice || basePrice;
-    // Clamp: if Google's price is >= reference, there's no discount to apply
     if (activeDiscount.price >= referencePrice) return 0;
     return (referencePrice - activeDiscount.price) / referencePrice;
   }, [activeDiscount, matchedSizePrice, basePrice]);
+
+  // Store the discount from the initial landing (pv2 JWT) with styleId + discountPercent
+  // so it can be retrieved and applied correctly on return visits without URL params.
+  useEffect(() => {
+    if (initialDiscount) {
+      const percent = matchedSizePrice && initialDiscount.price < matchedSizePrice
+        ? (matchedSizePrice - initialDiscount.price) / matchedSizePrice
+        : undefined;
+      addDiscount({
+        ...initialDiscount,
+        styleId: product.styleId,
+        discountPercent: percent && percent > 0 ? percent : undefined,
+      });
+    }
+  }, [initialDiscount, addDiscount, product.styleId, matchedSizePrice]);
 
   // Google discount is active when we successfully calculated a positive discount percentage
   const hasGoogleDiscount = !!activeDiscount && googleDiscountPercent > 0;

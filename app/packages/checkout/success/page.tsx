@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle, Mail, Clock, FileImage, ArrowRight, Phone } from 'lucide-react';
+import { PackageSuccessTracker } from './PackageSuccessTracker';
 
 export const metadata: Metadata = {
   title: 'Order Confirmed | Garment Decor',
@@ -16,6 +17,7 @@ export default async function PackageCheckoutSuccessPage({ searchParams }: PageP
   
   return (
     <div className="min-h-screen bg-stone-50">
+      {orderNumber && <PackageSuccessTracker orderNumber={orderNumber} />}
       <main className="mx-auto max-w-2xl px-4 py-16">
         {/* Success Header */}
         <div className="text-center mb-8">

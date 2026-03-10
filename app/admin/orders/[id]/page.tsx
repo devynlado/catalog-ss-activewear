@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { Badge } from '@/components/ui/Badge';
 import { OrderStatusActions } from './OrderStatusActions';
 import { ShippingForm } from './ShippingForm';
+import { ActualShippingCostEditor } from './ActualShippingCostEditor';
 import { OrderActivityLog } from './OrderActivityLog';
 import { OrderRefundUI } from './OrderRefundUI';
 
@@ -16,8 +17,10 @@ export const metadata = {
 const statusConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
   pending: { label: 'Pending', variant: 'warning' },
   confirmed: { label: 'Confirmed', variant: 'info' },
+  awaiting_purchasing: { label: 'Awaiting Purchasing', variant: 'brand' },
+  ordered: { label: 'Ordered', variant: 'info' },
   in_production: { label: 'In Production', variant: 'brand' },
-  shipped: { label: 'Shipped', variant: 'info' },
+  shipped: { label: 'Shipped', variant: 'success' },
   delivered: { label: 'Delivered', variant: 'success' },
   cancelled: { label: 'Cancelled', variant: 'error' },
 };
@@ -384,6 +387,13 @@ export default async function OrderDetailPage({
                       </p>
                     </div>
                   )}
+                  <div className="border-t border-stone-200 pt-3">
+                    <ActualShippingCostEditor
+                      orderId={order.id}
+                      currentValue={order.actual_shipping_cost != null ? Number(order.actual_shipping_cost) : null}
+                      shippingCharged={Number(order.shipping_cost) || 0}
+                    />
+                  </div>
                 </div>
               ) : (
                 <ShippingForm orderId={order.id} />

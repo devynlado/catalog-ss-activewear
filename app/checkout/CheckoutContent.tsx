@@ -32,6 +32,7 @@ import { AddressAutocomplete, loadGoogleMapsScript, ParsedAddress } from '@/comp
 import { OrderSummary } from './OrderSummary';
 import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
 import { trackBeginCheckout, trackGenerateLead, CartItem as GA4CartItem } from '@/lib/analytics';
+import { getAttribution } from '@/lib/attribution';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -268,6 +269,7 @@ function InlinePaymentForm({
               poNumber: poNumber || undefined,
               orderNotes: orderNotes || undefined,
               couponCode: appliedCoupon?.code ?? undefined,
+              ...getAttribution(),
             }),
             signal: controller.signal,
           });
