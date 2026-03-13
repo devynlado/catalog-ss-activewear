@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, Clock, Tag, BookOpen } from 'lucide-react';
 import { getBlogArticles, getBlogCategories, estimateReadingTime } from '@/lib/sanity';
 import type { BlogArticleListItem } from '@/lib/sanity';
+import { getBlogPostPath } from '@/lib/blog-url';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -17,7 +18,7 @@ function ArticleCard({ article }: { article: BlogArticleListItem }) {
 
   return (
     <Link
-      href={`/blog/${article.slug}`}
+      href={getBlogPostPath(article.category?.slug, article.slug)}
       className="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
     >
       {article.featuredImage && (
@@ -118,7 +119,7 @@ export default async function BlogPage() {
             {/* Featured article */}
             {featured && (
               <Link
-                href={`/blog/${featured.slug}`}
+                href={getBlogPostPath(featured.category?.slug, featured.slug)}
                 className="group mb-12 grid gap-6 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-all hover:shadow-lg lg:grid-cols-2"
               >
                 {featured.featuredImage && (

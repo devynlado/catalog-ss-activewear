@@ -416,6 +416,111 @@ export async function fetchHomepagePathTree(
   };
 }
 
+/** Row for top product pages by visitor source. */
+export interface ProductVisitorRow {
+  pagePath: string;
+  pageTitle?: string;
+  googleAds: number;
+  organicSearch: number;
+  organicSocial: number;
+  organicShopping: number;
+  referral: number;
+  crossNetwork: number;
+  other: number;
+  total: number;
+}
+
+const PRODUCT_CHANNEL_MAP: Record<string, keyof Omit<ProductVisitorRow, 'pagePath' | 'pageTitle' | 'total'>> = {
+  'Paid Search': 'googleAds',
+  'Organic Search': 'organicSearch',
+  'Organic Social': 'organicSocial',
+  'Organic Shopping': 'organicShopping',
+  'Referral': 'referral',
+  'Cross-Network': 'crossNetwork',
+};
+
+/**
+ * Fetch top N product pages (/product/*) by screen page views with breakdown by channel.
+ */
+export async function fetchProductPageVisitorsByChannel(
+  propertyId: string,
+  limit = 30,
+  dateRangeDays = 30
+): Promise<ProductVisitorRow[]> {
+  const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - dateRangeDays);
+  const startStr = startDate.toISOString().slice(0, 10);
+  const endStr = endDate.toISOString().slice(0, 10);
+
+  const client = getClient();
+
+  const response = await runReport(client, {
+    property,
+    dateRanges: [{ startDate: startStr, endDate: endStr }],
+    dimensions: [
+      { name: 'pagePath' },
+      { name: 'pageTitle' },
+      { name: 'sessionDefaultChannelGroup' },
+    ],
+    dimensionFilter: {
+      filter: {
+        fieldName: 'pagePath',
+        stringFilter: { matchType: 'BEGINS_WITH', value: '/product/' },
+      },
+    },
+    metrics: [{ name: 'screenPageViews' }],
+    limit: 10000,
+  });
+
+  if (!response.rows || response.rows.length === 0) {
+    return [];
+  }
+
+  const byPage = new Map<
+    string,
+    { pageTitle?: string; channels: Record<string, number>; total: number }
+  >();
+
+  for (const row of response.rows) {
+    const pagePath = row.dimensionValues?.[0]?.value ?? '';
+    const pageTitle = row.dimensionValues?.[1]?.value ?? undefined;
+    const channelRaw = (row.dimensionValues?.[2]?.value ?? '').trim();
+    const value = Number(row.metricValues?.[0]?.value ?? 0);
+    if (!pagePath) continue;
+
+    if (!byPage.has(pagePath)) {
+      byPage.set(pagePath, { pageTitle, channels: {}, total: 0 });
+    }
+    const entry = byPage.get(pagePath)!;
+
+    const matchedKey = Object.keys(PRODUCT_CHANNEL_MAP).find(
+      (k) => k.toLowerCase() === channelRaw.toLowerCase()
+    );
+    const ourKey = matchedKey ? PRODUCT_CHANNEL_MAP[matchedKey] : 'other';
+    entry.channels[ourKey] = (entry.channels[ourKey] ?? 0) + value;
+    entry.total += value;
+  }
+
+  const sorted = [...byPage.entries()]
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, limit);
+
+  return sorted.map(([pagePath, { pageTitle, channels, total }]) => ({
+    pagePath,
+    pageTitle: pageTitle || undefined,
+    googleAds: channels.googleAds ?? 0,
+    organicSearch: channels.organicSearch ?? 0,
+    organicSocial: channels.organicSocial ?? 0,
+    organicShopping: channels.organicShopping ?? 0,
+    referral: channels.referral ?? 0,
+    crossNetwork: channels.crossNetwork ?? 0,
+    other: channels.other ?? 0,
+    total,
+  }));
+}
+
 /** Sales/funnel metrics by visitor source (channel). */
 export interface SalesBySourceRow {
   source: string;

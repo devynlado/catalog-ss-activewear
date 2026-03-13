@@ -21,17 +21,20 @@ import {
   getAutoMetaDescription,
 } from '@/lib/sanity';
 import { getSiteUrl } from '@/lib/metadata';
+import { getBlogPostPath } from '@/lib/blog-url';
 import { PortableText } from '@/app/components/PortableText';
 import { PortfolioCardImage } from '@/app/portfolio/PortfolioCardImage';
 import { getDecorationTitle } from '@/sanity/schema/decorationOptions';
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ category: string; slug: string }> };
 
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const slugs = await getBlogArticleSlugs();
-  return slugs.map((slug) => ({ slug }));
+  const entries = await getBlogArticleSlugs();
+  return entries
+    .filter((e) => e.categorySlug)
+    .map((e) => ({ category: e.categorySlug!, slug: e.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -40,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article) return { title: 'Article Not Found | Garment Decor' };
 
   const base = getSiteUrl();
-  const url = `${base}/blog/${article.slug}`;
+  const url = `${base}${getBlogPostPath(article.category?.slug, article.slug)}`;
   const title = article.metaTitle || `${article.title} | Garment Decor Blog`;
   const description = getAutoMetaDescription(article);
   const image = article.featuredImage || `${base}/images/og-default.png`;
@@ -91,7 +94,7 @@ export default async function BlogArticlePage({ params }: Props) {
 
   const readMin = estimateReadingTime(article.plainBody);
   const base = getSiteUrl();
-  const url = `${base}/blog/${article.slug}`;
+  const url = `${base}${getBlogPostPath(article.category?.slug, article.slug)}`;
   const description = getAutoMetaDescription(article);
 
   const jsonLd = {
@@ -238,7 +241,7 @@ export default async function BlogArticlePage({ params }: Props) {
                       {related.map((r) => (
                         <Link
                           key={r._id}
-                          href={`/blog/${r.slug}`}
+                          href={getBlogPostPath(r.category?.slug, r.slug)}
                           className="group flex gap-3"
                         >
                           {r.featuredImage && (

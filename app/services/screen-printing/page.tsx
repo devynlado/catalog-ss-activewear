@@ -8,7 +8,7 @@ import {
   HowItWorks,
   ComparisonTable,
   TipsSection,
-  PortfolioGrid,
+  DynamicPortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
   ServiceQuoteForm,
@@ -134,14 +134,6 @@ const tips = [
     description: 'Screen printing becomes more affordable at higher quantities. Our sweet spot is 100+ pieces.',
   },
 ];
-
-// Build portfolio items from service images
-const portfolioItems = serviceImages?.gallery.map((img, index) => ({
-  title: img.alt,
-  tags: ['Screen Printing', index % 2 === 0 ? 'Custom' : 'Streetwear'],
-  image: img.src,
-  alt: img.alt,
-})) || [];
 
 const shopCategories = [
   { name: 'T-Shirts', href: '/catalog?category=21' },
@@ -278,10 +270,12 @@ export default function ScreenPrintingPage() {
       />
 
       {/* Portfolio */}
-      <PortfolioGrid
+      <DynamicPortfolioGrid
         title="Our Screen Printing Portfolio"
         subtitle="Real projects from real clients"
-        items={portfolioItems}
+        decorationSlug="screen-printing"
+        limit={8}
+        viewAllLink="/portfolio"
       />
 
       {/* Most Popular Blank for Screen Printing */}

@@ -45,7 +45,10 @@ export const blogArticleBySlugQuery = `
 `;
 
 export const blogArticleSlugsQuery = `
-  *[_type == "blogArticle" && defined(publishedAt)].slug.current
+  *[_type == "blogArticle" && defined(publishedAt)] {
+    "slug": slug.current,
+    "categorySlug": category->slug.current
+  }
 `;
 
 export const blogRelatedArticlesQuery = `

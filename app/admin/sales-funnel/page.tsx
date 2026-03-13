@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, Filter } from 'lucide-react';
 import { getServerProfile } from '@/lib/supabase-server';
 import { PageVisitorTable } from '../analytics/PageVisitorTable';
+import { ProductVisitorTable } from '../analytics/ProductVisitorTable';
 import { PageEngagementTable } from '../analytics/PageEngagementTable';
 import { CityDemographicsTable } from '../analytics/CityDemographicsTable';
 import { PathTreeDiagram } from '../analytics/PathTreeDiagram';
@@ -60,6 +61,16 @@ export default async function SalesFunnelPage() {
             Scroll horizontally to see all columns.
           </p>
           <PageVisitorTable />
+        </section>
+
+        <section className="mb-12">
+          <h2 className="mb-4 text-lg font-semibold text-navy-800">
+            Top 30 Product Pages by Visitor Source
+          </h2>
+          <p className="mb-4 text-sm text-slate-600">
+            Most visited product pages with traffic broken down by source: Google Ads, Organic Search, Organic Social, Organic Shopping, Referral, Cross-network, and Other. Data last 30 days.
+          </p>
+          <ProductVisitorTable />
         </section>
 
         <section className="mb-12">

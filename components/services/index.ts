@@ -4,6 +4,7 @@ export { HowItWorks } from './HowItWorks';
 export { ComparisonTable } from './ComparisonTable';
 export { TipsSection } from './TipsSection';
 export { PortfolioGrid } from './PortfolioGrid';
+export { DynamicPortfolioGrid } from './DynamicPortfolioGrid';
 export { RetailFinishingUpsell } from './RetailFinishingUpsell';
 export { ServiceCTA } from './ServiceCTA';
 export { ServiceQuoteForm } from './ServiceQuoteForm';

@@ -31,4 +31,5 @@ export type {
   BlogCategory,
   BlogArticleListItem,
   BlogArticleDetail,
+  BlogArticleSlugEntry,
 } from './blogFetch';

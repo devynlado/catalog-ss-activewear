@@ -78,9 +78,14 @@ export async function getBlogArticleBySlug(slug: string): Promise<BlogArticleDet
   return (await client.fetch<BlogArticleDetail | null>(blogArticleBySlugQuery, { slug })) ?? null;
 }
 
-export async function getBlogArticleSlugs(): Promise<string[]> {
+export interface BlogArticleSlugEntry {
+  slug: string;
+  categorySlug: string | null;
+}
+
+export async function getBlogArticleSlugs(): Promise<BlogArticleSlugEntry[]> {
   if (!client) return [];
-  return (await client.fetch<string[]>(blogArticleSlugsQuery)) ?? [];
+  return (await client.fetch<BlogArticleSlugEntry[]>(blogArticleSlugsQuery)) ?? [];
 }
 
 export async function getBlogRelatedArticles(currentSlug: string): Promise<BlogArticleListItem[]> {
