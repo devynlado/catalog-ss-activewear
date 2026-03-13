@@ -22,8 +22,8 @@ export function ContactCTATable() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const msg = data.error || (res.status === 403 ? 'Admin access required' : 'Failed to load');
-          const details = data.details ? ` — ${data.details}` : '';
+          const msg = data.error || (res.status === 403 ? 'Admin access required' : res.status === 401 ? 'Please log in.' : 'Failed to load');
+          const details = data.details && data.code !== 'GA4_ERROR' ? ` — ${data.details}` : '';
           throw new Error(`${msg}${details}`);
         }
         return data;
@@ -46,9 +46,12 @@ export function ContactCTATable() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
         <p className="font-medium">Could not load CTA to contact</p>
         <p className="mt-1 whitespace-pre-wrap break-words">{error}</p>
+        <p className="mt-3 text-xs text-amber-700">
+          On production: log in as an admin. For real GA4 data, add GA4_PROPERTY_ID and GA4_SERVICE_ACCOUNT_JSON in Vercel → Environment Variables; otherwise sample data is used.
+        </p>
       </div>
     );
   }

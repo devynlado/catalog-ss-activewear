@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight, Lock } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight, Lock, ShieldCheck } from 'lucide-react';
 import { Product, ProductColor, Category } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
@@ -18,6 +18,8 @@ import { SpecsContent } from '@/components/builder/SpecsAccordion';
 import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
 import { trackViewItem, trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
 import { ProductDescription } from './ProductDescription';
+import { hasTieredPricing, getTierTable, getTieredPrice, getBaseTierPrice } from '@/lib/tiered-pricing';
+import { ValuePropsStrip, SocialProofBanner, UseCaseCallouts, CuratedDescription, WhyThe1801GD, DecorationUpsell, BottomCTA } from '@/components/product/LA1801GDSections';
 
 /**
  * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
@@ -73,6 +75,10 @@ const isLAApparel = (styleId: number) => styleId >= 9001000 && styleId < 9010000
 export function ProductDetailClient({ product, googleDiscount: initialDiscount, initialVariant }: ProductDetailClientProps) {
   // Check if this is an LA Apparel product (needs special handling)
   const isLAApparelProduct = isLAApparel(product.styleId);
+  
+  // Check if this product uses tiered (volume-discount) pricing
+  const isTieredProduct = hasTieredPricing(product.styleId);
+  const tierTable = isTieredProduct ? getTierTable(product.styleId) : null;
   
   // Check if this is an Otto Cap product (needs image proxy and different display)
   const isOttoCap = product.supplier === 'otto_cap';
@@ -307,6 +313,22 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
   // When landing from Google, scope to the initial color so the "From" price
   // matches the hero and size table — no conflicting numbers on the page.
   const basePriceDisplay = useMemo(() => {
+    // For tiered products, use the tier-1 base price from config (authoritative)
+    if (isTieredProduct) {
+      const tierBase = getBaseTierPrice(product.styleId, 'M') ?? 0;
+      if (tierBase > 0) {
+        const effectivePrice = googleDiscountPercent > 0
+          ? Math.round(tierBase * (1 - googleDiscountPercent) * 100) / 100
+          : tierBase;
+        return {
+          hasPrice: true,
+          price: effectivePrice,
+          originalMinPrice: googleDiscountPercent > 0 ? tierBase : null,
+          originalMinRetail: null as number | null,
+        };
+      }
+    }
+
     // Choose which colors to consider: initial color only (discount landing) or all colors
     const colorsToConsider = isDiscountLanding && effectiveResolvedColor
       ? [effectiveResolvedColor]
@@ -360,7 +382,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
       originalMinPrice: googleDiscountPercent > 0 ? minPrice : null,
       originalMinRetail: minRetailPrice, // color-scoped retail for sale strikethrough
     };
-  }, [product.colors, googleDiscountPercent, isDiscountLanding, effectiveResolvedColor]);
+  }, [product.colors, product.styleId, googleDiscountPercent, isDiscountLanding, effectiveResolvedColor, isTieredProduct]);
   
   // Helper to validate image URLs (must be http/https)
   const isValidImageUrl = (url: string | undefined | null): url is string => {
@@ -550,8 +572,11 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
         const sizeInfo = color.sizes.find((s) => s.name === sizeName);
         const sku = sizeInfo?.sku || `${product.styleId}-${colorCode}-${sizeName}`;
 
-        // Use proportional discounted price per-size if Google discount is active
-        const regularPrice = sizeInfo?.salePrice || sizeInfo?.price || basePrice;
+        // For tiered products, store the tier-1 base price; the cart computes
+        // the actual volume-discounted price dynamically.
+        const regularPrice = isTieredProduct
+          ? (getBaseTierPrice(product.styleId, sizeName) ?? (sizeInfo?.salePrice || sizeInfo?.price || basePrice))
+          : (sizeInfo?.salePrice || sizeInfo?.price || basePrice);
         const finalPrice = googleDiscountPercent > 0
           ? Math.round(regularPrice * (1 - googleDiscountPercent) * 100) / 100
           : regularPrice;
@@ -808,9 +833,17 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
         <div className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
           {/* Header */}
           <div>
-            <p className="text-xs lg:text-sm font-semibold uppercase tracking-wide text-brand-600">
-              {product.brandName}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs lg:text-sm font-semibold uppercase tracking-wide text-brand-600">
+                {product.brandName}
+              </p>
+              {isLAApparelProduct && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-semibold text-green-700 uppercase tracking-wide">
+                  <ShieldCheck className="h-3 w-3" />
+                  Authorized Reseller
+                </span>
+              )}
+            </div>
             <h1 className="mt-1 lg:mt-2 text-xl lg:text-3xl font-bold text-slate-900">
               {product.title || `${product.brandName} ${product.styleName}`}
             </h1>
@@ -835,8 +868,13 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                   {formatPrice(basePriceDisplay.price)}
                 </span>
                 
-                {/* Per piece label */}
-                <span className="text-base text-slate-500 font-medium">per piece</span>
+                {/* Per piece label + volume floor hint for tiered products */}
+                <span className="text-base text-slate-500 font-medium">each</span>
+                {isTieredProduct && tierTable && (
+                  <span className="text-xs text-brand-600 font-semibold">
+                    · As low as {formatPrice(tierTable.tiers[tierTable.tiers.length - 1].prices[0])} at {tierTable.tiers[tierTable.tiers.length - 1].label}
+                  </span>
+                )}
                 
                 {/* Original price strikethrough — must be HIGHER than displayed price */}
                 {basePriceDisplay.originalMinPrice && basePriceDisplay.originalMinPrice > basePriceDisplay.price ? (
@@ -863,8 +901,62 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
             )}
           </div>
 
+          {/* Tiered Pricing Table */}
+          {tierTable && (
+            <div className="mt-4 rounded-xl border border-brand-100 bg-gradient-to-br from-brand-50/40 to-white p-3 lg:p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-700 mb-2">Volume Pricing</p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-500">
+                    <th className="text-left pb-1.5 font-medium">Qty</th>
+                    {tierTable.sizeGroups.map((sg, i) => (
+                      <th key={sg} className={cn("text-right pb-1.5 font-medium", i === 3 && "hidden sm:table-cell")}>{sg}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tierTable.tiers.map((tier, idx) => {
+                    const isActive = totalPieces >= tier.minQty && totalPieces <= tier.maxQty;
+                    return (
+                      <tr
+                        key={idx}
+                        className={cn(
+                          'transition-colors',
+                          isActive
+                            ? 'bg-brand-100/60 font-semibold text-brand-800'
+                            : 'text-slate-700',
+                        )}
+                      >
+                        <td className="py-1 pr-2 text-left text-xs">{tier.label}</td>
+                        {tier.prices.map((p, i) => (
+                          <td key={i} className={cn("py-1 text-right text-xs tabular-nums", i === 3 && "hidden sm:table-cell")}>
+                            {formatPrice(p)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {totalPieces > 0 && totalPieces < 72 && (() => {
+                const nextTiers = tierTable.tiers;
+                const currentIdx = nextTiers.findIndex(t => totalPieces >= t.minQty && totalPieces <= t.maxQty);
+                if (currentIdx >= 0 && currentIdx < nextTiers.length - 1) {
+                  const next = nextTiers[currentIdx + 1];
+                  const needed = next.minQty - totalPieces;
+                  return (
+                    <p className="mt-2 text-xs text-brand-600 font-medium">
+                      Add {needed} more for {formatPrice(next.prices[0])}/pc
+                    </p>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          )}
+
           {/* Popular For Tags */}
-          {product.categories && product.categories.length > 0 && (
+          {product.categories && product.categories.length > 0 && !isTieredProduct && (
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <span className="text-xs text-slate-500 font-medium">Popular for:</span>
               {getPopularForTags(product.categories).map(tag => (
@@ -876,6 +968,15 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                 </span>
               ))}
             </div>
+          )}
+
+          {/* 1801GD: Value props + social proof (replaces generic "Popular For" tags) */}
+          {product.styleName === '1801GD' && (
+            <>
+              <ValuePropsStrip />
+              <SocialProofBanner />
+              <UseCaseCallouts />
+            </>
           )}
         </div>
 
@@ -1173,8 +1274,20 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
 
         {/* Product Details */}
         <div className="space-y-2">
-          {/* Product Description */}
-          {product.description && (
+          {/* Description - Curated for 1801GD, ProductDescription for others */}
+          {product.styleName === '1801GD' ? (
+            <details open className="rounded-xl border border-stone-200 bg-white overflow-hidden group">
+              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-stone-50 transition-colors">
+                <span className="font-medium text-slate-700 text-sm">Description</span>
+                <svg className="h-4 w-4 text-slate-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="px-4 pb-4 border-t border-stone-100">
+                <CuratedDescription />
+              </div>
+            </details>
+          ) : product.description ? (
             <details className="rounded-xl border border-stone-200 bg-white overflow-hidden group">
               <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-stone-50 transition-colors">
                 <span className="font-medium text-slate-700 text-sm">Product Description</span>
@@ -1189,7 +1302,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                 />
               </div>
             </details>
-          )}
+          ) : null}
 
           {/* Specifications (lazy loads on open) */}
           <details 
@@ -1211,29 +1324,12 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
             </div>
           </details>
 
-          {/* Subtle Decoration Hint */}
+          {/* 1801GD: Grouped comparison + FAQ, decoration upsell, bottom CTA */}
           {product.styleName === '1801GD' ? (
-            <div className="mt-4 rounded-xl border border-brand-200 bg-gradient-to-r from-brand-50 to-white p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100">
-                  <Palette className="h-4 w-4 text-brand-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Need the 1801GD customized?
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Screen printing from $0.90/pc, embroidery from $3.00/pc. Factory-direct pricing, 50pc minimum.
-                  </p>
-                  <Link
-                    href="/blanks/los-angeles-apparel-1801gd"
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
-                  >
-                    View decoration options &amp; get a quote
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-              </div>
+            <div className="space-y-3 mt-2">
+              <WhyThe1801GD />
+              <DecorationUpsell />
+              <BottomCTA />
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-brand-100 bg-gradient-to-r from-brand-50 to-white p-4">

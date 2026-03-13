@@ -23,7 +23,7 @@ jobs:
 
           SITE_URL="${{ secrets.SITE_URL }}"
           API_KEY="${{ secrets.SYNC_API_KEY }}"
-          BATCH_SIZE=50
+          BATCH_SIZE=30
           OFFSET=0
           TOTAL_SKUS=0
           BATCH_NUM=0
@@ -53,21 +53,37 @@ jobs:
             BATCH_NUM=$((BATCH_NUM + 1))
             echo "Batch $BATCH_NUM: offset=$OFFSET, limit=$BATCH_SIZE"
 
-            response=$(curl -s -L -w "\n%{http_code}" \
-              -X POST \
-              "${SITE_URL}/api/sync?type=inventory&offset=${OFFSET}&limit=${BATCH_SIZE}" \
-              -H "Content-Type: application/json" \
-              -H "x-api-key: ${API_KEY}")
+            RETRIES=0
+            MAX_RETRIES=2
+            BATCH_OK=0
 
-            http_code=$(echo "$response" | tail -n1)
-            body=$(echo "$response" | sed '$d')
+            while [ "$RETRIES" -le "$MAX_RETRIES" ] && [ "$BATCH_OK" -eq 0 ]; do
+              if [ "$RETRIES" -gt 0 ]; then
+                echo "  Retry $RETRIES/$MAX_RETRIES (waiting 5s)..."
+                sleep 5
+              fi
 
-            if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 207 ]; then
-              skus=$(echo "$body" | grep -o '"skusProcessed":[0-9]*' | grep -o '[0-9]*')
-              TOTAL_SKUS=$((TOTAL_SKUS + ${skus:-0}))
-              echo "  OK (${http_code}) — ${skus:-0} SKUs updated"
-            else
-              echo "  FAILED (${http_code}): $body"
+              response=$(curl -s -L -w "\n%{http_code}" \
+                -X POST \
+                "${SITE_URL}/api/sync?type=inventory&offset=${OFFSET}&limit=${BATCH_SIZE}" \
+                -H "Content-Type: application/json" \
+                -H "x-api-key: ${API_KEY}")
+
+              http_code=$(echo "$response" | tail -n1)
+              body=$(echo "$response" | sed '$d')
+
+              if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 207 ]; then
+                skus=$(echo "$body" | grep -o '"skusProcessed":[0-9]*' | grep -o '[0-9]*')
+                TOTAL_SKUS=$((TOTAL_SKUS + ${skus:-0}))
+                echo "  OK (${http_code}) — ${skus:-0} SKUs updated"
+                BATCH_OK=1
+              else
+                RETRIES=$((RETRIES + 1))
+              fi
+            done
+
+            if [ "$BATCH_OK" -eq 0 ]; then
+              echo "  FAILED after $MAX_RETRIES retries (${http_code}): $body"
               FAILED=$((FAILED + 1))
             fi
 

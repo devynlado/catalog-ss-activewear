@@ -1,5 +1,7 @@
 // Stripe utility functions that can be used on both client and server
 
+import { hasTieredPricing, getEffectiveItemPrice } from './tiered-pricing';
+
 export type ShippingMethod = 'same_day' | 'economy';
 
 // Generate a unique order number
@@ -15,11 +17,25 @@ export function generateOrderNumber(): string {
 
 // Calculate order totals with shipping method
 export function calculateOrderTotals(
-  items: Array<{ unitPrice: number; quantity: number; discountedPrice?: number }>,
+  items: Array<{ unitPrice: number; quantity: number; discountedPrice?: number; styleId?: number; sizeName?: string }>,
   shippingMethod: ShippingMethod = 'economy'
 ) {
-  // Use discounted price when available
-  const subtotal = items.reduce((sum, item) => sum + (item.discountedPrice ?? item.unitPrice) * item.quantity, 0);
+  const styleQtys = new Map<number, number>();
+  for (const item of items) {
+    if (item.styleId && hasTieredPricing(item.styleId)) {
+      styleQtys.set(item.styleId, (styleQtys.get(item.styleId) || 0) + item.quantity);
+    }
+  }
+  const subtotal = items.reduce((sum, item) => {
+    if (item.styleId && item.sizeName) {
+      const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
+      return sum + getEffectiveItemPrice(
+        { styleId: item.styleId, sizeName: item.sizeName, unitPrice: item.unitPrice, discountedPrice: item.discountedPrice },
+        totalStyleQty,
+      ) * item.quantity;
+    }
+    return sum + (item.discountedPrice ?? item.unitPrice) * item.quantity;
+  }, 0);
   
   // TODO: Implement proper tax calculation via Stripe Tax
   // For now, estimate 8.25% (California average)

@@ -12,6 +12,7 @@ import { CartItem, AvailableSize } from '@/lib/database.types';
 import { DecorationPitch } from '@/components/cart/DecorationPitch';
 import { getDecoratedDeliveryEstimate, formatDateRange } from '@/app/checkout/ShippingOptions';
 import { trackViewCart, CartItem as GA4CartItem } from '@/lib/analytics';
+import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 
 // Card styles - stronger contrast/depth
 const glassCard = "bg-white border border-stone-200 rounded-2xl shadow-xl shadow-stone-300/40";
@@ -64,11 +65,20 @@ interface GroupedItem {
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
+  const styleQtys = new Map<number, number>();
+  for (const item of items) {
+    if (hasTieredPricing(item.styleId)) {
+      styleQtys.set(item.styleId, (styleQtys.get(item.styleId) || 0) + item.quantity);
+    }
+  }
+
   const groups = new Map<string, GroupedItem>();
 
   for (const item of items) {
     const key = `${item.styleId}-${item.colorCode}`;
     const normalizedSize = normalizeSize(item.sizeName);
+    const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
+    const effectivePrice = getEffectiveItemPrice(item, totalStyleQty);
     
     if (!groups.has(key)) {
       groups.set(key, {
@@ -84,13 +94,12 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         availableSizes: item.availableSizes || [],
         totalQuantity: 0,
         totalPrice: 0,
-        basePrice: item.discountedPrice ?? item.unitPrice,
+        basePrice: effectivePrice,
         hasDiscount: !!(item.discountedPrice && item.discountedPrice < item.unitPrice),
       });
     }
 
     const group = groups.get(key)!;
-    const effectivePrice = item.discountedPrice ?? item.unitPrice;
     
     // Merge available sizes
     if (item.availableSizes && item.availableSizes.length > group.availableSizes.length) {
@@ -141,6 +150,7 @@ export default function CartPage() {
     appliedCoupon,
     setAppliedCoupon,
     clearCoupon,
+    getTierUpsell,
   } = useCartStore();
 
   const [promoCode, setPromoCode] = useState('');
@@ -522,6 +532,16 @@ export default function CartPage() {
                           {group.hasDiscount && <span className="text-green-600 ml-2">• Sale price</span>}
                         </span>
                       </div>
+                      {/* Tier upsell nudge */}
+                      {(() => {
+                        const upsell = getTierUpsell(group.styleId);
+                        if (!upsell) return null;
+                        return (
+                          <p className="mt-1.5 text-xs font-medium text-brand-600">
+                            Add {upsell.unitsNeeded} more for {formatPrice(upsell.nextPrice)}/pc — save {upsell.savingsPercent}%
+                          </p>
+                        );
+                      })()}
                     </div>
                   );
                 })}
