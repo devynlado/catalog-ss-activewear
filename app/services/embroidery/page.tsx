@@ -7,13 +7,15 @@ import {
   BenefitsBadges,
   HowItWorks,
   TipsSection,
-  PortfolioGrid,
+  DynamicPortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
   ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
+  ServiceFAQ,
 } from '@/components/services';
+import type { ServiceFaqItem } from '@/components/services';
 import { getServiceImages } from '@/lib/service-images';
 
 // Get images for this service
@@ -93,13 +95,37 @@ const tips = [
   },
 ];
 
-// Build portfolio items from service images
-const portfolioItems = serviceImages?.gallery.map((img, index) => ({
-  title: img.alt,
-  tags: ['Embroidery', index % 2 === 0 ? 'Custom' : 'Headwear'],
-  image: img.src,
-  alt: img.alt,
-})) || [];
+
+const embroideryFaqItems: ServiceFaqItem[] = [
+  {
+    q: 'What is the minimum order quantity for embroidery?',
+    a: 'The minimum order quantity for custom embroidery is 50 pieces.',
+  },
+  {
+    q: 'What factors affect the price of embroidery?',
+    a: 'Embroidery prices are custom quoted per project. Pricing depends on several factors, including:\n\n• Garment type (e.g., t-shirts, sweatshirts, performance wear)\n• Number of colors and placements\n• Order quantity (larger embroidery orders receive volume discounts)',
+  },
+  {
+    q: 'How long does embroidery production take?',
+    a: 'Our standard embroidery production turnaround time is 10 business days from the date of final artwork approval and receipt of all blank garments.\n\nTurnaround time may vary depending on:\n\n• Current production volume\n• Order size and complexity\n• Add-on services (relabeling, folding, bagging, etc.)\n• Shipping or delivery requirements',
+  },
+  {
+    q: 'Can I see a sample or proof before production starts?',
+    a: 'Absolutely. If you\'re undecided on which garment to use for your embroidery project, we strongly recommend ordering blank samples before proceeding with a full production run. This helps ensure you\'re confident in your garment selection before printing begins.',
+  },
+  {
+    q: 'Do you offer bulk pricing for large embroidery orders?',
+    a: 'Yes. We offer tiered pricing for bulk embroidery orders, meaning the more you order, the lower the cost per piece.\n\nOur minimum order is 50 pieces, with price breaks available at 75, 100, 150, 250, 500, and 1000 pieces.',
+  },
+  {
+    q: 'Are you able to re-label a blank product?',
+    a: 'Yes, we can re-label blank garments, but it\'s important to understand the type of label currently on the product to determine the best approach for rebranding.\n\nTear-Away Labels\nIf your shirts come with tear-away tags, we will remove them free of charge and print your custom neck label in its place.\n\nCut-Away Labels\nSome garments may come with cut-away labels, which are designed to be removed by cutting. While we can remove these as well, it requires additional labor and may incur additional charges.',
+  },
+  {
+    q: 'Do you offer rush embroidery orders?',
+    a: 'Yes. Rush embroidery orders are typically completed within 2–4 business days, depending on the scope of the project and our current production capacity.\n\nRush turnaround is contingent on the following:\n\n• Artwork approval and blank garment delivery must be finalized upfront\n• All order details (sizes, styles, and print specifications) must be confirmed with no revisions\n• Availability of your requested garments from our suppliers\n\nRush fees apply and are quoted based on order complexity, decoration method, and required ship or pickup date. Please contact your sales representative as early as possible to confirm if a rush production slot is available.\n\nRush jobs are scheduled on a first-come, first-served basis.',
+  },
+];
 
 const shopCategories = [
   { name: 'Polos', href: '/catalog?category=52' },
@@ -235,11 +261,20 @@ export default function EmbroideryPage() {
         reasons={whyChooseReasons}
       />
 
+      {/* FAQ */}
+      <ServiceFAQ
+        title="Embroidery FAQ"
+        subtitle="Common questions about our custom embroidery services"
+        items={embroideryFaqItems}
+      />
+
       {/* Portfolio */}
-      <PortfolioGrid
+      <DynamicPortfolioGrid
         title="Embroidery Portfolio"
         subtitle="Precision stitching for every application"
-        items={portfolioItems}
+        decorationSlug="embroidery"
+        limit={8}
+        viewAllLink="/portfolio"
       />
 
       {/* Most Popular Blank for Embroidery */}

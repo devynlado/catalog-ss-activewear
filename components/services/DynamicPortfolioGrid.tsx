@@ -18,7 +18,7 @@ interface PortfolioProject {
 interface DynamicPortfolioGridProps {
   title: string;
   subtitle?: string;
-  decorationSlug: string;
+  decorationSlug: string | string[];
   limit?: number;
   viewAllLink?: string;
 }
@@ -33,8 +33,10 @@ export function DynamicPortfolioGrid({
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const slugParam = Array.isArray(decorationSlug) ? decorationSlug.join(',') : decorationSlug;
+
   useEffect(() => {
-    fetch(`/api/portfolio/by-decoration?decoration=${decorationSlug}&limit=${limit}`)
+    fetch(`/api/portfolio/by-decoration?decoration=${slugParam}&limit=${limit}`)
       .then((res) => res.json())
       .then((data) => setProjects(data.items ?? []))
       .catch(() => {})

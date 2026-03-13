@@ -15,9 +15,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'decoration param required' }, { status: 400 });
   }
 
+  const decorationSlugs = decoration.split(',').map((s) => s.trim()).filter(Boolean);
+
   try {
     const projects = await getProjectsFiltered({
-      decorationSlugs: [decoration],
+      decorationSlugs,
       limit,
     });
 

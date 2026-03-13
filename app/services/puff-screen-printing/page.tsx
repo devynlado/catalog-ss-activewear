@@ -6,13 +6,15 @@ import {
   BenefitsBadges,
   HowItWorks,
   TipsSection,
-  PortfolioGrid,
+  DynamicPortfolioGrid,
   RetailFinishingUpsell,
   ServiceCTA,
   ServiceQuoteForm,
   ShopBlanksSection,
   WhyChooseSection,
+  ServiceFAQ,
 } from '@/components/services';
+import type { ServiceFaqItem } from '@/components/services';
 import { getServiceImages } from '@/lib/service-images';
 
 // Get images for this service
@@ -74,13 +76,37 @@ const tips = [
   },
 ];
 
-// Build portfolio items from service images
-const portfolioItems = serviceImages?.gallery.map((img, index) => ({
-  title: img.alt,
-  tags: ['Puff', index % 2 === 0 ? '3D Effect' : 'Streetwear'],
-  image: img.src,
-  alt: img.alt,
-})) || [];
+
+const puffFaqItems: ServiceFaqItem[] = [
+  {
+    q: 'What is the minimum order quantity for puff screen printing?',
+    a: 'The minimum order quantity for custom puff screen printing is 50 pieces.',
+  },
+  {
+    q: 'What factors affect the price of puff screen printing?',
+    a: 'Puff screen printing prices are custom quoted per project. Pricing depends on several factors, including:\n\n• Garment type (e.g., t-shirts, sweatshirts, performance wear)\n• Number of print colors and print placements\n• Order quantity (larger puff screen printing orders receive volume discounts)',
+  },
+  {
+    q: 'How long does puff screen printing production take?',
+    a: 'Our standard puff screen printing production turnaround time is 10 business days from the date of final artwork approval and receipt of all blank garments.\n\nTurnaround time may vary depending on:\n\n• Current production volume\n• Order size and print complexity\n• Add-on services (relabeling, folding, bagging, etc.)\n• Shipping or delivery requirements',
+  },
+  {
+    q: 'Can I see a sample or proof before production starts?',
+    a: 'Absolutely. If you\'re undecided on which garment to use for your puff screen printing project, we strongly recommend ordering blank samples before proceeding with a full production run. This helps ensure you\'re confident in your garment selection before printing begins.',
+  },
+  {
+    q: 'Do you offer bulk pricing for large puff screen printing orders?',
+    a: 'Yes. We offer tiered pricing for bulk puff screen printing orders, meaning the more you order, the lower the cost per piece.\n\nOur minimum order is 50 pieces, with price breaks available at 75, 100, 150, 250, 500, and 1000 pieces.',
+  },
+  {
+    q: 'Are you able to re-label a blank product?',
+    a: 'Yes, we can re-label blank garments, but it\'s important to understand the type of label currently on the product to determine the best approach for rebranding.\n\nTear-Away Labels\nIf your shirts come with tear-away tags, we will remove them free of charge and print your custom neck label in its place.\n\nCut-Away Labels\nSome garments may come with cut-away labels, which are designed to be removed by cutting. While we can remove these as well, it requires additional labor and may incur additional charges.',
+  },
+  {
+    q: 'Do you offer rush puff screen printing orders?',
+    a: 'Yes. Rush puff screen printing orders are typically completed within 2–4 business days, depending on the scope of the project and our current production capacity.\n\nRush turnaround is contingent on the following:\n\n• Artwork approval and blank garment delivery must be finalized upfront\n• All order details (sizes, styles, and print specifications) must be confirmed with no revisions\n• Availability of your requested garments from our suppliers\n\nRush fees apply and are quoted based on order complexity, decoration method, and required ship or pickup date. Please contact your sales representative as early as possible to confirm if a rush production slot is available.\n\nRush jobs are scheduled on a first-come, first-served basis.',
+  },
+];
 
 const shopCategories = [
   { name: 'Cotton T-Shirts', href: '/catalog?category=21' },
@@ -212,11 +238,20 @@ export default function PuffScreenPrintingPage() {
         reasons={whyChooseReasons}
       />
 
+      {/* FAQ */}
+      <ServiceFAQ
+        title="Puff Screen Printing FAQ"
+        subtitle="Common questions about our puff screen printing services"
+        items={puffFaqItems}
+      />
+
       {/* Portfolio */}
-      <PortfolioGrid
+      <DynamicPortfolioGrid
         title="Puff Printing Portfolio"
         subtitle="3D prints that make an impact"
-        items={portfolioItems}
+        decorationSlug="puff-screen-printing"
+        limit={8}
+        viewAllLink="/portfolio"
       />
 
       {/* Tips */}
