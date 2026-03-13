@@ -1,14 +1,15 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 import { Suspense } from 'react';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { GuidesClient } from '@/components/guides/GuidesClient';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Product Guides | Garment Decor',
   description: 'Browse our curated product guides and collections. Find the perfect blanks for screen printing and embroidery.',
-};
+  path: '/guides',
+});
 
 interface GuideProduct {
   id: number;

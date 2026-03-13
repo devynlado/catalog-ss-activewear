@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Metadata } from 'next';
+import { getSiteUrl } from '@/lib/metadata';
 import { FilterSidebar } from '@/components/builder/FilterSidebar';
 import { ProductGrid } from '@/components/builder/ProductGrid';
 import { ProductGridSkeleton } from '@/components/ui/Skeleton';
@@ -33,12 +34,29 @@ interface CatalogPageProps {
 export async function generateMetadata({ params }: CatalogPageProps): Promise<Metadata> {
   const route = resolveSlugPath(params.slug || []);
   const title = route ? getRouteTitle(route) : 'All Products';
-  
+  const path = '/catalog' + (params.slug?.length ? '/' + params.slug.join('/') : '');
+  const url = `${getSiteUrl()}${path}`;
+  const description = route
+    ? `Shop ${title.toLowerCase()} for custom screen printing and embroidery. Add to your quote today.`
+    : 'Browse our full catalog of blank apparel for custom decoration. T-shirts, hoodies, headwear, bags and more.';
+  const fullTitle = `${title} | Garment Decor Catalog`;
+
   return {
-    title: `${title} | Garment Decor Catalog`,
-    description: route 
-      ? `Shop ${title.toLowerCase()} for custom screen printing and embroidery. Add to your quote today.`
-      : 'Browse our full catalog of blank apparel for custom decoration. T-shirts, hoodies, headwear, bags and more.',
+    title: fullTitle,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: fullTitle,
+      description,
+      url,
+      siteName: 'Garment Decor',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: fullTitle,
+      description,
+    },
   };
 }
 

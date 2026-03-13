@@ -40,16 +40,36 @@ async function getGuideBySlug(slug: string): Promise<Guide | null> {
 
 export async function generateMetadata({ params }: GuidePageProps): Promise<Metadata> {
   const guide = await getGuideBySlug(params.slug);
-  
+  const { getSiteUrl } = await import('@/lib/metadata');
+  const path = `/guides/${params.slug}`;
+  const url = `${getSiteUrl()}${path}`;
+
   if (!guide) {
     return {
       title: 'Guide Not Found | Garment Decor',
+      alternates: { canonical: url },
     };
   }
-  
+
+  const title = `${guide.name} | Product Guide | Garment Decor`;
+  const description = `Browse the ${guide.name} collection. Curated blanks for custom screen printing and embroidery.`;
+
   return {
-    title: `${guide.name} | Product Guide | Garment Decor`,
-    description: `Browse the ${guide.name} collection. Curated blanks for custom screen printing and embroidery.`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: 'Garment Decor',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
   };
 }
 

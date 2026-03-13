@@ -1,3 +1,4 @@
+import { createPageMetadata } from '@/lib/metadata';
 import { Hero } from '@/components/home/Hero';
 import { WhoWeService } from '@/components/home/WhoWeService';
 import { TurnaroundBanner } from '@/components/home/TurnaroundBanner';
@@ -9,6 +10,12 @@ import { ServicesGrid } from '@/components/home/ServicesGrid';
 import { BuiltForScale } from '@/components/home/BuiltForScale';
 import { TrustSignals } from '@/components/home/TrustSignals';
 import { FinalCTA } from '@/components/home/FinalCTA';
+
+export const metadata = createPageMetadata({
+  title: 'Garment Decor | Custom Screen Printing & Embroidery',
+  description: 'Professional screen printing, embroidery, and custom apparel decoration in Southern California. Wholesale pricing, fast turnaround, and premium quality for businesses.',
+  path: '/',
+});
 
 export default function HomePage() {
   return (

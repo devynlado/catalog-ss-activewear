@@ -1,19 +1,15 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 import { getProductBySlug } from '@/lib/product-cache';
 import { PackageHero, WhatsIncluded, BenefitsRow, FAQSection, StickyMobileCTA } from '@/components/packages/shared';
 import { ScreenPrintPackageBuilder, printedTeesComfortColorsPageConfig } from '@/components/packages/screenprinting';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Custom Printed Comfort Colors 1717 T-Shirts | All-Inclusive Pricing | Garment Decor',
   description: 'Get custom printed Comfort Colors 1717 garment-dyed t-shirts with all-inclusive pricing. Premium vintage feel, up to 2 colors included, no setup fees. Free shipping on orders $500+.',
-  openGraph: {
-    title: 'Custom Printed Comfort Colors 1717 T-Shirts | All-Inclusive Pricing',
-    description: 'All-inclusive pricing includes up to 2 print colors, art setup, and screens. Premium garment-dyed vintage tees.',
-    type: 'website',
-  },
-};
+  path: '/packages/printed-tees-comfort-colors',
+});
 
 const { hero, whatsIncluded, benefits, faq, stickyMobileCta, productSlug } = printedTeesComfortColorsPageConfig;
 

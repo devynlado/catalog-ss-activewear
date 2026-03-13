@@ -1,12 +1,14 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 import Link from 'next/link';
 import { CheckCircle, Mail, Clock, FileImage, ArrowRight, Phone } from 'lucide-react';
 import { PackageSuccessTracker } from './PackageSuccessTracker';
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Order Confirmed | Garment Decor',
   description: 'Your custom embroidered baseball caps order has been confirmed.',
-};
+  path: '/packages/checkout/success',
+  noIndex: true,
+});
 
 interface PageProps {
   searchParams: Promise<{ order?: string }>;

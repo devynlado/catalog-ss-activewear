@@ -1,19 +1,15 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 import { getProductBySlug } from '@/lib/product-cache';
 import { PackageHero, WhatsIncluded, BenefitsRow, FAQSection, StickyMobileCTA } from '@/components/packages/shared';
 import { ScreenPrintPackageBuilder, printedTeesGildanPageConfig } from '@/components/packages/screenprinting';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Custom Printed T-Shirts - Gildan 5000 | All-Inclusive Pricing | Garment Decor',
   description: 'Get custom printed Gildan 5000 t-shirts with all-inclusive pricing. Up to 2 colors included, no setup fees, no art charges. Free shipping on orders $500+. 5-7 day production.',
-  openGraph: {
-    title: 'Custom Printed T-Shirts - Gildan 5000 | All-Inclusive Pricing',
-    description: 'All-inclusive pricing includes up to 2 print colors, art setup, and screens. No hidden fees.',
-    type: 'website',
-  },
-};
+  path: '/packages/printed-tees-gildan',
+});
 
 const { hero, whatsIncluded, benefits, faq, stickyMobileCta, productSlug } = printedTeesGildanPageConfig;
 

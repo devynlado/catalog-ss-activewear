@@ -39,11 +39,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     (project.shortDescription ? project.shortDescription.slice(0, 160) : undefined);
   const image =
     project.featuredImage || (project.gallery && project.gallery[0]) || undefined;
-  const url = `https://garmentdecor.com/portfolio/${project.slug}`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
+  const url = `${baseUrl}/portfolio/${project.slug}`;
 
   return {
     title: `${title} | Garment Decor Portfolio`,
     description: description ?? undefined,
+    alternates: { canonical: url },
     openGraph: {
       title,
       description: description ?? undefined,

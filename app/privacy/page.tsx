@@ -1,9 +1,10 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description: 'Privacy Policy for Garment Decor - Learn how we collect, use, and protect your personal information.',
-};
+export const metadata = createPageMetadata({
+  title: 'Privacy Policy | Garment Decor',
+  description: 'Privacy Policy for Garment Decor. Learn how we collect, use, and protect your personal information when you use our website and services.',
+  path: '/privacy',
+});
 
 export default function PrivacyPage() {
   return (

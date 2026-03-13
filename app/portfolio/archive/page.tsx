@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 import Link from 'next/link';
 import { ArrowRight, LayoutGrid } from 'lucide-react';
 import { PortfolioCardImage } from '../PortfolioCardImage';
@@ -9,11 +9,12 @@ import { DECORATION_OPTIONS } from '@/sanity/schema/decorationOptions';
 import { ArchiveFilterBar } from './ArchiveFilterBar';
 import { ArchiveHeroActions } from './ArchiveHeroActions';
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Project Archive | Recent Work | Garment Decor',
   description:
     'Browse our most recent custom screen printing, embroidery, and decoration projects. Filter by decoration and product used, or search. Updated automatically as we publish new work.',
-};
+  path: '/portfolio/archive',
+});
 
 export const revalidate = 60;
 

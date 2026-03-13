@@ -8,6 +8,8 @@ import { CompanionProducts } from '@/components/builder/CompanionProducts';
 import { RelatedProducts } from '@/components/builder/RelatedProducts';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd';
+import { ProductFAQ } from './ProductFAQ';
+import { getProductFaqItems } from './productFaqData';
 import { validateDiscountToken, GoogleDiscount } from '@/lib/google-discount';
 
 // Initial variant resolved from URL params (color/size from GMC feed links)
@@ -195,8 +197,9 @@ export async function generateMetadata({ params }: ProductPageProps) {
 
   const title = `${product.title || product.styleName} - ${product.brandName}`;
   const description = product.description || `Shop ${product.styleName} by ${product.brandName}. View colors, sizes, inventory and get wholesale pricing.`;
-  const productUrl = `https://garmentdecor.com/product/${product.slug}`;
-  const imageUrl = product.imageUrl || 'https://garmentdecor.com/images/og-default.png';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
+  const productUrl = `${baseUrl}/product/${product.slug}`;
+  const imageUrl = product.imageUrl || `${baseUrl}/images/og-default.png`;
 
   return {
     title,
@@ -324,6 +327,30 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       />
       <BreadcrumbJsonLd items={breadcrumbItems} />
 
+      {/* FAQ Structured Data */}
+      {(() => {
+        const productName = `${product.brandName} ${product.styleName}`;
+        const faqItems = getProductFaqItems(productName);
+        const faqSchema = {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: faqItems.map(item => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: item.a,
+            },
+          })),
+        };
+        return (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+          />
+        );
+      })()}
+
       <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50">
         {/* Breadcrumb */}
       <div className="relative bg-gradient-to-r from-white via-stone-50/30 to-white border-b border-stone-200 overflow-hidden">
@@ -370,6 +397,13 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         <div className="pointer-events-none absolute -left-32 top-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-brand-500/5 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <CompanionProducts styleId={product.styleId} />
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="relative bg-white border-t border-stone-200 overflow-hidden">
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <ProductFAQ productName={`${product.brandName} ${product.styleName}`} />
         </div>
       </div>
 

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingCart, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
+import { Menu, X, ShoppingCart, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard, FileText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useCartStore } from '@/lib/cart-store';
 import { cn } from '@/lib/utils';
@@ -661,6 +661,19 @@ export function Header() {
                       <div>
                         <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Portfolio</span>
                         <span className="text-xs text-slate-500">Our work & projects</span>
+                      </div>
+                    </Link>
+                    <Link
+                      href="/blog"
+                      onClick={() => setResourcesOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2 hover:bg-stone-50 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Blog</span>
+                        <span className="text-xs text-slate-500">Tips, guides & insights</span>
                       </div>
                     </Link>
                     <Link
@@ -1483,6 +1496,14 @@ export function Header() {
                 >
                   <LayoutDashboard className="h-4 w-4 text-amber-500" />
                   Portfolio
+                </Link>
+                <Link
+                  href="/blog"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-stone-50"
+                >
+                  <FileText className="h-4 w-4 text-sky-500" />
+                  Blog
                 </Link>
                 <Link
                   href="/resources/screen-printing-guide"

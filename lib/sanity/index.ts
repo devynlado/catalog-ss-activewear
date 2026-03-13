@@ -15,3 +15,20 @@ export {
   getProjectsFiltered,
 } from './fetch';
 export type { ArchiveFilterParams } from './fetch';
+
+// Blog
+export {
+  getBlogArticles,
+  getBlogArticleBySlug,
+  getBlogArticleSlugs,
+  getBlogRelatedArticles,
+  getBlogCategories,
+  getBlogArticlesByCategory,
+  estimateReadingTime,
+  getAutoMetaDescription,
+} from './blogFetch';
+export type {
+  BlogCategory,
+  BlogArticleListItem,
+  BlogArticleDetail,
+} from './blogFetch';

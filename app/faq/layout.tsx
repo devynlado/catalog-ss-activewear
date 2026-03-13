@@ -1,21 +1,11 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 import { FAQJsonLd } from '@/components/seo/JsonLd';
 
-export const metadata: Metadata = {
-  title: 'FAQ - Frequently Asked Questions',
+export const metadata = createPageMetadata({
+  title: 'FAQ | Garment Decor',
   description: 'Get answers to common questions about screen printing, embroidery, pricing, turnaround times, artwork requirements, and ordering from Garment Decor.',
-  keywords: ['screen printing FAQ', 'embroidery questions', 'custom apparel FAQ', 'printing turnaround', 'artwork requirements'],
-  alternates: {
-    canonical: 'https://garmentdecor.com/faq',
-  },
-  openGraph: {
-    title: 'FAQ - Frequently Asked Questions | Garment Decor',
-    description: 'Get answers to common questions about screen printing, embroidery, pricing, and ordering.',
-    url: 'https://garmentdecor.com/faq',
-    siteName: 'Garment Decor',
-    type: 'website',
-  },
-};
+  path: '/faq',
+});
 
 // Top FAQs for structured data (plain text versions for SEO)
 const topFAQs = [

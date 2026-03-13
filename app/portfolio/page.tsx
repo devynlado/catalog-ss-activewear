@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 import Link from 'next/link';
 import { ArrowRight, Phone } from 'lucide-react';
 import { PortfolioCardImage } from './PortfolioCardImage';
@@ -6,11 +6,12 @@ import { getProjects, getProjectsFiltered, getCategories } from '@/lib/sanity';
 import { PortfolioSearch } from './PortfolioSearch';
 import { getDecorationTitle } from '@/sanity/schema/decorationOptions';
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Portfolio | Custom Apparel Projects | Garment Decor',
   description:
     'Explore our portfolio of custom screen printing, embroidery, and apparel decoration projects. See the quality of our work for brands, businesses, and events.',
-};
+  path: '/portfolio',
+});
 
 export const revalidate = 60;
 

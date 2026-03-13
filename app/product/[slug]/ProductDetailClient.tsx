@@ -17,6 +17,7 @@ import { SizeDistributionRow } from '@/components/builder/SizeDistributionRow';
 import { SpecsContent } from '@/components/builder/SpecsAccordion';
 import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
 import { trackViewItem, trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
+import { ProductDescription } from './ProductDescription';
 
 /**
  * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
@@ -1005,9 +1006,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
         {/* Color Selection Card - Enhanced depth */}
         {product.colors && product.colors.length > 0 && (
           <div id="color-selection" className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
-            <h3 className="text-sm lg:text-base font-bold text-slate-800">
-              {isDiscountLanding ? 'Add More Colors' : 'Select Colors'} <span className="font-normal text-slate-500">({product.colors.length} available)</span>
-            </h3>
+            <h2 className="text-sm lg:text-base font-bold text-slate-800">
+              {isDiscountLanding ? 'Add More Colors' : 'Available Colors'} <span className="font-normal text-slate-500">({product.colors.length} available)</span>
+            </h2>
             <p className="mt-0.5 lg:mt-1 text-xs text-slate-500 hidden lg:block">
               {isDiscountLanding ? 'Click colors to add more size rows. Click again to remove.' : 'Click colors to add size rows below. Click again to remove.'}
             </p>
@@ -1170,27 +1171,27 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           </div>
         )}
 
-        {/* Product Details - Minimal collapsible sections */}
+        {/* Product Details */}
         <div className="space-y-2">
-          {/* Description - First */}
+          {/* Product Description */}
           {product.description && (
             <details className="rounded-xl border border-stone-200 bg-white overflow-hidden group">
               <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-stone-50 transition-colors">
-                <span className="font-medium text-slate-700 text-sm">Description</span>
+                <span className="font-medium text-slate-700 text-sm">Product Description</span>
                 <svg className="h-4 w-4 text-slate-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </summary>
-              <div className="px-4 pb-4 border-t border-stone-100">
-                <div 
-                  className="pt-3 prose prose-sm prose-slate max-w-none prose-p:text-slate-600 prose-p:leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: product.description }} 
+              <div className="px-4 pb-4 border-t border-stone-100 pt-3">
+                <ProductDescription
+                  description={product.description}
+                  productName={product.title || product.styleName}
                 />
               </div>
             </details>
           )}
 
-          {/* Specifications - Second (lazy loads on open) */}
+          {/* Specifications (lazy loads on open) */}
           <details 
             className="rounded-xl border border-stone-200 bg-white overflow-hidden group"
             onToggle={(e) => {

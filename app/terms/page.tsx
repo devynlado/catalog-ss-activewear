@@ -1,9 +1,10 @@
-import { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
-  title: 'Terms of Service',
-  description: 'Terms of Service for Garment Decor - Read our terms and conditions for using our services.',
-};
+export const metadata = createPageMetadata({
+  title: 'Terms of Service | Garment Decor',
+  description: 'Terms of Service for Garment Decor. Read our terms and conditions for using our screen printing, embroidery, and custom apparel services.',
+  path: '/terms',
+});
 
 export default function TermsPage() {
   return (
