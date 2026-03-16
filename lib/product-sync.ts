@@ -12,7 +12,7 @@
 import { createServerSupabaseClient } from './supabase';
 import { SSProduct, SSProductSku } from './types';
 import { POPULAR_PRODUCTS, ProductCategory, PopularProduct } from './popular-products';
-import { getTieredStyleIds } from './tiered-pricing';
+import { getTieredStyleIds, getBaseTierPrice } from './tiered-pricing';
 
 // ============================================================================
 // CONFIGURATION
@@ -424,9 +424,21 @@ export async function syncPopularProducts(): Promise<SyncResult> {
             const retailPrices = skuPrices.map(p => p.retailPrice).filter(p => p > 0);
             const salePrices = skuPrices.map(p => p.salePrice).filter((p): p is number => p !== null && p > 0);
             
-            const minRetailPrice = retailPrices.length > 0 ? Math.min(...retailPrices) : null;
-            const minSalePrice = salePrices.length > 0 ? Math.min(...salePrices) : null;
-            const isOnSale = minSalePrice !== null && minSalePrice < (minRetailPrice || Infinity);
+            const tieredIds = getTieredStyleIds();
+            const isStyleTiered = tieredIds.has(style.styleID);
+
+            let minRetailPrice: number | null = retailPrices.length > 0 ? Math.min(...retailPrices) : null;
+            let minSalePrice: number | null = salePrices.length > 0 ? Math.min(...salePrices) : null;
+            let isOnSale = minSalePrice !== null && minSalePrice < (minRetailPrice || Infinity);
+
+            if (isStyleTiered) {
+              const tierBase = getBaseTierPrice(style.styleID, 'M');
+              if (tierBase != null) {
+                minRetailPrice = tierBase;
+                minSalePrice = null;
+                isOnSale = false;
+              }
+            }
             
             // Legacy base price calculation (keeping for backward compatibility)
             const minCogs = Math.min(...skus.map(s => s.customerPrice || s.piecePrice || 0).filter(p => p > 0));
@@ -515,8 +527,6 @@ export async function syncPopularProducts(): Promise<SyncResult> {
                 // Auto-min price for Google auto-pricing (floor based on your cost)
                 const autoMinPrice = Math.round(cogs * AUTO_MIN_MARKUP * 100) / 100;
 
-                // For tiered-pricing products, omit retail_price / sale_price so the
-                // upsert keeps the manually-set tier-1 base prices in the DB.
                 const skuRow: Record<string, unknown> = {
                   sku: sku.sku,
                   style_id: style.styleID,
@@ -535,7 +545,13 @@ export async function syncPopularProducts(): Promise<SyncResult> {
                   last_inventory_sync: new Date().toISOString(),
                 };
 
-                if (!isTiered) {
+                if (isTiered) {
+                  const tierBase = getBaseTierPrice(style.styleID, sku.sizeName);
+                  if (tierBase != null) {
+                    skuRow.retail_price = tierBase;
+                    skuRow.sale_price = null;
+                  }
+                } else {
                   skuRow.retail_price = retailPrice;
                   skuRow.sale_price = salePrice;
                 }
@@ -922,9 +938,21 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
             const retailPrices = skuPrices.map(p => p.retailPrice).filter(p => p > 0);
             const salePrices = skuPrices.map(p => p.salePrice).filter((p): p is number => p !== null && p > 0);
             
-            const minRetailPrice = retailPrices.length > 0 ? Math.min(...retailPrices) : null;
-            const minSalePrice = salePrices.length > 0 ? Math.min(...salePrices) : null;
-            const isOnSale = minSalePrice !== null && minSalePrice < (minRetailPrice || Infinity);
+            const tieredIdsFullSync = getTieredStyleIds();
+            const isStyleTieredFullSync = tieredIdsFullSync.has(style.styleID);
+
+            let minRetailPrice: number | null = retailPrices.length > 0 ? Math.min(...retailPrices) : null;
+            let minSalePrice: number | null = salePrices.length > 0 ? Math.min(...salePrices) : null;
+            let isOnSale = minSalePrice !== null && minSalePrice < (minRetailPrice || Infinity);
+
+            if (isStyleTieredFullSync) {
+              const tierBase = getBaseTierPrice(style.styleID, 'M');
+              if (tierBase != null) {
+                minRetailPrice = tierBase;
+                minSalePrice = null;
+                isOnSale = false;
+              }
+            }
             
             // Legacy base price calculation (keeping for backward compatibility)
             const minCogs = Math.min(...skus.map(s => s.customerPrice || s.piecePrice || 0).filter(p => p > 0));
@@ -992,8 +1020,8 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
                 availability: hasStock ? 'in_stock' : 'out_of_stock',
               });
               
-              const tieredIds = getTieredStyleIds();
-              const isTiered = tieredIds.has(style.styleID);
+              const tieredIdsSkus = getTieredStyleIds();
+              const isTieredSku = tieredIdsSkus.has(style.styleID);
 
               for (const sku of colorSkus) {
                 // COGS = your wholesale cost (for margin tracking / Google Merchant)
@@ -1030,7 +1058,13 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
                   last_inventory_sync: new Date().toISOString(),
                 };
 
-                if (!isTiered) {
+                if (isTieredSku) {
+                  const tierBase = getBaseTierPrice(style.styleID, sku.sizeName);
+                  if (tierBase != null) {
+                    skuRow.retail_price = tierBase;
+                    skuRow.sale_price = null;
+                  }
+                } else {
                   skuRow.retail_price = retailPrice;
                   skuRow.sale_price = salePrice;
                 }

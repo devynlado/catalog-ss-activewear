@@ -160,3 +160,136 @@ export function getNextTierInfo(styleId: number, currentQty: number) {
     savingsPercent: Math.round((savingsPerUnit / currentPrice) * 100),
   };
 }
+
+/**
+ * Enhanced next-tier info with total dollar savings for upsell messaging.
+ * Shows what the user would save on their entire order by reaching the next tier.
+ */
+export function getNextTierSavings(styleId: number, currentQty: number) {
+  const rule = rulesByStyleId.get(styleId);
+  if (!rule || currentQty <= 0) return null;
+
+  const currentTierIdx = rule.tiers.findIndex(
+    (t) => currentQty >= t.minQty && currentQty <= t.maxQty,
+  );
+  if (currentTierIdx < 0 || currentTierIdx >= rule.tiers.length - 1) return null;
+
+  const currentTier = rule.tiers[currentTierIdx];
+  const nextTier = rule.tiers[currentTierIdx + 1];
+  const unitsNeeded = nextTier.minQty - currentQty;
+  const nextQty = currentQty + unitsNeeded;
+  const savingsPerUnit = currentTier.prices.standard - nextTier.prices.standard;
+  const totalSavings = Math.round(savingsPerUnit * nextQty * 100) / 100;
+
+  return {
+    unitsNeeded,
+    nextLabel: nextTier.label,
+    nextPrice: nextTier.prices.standard,
+    savingsPerUnit,
+    savingsPercent: Math.round((savingsPerUnit / currentTier.prices.standard) * 100),
+    totalSavings,
+  };
+}
+
+/**
+ * Progress toward the next tier (for progress bar).
+ * Returns null when at the highest tier or no tiered pricing.
+ */
+export function getTierProgress(styleId: number, currentQty: number) {
+  const rule = rulesByStyleId.get(styleId);
+  if (!rule) return null;
+
+  const currentTierIdx = rule.tiers.findIndex(
+    (t) => currentQty >= t.minQty && currentQty <= t.maxQty,
+  );
+  if (currentTierIdx < 0) {
+    return { percent: 0, currentQty, nextMin: rule.tiers[0].minQty, nextLabel: rule.tiers[0].label, atMaxTier: false };
+  }
+  if (currentTierIdx >= rule.tiers.length - 1) {
+    return { percent: 100, currentQty, nextMin: rule.tiers[currentTierIdx].minQty, nextLabel: rule.tiers[currentTierIdx].label, atMaxTier: true };
+  }
+
+  const nextTier = rule.tiers[currentTierIdx + 1];
+  const currentTier = rule.tiers[currentTierIdx];
+  const rangeStart = currentTier.minQty;
+  const rangeEnd = nextTier.minQty;
+  const percent = Math.min(100, Math.round(((currentQty - rangeStart) / (rangeEnd - rangeStart)) * 100));
+
+  return {
+    percent,
+    currentQty,
+    nextMin: nextTier.minQty,
+    nextLabel: nextTier.label,
+    atMaxTier: false,
+  };
+}
+
+/**
+ * Current tier savings vs tier-1 base price (for "you're saving" messaging).
+ * Returns null when at tier-1 or no tiered pricing.
+ */
+export function getCurrentTierSavings(styleId: number, currentQty: number) {
+  const rule = rulesByStyleId.get(styleId);
+  if (!rule || currentQty <= 0) return null;
+
+  const tier1Price = rule.tiers[0].prices.standard;
+  const currentTierIdx = rule.tiers.findIndex(
+    (t) => currentQty >= t.minQty && currentQty <= t.maxQty,
+  );
+  if (currentTierIdx <= 0) return null;
+
+  const currentPrice = rule.tiers[currentTierIdx].prices.standard;
+  const savingsPerUnit = Math.round((tier1Price - currentPrice) * 100) / 100;
+  if (savingsPerUnit <= 0) return null;
+
+  const totalSavings = Math.round(savingsPerUnit * currentQty * 100) / 100;
+
+  return {
+    savingsPerUnit,
+    totalSavings,
+    savingsPercent: Math.round((savingsPerUnit / tier1Price) * 100),
+    tierLabel: rule.tiers[currentTierIdx].label,
+  };
+}
+
+/**
+ * Check whether a cart item is receiving a volume discount (below tier-1).
+ * Used for "Volume Price" badge in cart/checkout.
+ */
+export function isVolumePriced(styleId: number, sizeName: string, totalStyleQty: number): boolean {
+  const rule = rulesByStyleId.get(styleId);
+  if (!rule || totalStyleQty <= 0) return false;
+  const tier1Price = rule.tiers[0].prices[classifySize(sizeName)];
+  const currentPrice = getTieredPrice(styleId, sizeName, totalStyleQty, tier1Price);
+  return currentPrice < tier1Price;
+}
+
+/**
+ * Calculate total volume savings across a set of cart items (for checkout summary).
+ * Returns the difference between what the user would pay at tier-1 vs what they actually pay.
+ */
+export function calculateVolumeSavings(
+  items: Array<{ styleId: number; sizeName: string; quantity: number; unitPrice: number; discountedPrice?: number }>,
+): number {
+  let totalSavings = 0;
+
+  const styleQtys = new Map<number, number>();
+  for (const item of items) {
+    if (hasTieredPricing(item.styleId)) {
+      styleQtys.set(item.styleId, (styleQtys.get(item.styleId) || 0) + item.quantity);
+    }
+  }
+
+  for (const item of items) {
+    if (!hasTieredPricing(item.styleId)) continue;
+    const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
+    const tier1Price = getBaseTierPrice(item.styleId, item.sizeName) ?? item.unitPrice;
+    const effectivePrice = getEffectiveItemPrice(item, totalStyleQty);
+    const diff = tier1Price - effectivePrice;
+    if (diff > 0) {
+      totalSavings += diff * item.quantity;
+    }
+  }
+
+  return Math.round(totalSavings * 100) / 100;
+}

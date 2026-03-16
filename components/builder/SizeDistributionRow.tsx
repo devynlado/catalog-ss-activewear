@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { ProductColor } from '@/lib/types';
 import { cn, formatNumber, formatPrice } from '@/lib/utils';
+import { hasTieredPricing, getTieredPrice, getBaseTierPrice, getCurrentTierSavings } from '@/lib/tiered-pricing';
 import Image from 'next/image';
 
 /**
@@ -23,8 +24,10 @@ interface SizeDistributionRowProps {
   onQuantitiesChange: (quantities: Record<string, number>) => void;
   onRemove: () => void;
   showRemoveButton?: boolean;
-  hideInventory?: boolean; // Hide stock levels and allow all sizes (for LA Apparel)
-  discountPercent?: number; // Proportional discount (0-1) from Google automated discounts
+  hideInventory?: boolean;
+  discountPercent?: number;
+  styleId?: number;
+  totalStylePieces?: number;
 }
 
 // Stock level thresholds
@@ -52,6 +55,8 @@ export function SizeDistributionRow({
   showRemoveButton = true,
   hideInventory = false,
   discountPercent = 0,
+  styleId,
+  totalStylePieces = 0,
 }: SizeDistributionRowProps) {
   const handleQuantityChange = (sizeName: string, value: string) => {
     const numValue = parseInt(value, 10);
@@ -68,18 +73,29 @@ export function SizeDistributionRow({
 
   const totalQty = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
 
-  // Helper: get the effective (potentially discounted) price for a size
-  const getEffectivePrice = (size: { price: number; salePrice: number | null }) => {
-    const retail = size.salePrice || size.price;
-    if (discountPercent > 0) {
-      return Math.round(retail * (1 - discountPercent) * 100) / 100;
+  const isTiered = styleId != null && hasTieredPricing(styleId);
+  const tierSavings = isTiered && styleId != null
+    ? getCurrentTierSavings(styleId, totalStylePieces)
+    : null;
+
+  const getBasePrice = (size: { name: string; price: number; salePrice: number | null }) => {
+    if (isTiered && styleId != null) {
+      const qty = Math.max(totalStylePieces, 1);
+      return getTieredPrice(styleId, size.name, qty, size.salePrice || size.price);
     }
-    return retail;
+    return size.salePrice || size.price;
   };
 
-  // Helper: get the original price (before Google discount) for strikethrough
-  const getOriginalPrice = (size: { price: number; salePrice: number | null }) => {
-    return size.salePrice || size.price;
+  const getEffectivePrice = (size: { name: string; price: number; salePrice: number | null }) => {
+    const base = getBasePrice(size);
+    if (discountPercent > 0) {
+      return Math.round(base * (1 - discountPercent) * 100) / 100;
+    }
+    return base;
+  };
+
+  const getOriginalPrice = (size: { name: string; price: number; salePrice: number | null }) => {
+    return getBasePrice(size);
   };
 
   const hasDiscount = discountPercent > 0;
@@ -146,6 +162,11 @@ export function SizeDistributionRow({
               ({totalQty} {totalQty === 1 ? 'piece' : 'pieces'})
             </span>
           )}
+          {tierSavings && (
+            <span className="text-xs font-medium text-brand-600 animate-in fade-in duration-300">
+              {tierSavings.tierLabel} pricing
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {/* Subtotal */}
@@ -175,9 +196,14 @@ export function SizeDistributionRow({
             const indicator = hideInventory 
               ? { color: 'text-slate-500', bgColor: 'bg-stone-50', label: '' }
               : getStockIndicator(stock);
-            // When hideInventory is true, never disable the input
             const isOutOfStock = hideInventory ? false : stock === 0;
             const currentQty = quantities[size.name] || '';
+
+            const currentPrice = getBasePrice(size);
+            const tier1Price = isTiered && styleId != null
+              ? getBaseTierPrice(styleId, size.name)
+              : null;
+            const showTierStrike = tier1Price != null && currentPrice < tier1Price;
 
             return (
               <div
@@ -187,12 +213,10 @@ export function SizeDistributionRow({
                   hideInventory ? 'bg-stone-50' : (isOutOfStock ? 'bg-stone-50' : indicator.bgColor)
                 )}
               >
-                {/* Size label */}
                 <span className="text-xs font-bold mb-1 text-slate-700">
                   {size.name}
                 </span>
                 
-                {/* Quantity input */}
                 <input
                   type="number"
                   value={currentQty}
@@ -208,23 +232,30 @@ export function SizeDistributionRow({
                   )}
                 />
                 
-                {/* Price - shows discounted price with strikethrough when Google discount active */}
                 {hasDiscount ? (
                   <div className="mt-1 flex flex-col items-center">
-                    <span className="text-xs font-bold text-red-600">
+                    <span className="text-xs font-bold text-red-600 transition-all duration-300">
                       {formatPrice(getEffectivePrice(size))}
                     </span>
                     <span className="text-[10px] text-slate-400 line-through">
                       {formatPrice(getOriginalPrice(size))}
                     </span>
                   </div>
+                ) : showTierStrike ? (
+                  <div className="mt-1 flex flex-col items-center transition-all duration-300">
+                    <span className="text-xs font-bold text-brand-600">
+                      {formatPrice(currentPrice)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 line-through">
+                      {formatPrice(tier1Price)}
+                    </span>
+                  </div>
                 ) : (
-                  <div className="mt-1 text-xs font-bold text-brand-600">
-                    {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
+                  <div className="mt-1 text-xs font-bold text-brand-600 transition-all duration-300">
+                    {formatPrice(currentPrice)}
                   </div>
                 )}
                 
-                {/* Stock count with indicator - hidden when hideInventory is true */}
                 {!hideInventory && (
                   <div className={cn('text-[10px] font-medium', indicator.color)}>
                     {stock === 0 ? (
@@ -246,9 +277,14 @@ export function SizeDistributionRow({
             const indicator = hideInventory 
               ? { color: 'text-slate-500', bgColor: 'bg-stone-50', label: '' }
               : getStockIndicator(stock);
-            // When hideInventory is true, never disable the input
             const isOutOfStock = hideInventory ? false : stock === 0;
             const currentQty = quantities[size.name] || '';
+
+            const currentPrice = getBasePrice(size);
+            const tier1Price = isTiered && styleId != null
+              ? getBaseTierPrice(styleId, size.name)
+              : null;
+            const showTierStrike = tier1Price != null && currentPrice < tier1Price;
 
             return (
               <div
@@ -258,12 +294,10 @@ export function SizeDistributionRow({
                   hideInventory ? 'bg-stone-50' : (isOutOfStock ? 'bg-stone-50' : indicator.bgColor)
                 )}
               >
-                {/* Size label */}
                 <span className="text-xs font-bold mb-1.5 text-slate-700">
                   {size.name}
                 </span>
                 
-                {/* Quantity input */}
                 <input
                   type="number"
                   value={currentQty}
@@ -279,23 +313,30 @@ export function SizeDistributionRow({
                   )}
                 />
                 
-                {/* Price - shows discounted price with strikethrough when Google discount active */}
                 {hasDiscount ? (
                   <div className="mt-1 flex flex-col items-center">
-                    <span className="text-xs font-bold text-red-600">
+                    <span className="text-xs font-bold text-red-600 transition-all duration-300">
                       {formatPrice(getEffectivePrice(size))}
                     </span>
                     <span className="text-[10px] text-slate-400 line-through">
                       {formatPrice(getOriginalPrice(size))}
                     </span>
                   </div>
+                ) : showTierStrike ? (
+                  <div className="mt-1 flex flex-col items-center transition-all duration-300">
+                    <span className="text-xs font-bold text-brand-600">
+                      {formatPrice(currentPrice)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 line-through">
+                      {formatPrice(tier1Price)}
+                    </span>
+                  </div>
                 ) : (
-                  <div className="mt-1 text-xs font-bold text-brand-600">
-                    {size.salePrice ? formatPrice(size.salePrice) : formatPrice(size.price)}
+                  <div className="mt-1 text-xs font-bold text-brand-600 transition-all duration-300">
+                    {formatPrice(currentPrice)}
                   </div>
                 )}
                 
-                {/* Stock count with indicator - hidden when hideInventory is true */}
                 {!hideInventory && (
                   <div className={cn('text-[10px] font-medium', indicator.color)}>
                     {stock === 0 ? (

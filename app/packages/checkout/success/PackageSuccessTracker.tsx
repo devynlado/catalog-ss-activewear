@@ -25,7 +25,8 @@ export function PackageSuccessTracker({ orderNumber }: PackageSuccessTrackerProp
           items: (data.lineItems || []).map((item: { item_id: string; item_name: string; price: number; quantity: number }) => ({
             sku: item.item_id,
             styleId: 0,
-            styleName: item.item_name,
+            styleName: '',
+            productTitle: item.item_name,
             brandName: '',
             colorName: '',
             colorCode: '',
