@@ -30,6 +30,13 @@ interface GA4LineItem {
   quantity: number;
 }
 
+interface OrderShipment {
+  warehouse: string;
+  tracking_number?: string | null;
+  carrier?: string | null;
+  shipped_at?: string | null;
+}
+
 interface OrderDetails {
   orderNumber: string;
   email: string;
@@ -41,7 +48,14 @@ interface OrderDetails {
   shippingMethod?: string;
   lineItems?: GA4LineItem[];
   shippingCost?: number;
+  shipments?: OrderShipment[];
 }
+
+const WAREHOUSE_LABELS: Record<string, string> = {
+  ss_activewear: 'SS Activewear',
+  los_angeles_apparel: 'LA Apparel',
+  as_colour: 'AS Colour',
+};
 
 // Glass card styles
 const glassCard = "bg-white/70 backdrop-blur-sm border border-stone-200 rounded-2xl shadow-lg shadow-stone-200/50";
@@ -143,7 +157,8 @@ function SuccessContent() {
               items: (data.lineItems || []).map((item: GA4LineItem) => ({
                 sku: item.item_id,
                 styleId: 0,
-                styleName: item.item_name,
+                styleName: '',
+                productTitle: item.item_name,
                 brandName: '',
                 colorName: '',
                 colorCode: '',
@@ -203,6 +218,11 @@ function SuccessContent() {
           </h1>
           <p className="text-slate-600">
             Your order has been confirmed and is being prepared for shipment.
+            {orderDetails?.shipments && orderDetails.shipments.length > 1 && (
+              <span className="block mt-1 text-sm">
+                Your items will arrive in {orderDetails.shipments.length} separate packages. We&apos;ll send tracking for each.
+              </span>
+            )}
           </p>
         </div>
 

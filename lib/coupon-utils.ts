@@ -145,40 +145,66 @@ export interface OrderTotalsWithCoupon {
   subtotal: number;
   discountAmount: number;
   shippingCost: number;
+  shippingBreakdown: import('./shipping').ShippingBreakdown;
   taxAmount: number;
   total: number;
 }
 
-const TAX_RATE = 0.0825;
-const FREE_ECONOMY_THRESHOLD = 500;
+import {
+  TAX_RATE,
+  FREE_ECONOMY_THRESHOLD,
+  groupCartByWarehouse,
+  calculateShippingBreakdown,
+  type ShipmentGroup,
+  type ShippingBreakdown,
+} from './shipping';
+import type { CartItem } from './database.types';
 
 /**
- * Compute order totals when a coupon is applied.
+ * Compute order totals with coupon + multi-warehouse shipping.
  * - Tax is applied to (subtotal - discountAmount).
- * - Free shipping (coupon): only for economy; same_day still charged.
+ * - Free shipping (coupon or threshold): covers economy on all shipments.
+ * - Express only applies to primary shipment; secondary is always economy.
  */
 export function calculateOrderTotalsWithCoupon(
   subtotal: number,
   shippingMethod: ShippingMethod,
-  couponResult: { discountAmount: number; freeShipping: boolean } | null
+  couponResult: { discountAmount: number; freeShipping: boolean } | null,
+  items?: CartItem[],
 ): OrderTotalsWithCoupon {
   const discountAmount = couponResult?.discountAmount ?? 0;
   const taxable = Math.max(0, subtotal - discountAmount);
   const taxAmount = Math.round(taxable * TAX_RATE * 100) / 100;
 
-  let shippingCost = shippingMethod === 'same_day' ? 25 : 15;
-  if (shippingMethod === 'economy' && subtotal >= FREE_ECONOMY_THRESHOLD) {
-    shippingCost = 0;
-  }
-  if (couponResult?.freeShipping && shippingMethod === 'economy') {
-    shippingCost = 0;
+  const shipments = items ? groupCartByWarehouse(items) : [];
+  const couponFreeShipping = couponResult?.freeShipping ?? false;
+
+  let shippingBreakdown: ShippingBreakdown;
+  if (shipments.length > 0) {
+    shippingBreakdown = calculateShippingBreakdown(
+      shipments,
+      shippingMethod,
+      subtotal,
+      couponFreeShipping,
+    );
+  } else {
+    // Fallback for calls without items (legacy compat) — single-shipment behavior
+    let cost = shippingMethod === 'same_day' ? 25 : 15;
+    if (shippingMethod === 'economy' && subtotal >= FREE_ECONOMY_THRESHOLD) cost = 0;
+    if (couponFreeShipping && shippingMethod === 'economy') cost = 0;
+    shippingBreakdown = {
+      shipments: [{ warehouse: 'ss_activewear' as const, method: shippingMethod, cost, isFree: cost === 0 }],
+      totalShippingCost: cost,
+    };
   }
 
+  const shippingCost = shippingBreakdown.totalShippingCost;
   const total = Math.round((subtotal - discountAmount + shippingCost + taxAmount) * 100) / 100;
   return {
     subtotal: Math.round(subtotal * 100) / 100,
     discountAmount,
     shippingCost,
+    shippingBreakdown,
     taxAmount,
     total,
   };

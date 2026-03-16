@@ -8,12 +8,14 @@ import { CartItem } from '@/lib/database.types';
 import { formatPrice, cn } from '@/lib/utils';
 import { ShippingMethod, getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
 import { DecorationSelection } from '@/lib/decoration-pricing';
-import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
+import { hasTieredPricing, getEffectiveItemPrice, calculateVolumeSavings, isVolumePriced } from '@/lib/tiered-pricing';
+import { type ShippingBreakdown } from '@/lib/shipping';
 
 interface OrderSummaryProps {
   items: CartItem[];
   shippingMethod: ShippingMethod;
   shippingCost: number;
+  shippingBreakdown?: ShippingBreakdown;
   taxAmount?: number;
   isEditable?: boolean;
   decoration?: DecorationSelection | null;
@@ -59,6 +61,7 @@ interface GroupedItem {
   totalPrice: number;
   unitPrice: number;
   hasDiscount: boolean;
+  hasVolumePrice: boolean;
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
@@ -92,6 +95,7 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         totalPrice: 0,
         unitPrice: effectivePrice,
         hasDiscount: !!(item.discountedPrice && item.discountedPrice < item.unitPrice),
+        hasVolumePrice: isVolumePriced(item.styleId, item.sizeName, totalStyleQty),
       });
     }
 
@@ -126,6 +130,7 @@ export function OrderSummary({
   items,
   shippingMethod,
   shippingCost,
+  shippingBreakdown,
   taxAmount,
   isEditable = true,
   decoration,
@@ -158,6 +163,7 @@ export function OrderSummary({
     }
     return sum;
   }, 0);
+  const volumeSavings = calculateVolumeSavings(items);
 
   // Calculate tax (8.25% estimate if not provided) - include decoration in taxable amount
   const taxableAmount = subtotal + decorationTotal - couponDiscount;
@@ -319,6 +325,11 @@ export function OrderSummary({
                   <div className="mt-2 flex items-center justify-between text-xs">
                     <span className="text-slate-500">
                       {group.totalQuantity} pcs @ {formatPrice(group.unitPrice)}
+                      {group.hasVolumePrice && (
+                        <span className="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-medium">
+                          Volume Price
+                        </span>
+                      )}
                     </span>
                     {group.hasDiscount && (
                       <span className="text-green-600 font-medium">
@@ -344,6 +355,13 @@ export function OrderSummary({
             <div className="flex justify-between text-sm">
               <span className="text-green-600 font-medium">Discount Savings</span>
               <span className="text-green-600 font-medium">-{formatPrice(totalSavings)}</span>
+            </div>
+          )}
+
+          {volumeSavings > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-green-600 font-medium">Volume Discount</span>
+              <span className="text-green-600 font-medium">-{formatPrice(volumeSavings)}</span>
             </div>
           )}
 
@@ -379,17 +397,46 @@ export function OrderSummary({
             </div>
           )}
           
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-600">
-              Shipping ({shippingMethod === 'economy' ? 'Economy' : 'Express'})
-            </span>
-            <span className={cn(
-              'font-medium',
-              shippingCost === 0 ? 'text-green-600' : 'text-slate-800'
-            )}>
-              {shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}
-            </span>
-          </div>
+          {shippingBreakdown && shippingBreakdown.shipments.length > 1 ? (
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">
+                  Shipping ({shippingBreakdown.shipments.length} shipments)
+                </span>
+                <span className={cn(
+                  'font-medium',
+                  shippingCost === 0 ? 'text-green-600' : 'text-slate-800'
+                )}>
+                  {shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}
+                </span>
+              </div>
+              {shippingBreakdown.shipments.map((s, i) => (
+                <div key={s.warehouse} className="flex justify-between text-xs pl-2">
+                  <span className="text-slate-500">
+                    Shipment {i + 1} ({s.method === 'economy' ? 'Economy' : 'Express'})
+                  </span>
+                  <span className={cn(
+                    'font-medium',
+                    s.isFree ? 'text-green-600' : 'text-slate-600'
+                  )}>
+                    {s.isFree ? 'Free' : formatPrice(s.cost)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">
+                Shipping ({shippingMethod === 'economy' ? 'Economy' : 'Express'})
+              </span>
+              <span className={cn(
+                'font-medium',
+                shippingCost === 0 ? 'text-green-600' : 'text-slate-800'
+              )}>
+                {shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}
+              </span>
+            </div>
+          )}
           
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Tax (est.)</span>

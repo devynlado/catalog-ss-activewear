@@ -1,8 +1,17 @@
 // Stripe utility functions that can be used on both client and server
 
 import { hasTieredPricing, getEffectiveItemPrice } from './tiered-pricing';
+import {
+  FREE_ECONOMY_THRESHOLD,
+  TAX_RATE,
+  groupCartByWarehouse,
+  calculateShippingBreakdown,
+  type ShippingMethod,
+  type ShippingBreakdown,
+} from './shipping';
+import type { CartItem } from './database.types';
 
-export type ShippingMethod = 'same_day' | 'economy';
+export type { ShippingMethod };
 
 // Generate a unique order number
 // Format: ORD-YYMMDD-XXXX (e.g., ORD-260129-A7B3)
@@ -15,18 +24,17 @@ export function generateOrderNumber(): string {
   return `ORD-${year}${month}${day}-${random}`;
 }
 
-// Calculate order totals with shipping method
-export function calculateOrderTotals(
-  items: Array<{ unitPrice: number; quantity: number; discountedPrice?: number; styleId?: number; sizeName?: string }>,
-  shippingMethod: ShippingMethod = 'economy'
-) {
+// Calculate subtotal with tiered pricing
+function computeSubtotal(
+  items: Array<{ unitPrice: number; quantity: number; discountedPrice?: number; styleId?: number; sizeName?: string }>
+): number {
   const styleQtys = new Map<number, number>();
   for (const item of items) {
     if (item.styleId && hasTieredPricing(item.styleId)) {
       styleQtys.set(item.styleId, (styleQtys.get(item.styleId) || 0) + item.quantity);
     }
   }
-  const subtotal = items.reduce((sum, item) => {
+  return items.reduce((sum, item) => {
     if (item.styleId && item.sizeName) {
       const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
       return sum + getEffectiveItemPrice(
@@ -36,25 +44,25 @@ export function calculateOrderTotals(
     }
     return sum + (item.discountedPrice ?? item.unitPrice) * item.quantity;
   }, 0);
-  
-  // TODO: Implement proper tax calculation via Stripe Tax
-  // For now, estimate 8.25% (California average)
-  const taxRate = 0.0825;
-  const taxAmount = subtotal * taxRate;
-  
-  // Shipping based on method
-  const freeEconomyThreshold = 500;
-  let shippingCost = shippingMethod === 'same_day' ? 25 : 15;
-  if (shippingMethod === 'economy' && subtotal >= freeEconomyThreshold) {
-    shippingCost = 0; // Free economy shipping over threshold
-  }
-  
-  const total = subtotal + taxAmount + shippingCost;
-  
+}
+
+// Calculate order totals with multi-warehouse shipping support
+export function calculateOrderTotals(
+  items: Array<{ unitPrice: number; quantity: number; discountedPrice?: number; styleId?: number; sizeName?: string; warehouse?: string }>,
+  shippingMethod: ShippingMethod = 'economy'
+) {
+  const subtotal = computeSubtotal(items);
+  const taxAmount = subtotal * TAX_RATE;
+
+  const shipments = groupCartByWarehouse(items as CartItem[]);
+  const { totalShippingCost } = calculateShippingBreakdown(shipments, shippingMethod, subtotal);
+
+  const total = subtotal + taxAmount + totalShippingCost;
+
   return {
     subtotal: Math.round(subtotal * 100) / 100,
     taxAmount: Math.round(taxAmount * 100) / 100,
-    shippingCost: Math.round(shippingCost * 100) / 100,
+    shippingCost: Math.round(totalShippingCost * 100) / 100,
     total: Math.round(total * 100) / 100,
   };
 }

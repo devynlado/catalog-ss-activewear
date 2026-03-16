@@ -9,6 +9,7 @@ import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
 import { useCartStore } from '@/lib/cart-store';
 import { useDiscountStore } from '@/lib/discount-store';
+import { getItemWarehouse } from '@/lib/shipping';
 import { GoogleDiscount } from '@/lib/google-discount';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -18,7 +19,7 @@ import { SpecsContent } from '@/components/builder/SpecsAccordion';
 import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
 import { trackViewItem, trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
 import { ProductDescription } from './ProductDescription';
-import { hasTieredPricing, getTierTable, getTieredPrice, getBaseTierPrice } from '@/lib/tiered-pricing';
+import { hasTieredPricing, getTierTable, getTieredPrice, getBaseTierPrice, getNextTierSavings, getTierProgress, getCurrentTierSavings } from '@/lib/tiered-pricing';
 import { ValuePropsStrip, SocialProofBanner, UseCaseCallouts, CuratedDescription, WhyThe1801GD, DecorationUpsell, BottomCTA } from '@/components/product/LA1801GDSections';
 
 /**
@@ -415,16 +416,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
     return count;
   }, [colorQuantities]);
 
-  // Helper: calculate the effective price for a size (with proportional Google discount)
-  const getEffectivePrice = (size: { price: number; salePrice: number | null }) => {
-    const retail = size.salePrice || size.price;
-    if (googleDiscountPercent > 0) {
-      return Math.round(retail * (1 - googleDiscountPercent) * 100) / 100;
-    }
-    return retail;
-  };
-
-  // Calculate per-color subtotals and grand total (uses discounted prices when active)
+  // Calculate per-color subtotals and grand total using tiered pricing when applicable
   const { colorSubtotals, grandTotal } = useMemo(() => {
     const subtotals: Array<{ colorCode: string; colorName: string; pieces: number; total: number }> = [];
     let grand = 0;
@@ -438,7 +430,16 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
         if (qty > 0) {
           const size = color.sizes.find((s) => s.name === sizeName);
           if (size) {
-            const unitPrice = getEffectivePrice(size);
+            const fallback = size.salePrice || size.price;
+            let unitPrice: number;
+            if (isTieredProduct) {
+              unitPrice = getTieredPrice(product.styleId, sizeName, Math.max(totalPieces, 1), fallback);
+            } else {
+              unitPrice = fallback;
+            }
+            if (googleDiscountPercent > 0) {
+              unitPrice = Math.round(unitPrice * (1 - googleDiscountPercent) * 100) / 100;
+            }
             colorPieces += qty;
             colorTotal += unitPrice * qty;
           }
@@ -457,7 +458,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
     });
 
     return { colorSubtotals: subtotals, grandTotal: grand };
-  }, [selectedColors, colorQuantities, googleDiscountPercent]);
+  }, [selectedColors, colorQuantities, googleDiscountPercent, totalPieces, isTieredProduct, product.styleId]);
 
   // Handle color swatch click - toggle selection
   const handleColorClick = (color: ProductColor | null) => {
@@ -938,19 +939,48 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                   })}
                 </tbody>
               </table>
-              {totalPieces > 0 && totalPieces < 72 && (() => {
-                const nextTiers = tierTable.tiers;
-                const currentIdx = nextTiers.findIndex(t => totalPieces >= t.minQty && totalPieces <= t.maxQty);
-                if (currentIdx >= 0 && currentIdx < nextTiers.length - 1) {
-                  const next = nextTiers[currentIdx + 1];
-                  const needed = next.minQty - totalPieces;
-                  return (
-                    <p className="mt-2 text-xs text-brand-600 font-medium">
-                      Add {needed} more for {formatPrice(next.prices[0])}/pc
-                    </p>
-                  );
-                }
-                return null;
+              {/* Savings callout when user is in tier 2+ */}
+              {(() => {
+                const savings = getCurrentTierSavings(product.styleId, totalPieces);
+                if (!savings) return null;
+                return (
+                  <div className="mt-2 flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-3 py-2">
+                    <span className="text-xs font-bold text-green-700">
+                      Saving {formatPrice(savings.savingsPerUnit)}/pc with volume pricing — {formatPrice(savings.totalSavings)} total savings!
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* Enhanced upsell nudge with total dollar savings */}
+              {(() => {
+                const upsell = getNextTierSavings(product.styleId, totalPieces);
+                if (!upsell) return null;
+                return (
+                  <p className="mt-2 text-xs text-brand-600 font-medium">
+                    Add {upsell.unitsNeeded} more {upsell.unitsNeeded === 1 ? 'piece' : 'pieces'} to unlock {formatPrice(upsell.savingsPerUnit)}/pc savings — save {formatPrice(upsell.totalSavings)} on your order!
+                  </p>
+                );
+              })()}
+
+              {/* Tier progress bar */}
+              {(() => {
+                const progress = getTierProgress(product.styleId, totalPieces);
+                if (!progress || progress.atMaxTier || totalPieces === 0) return null;
+                return (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                      <span>{totalPieces} of {progress.nextMin} pcs</span>
+                      <span className="font-semibold text-brand-600">{progress.nextLabel}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-brand-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-600 shadow-sm shadow-brand-500/25 transition-all duration-500"
+                        style={{ width: `${progress.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
               })()}
             </div>
           )}
@@ -1153,6 +1183,8 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                   showRemoveButton={selectedColors.length > 1}
                   hideInventory={isLAApparelProduct}
                   discountPercent={googleDiscountPercent}
+                  styleId={product.styleId}
+                  totalStylePieces={totalPieces}
                 />
               ))}
             </div>
@@ -1212,6 +1244,17 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                 </div>
               </div>
             )}
+
+            {/* Upsell nudge at point of decision */}
+            {isTieredProduct && totalPieces > 0 && (() => {
+              const upsell = getNextTierSavings(product.styleId, totalPieces);
+              if (!upsell) return null;
+              return (
+                <p className="mt-3 text-center text-xs font-medium text-brand-600">
+                  Add {upsell.unitsNeeded} more for {formatPrice(upsell.nextPrice)}/pc — save {formatPrice(upsell.totalSavings)} on your order
+                </p>
+              );
+            })()}
 
             {/* Primary CTA - Add to Cart */}
             <div className="mt-5 space-y-4">

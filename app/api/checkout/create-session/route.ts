@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { validateCoupon, calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
 import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
+import { groupCartByWarehouse, calculateShippingBreakdown } from '@/lib/shipping';
 
 interface ShippingInfo {
   email: string;
@@ -91,7 +92,8 @@ export async function POST(request: NextRequest) {
         const withCoupon = calculateOrderTotalsWithCoupon(
           roundedSubtotal,
           shippingMethod,
-          { discountAmount: result.discountAmount, freeShipping: result.freeShipping }
+          { discountAmount: result.discountAmount, freeShipping: result.freeShipping },
+          items,
         );
         actualShippingCost = withCoupon.shippingCost;
         taxAmount = withCoupon.taxAmount;
@@ -103,11 +105,29 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      const withCoupon = calculateOrderTotalsWithCoupon(roundedSubtotal, shippingMethod, null);
+      const withCoupon = calculateOrderTotalsWithCoupon(roundedSubtotal, shippingMethod, null, items);
       actualShippingCost = withCoupon.shippingCost;
       taxAmount = withCoupon.taxAmount;
       totalWithShipping = withCoupon.total;
     }
+
+    // Group items by warehouse for shipment records
+    const shipmentGroups = groupCartByWarehouse(items);
+    const couponFreeShipping = couponCode ? (await (async () => {
+      const supabaseService2 = createServerSupabaseClient();
+      const r = await validateCoupon(supabaseService2, {
+        code: couponCode.trim(),
+        subtotal: roundedSubtotal,
+        context: 'cart',
+      });
+      return r.valid ? r.freeShipping : false;
+    })()) : false;
+    const shippingBreakdown = calculateShippingBreakdown(
+      shipmentGroups,
+      shippingMethod,
+      roundedSubtotal,
+      couponFreeShipping,
+    );
 
     // Generate order number
     const orderNumber = generateOrderNumber();
@@ -241,8 +261,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build order_shipments rows
+    const shipmentRows = shipmentGroups.map((group, idx) => {
+      const breakdownEntry = shippingBreakdown.shipments.find(
+        s => s.warehouse === group.warehouse
+      );
+      return {
+        order_id: order.id,
+        shipment_index: idx,
+        warehouse: group.warehouse,
+        shipping_method: group.isPrimary ? shippingMethod : 'economy',
+        shipping_cost: breakdownEntry?.cost ?? 0,
+        items: group.items.map(item => ({
+          sku: item.sku,
+          styleId: item.styleId,
+          styleName: item.styleName,
+          brandName: item.brandName,
+          colorName: item.colorName,
+          colorCode: item.colorCode,
+          sizeName: item.sizeName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          imageUrl: item.imageUrl,
+        })),
+      };
+    });
+
     // Now run the follow-up writes in parallel
-    // These are: update order with PI id, patch PI metadata with order_id, log activities
     await Promise.all([
       // Update order with payment intent ID
       (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -256,6 +301,10 @@ export async function POST(request: NextRequest) {
       stripe.paymentIntents.update(paymentIntent.id, {
         metadata: { order_id: order.id },
       }),
+      // Insert order_shipments
+      ...(shipmentRows.length > 0
+        ? [(supabase as any).from('order_shipments').insert(shipmentRows)] // eslint-disable-line @typescript-eslint/no-explicit-any
+        : []),
       // Log order creation activity
       (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
         .from('order_activities')
@@ -269,6 +318,7 @@ export async function POST(request: NextRequest) {
             item_count: items.length,
             total_pieces: items.reduce((sum, item) => sum + item.quantity, 0),
             total: totalWithShipping,
+            shipment_count: shipmentGroups.length,
           },
         }),
       // Log payment processing activity

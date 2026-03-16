@@ -12,7 +12,8 @@ import { CartItem, AvailableSize } from '@/lib/database.types';
 import { DecorationPitch } from '@/components/cart/DecorationPitch';
 import { getDecoratedDeliveryEstimate, formatDateRange } from '@/app/checkout/ShippingOptions';
 import { trackViewCart, CartItem as GA4CartItem } from '@/lib/analytics';
-import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
+import { hasTieredPricing, getEffectiveItemPrice, isVolumePriced } from '@/lib/tiered-pricing';
+import { isMultiWarehouseCart, FREE_ECONOMY_THRESHOLD, WAREHOUSE_CONFIG, groupCartByWarehouse } from '@/lib/shipping';
 
 // Card styles - stronger contrast/depth
 const glassCard = "bg-white border border-stone-200 rounded-2xl shadow-xl shadow-stone-300/40";
@@ -62,6 +63,7 @@ interface GroupedItem {
   totalPrice: number;
   basePrice: number;
   hasDiscount: boolean;
+  hasVolumePrice: boolean;
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
@@ -96,6 +98,7 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         totalPrice: 0,
         basePrice: effectivePrice,
         hasDiscount: !!(item.discountedPrice && item.discountedPrice < item.unitPrice),
+        hasVolumePrice: isVolumePriced(item.styleId, item.sizeName, totalStyleQty),
       });
     }
 
@@ -160,9 +163,11 @@ export default function CartPage() {
 
   const subtotal = getSubtotal();
   const totalUnits = getTotalUnits();
-  const freeShippingThreshold = 500;
+  const freeShippingThreshold = FREE_ECONOMY_THRESHOLD;
   const qualifiesForFreeShipping = subtotal >= freeShippingThreshold;
   const amountToFreeShipping = freeShippingThreshold - subtotal;
+  const multiWarehouse = useMemo(() => isMultiWarehouseCart(items), [items]);
+  const shipmentGroups = useMemo(() => multiWarehouse ? groupCartByWarehouse(items) : [], [items, multiWarehouse]);
 
   // Group items
   const groupedItems = useMemo(() => groupItemsByStyleColor(items), [items]);
@@ -350,7 +355,9 @@ export default function CartPage() {
                     <Truck className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-green-700">You qualify for FREE shipping!</p>
+                    <p className="text-sm font-bold text-green-700">
+                      You qualify for FREE shipping{multiWarehouse ? ' on all shipments' : ''}!
+                    </p>
                     <p className="text-xs text-slate-500">Economy shipping on orders over $500</p>
                   </div>
                 </div>
@@ -373,6 +380,21 @@ export default function CartPage() {
                 </div>
               )}
             </div>
+
+            {/* Split Shipment Notice */}
+            {multiWarehouse && (
+              <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+                <Package className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    Your items ship from {shipmentGroups.length} fulfillment centers
+                  </p>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    They&apos;ll arrive in separate packages. Shipping for each is shown at checkout.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Products Table */}
             <div className={glassCard + " overflow-hidden"}>
@@ -530,6 +552,11 @@ export default function CartPage() {
                         <span className="text-slate-600">
                           {group.totalQuantity} pcs @ {formatPrice(group.basePrice)}
                           {group.hasDiscount && <span className="text-green-600 ml-2">• Sale price</span>}
+                          {group.hasVolumePrice && (
+                            <span className="inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-medium">
+                              Volume Price
+                            </span>
+                          )}
                         </span>
                       </div>
                       {/* Tier upsell nudge */}
@@ -676,7 +703,9 @@ export default function CartPage() {
                   );
                 })()}
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Shipping</span>
+                  <span className="text-slate-600">
+                    Shipping{multiWarehouse ? ` (${shipmentGroups.length} shipments)` : ''}
+                  </span>
                   <span className="font-medium">
                     {appliedCoupon?.freeShipping ? (
                       <span className="text-green-600 font-bold">FREE (promo)</span>

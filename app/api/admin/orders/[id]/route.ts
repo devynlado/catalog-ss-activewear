@@ -8,7 +8,7 @@ import {
   getOrderShippedSubject,
 } from '@/lib/emails/order-shipped';
 
-const VALID_STATUSES = ['pending', 'confirmed', 'awaiting_purchasing', 'ordered', 'in_production', 'shipped', 'delivered', 'cancelled'] as const;
+const VALID_STATUSES = ['pending', 'confirmed', 'awaiting_purchasing', 'ordered', 'in_production', 'partially_shipped', 'shipped', 'delivered', 'cancelled'] as const;
 type OrderStatus = typeof VALID_STATUSES[number];
 
 const STATUS_ORDER: Record<OrderStatus, number> = {
@@ -17,6 +17,7 @@ const STATUS_ORDER: Record<OrderStatus, number> = {
   awaiting_purchasing: 1,
   ordered: 2,
   in_production: 3,
+  partially_shipped: 3.5,
   shipped: 4,
   delivered: 5,
   cancelled: 99,
@@ -57,7 +58,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { status, tracking_number, carrier, actual_shipping_cost } = body;
+  const { status, tracking_number, carrier, actual_shipping_cost, shipment_id } = body;
 
   const serviceSupabase = getServiceSupabase();
 
@@ -133,16 +134,58 @@ export async function PATCH(
     updates.actual_shipping_cost = cost;
   }
 
-  if (Object.keys(updates).length === 0) {
+  // Handle per-shipment tracking updates
+  if (shipment_id && tracking_number) {
+    const shipmentUpdates: Record<string, unknown> = {
+      tracking_number,
+      carrier: carrier || 'other',
+      shipped_at: new Date().toISOString(),
+    };
+    if (actual_shipping_cost !== undefined) {
+      const cost = parseFloat(actual_shipping_cost);
+      if (!isNaN(cost) && cost >= 0) shipmentUpdates.actual_shipping_cost = cost;
+    }
+
+    await serviceSupabase
+      .from('order_shipments')
+      .update(shipmentUpdates)
+      .eq('id', shipment_id);
+
+    // Check if all shipments now have tracking
+    const { data: allShipments } = await serviceSupabase
+      .from('order_shipments')
+      .select('id, tracking_number')
+      .eq('order_id', params.id);
+
+    const allShipped = allShipments?.every((s: { tracking_number: string | null }) => s.tracking_number);
+    const someShipped = allShipments?.some((s: { tracking_number: string | null }) => s.tracking_number);
+
+    if (allShipped) {
+      updates.status = 'shipped';
+      updates.shipped_at = new Date().toISOString();
+      updates.tracking_number = tracking_number;
+      updates.carrier = carrier || 'other';
+    } else if (someShipped) {
+      updates.status = 'partially_shipped';
+    }
+  }
+
+  if (Object.keys(updates).length === 0 && !shipment_id) {
     return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
   }
 
-  const { data: updatedOrder, error: updateError } = await serviceSupabase
-    .from('orders')
-    .update(updates)
-    .eq('id', params.id)
-    .select()
-    .single();
+  const { data: updatedOrder, error: updateError } = Object.keys(updates).length > 0
+    ? await serviceSupabase
+        .from('orders')
+        .update(updates)
+        .eq('id', params.id)
+        .select()
+        .single()
+    : await serviceSupabase
+        .from('orders')
+        .select()
+        .eq('id', params.id)
+        .single();
 
   if (updateError) {
     console.error('Order update failed:', updateError);
