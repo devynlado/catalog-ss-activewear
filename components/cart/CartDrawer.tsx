@@ -10,7 +10,8 @@ import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { CartItem, AvailableSize } from '@/lib/database.types';
 import { DecorationTeaser } from './DecorationTeaser';
-import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
+import { hasTieredPricing, getEffectiveItemPrice, isVolumePriced } from '@/lib/tiered-pricing';
+import { isMultiWarehouseCart, FREE_ECONOMY_THRESHOLD } from '@/lib/shipping';
 
 // Quick category links for empty state
 const quickCategories = [
@@ -70,6 +71,7 @@ interface GroupedItem {
   totalPrice: number;
   unitPrice: number;
   hasDiscount: boolean;
+  hasVolumePrice: boolean;
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
@@ -104,6 +106,7 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         totalPrice: 0,
         unitPrice: effectivePrice,
         hasDiscount: !!(item.discountedPrice && item.discountedPrice < item.unitPrice),
+        hasVolumePrice: isVolumePriced(item.styleId, item.sizeName, totalStyleQty),
       });
     }
 
@@ -160,8 +163,9 @@ export function CartDrawer() {
   const router = useRouter();
   const subtotal = getSubtotal();
   const totalUnits = getTotalUnits();
-  const freeShippingThreshold = 500;
+  const freeShippingThreshold = FREE_ECONOMY_THRESHOLD;
   const awayFromFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
+  const multiWarehouse = useMemo(() => isMultiWarehouseCart(items), [items]);
   
   // Track which groups have expanded size selector
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -309,8 +313,17 @@ export function CartDrawer() {
           <div className="relative z-10 bg-gradient-to-r from-green-50/80 to-emerald-50/80 backdrop-blur-sm px-6 py-3 border-b border-green-100/70">
             <div className="flex items-center gap-2 text-sm text-green-700 font-semibold">
               <Truck className="h-4 w-4" />
-              <span>You qualify for free shipping!</span>
+              <span>You qualify for free shipping{multiWarehouse ? ' on all shipments' : ''}!</span>
             </div>
+          </div>
+        )}
+
+        {items.length > 0 && multiWarehouse && (
+          <div className="relative z-10 bg-blue-50/80 backdrop-blur-sm px-6 py-2.5 border-b border-blue-100/70">
+            <p className="text-xs text-blue-800">
+              <Package className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />
+              Items ship from 2 locations — arrives in separate packages
+            </p>
           </div>
         )}
 
@@ -384,8 +397,8 @@ export function CartDrawer() {
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium text-brand-600">{group.brandName}</p>
                             <h4 className="font-bold text-slate-800 truncate">
                               {group.productTitle || `${group.brandName} ${group.styleName}`}
@@ -496,6 +509,11 @@ export function CartDrawer() {
                     <div className="mt-3 flex items-center justify-between text-sm">
                       <span className="text-slate-500">
                         {group.totalQuantity} pcs @ {formatPrice(group.unitPrice)}
+                        {group.hasVolumePrice && (
+                          <span className="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-medium">
+                            Volume Price
+                          </span>
+                        )}
                       </span>
                       <span className="font-bold text-navy-800">
                         {formatPrice(group.totalPrice)}
@@ -506,7 +524,7 @@ export function CartDrawer() {
                       if (!upsell) return null;
                       return (
                         <p className="mt-1 text-[10px] font-medium text-brand-600">
-                          +{upsell.unitsNeeded} more → {formatPrice(upsell.nextPrice)}/pc
+                          Add {upsell.unitsNeeded} more for {formatPrice(upsell.nextPrice)}/pc — save {upsell.savingsPercent}%
                         </p>
                       );
                     })()}

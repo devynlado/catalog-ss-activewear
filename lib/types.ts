@@ -160,7 +160,7 @@ export interface Product {
   isPopular?: boolean;
   popularTier?: 'bestseller' | 'staff-pick' | 'value' | 'streetwear';
   // Multi-supplier support
-  supplier?: 'ss_activewear' | 'otto_cap';
+  supplier?: 'ss_activewear' | 'otto_cap' | 'los_angeles_apparel' | 'as_colour';
 }
 
 export interface ProductColor {

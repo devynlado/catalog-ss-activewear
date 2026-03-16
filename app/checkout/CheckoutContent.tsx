@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
-import { calculateOrderTotals, toStripeCents, ShippingMethod } from '@/lib/stripe-utils';
+import { toStripeCents } from '@/lib/stripe-utils';
 import { calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +34,17 @@ import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } fr
 import { trackBeginCheckout, trackGenerateLead, CartItem as GA4CartItem } from '@/lib/analytics';
 import { getAttribution } from '@/lib/attribution';
 import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
+import {
+  type ShippingMethod,
+  groupCartByWarehouse,
+  isMultiWarehouseCart,
+  calculateShippingBreakdown,
+  getShipmentDeliveryEstimate,
+  getShipmentBrandLabel,
+  FREE_ECONOMY_THRESHOLD,
+  WAREHOUSE_CONFIG,
+  type ShipmentGroup,
+} from '@/lib/shipping';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -66,19 +77,15 @@ const initialShippingInfo: ShippingInfo = {
   zipCode: '',
 };
 
-const shippingOptions = [
+const primaryShippingOptions = [
   {
     id: 'economy' as ShippingMethod,
     name: 'Economy Shipping',
-    price: 15,
-    freeOver: 500,
     icon: Truck,
   },
   {
     id: 'same_day' as ShippingMethod,
     name: 'Express Shipping',
-    price: 25,
-    freeOver: null,
     icon: Zap,
   },
 ];
@@ -192,6 +199,7 @@ interface InlinePaymentFormProps {
     discountedPrice?: number;
     quantity: number;
     imageUrl?: string;
+    warehouse?: string;
   }>;
   shippingInfo: ShippingInfo;
   shippingMethod: ShippingMethod;
@@ -388,6 +396,10 @@ export default function CheckoutContent() {
   // General error state (for non-payment errors)
   const [error, setError] = useState<string | null>(null);
 
+  // Multi-warehouse grouping
+  const shipmentGroups = useMemo(() => groupCartByWarehouse(items), [items]);
+  const multiWarehouse = shipmentGroups.length > 1;
+
   // Calculate totals (with optional coupon) — apply tiered pricing where applicable
   const styleQtyMap = new Map<number, number>();
   for (const item of items) {
@@ -406,10 +418,11 @@ export default function CheckoutContent() {
   const totalsWithCoupon = calculateOrderTotalsWithCoupon(
     roundedSubtotal,
     shippingMethod,
-    couponResult
+    couponResult,
+    items,
   );
-  const totals = calculateOrderTotals(items, shippingMethod);
   const actualShippingCost = totalsWithCoupon.shippingCost;
+  const shippingBreakdown = totalsWithCoupon.shippingBreakdown;
   const taxAmount = totalsWithCoupon.taxAmount;
   const orderTotal = totalsWithCoupon.total;
 
@@ -531,7 +544,6 @@ export default function CheckoutContent() {
     const missing: string[] = [];
     if (!shippingInfo.email) missing.push('Email');
     if (!shippingInfo.phone) missing.push('Phone');
-    if (!shippingInfo.company) missing.push('Company Name');
     if (!shippingInfo.firstName) missing.push('First Name');
     if (!shippingInfo.lastName) missing.push('Last Name');
     if (!shippingInfo.address) missing.push('Street Address');
@@ -668,13 +680,11 @@ export default function CheckoutContent() {
               <div className="space-y-4">
                 {/* Company Name - First and prominent for B2B */}
                 <Input
-                  label="Company Name"
+                  label="Company Name (optional)"
                   value={shippingInfo.company}
                   onChange={(e) => handleShippingChange('company', e.target.value)}
                   placeholder="Your Company, Inc."
-                  required
                   autoComplete="organization"
-                  hint="Required for business deliveries"
                 />
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -896,6 +906,7 @@ export default function CheckoutContent() {
                 items={items}
                 shippingMethod={shippingMethod}
                 shippingCost={actualShippingCost}
+                shippingBreakdown={shippingBreakdown}
                 taxAmount={taxAmount}
                 isEditable={true}
                 decoration={decoration}
@@ -906,12 +917,29 @@ export default function CheckoutContent() {
               {/* Shipping Method */}
               <div className={glassCard + " p-5"}>
                 <h3 className="font-bold text-slate-800 mb-4">Shipping Method</h3>
+
+                {/* Primary shipment — always has economy/express choice */}
+                {multiWarehouse && shipmentGroups[0] && (
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Shipment 1 — {getShipmentBrandLabel(shipmentGroups[0])} ({shipmentGroups[0].itemCount} {shipmentGroups[0].itemCount === 1 ? 'item' : 'items'})
+                  </p>
+                )}
                 <div className="space-y-3">
-                  {shippingOptions.map((option) => {
-                    const isFree = option.freeOver && subtotal >= option.freeOver;
+                  {primaryShippingOptions.map((option) => {
+                    const primaryShipment = shipmentGroups[0];
+                    const shippingInfo_ = primaryShipment
+                      ? getShipmentDeliveryEstimate(primaryShipment, option.id)
+                      : (option.id === 'economy' ? economyDelivery : expressDelivery);
+                    const breakdown = shippingBreakdown.shipments.find(
+                      s => s.warehouse === primaryShipment?.warehouse
+                    );
+                    const price = option.id === 'economy'
+                      ? (breakdown?.method === 'economy' ? breakdown.cost : (roundedSubtotal >= FREE_ECONOMY_THRESHOLD ? 0 : 15))
+                      : 25;
+                    const isFreeEconomy = option.id === 'economy' && (roundedSubtotal >= FREE_ECONOMY_THRESHOLD || couponResult?.freeShipping);
+                    const displayPrice = option.id === 'economy' && isFreeEconomy ? 0 : price;
                     const Icon = option.icon;
-                    const estimate = option.id === 'economy' ? economyDelivery : expressDelivery;
-                    
+
                     return (
                       <label
                         key={option.id}
@@ -939,6 +967,53 @@ export default function CheckoutContent() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-slate-900">{option.name}</p>
+                            {displayPrice === 0 && (
+                              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                FREE
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600">
+                            Arrives {formatDateRange(shippingInfo_.min, shippingInfo_.max)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          {displayPrice === 0 ? (
+                            <>
+                              <p className="font-semibold text-green-600">Free</p>
+                              <p className="text-xs text-slate-400 line-through">{formatPrice(option.id === 'economy' ? 15 : 25)}</p>
+                            </>
+                          ) : (
+                            <p className="font-semibold text-slate-900">{formatPrice(displayPrice)}</p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {/* Secondary shipments — economy only, no choice */}
+                {multiWarehouse && shipmentGroups.slice(1).map((shipment, idx) => {
+                  const config = WAREHOUSE_CONFIG[shipment.warehouse];
+                  const secondaryBreakdown = shippingBreakdown.shipments.find(
+                    s => s.warehouse === shipment.warehouse
+                  );
+                  const secondaryDelivery = getShipmentDeliveryEstimate(shipment, 'economy');
+                  const isFree = secondaryBreakdown?.isFree ?? false;
+                  const cost = secondaryBreakdown?.cost ?? config?.economy.price ?? 15;
+
+                  return (
+                    <div key={shipment.warehouse} className="mt-4">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                        Shipment {idx + 2} — {getShipmentBrandLabel(shipment)} ({shipment.itemCount} {shipment.itemCount === 1 ? 'item' : 'items'})
+                      </p>
+                      <div className="flex items-center gap-4 rounded-xl border-2 border-brand-500 bg-white/80 ring-2 ring-brand-500/20 p-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white">
+                          <Truck className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-slate-900">Economy Shipping</p>
                             {isFree && (
                               <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                                 FREE
@@ -946,23 +1021,23 @@ export default function CheckoutContent() {
                             )}
                           </div>
                           <p className="text-sm text-slate-600">
-                            Arrives {formatDateRange(estimate.min, estimate.max)}
+                            Arrives {formatDateRange(secondaryDelivery.min, secondaryDelivery.max)}
                           </p>
                         </div>
                         <div className="text-right">
                           {isFree ? (
                             <>
                               <p className="font-semibold text-green-600">Free</p>
-                              <p className="text-xs text-slate-400 line-through">{formatPrice(option.price)}</p>
+                              <p className="text-xs text-slate-400 line-through">{formatPrice(config?.economy.price ?? 15)}</p>
                             </>
                           ) : (
-                            <p className="font-semibold text-slate-900">{formatPrice(option.price)}</p>
+                            <p className="font-semibold text-slate-900">{formatPrice(cost)}</p>
                           )}
                         </div>
-                      </label>
-                    );
-                  })}
-                </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Payment Section — always visible, deferred intent */}

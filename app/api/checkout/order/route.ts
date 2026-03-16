@@ -30,11 +30,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Fetch order shipments
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: shipments } = await (supabase as any)
+      .from('order_shipments')
+      .select('warehouse, tracking_number, carrier, shipped_at')
+      .eq('order_id', order.id)
+      .order('shipment_index', { ascending: true });
+
     // Parse items for GA4 tracking
     const items = order.items || [];
     const lineItems = items.map((item: any) => ({
       item_id: item.sku || item.styleId?.toString() || 'unknown',
-      item_name: item.styleName || item.productName || 'Product',
+      item_name: item.productTitle || item.styleName || item.productName || 'Product',
       price: item.discountedPrice ?? item.unitPrice ?? 0,
       quantity: item.quantity || 1,
     }));
@@ -57,6 +65,8 @@ export async function GET(request: NextRequest) {
       // GA4 tracking data
       lineItems,
       shippingCost: order.shipping_cost || 0,
+      // Multi-shipment data
+      shipments: shipments && shipments.length > 1 ? shipments : undefined,
     });
   } catch (error) {
     console.error('Error retrieving order:', error);

@@ -37,6 +37,8 @@ export interface OrderShippedEmailProps {
     zipCode?: string;
     zip?: string;
   } | null;
+  shipmentIndex?: number;
+  totalShipments?: number;
 }
 
 const CARRIER_LABELS: Record<string, string> = {
@@ -47,7 +49,10 @@ const CARRIER_LABELS: Record<string, string> = {
   other: 'Carrier',
 };
 
-export function getOrderShippedSubject(orderNumber: string): string {
+export function getOrderShippedSubject(orderNumber: string, shipmentIndex?: number, totalShipments?: number): string {
+  if (totalShipments && totalShipments > 1 && shipmentIndex !== undefined) {
+    return `Shipment ${shipmentIndex + 1} of ${totalShipments} is on its way — ${orderNumber}`;
+  }
   return `Your Garment Decor order is on its way — ${orderNumber}`;
 }
 
@@ -60,11 +65,17 @@ export function generateOrderShippedHtml(props: OrderShippedEmailProps): string 
     trackingUrl,
     items,
     shippingAddress,
+    shipmentIndex,
+    totalShipments,
   } = props;
 
   const firstName = customerName.split(' ')[0];
   const carrierLabel = CARRIER_LABELS[carrier.toLowerCase()] || carrier;
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const isPartialShipment = totalShipments && totalShipments > 1;
+  const shipmentLabel = isPartialShipment
+    ? `Shipment ${(shipmentIndex ?? 0) + 1} of ${totalShipments}`
+    : null;
 
   const addressLine = shippingAddress
     ? [
@@ -90,10 +101,11 @@ export function generateOrderShippedHtml(props: OrderShippedEmailProps): string 
   `).join('');
 
   const content = `
-    ${emailHeader('Your order is on its way!', `Order #${orderNumber}`, {
-      backgroundColor: EMAIL_COLORS.success,
-      iconEmoji: '📦'
-    })}
+    ${emailHeader(
+      isPartialShipment ? `${shipmentLabel} is on its way!` : 'Your order is on its way!',
+      `Order #${orderNumber}`,
+      { backgroundColor: EMAIL_COLORS.success, iconEmoji: '📦' }
+    )}
 
     <!-- Greeting -->
     <tr>
@@ -102,7 +114,10 @@ export function generateOrderShippedHtml(props: OrderShippedEmailProps): string 
           Hi ${firstName},
         </p>
         <p style="margin: 16px 0 0; color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONTS.stack};">
-          Order ${orderNumber} has shipped and is headed to you. Here's everything you need to track your delivery.
+          ${isPartialShipment
+            ? `Part of your order (${orderNumber}) has shipped. The remaining items will ship separately and you'll receive another tracking email.`
+            : `Order ${orderNumber} has shipped and is headed to you. Here's everything you need to track your delivery.`
+          }
         </p>
       </td>
     </tr>
@@ -198,11 +213,14 @@ export function generateOrderShippedText(props: OrderShippedEmailProps): string 
     trackingUrl,
     items,
     shippingAddress,
+    shipmentIndex,
+    totalShipments,
   } = props;
 
   const firstName = customerName.split(' ')[0];
   const carrierLabel = CARRIER_LABELS[carrier.toLowerCase()] || carrier;
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const isPartialShipment = totalShipments && totalShipments > 1;
 
   const itemsList = items.map(item =>
     `  - ${item.name}${item.color ? ` (${item.color})` : ''} x${item.quantity}`
@@ -217,12 +235,15 @@ export function generateOrderShippedText(props: OrderShippedEmailProps): string 
     : '';
 
   return `
-YOUR ORDER IS ON ITS WAY!
+${isPartialShipment ? `SHIPMENT ${(shipmentIndex ?? 0) + 1} OF ${totalShipments} IS ON ITS WAY!` : 'YOUR ORDER IS ON ITS WAY!'}
 ===========================
 
 Hi ${firstName},
 
-Order ${orderNumber} has shipped and is headed to you.
+${isPartialShipment
+    ? `Part of your order (${orderNumber}) has shipped. The remaining items will ship separately.`
+    : `Order ${orderNumber} has shipped and is headed to you.`
+  }
 
 TRACKING DETAILS:
 Carrier: ${carrierLabel}

@@ -920,6 +920,25 @@ export interface CartItem {
   discountSource?: 'google';  // Track discount origin
   imageUrl?: string;
   availableSizes?: AvailableSize[];  // All sizes available for this style/color
+  warehouse?: 'ss_activewear' | 'los_angeles_apparel' | 'as_colour';
+}
+
+// Order shipment tracking (matches order_shipments table)
+export interface OrderShipment {
+  id: string;
+  order_id: string;
+  shipment_index: number;
+  warehouse: string;
+  shipping_method: string | null;
+  shipping_cost: number;
+  actual_shipping_cost: number | null;
+  carrier: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  items: unknown;
+  created_at: string;
+  updated_at: string;
 }
 
 // Shipping address type

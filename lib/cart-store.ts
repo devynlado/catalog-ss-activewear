@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { CartItem } from './database.types';
 import { DecorationSelection } from './decoration-pricing';
 import { hasTieredPricing, getTieredPrice, getNextTierInfo, getEffectiveItemPrice } from './tiered-pricing';
+import { getItemWarehouse, groupCartByWarehouse, isMultiWarehouseCart, type Warehouse, type ShipmentGroup } from './shipping';
 
 export interface AppliedCoupon {
   code: string;
@@ -53,6 +54,10 @@ interface CartStore {
   getTieredUnitPrice: (item: CartItem) => number;
   getStyleQuantity: (styleId: number) => number;
   getTierUpsell: (styleId: number) => ReturnType<typeof getNextTierInfo>;
+
+  // Warehouse helpers
+  getShipmentGroups: () => ShipmentGroup[];
+  isMultiWarehouse: () => boolean;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -75,6 +80,7 @@ export const useCartStore = create<CartStore>()(
         const newItem: CartItem = {
           ...item,
           id: `${item.sku}-${Date.now()}`,
+          warehouse: item.warehouse ?? getItemWarehouse(item.styleId),
         };
         
         // Check if same SKU already exists
@@ -198,6 +204,9 @@ export const useCartStore = create<CartStore>()(
         const totalQty = get().getStyleQuantity(styleId);
         return getNextTierInfo(styleId, totalQty);
       },
+
+      getShipmentGroups: () => groupCartByWarehouse(get().items),
+      isMultiWarehouse: () => isMultiWarehouseCart(get().items),
     }),
     {
       name: 'garment-decor-cart',

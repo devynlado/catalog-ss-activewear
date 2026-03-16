@@ -20,9 +20,16 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'succes
   awaiting_purchasing: { label: 'Awaiting Purchasing', variant: 'brand' },
   ordered: { label: 'Ordered', variant: 'info' },
   in_production: { label: 'In Production', variant: 'brand' },
+  partially_shipped: { label: 'Partially Shipped', variant: 'brand' },
   shipped: { label: 'Shipped', variant: 'success' },
   delivered: { label: 'Delivered', variant: 'success' },
   cancelled: { label: 'Cancelled', variant: 'error' },
+};
+
+const WAREHOUSE_LABELS: Record<string, string> = {
+  ss_activewear: 'SS Activewear',
+  los_angeles_apparel: 'LA Apparel',
+  as_colour: 'AS Colour',
 };
 
 const paymentConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
@@ -53,6 +60,13 @@ export default async function OrderDetailPage({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = Array.isArray(order.items) ? order.items : [];
+
+  // Fetch order shipments
+  const { data: shipments } = await supabase
+    .from('order_shipments')
+    .select('*')
+    .eq('order_id', order.id)
+    .order('shipment_index', { ascending: true });
 
   // Fetch refund payments for this order (amount + created_at for activity log backfill)
   const { data: refundPayments } = await supabase
@@ -363,7 +377,56 @@ export default async function OrderDetailPage({
             {/* Shipping & Tracking */}
             <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-navy-800">Shipping &amp; Tracking</h2>
-              {order.tracking_number ? (
+              {shipments && shipments.length > 1 ? (
+                <div className="space-y-4">
+                  {shipments.map((shipment: any, idx: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                    <div key={shipment.id} className={`${idx > 0 ? 'border-t border-stone-200 pt-4' : ''}`}>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                        Shipment {idx + 1} — {WAREHOUSE_LABELS[shipment.warehouse] || shipment.warehouse}
+                      </p>
+                      {shipment.tracking_number ? (
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs font-medium text-slate-500">Carrier</p>
+                            <p className="text-sm font-medium text-slate-800">
+                              {shipment.carrier?.toUpperCase() || 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-500">Tracking</p>
+                            <p className="break-all text-sm font-medium text-slate-800">{shipment.tracking_number}</p>
+                          </div>
+                          {shipment.shipped_at && (
+                            <div>
+                              <p className="text-xs font-medium text-slate-500">Shipped</p>
+                              <p className="text-sm text-slate-800">
+                                {new Date(shipment.shipped_at).toLocaleDateString('en-US', {
+                                  month: 'short', day: 'numeric', year: 'numeric',
+                                })}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">Awaiting tracking</p>
+                      )}
+                    </div>
+                  ))}
+                  {/* Show form for unshipped shipments */}
+                  {shipments.some((s: any) => !s.tracking_number) && ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                    <div className="border-t border-stone-200 pt-4">
+                      <ShippingForm orderId={order.id} shipments={shipments} />
+                    </div>
+                  )}
+                  <div className="border-t border-stone-200 pt-3">
+                    <ActualShippingCostEditor
+                      orderId={order.id}
+                      currentValue={order.actual_shipping_cost != null ? Number(order.actual_shipping_cost) : null}
+                      shippingCharged={Number(order.shipping_cost) || 0}
+                    />
+                  </div>
+                </div>
+              ) : order.tracking_number ? (
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs font-medium text-slate-500">Carrier</p>
@@ -396,7 +459,7 @@ export default async function OrderDetailPage({
                   </div>
                 </div>
               ) : (
-                <ShippingForm orderId={order.id} />
+                <ShippingForm orderId={order.id} shipments={shipments || undefined} />
               )}
             </div>
 
