@@ -34,6 +34,9 @@ export function OrderFilters({ currentStatus, currentSearch, statusCounts }: Ord
   const updateParams = (updates: Record<string, string | undefined>) => {
     const params = new URLSearchParams(searchParams.toString());
 
+    // Reset to page 1 when filters change
+    params.delete('page');
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value) {
         params.set(key, value);

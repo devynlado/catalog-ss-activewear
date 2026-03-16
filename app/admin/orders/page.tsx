@@ -3,42 +3,59 @@ import { ArrowLeft, Search, Package } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { OrderCard } from './OrderCard';
 import { OrderFilters } from './OrderFilters';
+import { Pagination } from './Pagination';
 
 export const metadata = {
   title: 'Orders',
   description: 'Manage customer orders',
 };
 
+const PER_PAGE = 25;
+
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: { status?: string; payment?: string; search?: string };
+  searchParams: { status?: string; payment?: string; search?: string; page?: string };
 }) {
   const supabase = await createSupabaseServerClient();
 
+  const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
+  const from = (currentPage - 1) * PER_PAGE;
+  const to = from + PER_PAGE - 1;
+
+  const applyFilters = (q: any) => {
+    if (searchParams.status && searchParams.status !== 'all') {
+      q = q.eq('status', searchParams.status);
+    } else if (!searchParams.status || searchParams.status === 'all') {
+      q = q.neq('status', 'pending');
+    }
+    if (searchParams.payment && searchParams.payment !== 'all') {
+      q = q.eq('payment_status', searchParams.payment);
+    }
+    if (searchParams.search) {
+      q = q.or(
+        `order_number.ilike.%${searchParams.search}%,customer_name.ilike.%${searchParams.search}%,customer_email.ilike.%${searchParams.search}%,po_number.ilike.%${searchParams.search}%,company.ilike.%${searchParams.search}%`
+      );
+    }
+    return q;
+  };
+
+  // Fetch filtered count
+  let countQuery = supabase.from('orders').select('*', { count: 'exact', head: true });
+  countQuery = applyFilters(countQuery);
+  const { count: filteredCount } = await countQuery;
+  const totalFiltered = filteredCount || 0;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PER_PAGE));
+
+  // Fetch paginated orders
   let query = supabase
     .from('orders')
     .select('*')
     .order('created_at', { ascending: false });
-
-  if (searchParams.status && searchParams.status !== 'all') {
-    query = query.eq('status', searchParams.status);
-  } else if (!searchParams.status || searchParams.status === 'all') {
-    query = query.neq('status', 'pending');
-  }
-
-  if (searchParams.payment && searchParams.payment !== 'all') {
-    query = query.eq('payment_status', searchParams.payment);
-  }
-
-  if (searchParams.search) {
-    query = query.or(
-      `order_number.ilike.%${searchParams.search}%,customer_name.ilike.%${searchParams.search}%,customer_email.ilike.%${searchParams.search}%,po_number.ilike.%${searchParams.search}%,company.ilike.%${searchParams.search}%`
-    );
-  }
+  query = applyFilters(query);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: orders } = await query.limit(50) as { data: any[] | null };
+  const { data: orders } = await query.range(from, to) as { data: any[] | null };
 
   const { count: allCount } = await supabase
     .from('orders')
@@ -105,7 +122,19 @@ export default async function OrdersPage({
           statusCounts={statusCounts}
         />
 
-        <div className="mt-6 space-y-4">
+        {/* Top Pagination */}
+        {orders && orders.length > 0 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalFiltered}
+              perPage={PER_PAGE}
+            />
+          </div>
+        )}
+
+        <div className="mt-4 space-y-4">
           {orders && orders.length > 0 ? (
             orders.map((order) => (
               <OrderCard key={order.id} order={order} />
@@ -128,6 +157,18 @@ export default async function OrdersPage({
             </div>
           )}
         </div>
+
+        {/* Bottom Pagination */}
+        {orders && orders.length > 0 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalFiltered}
+              perPage={PER_PAGE}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -44,6 +44,10 @@ interface Order {
   shipping_address: Record<string, string> | null;
   created_at: string;
   admin_note?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  gclid?: string | null;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
@@ -64,6 +68,28 @@ const paymentConfig: Record<string, { label: string; variant: 'default' | 'succe
   failed: { label: 'Failed', variant: 'error' },
   refunded: { label: 'Refunded', variant: 'default' },
 };
+
+type SourceChannel = { label: string; color: string };
+
+function deriveChannel(order: Pick<Order, 'utm_source' | 'utm_medium' | 'gclid'>): SourceChannel | null {
+  const src = (order.utm_source || '').toLowerCase();
+  const med = (order.utm_medium || '').toLowerCase();
+
+  if (order.gclid || med === 'cpc' || med === 'ppc' || med === 'paid')
+    return { label: 'Google Ads', color: 'bg-blue-100 text-blue-700' };
+  if (med === 'organic' || src === 'google' || src === 'bing' || src === 'yahoo')
+    return { label: 'Organic Search', color: 'bg-green-100 text-green-700' };
+  if (med === 'social' || ['facebook', 'instagram', 'tiktok', 'twitter', 'linkedin'].includes(src))
+    return { label: 'Social', color: 'bg-purple-100 text-purple-700' };
+  if (med === 'referral')
+    return { label: 'Referral', color: 'bg-amber-100 text-amber-700' };
+  if (med === 'email')
+    return { label: 'Email', color: 'bg-sky-100 text-sky-700' };
+  if (src || med)
+    return { label: src || med, color: 'bg-stone-100 text-stone-600' };
+
+  return null;
+}
 
 const carriers = [
   { id: 'ups', label: 'UPS' },
@@ -231,6 +257,8 @@ export function OrderCard({ order }: { order: Order }) {
     ? [shippingAddr.city, shippingAddr.state].filter(Boolean).join(', ')
     : null;
 
+  const channel = deriveChannel(order);
+
   return (
     <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md">
       <div
@@ -246,6 +274,22 @@ export function OrderCard({ order }: { order: Order }) {
             <span className="text-xs font-medium text-slate-500">{order.order_number}</span>
             <span className="text-slate-300">&middot;</span>
             <span className="text-xs text-slate-500">{createdDate} {createdTime}</span>
+            {channel && (
+              <>
+                <span className="text-slate-300">&middot;</span>
+                <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${channel.color}`}>
+                  {channel.label}
+                </span>
+              </>
+            )}
+            {!channel && (
+              <>
+                <span className="text-slate-300">&middot;</span>
+                <span className="inline-flex items-center rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-stone-500">
+                  Direct
+                </span>
+              </>
+            )}
           </div>
           <h3 className="mt-0.5 truncate font-semibold text-navy-800">
             {order.company || order.customer_name || order.customer_email}

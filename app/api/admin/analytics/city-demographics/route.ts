@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import {
   fetchTopUSCitiesDemographics,
@@ -8,7 +8,7 @@ import {
 export type { CityDemographicsRow };
 
 /** GET: Top 15 US cities by visitors with demographics. Admin-only. */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -22,13 +22,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin access required. Please log in as an admin.', code: 'FORBIDDEN' }, { status: 403 });
     }
 
+    const startDate = request.nextUrl.searchParams.get('startDate') || undefined;
+    const endDate = request.nextUrl.searchParams.get('endDate') || undefined;
+
     const propertyId = process.env.GA4_PROPERTY_ID;
     const hasCredentials =
       !!process.env.GA4_SERVICE_ACCOUNT_JSON || !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
     if (propertyId && hasCredentials) {
       try {
-        const cities = await fetchTopUSCitiesDemographics(propertyId, 15, 30);
+        const cities = await fetchTopUSCitiesDemographics(propertyId, 15, 30, startDate, endDate);
         return NextResponse.json({ cities, source: 'ga4' });
       } catch (err) {
         console.error('[Analytics] GA4 city demographics fetch failed:', err);

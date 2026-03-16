@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Filter } from 'lucide-react';
 import { getServerProfile } from '@/lib/supabase-server';
+import { DateRangePicker } from '../analytics/DateRangePicker';
 import { PageVisitorTable } from '../analytics/PageVisitorTable';
 import { ProductVisitorTable } from '../analytics/ProductVisitorTable';
 import { PageEngagementTable } from '../analytics/PageEngagementTable';
@@ -16,12 +17,30 @@ export const metadata = {
   description: 'Page visitor, traffic, and conversion analytics for garmentdecor.com',
 };
 
-export default async function SalesFunnelPage() {
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+interface Props {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function SalesFunnelPage({ searchParams }: Props) {
   const { profile } = await getServerProfile();
 
   if (!profile || profile.role !== 'admin') {
     redirect('/admin');
   }
+
+  const params = await searchParams;
+  const startDate = typeof params.startDate === 'string' ? params.startDate : daysAgo(30);
+  const endDate = typeof params.endDate === 'string' ? params.endDate : today();
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -52,6 +71,8 @@ export default async function SalesFunnelPage() {
           </Link>
         </div>
 
+        <DateRangePicker startDate={startDate} endDate={endDate} />
+
         <section className="mb-12">
           <h2 className="mb-4 text-lg font-semibold text-navy-800">
             Page Visitor Analytics
@@ -60,7 +81,7 @@ export default async function SalesFunnelPage() {
             Top 20 most visited pages with traffic broken down by source (GA4-style channels).
             Scroll horizontally to see all columns.
           </p>
-          <PageVisitorTable />
+          <PageVisitorTable startDate={startDate} endDate={endDate} />
         </section>
 
         <section className="mb-12">
@@ -68,9 +89,9 @@ export default async function SalesFunnelPage() {
             Top 30 Product Pages by Visitor Source
           </h2>
           <p className="mb-4 text-sm text-slate-600">
-            Most visited product pages with traffic broken down by source: Google Ads, Organic Search, Organic Social, Organic Shopping, Referral, Cross-network, and Other. Data last 30 days.
+            Most visited product pages with traffic broken down by source: Google Ads, Organic Search, Organic Social, Organic Shopping, Referral, Cross-network, and Other.
           </p>
-          <ProductVisitorTable />
+          <ProductVisitorTable startDate={startDate} endDate={endDate} />
         </section>
 
         <section className="mb-12">
@@ -78,9 +99,9 @@ export default async function SalesFunnelPage() {
             Page Engagement
           </h2>
           <p className="mb-4 text-sm text-slate-600">
-            Views, active users, views per user, average engagement time, and event counts (click, form_submit, generate_lead) for key pages. Data last 30 days.
+            Views, active users, views per user, average engagement time, and event counts (click, form_submit, generate_lead) for key pages.
           </p>
-          <PageEngagementTable />
+          <PageEngagementTable startDate={startDate} endDate={endDate} />
         </section>
 
         <section className="mb-12">
@@ -90,7 +111,7 @@ export default async function SalesFunnelPage() {
           <p className="mb-4 text-sm text-slate-600">
             Top 15 US cities by visitor count. New users, return users, channel breakdown (paid/organic search, organic social), average engagement time, and total revenue. Scroll horizontally if needed.
           </p>
-          <CityDemographicsTable />
+          <CityDemographicsTable startDate={startDate} endDate={endDate} />
         </section>
 
         <section className="mb-12">
@@ -98,9 +119,9 @@ export default async function SalesFunnelPage() {
             CTA to Contact
           </h2>
           <p className="mb-4 text-sm text-slate-600">
-            Top 20 pages that send the most visitors to the contact page, and what those visitors do on /contact (form submissions, phone, email, and location clicks). Data last 30 days.
+            Top 20 pages that send the most visitors to the contact page, and what those visitors do on /contact (form submissions, phone, email, and location clicks).
           </p>
-          <ContactCTATable />
+          <ContactCTATable startDate={startDate} endDate={endDate} />
         </section>
 
         <section className="mb-12">
@@ -108,9 +129,9 @@ export default async function SalesFunnelPage() {
             Sales by visitor source
           </h2>
           <p className="mb-4 text-sm text-slate-600">
-            Ecommerce funnel by channel: products viewed, added to cart, entered checkout, and purchases. Paid search (Google Ads), organic search, organic social, organic shopping, and referrals. Data last 30 days.
+            Ecommerce funnel by channel: products viewed, added to cart, entered checkout, and purchases. Paid search (Google Ads), organic search, organic social, organic shopping, and referrals.
           </p>
-          <SalesBySourceSection />
+          <SalesBySourceSection startDate={startDate} endDate={endDate} />
         </section>
 
         <section className="mb-12">
@@ -118,9 +139,9 @@ export default async function SalesFunnelPage() {
             Lead by Visitor Source
           </h2>
           <p className="mb-4 text-sm text-slate-600">
-            Quantity and type of events and leads by visitor source (Direct, Google Ads, Organic search, Organic Social, Organic Shopping, Referral, Other). Data last 30 days. Scroll horizontally to see all columns.
+            Quantity and type of events and leads by visitor source (Direct, Google Ads, Organic search, Organic Social, Organic Shopping, Referral, Other). Scroll horizontally to see all columns.
           </p>
-          <LeadBySourceTable />
+          <LeadBySourceTable startDate={startDate} endDate={endDate} />
         </section>
 
         <section>
@@ -128,9 +149,9 @@ export default async function SalesFunnelPage() {
             Paths from Homepage
           </h2>
           <p className="mb-4 text-sm text-slate-600">
-            Three-level tree: where visitors go after the homepage, then the next two steps. Based on sessions that started on the homepage (last 30 days).
+            Three-level tree: where visitors go after the homepage, then the next two steps. Based on sessions that started on the homepage.
           </p>
-          <PathTreeDiagram />
+          <PathTreeDiagram startDate={startDate} endDate={endDate} />
         </section>
       </div>
     </div>

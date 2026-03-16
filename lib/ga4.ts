@@ -99,6 +99,23 @@ function getClient(): BetaAnalyticsDataClient {
   return new BetaAnalyticsDataClient();
 }
 
+function resolveDateRange(
+  dateRangeDays: number,
+  explicitStart?: string,
+  explicitEnd?: string
+): { startStr: string; endStr: string } {
+  if (explicitStart && explicitEnd) {
+    return { startStr: explicitStart, endStr: explicitEnd };
+  }
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - dateRangeDays);
+  return {
+    startStr: startDate.toISOString().slice(0, 10),
+    endStr: endDate.toISOString().slice(0, 10),
+  };
+}
+
 /**
  * Fetch top 20 pages by screen page views with breakdown by session default channel group.
  * Uses one runReport with dimensions: pagePath, pageTitle (optional), sessionDefaultChannelGroup;
@@ -107,14 +124,12 @@ function getClient(): BetaAnalyticsDataClient {
 export async function fetchTopPageVisitorsByChannel(
   propertyId: string,
   limit = 20,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<PageVisitorRow[]> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
 
   const client = getClient();
 
@@ -203,14 +218,12 @@ export interface CityDemographicsRow {
 export async function fetchTopUSCitiesDemographics(
   propertyId: string,
   limit = 15,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<CityDemographicsRow[]> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
   const client = getClient();
 
   const usaValues = ['United States', 'United States of America', 'USA'];
@@ -309,14 +322,12 @@ export async function fetchHomepagePathTree(
   level1Count = 7,
   level2CountPerNode = 4,
   level3CountPerNode = 3,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<PathTreeNode> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
   const client = getClient();
 
   const report1 = await runReport(client, {
@@ -445,14 +456,12 @@ const PRODUCT_CHANNEL_MAP: Record<string, keyof Omit<ProductVisitorRow, 'pagePat
 export async function fetchProductPageVisitorsByChannel(
   propertyId: string,
   limit = 30,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<ProductVisitorRow[]> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
 
   const client = getClient();
 
@@ -564,14 +573,12 @@ const SALES_METRICS_WITH_VALUES = [
  */
 export async function fetchSalesByVisitorSource(
   propertyId: string,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<SalesBySourceRow[]> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
   const client = getClient();
 
   const dimensionFilter = {
@@ -692,14 +699,12 @@ function referrerToSourcePath(referrer: string): string {
 export async function fetchContactCTAReport(
   propertyId: string,
   limit = 20,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<ContactCTARow[]> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
   const client = getClient();
 
   const viewsReport = await runReport(client, {
@@ -848,14 +853,12 @@ function leadChannelToLabel(channel: string): string {
  */
 export async function fetchLeadsByVisitorSource(
   propertyId: string,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<LeadBySourceRow[]> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
   const client = getClient();
 
   const report = await runReport(client, {
@@ -995,14 +998,12 @@ export interface PageEngagementRow {
  */
 export async function fetchPageEngagement(
   propertyId: string,
-  dateRangeDays = 30
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
 ): Promise<PageEngagementRow[]> {
   const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - dateRangeDays);
-  const startStr = startDate.toISOString().slice(0, 10);
-  const endStr = endDate.toISOString().slice(0, 10);
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
   const client = getClient();
 
   const pagePathFilter = {

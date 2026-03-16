@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { fetchSalesByVisitorSource, type SalesBySourceRow } from '@/lib/ga4';
 
 export type { SalesBySourceRow };
 
 /** GET: Ecommerce funnel metrics by visitor source. Admin-only. */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -19,13 +19,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin access required. Please log in as an admin.', code: 'FORBIDDEN' }, { status: 403 });
     }
 
+    const startDate = request.nextUrl.searchParams.get('startDate') || undefined;
+    const endDate = request.nextUrl.searchParams.get('endDate') || undefined;
+
     const propertyId = process.env.GA4_PROPERTY_ID;
     const hasCredentials =
       !!process.env.GA4_SERVICE_ACCOUNT_JSON || !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
     if (propertyId && hasCredentials) {
       try {
-        const rows = await fetchSalesByVisitorSource(propertyId, 30);
+        const rows = await fetchSalesByVisitorSource(propertyId, 30, startDate, endDate);
         return NextResponse.json({ rows, source: 'ga4' });
       } catch (err) {
         console.error('[Analytics] GA4 sales by source fetch failed:', err);

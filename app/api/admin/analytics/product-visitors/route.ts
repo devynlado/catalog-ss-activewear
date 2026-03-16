@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import {
   fetchProductPageVisitorsByChannel,
@@ -8,7 +8,7 @@ import {
 export type { ProductVisitorRow };
 
 /** GET: Top 30 most visited product pages with visitor origins by channel. Admin-only. */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -21,13 +21,16 @@ export async function GET() {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
   }
 
+  const startDate = request.nextUrl.searchParams.get('startDate') || undefined;
+  const endDate = request.nextUrl.searchParams.get('endDate') || undefined;
+
   const propertyId = process.env.GA4_PROPERTY_ID;
   const hasCredentials =
     !!process.env.GA4_SERVICE_ACCOUNT_JSON || !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
   if (propertyId && hasCredentials) {
     try {
-      const pages = await fetchProductPageVisitorsByChannel(propertyId, 30, 30);
+      const pages = await fetchProductPageVisitorsByChannel(propertyId, 30, 30, startDate, endDate);
       return NextResponse.json({ pages, source: 'ga4' });
     } catch (err) {
       console.error('[Analytics] GA4 product visitors fetch failed:', err);

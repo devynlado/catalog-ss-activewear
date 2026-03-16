@@ -25,7 +25,12 @@ function shortenPath(path: string, maxLen = 18): string {
   return path.slice(0, maxLen - 1) + '…';
 }
 
-export function PathTreeDiagram() {
+interface PathTreeDiagramProps {
+  startDate?: string;
+  endDate?: string;
+}
+
+export function PathTreeDiagram({ startDate, endDate }: PathTreeDiagramProps) {
   const [tree, setTree] = useState<PathTreeNode | null>(null);
   const [dataSource, setDataSource] = useState<'ga4' | 'mock' | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +46,12 @@ export function PathTreeDiagram() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/admin/analytics/path-tree')
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const qs = params.toString();
+    fetch(`/api/admin/analytics/path-tree${qs ? `?${qs}` : ''}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -57,7 +67,7 @@ export function PathTreeDiagram() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [startDate, endDate]);
 
   if (loading) {
     return (

@@ -4,6 +4,9 @@ import { ArrowRight, Clock, Tag, BookOpen } from 'lucide-react';
 import { getBlogArticles, getBlogCategories, estimateReadingTime } from '@/lib/sanity';
 import type { BlogArticleListItem } from '@/lib/sanity';
 import { getBlogPostPath } from '@/lib/blog-url';
+import { BlogPagination } from './BlogPagination';
+
+const POSTS_PER_PAGE = 9;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -58,10 +61,23 @@ function ArticleCard({ article }: { article: BlogArticleListItem }) {
   );
 }
 
-export default async function BlogPage() {
+export default async function BlogPage({
+  searchParams,
+}: {
+  searchParams: { category?: string; page?: string };
+}) {
   const [articles, categories] = await Promise.all([getBlogArticles(), getBlogCategories()]);
-  const featured = articles[0] ?? null;
-  const rest = articles.slice(1);
+
+  const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
+  const isFirstPage = currentPage === 1;
+
+  const featured = isFirstPage ? (articles[0] ?? null) : null;
+  const allGridArticles = articles.slice(1);
+  const totalGridItems = allGridArticles.length;
+  const totalPages = Math.max(1, Math.ceil(totalGridItems / POSTS_PER_PAGE));
+
+  const gridOffset = (currentPage - 1) * POSTS_PER_PAGE;
+  const paginatedRest = allGridArticles.slice(gridOffset, gridOffset + POSTS_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -161,11 +177,23 @@ export default async function BlogPage() {
             )}
 
             {/* Article grid */}
-            {rest.length > 0 && (
+            {paginatedRest.length > 0 && (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {rest.map((article) => (
+                {paginatedRest.map((article) => (
                   <ArticleCard key={article._id} article={article} />
                 ))}
+              </div>
+            )}
+
+            {/* Bottom Pagination */}
+            {totalGridItems > 0 && (
+              <div className="mt-12">
+                <BlogPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalGridItems}
+                  perPage={POSTS_PER_PAGE}
+                />
               </div>
             )}
           </>

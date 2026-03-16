@@ -22,14 +22,24 @@ function formatCurrency(n: number): string {
   }).format(n);
 }
 
-export function SalesBySourceSection() {
+interface SalesBySourceProps {
+  startDate?: string;
+  endDate?: string;
+}
+
+export function SalesBySourceSection({ startDate, endDate }: SalesBySourceProps) {
   const [rows, setRows] = useState<SalesBySourceRow[]>([]);
   const [dataSource, setDataSource] = useState<'ga4' | 'mock' | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/analytics/sales-by-source')
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const qs = params.toString();
+    fetch(`/api/admin/analytics/sales-by-source${qs ? `?${qs}` : ''}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -45,7 +55,7 @@ export function SalesBySourceSection() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [startDate, endDate]);
 
   if (loading) {
     return (
