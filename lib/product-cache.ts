@@ -792,8 +792,8 @@ function transformProduct(row: any): Product {
     sizes: [], // Sizes loaded separately if needed
   }));
   
-  const title = row.title_optimized || row.title_raw || row.style_name;
-  const description = row.description_optimized || row.description_raw || '';
+  const title = row.title_raw || row.style_name;
+  const description = row.description_raw || '';
   
   // Generate slug if not in database
   const slug = row.slug || `${row.brand_name}-${row.style_name}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
@@ -823,6 +823,8 @@ function transformProduct(row: any): Product {
     isPopular: row.is_popular || false,
     popularTier: row.popular_tier as ProductTier | undefined,
     supplier: row.supplier as 'ss_activewear' | 'otto_cap' | undefined,
+    seoTitle: row.title_optimized || undefined,
+    metaDescription: row.description_optimized || undefined,
   };
 }
 
@@ -903,8 +905,8 @@ function transformProductWithSkus(row: any): Product {
     };
   });
   
-  const title = row.title_optimized || row.title_raw || row.style_name;
-  const description = row.description_optimized || row.description_raw || '';
+  const title = row.title_raw || row.style_name;
+  const description = row.description_raw || '';
   
   // Calculate min prices from all SKUs for display
   // This ensures product card and detail page show the same "From $X" price
@@ -942,6 +944,8 @@ function transformProductWithSkus(row: any): Product {
     isPopular: row.is_popular || false,
     popularTier: row.popular_tier as ProductTier | undefined,
     supplier: row.supplier as 'ss_activewear' | 'otto_cap' | undefined,
+    seoTitle: row.title_optimized || undefined,
+    metaDescription: row.description_optimized || undefined,
   };
 }
 

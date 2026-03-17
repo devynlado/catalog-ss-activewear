@@ -160,8 +160,8 @@ export async function generateMetadata({ params }: ProductPageProps) {
     const product = await getProductByNumericId(numericId);
     if (!product) return { title: 'Product Not Found' };
     return {
-      title: `${product.title || product.styleName} - ${product.brandName} | Garment Decor`,
-      description: product.description || `Shop ${product.styleName} by ${product.brandName}`,
+      title: product.seoTitle || `${product.title || product.styleName} - ${product.brandName} | Garment Decor`,
+      description: product.metaDescription || product.description || `Shop ${product.styleName} by ${product.brandName}`,
     };
   }
   
@@ -195,8 +195,8 @@ export async function generateMetadata({ params }: ProductPageProps) {
   
   if (!product) return { title: 'Product Not Found' };
 
-  const title = `${product.title || product.styleName} - ${product.brandName}`;
-  const description = product.description || `Shop ${product.styleName} by ${product.brandName}. View colors, sizes, inventory and get wholesale pricing.`;
+  const title = product.seoTitle || `${product.title || product.styleName} - ${product.brandName}`;
+  const description = product.metaDescription || product.description || `Shop ${product.styleName} by ${product.brandName}. View colors, sizes, inventory and get wholesale pricing.`;
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
   const productUrl = `${baseUrl}/product/${product.slug}`;
   const imageUrl = product.imageUrl || `${baseUrl}/images/og-default.png`;
@@ -315,10 +315,10 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
   return (
     <>
-      {/* Structured Data */}
+      {/* Structured Data — uses SEO-optimized title/description for search engines */}
       <ProductJsonLd
-        name={product.title || product.styleName}
-        description={product.description || `${product.styleName} by ${product.brandName}`}
+        name={product.seoTitle || product.title || product.styleName}
+        description={product.metaDescription || product.description || `${product.styleName} by ${product.brandName}`}
         image={product.imageUrl || ''}
         brand={product.brandName}
         sku={product.styleName}

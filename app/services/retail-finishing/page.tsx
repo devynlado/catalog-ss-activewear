@@ -9,7 +9,9 @@ import {
   ServiceCTA,
   ServiceQuoteForm,
   ShopBlanksSection,
+  ServiceFAQ,
 } from '@/components/services';
+import type { ServiceFaqItem } from '@/components/services';
 import { getServiceImages } from '@/lib/service-images';
 
 // Get images for this service
@@ -106,6 +108,33 @@ const whyRetailFinishing = [
   {
     title: 'Time Savings',
     description: 'Let us handle the finishing details so you can focus on selling and growing your brand.',
+  },
+];
+
+const retailFinishingFaqItems: ServiceFaqItem[] = [
+  {
+    q: 'Are you able to re-label a blank product?',
+    a: 'Yes, we can re-label a blank product, but it\'s important to understand the type of label currently on the garment to determine the best approach for custom garment re-labeling.\n\nTear-Away Labels\nIf your shirts come with tear-away tags, we will remove them free of charge and print your custom neck label in its place.\n\nCut-Away Labels\nSome garments may come with cut-away labels, which are designed to be removed by cutting. While we can remove these as well, it requires additional labor and may incur extra charges.',
+  },
+  {
+    q: 'What are the downsides of a tear-away label when doing a re-label?',
+    a: 'While we remove tear-away labels free of charge, there may be some minor downsides to this process. Small pieces of the label may remain in the garment\'s seam, or the stitching on the backside of the neck may experience slight damage. We are not responsible for removing all remnants of the tear-away label unless seamstress services are requested as part of your order.',
+  },
+  {
+    q: 'What issues arise if the garment has a cut-away label?',
+    a: 'Garments with cut-away labels require additional labor to remove the existing label. A seamstress will need to unstitch the label and resew the area, which involves more time and effort. Due to the extra labor involved, an additional surcharge will be applied if this cut-away label removal service is required.',
+  },
+  {
+    q: 'What issues arise with screen printed neck tags?',
+    a: 'Screen printed neck tags can sometimes cause ink to bleed through to the opposite side of the garment, especially if the artwork has heavy ink coverage or if the fabric is thin. This may result in a visible print on the outside of the garment.',
+  },
+  {
+    q: 'How do you prevent ink from bleeding through on screen printed neck tags?',
+    a: 'To minimize the risk of ink bleeding through to the backside during neck tag printing, we default to using light grey ink for neck label production. This color is effective at reducing bleed-through and works well with most garment colors, ensuring a clean and professional finish.',
+  },
+  {
+    q: 'How do you package your orders?',
+    a: 'All orders are bulk packaged — generally folded by the dozen for shirts and half dozens for fleece — unless the order includes retail finishing. Retail finishing options are available for orders that require individual folding, poly-bagging, hangtags, or other presentation upgrades. Based on the garment variation and other factors, we might deviate from our typical packaging procedures if we find it professionally reasonable to do so.',
   },
 ];
 
@@ -263,6 +292,13 @@ export default function RetailFinishingPage() {
           </div>
         </div>
       </section>
+
+      {/* FAQ */}
+      <ServiceFAQ
+        title="Retail Finishing FAQ"
+        subtitle="Common questions about our retail finishing services"
+        items={retailFinishingFaqItems}
+      />
 
       {/* Combine With Services */}
       <section className="py-16 lg:py-20 bg-navy-800">

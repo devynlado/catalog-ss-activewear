@@ -1,0 +1,62 @@
+# 30-Day Coupon Email Campaign
+# Runs daily at 2 PM UTC (7 AM PT) to send retention coupon emails
+# to customers whose first paid order was ~30 days ago.
+
+name: 30-Day Coupon Email Campaign
+
+on:
+  schedule:
+    # 2 PM UTC = 7 AM Pacific
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+    # Manual trigger for testing
+
+jobs:
+  send-coupon-emails:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Send Coupon Emails
+        run: |
+          echo "Triggering 30-day coupon email campaign..."
+
+          response=$(curl -s -L -w "\n%{http_code}" \
+            -X POST \
+            "${{ secrets.SITE_URL }}/api/cron/coupon-email" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.SYNC_API_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Campaign endpoint returned non-200 status."
+            exit 1
+          fi
+
+          sent=$(echo "$body" | grep -o '"sent":[0-9]*' | grep -o '[0-9]*')
+          failed=$(echo "$body" | grep -o '"failed":[0-9]*' | grep -o '[0-9]*')
+
+          echo "---"
+          echo "Emails sent: ${sent:-0}"
+          echo "Emails failed: ${failed:-0}"
+
+          if [ "${failed:-0}" -gt 0 ]; then
+            echo "Some emails failed — check Vercel logs for details."
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Coupon email campaign failed! Check the logs for details."
+
+# Required Secrets (same as existing sync workflows):
+# - SITE_URL: Your production URL (e.g., https://www.garmentdecor.com)
+# - SYNC_API_KEY: The API key for authentication
+#
+# Required Environment Variable on Vercel:
+# - RETENTION_COUPON_CODE: The shared coupon code (e.g., COMEBACK10)

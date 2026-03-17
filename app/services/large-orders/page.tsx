@@ -8,7 +8,9 @@ import {
   HowItWorks,
   WhyChooseSection,
   ServiceCTA,
+  ServiceFAQ,
 } from '@/components/services';
+import type { ServiceFaqItem } from '@/components/services';
 import { SalesRepCard } from '@/components/admin/SalesRepCard';
 import { trackGenerateLead } from '@/lib/analytics';
 
@@ -64,6 +66,53 @@ const orderTiers = [
     label: 'Enterprise',
     benefits: ['Best pricing', 'Program management', 'Inventory solutions'],
     color: 'bg-emerald-600',
+  },
+];
+
+const largeOrdersFaqItems: ServiceFaqItem[] = [
+  {
+    q: 'Do you offer bulk discounts?',
+    a: 'Yes! We offer tiered pricing, meaning the more you order, the cheaper it gets. Our minimum is 50 pieces and we offer price breaks at 75, 100, 150, 250, 500, and 1000.',
+  },
+  {
+    q: 'How do you package your orders?',
+    a: 'All orders will be bulk packaged which is generally folded by the dozen for shirts and half dozens for fleece, unless the order includes retail finish. Based on the garment variation and other factors, we might deviate from our typical packaging procedures if we find it professionally reasonable to do so.',
+  },
+  {
+    q: 'What is your policy on decorating expensive garments?',
+    a: 'Due to the wholesale nature of bulk production and cost effective pricing, we reserve the right to refuse accepting customer supplied products should the ratio of blank product cost significantly outweigh the production charges associated with decorating such an expensive garment. We only provide insurance for items when we supply the products ourselves. If you are supplying your own products, the responsibility for damaged goods will fall to the customer.',
+  },
+  {
+    q: 'What is your standard turnaround time?',
+    a: 'Our standard production turnaround time is 10 business days from the date of final artwork approval and receipt of all blank garments.\n\nTurnaround may vary depending on:\n\n• Current production volume\n• Order size and complexity\n• Decoration method (screen printing, embroidery, DTF, etc.)\n• Add-on services (relabeling, folding, bagging, etc.)\n• Shipping or delivery requirements',
+  },
+  {
+    q: "I'm not sure which blank to choose. Can I request samples?",
+    a: "Absolutely. If you're undecided on which garment to use, we strongly recommend ordering blank samples before proceeding with a full production run. This helps ensure you're confident in your selection.",
+  },
+  {
+    q: 'What is the cost of blank samples?',
+    a: 'Blank samples are billable items and are priced based on the specific garment selected. Shipping costs also apply and will vary depending on your location and order size.',
+  },
+  {
+    q: 'What happens if I receive an item in my order that is spoiled?',
+    a: "While we maintain strict quality control, our process involves human labor and there is a small chance—typically less than 1%—that a misprint or defect could make it through to your final shipment. If you receive a spoiled item in your order, please notify us promptly. We'll review the issue against the approved artwork or sample and determine an appropriate resolution, which may include a refund or credit.",
+  },
+  {
+    q: 'Do you offer exact quantity fulfillment?',
+    a: 'Garment Decor can fulfill exact quantity orders, but only when this requirement is clearly communicated and confirmed prior to order approval.',
+  },
+  {
+    q: "What are the chances my order won't be 100% complete?",
+    a: 'While we strive for accuracy, Garment Decor reserves the right to decline exact quantity guarantees on orders with high complexity—such as multiple print locations or high-value garments. These projects carry a higher risk of spoilage and may not be eligible for exact count fulfillment.',
+  },
+  {
+    q: 'Why does exact quantity come with an additional charge?',
+    a: 'Fulfilling an exact quantity requires us to order extra blanks, pre-schedule production, and implement additional measures to guarantee this. Because of these added steps and labor, an exact quantity order may incur an additional fee depending on the scope of the project.',
+  },
+  {
+    q: 'What happens if your team counts a different quantity than what I shipped?',
+    a: 'If our count differs from the quantity you stated, Garment Decor is not liable for the discrepancy. We will proceed based on the count we verify during our check-in process and recommend confirming your shipment carefully before sending.',
   },
 ];
 
@@ -228,6 +277,13 @@ export default function LargeOrdersPage() {
         title="Why Work With Us on Large Orders?"
         subtitle="Enterprise-level service without enterprise-level hassle"
         reasons={whyChooseReasons}
+      />
+
+      {/* FAQ */}
+      <ServiceFAQ
+        title="Large Orders FAQ"
+        subtitle="Common questions about our large and enterprise order services"
+        items={largeOrdersFaqItems}
       />
 
       {/* Contact Form Section */}

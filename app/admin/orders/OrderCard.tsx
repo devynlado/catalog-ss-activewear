@@ -112,6 +112,7 @@ export function OrderCard({ order }: { order: Order }) {
   const [noteText, setNoteText] = useState(order.admin_note ?? '');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
+  const [showAllItems, setShowAllItems] = useState(false);
   const router = useRouter();
 
   const nextStatusMap: Record<string, { id: string; label: string }> = {
@@ -426,7 +427,7 @@ export function OrderCard({ order }: { order: Order }) {
           <div className="mt-6">
             <h4 className="mb-3 text-sm font-semibold text-navy-800">Items ({itemCount})</h4>
             <div className="space-y-2">
-              {items.slice(0, 5).map((item, index) => {
+              {(showAllItems ? items : items.slice(0, 5)).map((item, index) => {
                 const name = item.packageDisplayName
                   || `${item.brandName || ''} ${item.styleName || item.productTitle || ''}`.trim()
                   || 'Item';
@@ -456,9 +457,15 @@ export function OrderCard({ order }: { order: Order }) {
                 );
               })}
               {items.length > 5 && (
-                <p className="text-center text-xs text-slate-500">
-                  +{items.length - 5} more item{items.length - 5 !== 1 ? 's' : ''}
-                </p>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setShowAllItems(!showAllItems); }}
+                  className="w-full rounded-lg py-1.5 text-center text-xs font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 transition-colors"
+                >
+                  {showAllItems
+                    ? 'Show less'
+                    : `+${items.length - 5} more item${items.length - 5 !== 1 ? 's' : ''}`}
+                </button>
               )}
             </div>
           </div>
