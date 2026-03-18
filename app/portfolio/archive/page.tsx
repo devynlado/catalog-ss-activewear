@@ -4,7 +4,7 @@ import { ArrowRight, LayoutGrid } from 'lucide-react';
 import { PortfolioCardImage } from '../PortfolioCardImage';
 import { getProjectsFiltered } from '@/lib/sanity';
 import { getArchiveProductCategories } from '@/lib/portfolio-product-categories';
-import { getDecorationTitle } from '@/sanity/schema/decorationOptions';
+import { getDecorationTitles } from '@/sanity/schema/decorationOptions';
 import { DECORATION_OPTIONS } from '@/sanity/schema/decorationOptions';
 import { ArchiveFilterBar } from './ArchiveFilterBar';
 import { ArchiveHeroActions } from './ArchiveHeroActions';
@@ -110,7 +110,7 @@ export default async function PortfolioArchivePage({ searchParams }: PageProps) 
               {projects.map((project, index) => {
                 const imageUrl =
                   project.featuredImage || (project.gallery && project.gallery[0]) || null;
-                const decorationLabel = getDecorationTitle(project.decoration);
+                const decorationLabel = getDecorationTitles(project.decoration);
                 const isFeatured = index === 0;
                 const isTall = index === 1;
                 const isWideBottom = index === 8 && projects.length === 9;

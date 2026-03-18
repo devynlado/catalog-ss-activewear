@@ -49,7 +49,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-streetwear-printing-lane-seven-ls16005-lunar-rock-by-garment-decor' },
     tags: ['Screen Printing', 'Tops', 'Streetwear'],
     product: 'Lane Seven LS16005 Urban Heavy Tee',
-    decoration: 'screen-printing',
+    decoration: ['screen-printing'],
     materials: 'Oversize Fit 7.66 oz 100% combed cotton jersey',
     designName: 'I Love EDM',
     shortDescription:
@@ -73,7 +73,7 @@ const projects = [
     slug: { _type: 'slug', current: 'screen-print-puff-ink-for-swish-studios' },
     tags: ['Puff Screen Printing', 'Retail Finishing', 'Screen Printing', 'Shirts', 'Sweatshirts', 'Tops'],
     product: '6.5oz Garment Dye Crew Neck T-Shirt Style 1801GD and LS14001 Premium Pullover Hoodie',
-    decoration: 'puff-screen-printing',
+    decoration: ['puff-screen-printing'],
     materials:
       'Unisex • Made in Los Angeles, Calif. • 6.5 oz/yd2/ 220 g/m2 • 18/1 Open-end Cotton • 100% Shrink Free Garment dye Cotton',
     designName: 'All Hit No Misses',
@@ -99,7 +99,7 @@ const projects = [
     slug: { _type: 'slug', current: 'jumbo-screen-printing-for-la-apparel-1801gd-black-wall-street-t-shirts' },
     tags: ['Jumbo', 'Screen Printing', 'Tops'],
     product: '1801GD Los Angeles Apparel',
-    decoration: 'jumbo-screen-printing',
+    decoration: ['jumbo-screen-printing'],
     materials: 'Made in USA 18 Singles 6.5oz/y2 100% Cotton',
     designName: 'Black Wall Street',
     client: 'New Haven Festivals Inc.',
@@ -124,7 +124,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-embroidery-on-otto-cap-trucker-hats-for-streetwear-brands' },
     tags: ['Embroidery', 'Trucker Hat'],
     product: 'Otto Cap 39-165 5 Panel High Crown Mesh Back Trucker Hat',
-    decoration: 'embroidery',
+    decoration: ['embroidery'],
     materials: '5-panel cap Plastic Adjustable Snap Polyester Foam Front 100% Polyester Front Panel w/ Lining',
     designName: 'Sunset Oil Mini Mart',
     shortDescription:
@@ -148,7 +148,7 @@ const projects = [
     slug: { _type: 'slug', current: 'why-streetwear-brands-love-garment-decors-digital-squeegee-print-on-as-colour-tees' },
     tags: ['Digital Screen Printing', 'Tops'],
     product: 'AS Colour 5080 Heavy Tee',
-    decoration: 'digital-screen-printing',
+    decoration: ['digital-screen-printing'],
     materials: 'Oversized Heavyweight, 8.2 oz 100% carded cotton',
     designName: 'Welcome Las Vegas',
     shortDescription:
@@ -173,7 +173,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-screen-printing-for-alternative-apparel-aa1070-tees-stand-out' },
     tags: ['Screen Printing', 'Tops'],
     product: 'Alternative Apparel AA1070 Unisex Go-To T-Shirt',
-    decoration: 'screen-printing',
+    decoration: ['screen-printing'],
     materials: 'Unisex classic fit Garment-washed 100% combed and ringspun cotton',
     designName: "Snoopy's Surf Shop Hawaii",
     shortDescription:
@@ -194,7 +194,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-jumbo-prints-for-distressed-shirts-streetwear-that-stands-out' },
     tags: ['Jumbo', 'Screen Printing', 'Tops'],
     product: 'Custom Distressed Tees',
-    decoration: 'jumbo-screen-printing',
+    decoration: ['jumbo-screen-printing'],
     materials: 'Relaxed and Oversized Fit Garment Dyed Shirt 6.5oz/y2 100% USA Cotton Drop Shoulder',
     designName: 'Skeleton Bat by Lost Intricacy',
     shortDescription:
@@ -215,7 +215,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-screen-printing-for-independent-trading-ss4500-hoodies' },
     tags: ['Screen Printing', 'Sweatshirts'],
     product: 'Independent Trading SS4500 Midweight Hooded Sweatshirt',
-    decoration: 'simulated-process',
+    decoration: ['simulated-process'],
     materials: 'Pouch pocket 8.5 oz./yd² 80/20 ring-spun cotton/polyester blend fleece with 100% cotton face',
     designName: 'Until Failure',
     shortDescription:
@@ -236,7 +236,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-wholesale-screen-printed-jogger-pants-by-garment-decor' },
     tags: ['Bottoms', 'Puff Screen Printing', 'Screen Printing', 'Spot Color'],
     product: "Independent IND20PNT Men's Midweight Fleece Pant",
-    decoration: 'puff-screen-printing',
+    decoration: ['puff-screen-printing'],
     materials:
       '8.5 oz. (280gm) cotton/polyester blend fleece. Solid Colors & Camo: 80% Cotton/20% Polyester with 100% Cotton Face Yarn. Grey Heather: 52% Cotton/48% Polyester. Elastic waistband with drawcord, 1×1 ribbing at ankle cuffs, relaxed fit.',
     designName: 'Sorry for the Weight',
@@ -258,7 +258,7 @@ const projects = [
     slug: { _type: 'slug', current: 'd-puff-printing-sweater' },
     tags: ['Puff Screen Printing', 'Screen Printing', 'Spot Color'],
     product: 'Los Angeles Apparel 1801GD T-Shirt',
-    decoration: 'puff-screen-printing',
+    decoration: ['puff-screen-printing'],
     materials: '50% US Cotton / 50% Polyester',
     designName: 'Uninterrupted',
     shortDescription:
@@ -279,7 +279,7 @@ const projects = [
     slug: { _type: 'slug', current: 'baby-angel' },
     tags: ['Puff Screen Printing', 'Screen Printing', 'Spot Color', 'Sweatshirts'],
     product: 'Made Blanks Ready To Dye Varsity Crewneck Dyed Orange',
-    decoration: 'puff-screen-printing',
+    decoration: ['puff-screen-printing'],
     materials:
       '14oz | 80% organic cotton, 20% recycled polyester fleece. 5 needle double stitch, side gusset. 16oz 100% cotton 1 x 1 ribbed cuff and waistbands. True to size.',
     designName: 'Arch Angel',
@@ -301,7 +301,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-jumbo-screen-printing-for-streetwear-clothing-brands' },
     tags: ['Jumbo', 'Screen Printing', 'Tops'],
     product: 'Custom-cut and sewn t-shirt',
-    decoration: 'jumbo-screen-printing',
+    decoration: ['jumbo-screen-printing'],
     materials: 'Made in USA 18 Singles 6.5oz/y2 100% Cotton',
     designName: 'Lost Intricacy',
     shortDescription:
@@ -322,7 +322,7 @@ const projects = [
     slug: { _type: 'slug', current: 'why-agencies-choose-garment-decor-for-bold-jumbo-screen-prints-on-apparel' },
     tags: ['Jumbo', 'Shirts', 'Tops'],
     product: 'American Apparel – Heavyweight Cotton Long Sleeve Tee – 1304',
-    decoration: 'jumbo-screen-printing',
+    decoration: ['jumbo-screen-printing'],
     materials: 'Relaxed fit 6 oz./yd² (US) 100% Cotton',
     designName: 'I LAY DOWN MY LIFE FOR YOU Tour Longsleeve Tee (Black)',
     client: 'JPEG MAFIA',
@@ -347,7 +347,7 @@ const projects = [
     slug: { _type: 'slug', current: 'elevate-your-brand-with-jumbo-prints-on-shaka-wear-7-5oz-max-heavyweight-tees' },
     tags: ['Jumbo', 'Screen Printing', 'Tops'],
     product: 'Shaka Wear 7.5oz Max Heavyweight Tee',
-    decoration: 'jumbo-screen-printing',
+    decoration: ['jumbo-screen-printing'],
     materials: '100% Cotton Drop Shoulder Style (Boxy Fit) Garment dyed for a retro/vintage look Oversized fit',
     designName: 'B***H TEE (Rihanna)',
     client: "Rihanna's Merchandise Team",
@@ -372,7 +372,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-puff-embroidery-for-yupoong-6089-caps-elevate-your-streetwear-brand' },
     tags: ['Embroidery', 'Headwear', 'Puff', 'Snapback'],
     product: 'Yupoong Classics 6089 Premium Flat Bill Snapback Cap',
-    decoration: 'embroidery',
+    decoration: ['embroidery'],
     materials: 'Structured, six-panel, high-profile Snapback closure 80/20 acrylic/wool',
     designName: 'Dark Horse Records',
     shortDescription:
@@ -393,7 +393,7 @@ const projects = [
     slug: { _type: 'slug', current: 'elevate-as-colour-5161-relax-hoodies-with-custom-puff-embroidery' },
     tags: ['Embroidery', 'Puff', 'Sweatshirts'],
     product: 'AS Colour 5161 Relax Hoodie',
-    decoration: 'embroidery',
+    decoration: ['embroidery'],
     materials:
       'Relaxed Fit Midweight, 9.4 oz, 80% cotton 20% recycled polyester CVC fleece. Pre-shrunk, pullover hood, drop shoulder, kangaroo pocket, self-fabric lined hood, no drawcord, sleeve cuff ribbing.',
     designName: 'Hardwood LA',
@@ -415,7 +415,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-embroidered-caps-perfect-for-your-sports-teams-winning-look' },
     tags: ['Embroidery', 'Trucker Hat'],
     product: 'Custom Made 5 Panel Perforated Hat',
-    decoration: 'embroidery',
+    decoration: ['embroidery'],
     materials: '5-panel cap Flat Bill Snapback Caps Waterproof Laser Cut Hole Perforated Hat',
     designName: 'Green Ball Hooligans Pickleball',
     shortDescription:
@@ -436,7 +436,7 @@ const projects = [
     slug: { _type: 'slug', current: 'custom-embroidery-for-otto-cap-31-069-perfect-for-streetwear-brands' },
     tags: ['Embroidery', 'Headwear', 'Snapback'],
     product: 'OTTO CAP 31-069 5 Panel Mid Profile Baseball Cap',
-    decoration: 'embroidery',
+    decoration: ['embroidery'],
     materials: '5-panel cap Plastic Adjustable Snap Cotton Blend Twill 65% Polyester / 35% Cotton – Structured Firm Front Panel',
     designName: 'The Cactus Club',
     shortDescription:
@@ -460,7 +460,7 @@ const projects = [
     slug: { _type: 'slug', current: 'standout-tour-merch-custom-digital-squeegee-long-sleeves-for-concerts' },
     tags: ['Digital Screen Printing', 'Screen Printing', 'Sweatshirts', 'Tops'],
     product: '5400 Gildan Heavy Cotton™ Long Sleeve T-Shirt',
-    decoration: 'digital-screen-printing',
+    decoration: ['digital-screen-printing'],
     materials: '5.3 oz./yd² (US) Classic Fit 100% Cotton',
     designName: 'Girls in Purgatory',
     client: 'Girls in Purgatory',
@@ -485,7 +485,7 @@ const projects = [
     slug: { _type: 'slug', current: 'premium-digital-squeegee-printing-for-1801gd-la-apparel-tees' },
     tags: ['Digital Screen Printing', 'Shirts', 'Tops'],
     product: 'Los Angeles Apparel 6.5oz Garment Dye Crew Neck T-Shirt Style 1801GD',
-    decoration: 'digital-screen-printing',
+    decoration: ['digital-screen-printing'],
     materials: 'Made in USA 18 Singles 6.5oz/y2 100% Cotton',
     designName: 'Racing Heritage',
     client: 'Team Ruckus Racing',
@@ -510,7 +510,7 @@ const projects = [
     slug: { _type: 'slug', current: 'digital-squeegee-los-angeles-apparel-1810gd-independent-trading-ind420xd' },
     tags: ['Digital Screen Printing', 'Retail Finishing', 'Sweatshirts', 'Tops'],
     product: 'IND420XD Independent Trading Mainstreet 420gm Heavyweight Pullover Hood',
-    decoration: 'digital-screen-printing',
+    decoration: ['digital-screen-printing'],
     materials:
       'Premium Heavyweight 12.5oz./420gm 3-end fleece 100% cotton face yarns 75% cotton / 25% polyester',
     designName: 'Street City Apparel',

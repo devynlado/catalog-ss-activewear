@@ -24,7 +24,7 @@ import { getSiteUrl } from '@/lib/metadata';
 import { getBlogPostPath } from '@/lib/blog-url';
 import { PortableText } from '@/app/components/PortableText';
 import { PortfolioCardImage } from '@/app/portfolio/PortfolioCardImage';
-import { getDecorationTitle } from '@/sanity/schema/decorationOptions';
+import { getDecorationTitles } from '@/sanity/schema/decorationOptions';
 
 type Props = { params: Promise<{ category: string; slug: string }> };
 
@@ -318,7 +318,7 @@ export default async function BlogArticlePage({ params }: Props) {
                 {portfolioItems.map((project) => {
                   const imageUrl =
                     project.featuredImage || (project.gallery && project.gallery[0]) || null;
-                  const decorationLabel = getDecorationTitle(project.decoration);
+                  const decorationLabel = getDecorationTitles(project.decoration);
                   return (
                     <Link
                       key={project._id}

@@ -6,14 +6,10 @@ import {
   ServiceHero,
   BenefitsBadges,
   TipsSection,
-  PortfolioGrid,
+  DynamicPortfolioGrid,
   ServiceCTA,
   ServiceQuoteForm,
 } from '@/components/services';
-import { getServiceImages } from '@/lib/service-images';
-
-// Get images for this service
-const serviceImages = getServiceImages('rush');
 
 const turnaroundTiers = [
   {
@@ -102,13 +98,6 @@ const tips = [
   },
 ];
 
-// Build portfolio items from service images
-const portfolioItems = serviceImages?.gallery.map((img, index) => ({
-  title: img.alt,
-  tags: ['Rush', index % 2 === 0 ? 'Fast Turn' : 'Custom'],
-  image: img.src,
-  alt: img.alt,
-})) || [];
 
 export default function RushPage() {
   return (
@@ -265,10 +254,10 @@ export default function RushPage() {
       </section>
 
       {/* Portfolio */}
-      <PortfolioGrid
+      <DynamicPortfolioGrid
         title="Rush Order Success Stories"
         subtitle="Tight deadlines, delivered on time"
-        items={portfolioItems}
+        decorationSlug="rush"
       />
 
       {/* Tips */}

@@ -10,7 +10,7 @@ interface PortfolioProject {
   title: string;
   slug: string;
   client: string | null;
-  decoration: string;
+  decoration: string | string[];
   category: { title: string; slug: string } | null;
   featuredImage: string | null;
 }

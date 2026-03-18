@@ -4,7 +4,7 @@ import { ArrowRight, Phone } from 'lucide-react';
 import { PortfolioCardImage } from './PortfolioCardImage';
 import { getProjects, getProjectsFiltered, getCategories } from '@/lib/sanity';
 import { PortfolioSearch } from './PortfolioSearch';
-import { getDecorationTitle } from '@/sanity/schema/decorationOptions';
+import { getDecorationTitles } from '@/sanity/schema/decorationOptions';
 
 export const metadata = createPageMetadata({
   title: 'Portfolio | Custom Apparel Projects | Garment Decor',
@@ -160,7 +160,7 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
                 {pageItems.map((project) => {
                 const imageUrl =
                   project.featuredImage || (project.gallery && project.gallery[0]) || null;
-                const decorationLabel = getDecorationTitle(project.decoration);
+                const decorationLabel = getDecorationTitles(project.decoration);
                 return (
                   <Link
                     key={project._id}

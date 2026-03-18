@@ -16,7 +16,7 @@ export interface ProjectListItem {
   shortDescription: string | null;
   category: { title: string; slug: string } | null;
   product?: string | null;
-  decoration: string;
+  decoration: string | string[];
   client: string | null;
   featuredImage: string | null;
   gallery: string[];
@@ -44,7 +44,7 @@ export interface RelatedProject {
   slug: string;
   shortDescription: string | null;
   category: string | null;
-  decoration: string;
+  decoration: string | string[];
   featuredImage: string | null;
   gallery: string | null;
 }
@@ -74,12 +74,13 @@ export async function getProjectSlugs(): Promise<string[]> {
 }
 
 export async function getRelatedProjects(
-  decoration: string,
+  decoration: string | string[],
   currentSlug: string
 ): Promise<RelatedProject[]> {
   if (!client) return [];
+  const decorationSlugs = Array.isArray(decoration) ? decoration : [decoration];
   const data = await client.fetch<RelatedProject[]>(relatedProjectsQuery, {
-    decoration,
+    decorationSlugs,
     currentSlug,
   });
   return data ?? [];

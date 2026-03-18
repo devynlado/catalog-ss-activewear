@@ -57,14 +57,14 @@ export const projectType = defineType({
     defineField({
       name: 'decoration',
       title: 'Decoration',
-      type: 'string',
+      type: 'array',
+      of: [{ type: 'string' }],
       group: 'details',
-      description: 'Printing/embroidery service – links to the service page on the site',
+      description: 'Printing/embroidery services used in this project (select one or more)',
       options: {
         list: [...DECORATION_OPTIONS],
-        layout: 'dropdown',
       },
-      validation: (Rule) => Rule.required(),
+      validation: (Rule) => Rule.required().min(1),
     }),
     defineField({
       name: 'materials',

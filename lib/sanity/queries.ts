@@ -49,9 +49,11 @@ export const projectSlugsQuery = `
   *[_type == "project" && defined(publishedAt)].slug.current
 `;
 
-/** Related projects: same decoration, exclude current slug, limit 4 */
+/** Related projects: shares any decoration with current project, exclude current slug, limit 4 */
 export const relatedProjectsQuery = `
-  *[_type == "project" && decoration == $decoration && slug.current != $currentSlug && defined(publishedAt)] | order(publishedAt desc) [0...4] {
+  *[_type == "project" && slug.current != $currentSlug && defined(publishedAt)
+    && count(decoration[@ in $decorationSlugs]) > 0
+  ] | order(publishedAt desc) [0...4] {
     _id,
     title,
     "slug": slug.current,
@@ -80,7 +82,7 @@ export const categoriesQuery = `
  */
 export const projectArchiveFilterQuery = `
   *[_type == "project" && defined(publishedAt)
-    && (!defined($decorationSlugs) || count($decorationSlugs) == 0 || decoration in $decorationSlugs)
+    && (!defined($decorationSlugs) || count($decorationSlugs) == 0 || count(decoration[@ in $decorationSlugs]) > 0)
     && (
       !defined($searchPattern) || $searchPattern == "" || $searchPattern == "*"
       || title match $searchPattern

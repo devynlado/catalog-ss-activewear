@@ -9,14 +9,13 @@ import {
   Palette,
   PenTool,
   Star,
-  Phone,
   ShoppingBag,
-  Zap,
 } from 'lucide-react';
 import { getProjectBySlug, getProjectSlugs, getRelatedProjects } from '@/lib/sanity';
-import { getServiceUrl, getDecorationTitle } from '@/sanity/schema/decorationOptions';
+import { getServiceUrl, getDecorationTitle, normalizeDecorations, getDecorationTitles } from '@/sanity/schema/decorationOptions';
 import { PortableText } from '@/app/components/PortableText';
 import { ProjectGallery } from './ProjectGallery';
+import { SidebarQuoteCTA, BottomQuoteCTA } from './PortfolioQuoteCTA';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -67,9 +66,11 @@ export default async function PortfolioProjectPage({ params }: Props) {
   const project = await getProjectBySlug(slug);
   if (!project) notFound();
 
-  const relatedProjects = await getRelatedProjects(project.decoration, project.slug);
-  const decorationLabel = getDecorationTitle(project.decoration);
-  const serviceUrl = getServiceUrl(project.decoration);
+  const decorations = normalizeDecorations(project.decoration);
+  const relatedProjects = await getRelatedProjects(decorations, project.slug);
+  const decorationLabel = getDecorationTitles(decorations);
+  const primaryDecoration = decorations[0] ?? 'screen-printing';
+  const serviceUrl = getServiceUrl(primaryDecoration);
   const heroImage =
     project.featuredImage || (project.gallery && project.gallery[0]) || null;
 
@@ -278,40 +279,31 @@ export default async function PortfolioProjectPage({ params }: Props) {
 
                 {/* Learn about this service */}
                 <div className="rounded-xl border border-stone-200 p-6">
-                  <h3 className="font-semibold text-slate-900 mb-2">Learn About This Service</h3>
+                  <h3 className="font-semibold text-slate-900 mb-2">
+                    {decorations.length > 1 ? 'Learn About These Services' : 'Learn About This Service'}
+                  </h3>
                   <p className="text-sm text-slate-600 mb-4">
                     Explore our {decorationLabel.toLowerCase()} capabilities.
                   </p>
-                  <Link
-                    href={serviceUrl}
-                    className="inline-flex items-center gap-2 text-brand-600 font-medium hover:text-brand-700 text-sm"
-                  >
-                    View {decorationLabel}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  <div className="flex flex-col gap-2">
+                    {decorations.map((slug) => (
+                      <Link
+                        key={slug}
+                        href={getServiceUrl(slug)}
+                        className="inline-flex items-center gap-2 text-brand-600 font-medium hover:text-brand-700 text-sm"
+                      >
+                        View {getDecorationTitle(slug)}
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    ))}
+                  </div>
                 </div>
 
                 {/* CTA */}
-                <div className="rounded-xl bg-slate-900 p-6 text-white">
-                  <h3 className="font-semibold text-lg mb-2 text-white">Start Your Project</h3>
-                  <p className="text-slate-300 text-sm mb-4">
-                    Get a quote for a similar project in under 2 hours.
-                  </p>
-                  <Link
-                    href="/quote"
-                    className="flex items-center justify-center gap-2 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 transition-colors"
-                  >
-                    Request a Quote
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <a
-                    href="tel:+18559427636"
-                    className="mt-3 flex items-center justify-center gap-2 w-full rounded-lg border border-white/20 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-                  >
-                    <Phone className="h-4 w-4" />
-                    (855) 942-7636
-                  </a>
-                </div>
+                <SidebarQuoteCTA
+                  defaultDecoration={primaryDecoration}
+                  projectTitle={project.title}
+                />
               </div>
             </div>
           </div>
@@ -369,37 +361,10 @@ export default async function PortfolioProjectPage({ params }: Props) {
       )}
 
       {/* Final CTA */}
-      <section className="py-16 sm:py-20 bg-brand-500">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Zap className="h-6 w-6 text-white" />
-            <span className="text-white/90 font-medium">Average quote response: 2 hours</span>
-          </div>
-          <h2 className="text-2xl font-bold text-white sm:text-3xl">
-            Ready to Start Your Project?
-          </h2>
-          <p className="mt-4 text-lg text-white/90 max-w-2xl mx-auto">
-            Whether you need 50 pieces or 50,000, we&apos;ll help bring your vision to life with the
-            same attention to detail.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/quote"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-8 py-4 text-base font-semibold text-brand-600 shadow-lg transition-all hover:bg-stone-50"
-            >
-              Get Your Free Quote
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <a
-              href="tel:+18559427636"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/20 px-8 py-4 text-base font-semibold text-white backdrop-blur transition-all hover:bg-white/30"
-            >
-              <Phone className="h-5 w-5" />
-              (855) 942-7636
-            </a>
-          </div>
-        </div>
-      </section>
+      <BottomQuoteCTA
+        defaultDecoration={primaryDecoration}
+        projectTitle={project.title}
+      />
     </div>
   );
 }
