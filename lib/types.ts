@@ -161,6 +161,7 @@ export interface Product {
   popularTier?: 'bestseller' | 'staff-pick' | 'value' | 'streetwear';
   // Multi-supplier support
   supplier?: 'ss_activewear' | 'otto_cap' | 'los_angeles_apparel' | 'as_colour';
+  gender?: string;
   // SEO-only fields (not displayed on website, used for <title>, <meta>, JSON-LD)
   seoTitle?: string;
   metaDescription?: string;

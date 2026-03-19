@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { getProductById } from '@/lib/ss-activewear';
 import { getProductByStyleId, getProductBySlug, getCacheStats } from '@/lib/product-cache';
+import type { Product } from '@/lib/types';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductBreadcrumbs } from '@/components/catalog/ProductBreadcrumbs';
 import { CompanionProducts } from '@/components/builder/CompanionProducts';
@@ -149,8 +150,56 @@ async function getProduct(slugOrId: string, searchParams?: Record<string, string
   return null;
 }
 
-export async function generateMetadata({ params }: ProductPageProps) {
+/**
+ * Build a variant-level SEO title when ?color= and/or ?size= params are present.
+ * Format: "{brand} {style} {clean_title} - {gender} | {color} | {size}"
+ * Falls back to the parent-level title_optimized from the DB when no variant params match.
+ */
+function buildVariantSeoTitle(
+  product: Product,
+  colorParam?: string | null,
+  sizeParam?: string | null,
+): { title: string; matchedColor?: string; matchedSize?: string } {
+  const baseTitle = product.title || product.styleName;
+  const gender = product.gender || 'Unisex';
+
+  let matchedColorName: string | undefined;
+  let matchedSizeName: string | undefined;
+
+  if (colorParam && product.colors?.length) {
+    const color = product.colors.find(
+      c => c.colorName.toLowerCase() === colorParam.toLowerCase() ||
+           c.colorCode.toLowerCase() === colorParam.toLowerCase()
+    );
+    if (color) {
+      matchedColorName = color.colorName;
+      if (sizeParam && color.sizes?.length) {
+        const size = color.sizes.find(
+          s => s.name.toLowerCase() === sizeParam.toLowerCase()
+        );
+        if (size) matchedSizeName = size.name;
+      }
+    }
+  }
+
+  if (matchedColorName) {
+    const parts = [`${product.brandName} ${product.styleName} ${baseTitle} - ${gender}`, matchedColorName];
+    if (matchedSizeName) parts.push(matchedSizeName);
+    const variantTitle = parts.join(' | ');
+    return {
+      title: variantTitle.length <= 150 ? variantTitle : variantTitle.slice(0, 150).replace(/\s+\S*$/, ''),
+      matchedColor: matchedColorName,
+      matchedSize: matchedSizeName,
+    };
+  }
+
+  return { title: product.seoTitle || `${baseTitle} - ${product.brandName}` };
+}
+
+export async function generateMetadata({ params, searchParams }: ProductPageProps) {
   const slugOrId = params.slug;
+  const colorParam = typeof searchParams.color === 'string' ? searchParams.color : null;
+  const sizeParam = typeof searchParams.size === 'string' ? searchParams.size : null;
   
   // For numeric IDs, we'll redirect in the page component
   const numericId = parseInt(slugOrId, 10);
@@ -159,8 +208,9 @@ export async function generateMetadata({ params }: ProductPageProps) {
   if (isNumericId) {
     const product = await getProductByNumericId(numericId);
     if (!product) return { title: 'Product Not Found' };
+    const { title } = buildVariantSeoTitle(product, colorParam, sizeParam);
     return {
-      title: product.seoTitle || `${product.title || product.styleName} - ${product.brandName} | Garment Decor`,
+      title,
       description: product.metaDescription || product.description || `Shop ${product.styleName} by ${product.brandName}`,
     };
   }
@@ -169,7 +219,6 @@ export async function generateMetadata({ params }: ProductPageProps) {
   let product = await getProductBySlug(slugOrId);
   
   if (!product) {
-    // Fallback: Parse slug and find by brand + style
     const parsed = parseSlugForLookup(slugOrId);
     if (parsed) {
       try {
@@ -195,10 +244,19 @@ export async function generateMetadata({ params }: ProductPageProps) {
   
   if (!product) return { title: 'Product Not Found' };
 
-  const title = product.seoTitle || `${product.title || product.styleName} - ${product.brandName}`;
+  const { title, matchedColor, matchedSize } = buildVariantSeoTitle(product, colorParam, sizeParam);
   const description = product.metaDescription || product.description || `Shop ${product.styleName} by ${product.brandName}. View colors, sizes, inventory and get wholesale pricing.`;
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
-  const productUrl = `${baseUrl}/product/${product.slug}`;
+  
+  // Self-referencing canonical: include variant params when they resolved to a valid variant
+  let productUrl = `${baseUrl}/product/${product.slug}`;
+  if (matchedColor) {
+    const canonicalParams = new URLSearchParams();
+    canonicalParams.set('color', matchedColor);
+    if (matchedSize) canonicalParams.set('size', matchedSize);
+    productUrl += `?${canonicalParams.toString()}`;
+  }
+  
   const imageUrl = product.imageUrl || `${baseUrl}/images/og-default.png`;
 
   return {
@@ -305,6 +363,18 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     }
   }
 
+  // Build variant-aware SEO title for JSON-LD (same logic as generateMetadata)
+  const { title: jsonLdTitle } = buildVariantSeoTitle(product, colorParam, sizeParam);
+
+  // Build variant-aware canonical URL for JSON-LD
+  let jsonLdUrl = `https://garmentdecor.com/product/${product.slug}`;
+  if (initialVariant?.colorName) {
+    const params = new URLSearchParams();
+    params.set('color', initialVariant.colorName);
+    if (initialVariant.sizeName) params.set('size', initialVariant.sizeName);
+    jsonLdUrl += `?${params.toString()}`;
+  }
+
   // Build breadcrumb data for structured data
   const breadcrumbItems = [
     { name: 'Home', url: 'https://garmentdecor.com' },
@@ -315,15 +385,15 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
   return (
     <>
-      {/* Structured Data — uses SEO-optimized title/description for search engines */}
+      {/* Structured Data — uses variant-level title when ?color=&size= are present */}
       <ProductJsonLd
-        name={product.seoTitle || product.title || product.styleName}
+        name={jsonLdTitle}
         description={product.metaDescription || product.description || `${product.styleName} by ${product.brandName}`}
         image={product.imageUrl || ''}
         brand={product.brandName}
         sku={product.styleName}
         price={product.salePrice || product.price}
-        url={`https://garmentdecor.com/product/${product.slug}`}
+        url={jsonLdUrl}
       />
       <BreadcrumbJsonLd items={breadcrumbItems} />
 

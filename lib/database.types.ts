@@ -302,6 +302,7 @@ export interface Database {
           title_optimized: string | null;
           description_raw: string | null;
           description_optimized: string | null;
+          meta_description: string | null;
           base_category: string | null;
           product_type: string | null;
           google_category_id: number | null;
@@ -334,6 +335,7 @@ export interface Database {
           title_optimized?: string | null;
           description_raw?: string | null;
           description_optimized?: string | null;
+          meta_description?: string | null;
           base_category?: string | null;
           product_type?: string | null;
           google_category_id?: number | null;
@@ -366,6 +368,7 @@ export interface Database {
           title_optimized?: string | null;
           description_raw?: string | null;
           description_optimized?: string | null;
+          meta_description?: string | null;
           base_category?: string | null;
           product_type?: string | null;
           google_category_id?: number | null;

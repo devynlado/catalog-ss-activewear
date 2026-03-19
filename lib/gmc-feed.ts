@@ -187,7 +187,7 @@ export interface ProductVariant {
   styleImage?: string;
   slug?: string;  // SEO-friendly URL slug (e.g., "bella-canvas-3413")
   titleOverride?: string;   // Manual title from Supabase (title_optimized)
-  descriptionOverride?: string;  // Manual description from Supabase (description_optimized)
+  descriptionOverride?: string;  // SEO meta description from Supabase (meta_description)
 }
 
 /**

@@ -212,7 +212,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
       title_raw,
       title_optimized,
       description_raw,
-      description_optimized,
+      meta_description,
       base_category,
       product_type,
       primary_image_url,
@@ -227,6 +227,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
       min_sale_price,
       is_on_sale,
       supplier,
+      gender,
       product_colors (
         id,
         color_name,
@@ -442,7 +443,7 @@ export async function searchProductsFromCache(
       title_raw,
       title_optimized,
       description_raw,
-      description_optimized,
+      meta_description,
       base_category,
       product_type,
       primary_image_url,
@@ -454,6 +455,7 @@ export async function searchProductsFromCache(
       color_count,
       base_price,
       supplier,
+      gender,
       product_colors (
         id,
         color_name,
@@ -505,7 +507,7 @@ export async function searchProductsFromCache(
     title_raw: string;
     title_optimized: string | null;
     description_raw: string;
-    description_optimized: string | null;
+    meta_description: string | null;
     base_category: string | null;
     product_type: string | null;
     primary_image_url: string | null;
@@ -594,7 +596,7 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
       title_raw,
       title_optimized,
       description_raw,
-      description_optimized,
+      meta_description,
       base_category,
       product_type,
       primary_image_url,
@@ -606,6 +608,7 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
       color_count,
       base_price,
       supplier,
+      gender,
       product_colors (
         id,
         color_name,
@@ -660,7 +663,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       title_raw,
       title_optimized,
       description_raw,
-      description_optimized,
+      meta_description,
       base_category,
       product_type,
       primary_image_url,
@@ -672,6 +675,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       color_count,
       base_price,
       supplier,
+      gender,
       product_colors (
         id,
         color_name,
@@ -823,8 +827,9 @@ function transformProduct(row: any): Product {
     isPopular: row.is_popular || false,
     popularTier: row.popular_tier as ProductTier | undefined,
     supplier: row.supplier as 'ss_activewear' | 'otto_cap' | undefined,
+    gender: row.gender || 'Unisex',
     seoTitle: row.title_optimized || undefined,
-    metaDescription: row.description_optimized || undefined,
+    metaDescription: row.meta_description || undefined,
   };
 }
 
@@ -944,8 +949,9 @@ function transformProductWithSkus(row: any): Product {
     isPopular: row.is_popular || false,
     popularTier: row.popular_tier as ProductTier | undefined,
     supplier: row.supplier as 'ss_activewear' | 'otto_cap' | undefined,
+    gender: row.gender || 'Unisex',
     seoTitle: row.title_optimized || undefined,
-    metaDescription: row.description_optimized || undefined,
+    metaDescription: row.meta_description || undefined,
   };
 }
 

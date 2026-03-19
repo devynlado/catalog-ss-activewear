@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS products (
     title_optimized     TEXT,                    -- For future AI optimization
     description_raw     TEXT,                    -- Original description from SS API
     description_optimized TEXT,                  -- For future AI optimization
+    meta_description    TEXT,                    -- SEO meta description for <meta>, JSON-LD, GMC feed
     base_category       TEXT,
     product_type        TEXT,                    -- "T-Shirts > Core T-Shirts"
     google_category_id  INT,

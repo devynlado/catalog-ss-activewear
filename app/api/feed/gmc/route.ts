@@ -19,6 +19,7 @@ interface CachedProduct {
   title_optimized: string | null;
   description_raw: string | null;
   description_optimized: string | null;
+  meta_description: string | null;
   primary_image_url: string | null;
   popular_tier: string | null;
   base_category: string | null;
@@ -164,6 +165,7 @@ async function fetchFromSupabase(): Promise<{
         title_optimized,
         description_raw,
         description_optimized,
+        meta_description,
         primary_image_url,
         popular_tier,
         base_category,
@@ -349,7 +351,7 @@ async function fetchFromSupabase(): Promise<{
         styleImage: product.primary_image_url || '',
         slug: product.slug,
         titleOverride: product.title_optimized || undefined,
-        descriptionOverride: product.description_optimized || undefined,
+        descriptionOverride: product.meta_description || undefined,
       };
       
       const row = generateFeedRow(variant, category, tier, baseUrl);
