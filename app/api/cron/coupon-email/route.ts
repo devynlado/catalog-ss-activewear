@@ -15,24 +15,28 @@ const BATCH_LIMIT = 50;
 const EXPIRES_IN_DAYS = 14;
 
 function getServiceSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!key) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY');
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key);
 }
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
-function verifyApiKey(request: NextRequest): boolean {
+function verifyCronAuth(request: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader === `Bearer ${cronSecret}`) return true;
+  }
+
   const apiKey = request.headers.get('x-api-key');
   const expectedKey = process.env.SYNC_API_KEY;
-  if (!expectedKey) {
-    console.error('[Coupon Email] SYNC_API_KEY not configured');
-    return false;
-  }
-  return apiKey === expectedKey;
+  if (expectedKey && apiKey === expectedKey) return true;
+
+  console.error('[Coupon Email] Auth failed — neither CRON_SECRET nor SYNC_API_KEY matched');
+  return false;
 }
 
 /**
@@ -62,14 +66,14 @@ async function getCouponDetails(supabase: ReturnType<typeof getServiceSupabase>,
 }
 
 /**
- * POST /api/cron/coupon-email
+ * GET & POST /api/cron/coupon-email
  *
- * Called daily by GitHub Actions. Finds customers whose earliest paid
+ * Called daily by Vercel Cron (GET). Finds customers whose earliest paid
  * order was 28-32 days ago and who haven't received this campaign email,
  * then sends them a coupon and records the send.
  */
-export async function POST(request: NextRequest) {
-  if (!verifyApiKey(request)) {
+async function handleCouponEmail(request: NextRequest) {
+  if (!verifyCronAuth(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -244,4 +248,12 @@ export async function POST(request: NextRequest) {
     total: customers.length,
     results,
   });
+}
+
+export async function GET(request: NextRequest) {
+  return handleCouponEmail(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleCouponEmail(request);
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Truck, Package } from 'lucide-react';
+import { Truck, Package, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 interface Shipment {
   id: string;
@@ -22,6 +22,12 @@ interface ShippingFormProps {
   shipments?: Shipment[];
 }
 
+interface EmailStatus {
+  sent: boolean;
+  error?: string;
+  skippedReason?: string;
+}
+
 const carriers = [
   { id: 'ups', label: 'UPS' },
   { id: 'fedex', label: 'FedEx' },
@@ -36,6 +42,36 @@ const WAREHOUSE_LABELS: Record<string, string> = {
   as_colour: 'AS Colour',
 };
 
+function EmailStatusBanner({ emailStatus }: { emailStatus: EmailStatus }) {
+  if (emailStatus.sent) {
+    return (
+      <div className="flex items-start gap-2 rounded-lg bg-green-50 border border-green-200 p-3">
+        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+        <p className="text-xs text-green-700">Shipping confirmation email sent to customer.</p>
+      </div>
+    );
+  }
+
+  if (emailStatus.skippedReason) {
+    return (
+      <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3">
+        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+        <p className="text-xs text-amber-700">Email not sent: {emailStatus.skippedReason}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 p-3">
+      <XCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+      <p className="text-xs text-red-700">
+        Email failed to send{emailStatus.error ? `: ${emailStatus.error}` : ''}. 
+        Use the &quot;Resend Email&quot; button to retry.
+      </p>
+    </div>
+  );
+}
+
 function SingleShipmentForm({ orderId, shipmentId, warehouseLabel }: {
   orderId: string;
   shipmentId?: string;
@@ -47,6 +83,7 @@ function SingleShipmentForm({ orderId, shipmentId, warehouseLabel }: {
   const [actualShippingCost, setActualShippingCost] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +95,7 @@ function SingleShipmentForm({ orderId, shipmentId, warehouseLabel }: {
 
     setIsSubmitting(true);
     setError(null);
+    setEmailStatus(null);
 
     try {
       const response = await fetch(`/api/admin/orders/${orderId}`, {
@@ -72,9 +110,14 @@ function SingleShipmentForm({ orderId, shipmentId, warehouseLabel }: {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Failed to update tracking');
+      }
+
+      if (data.emailStatus) {
+        setEmailStatus(data.emailStatus);
       }
 
       router.refresh();
@@ -149,6 +192,8 @@ function SingleShipmentForm({ orderId, shipmentId, warehouseLabel }: {
       {error && (
         <p className="text-xs text-red-600">{error}</p>
       )}
+
+      {emailStatus && <EmailStatusBanner emailStatus={emailStatus} />}
 
       <button
         type="submit"

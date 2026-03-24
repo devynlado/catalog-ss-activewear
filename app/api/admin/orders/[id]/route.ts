@@ -31,14 +31,114 @@ const CARRIER_TRACKING_URLS: Record<string, string> = {
 };
 
 function getServiceSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!key) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY');
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key);
 }
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendShippedEmail(
+  order: any,
+  trackingNumber: string,
+  carrierName: string,
+  userId: string,
+  serviceSupabase: ReturnType<typeof getServiceSupabase>,
+): Promise<{ sent: boolean; error?: string; skippedReason?: string }> {
+  const trackingUrl = CARRIER_TRACKING_URLS[carrierName.toLowerCase()]
+    ? `${CARRIER_TRACKING_URLS[carrierName.toLowerCase()]}${trackingNumber}`
+    : undefined;
+
+  const customerEmail = order.customer_email;
+
+  if (!customerEmail) {
+    console.error(`[order-shipped-email] Order ${order.order_number} has no customer_email — skipping`);
+    return { sent: false, skippedReason: 'No customer email on order' };
+  }
+
+  try {
+    const resend = getResend();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = (order.items as any[]) || [];
+
+    const emailProps = {
+      orderNumber: order.order_number,
+      customerName: order.customer_name || 'Customer',
+      carrier: carrierName,
+      trackingNumber,
+      trackingUrl,
+      items: items.map((item: Record<string, unknown>) => ({
+        name: `${item.brandName || ''} ${item.styleName || item.productName || ''}`.trim() || 'Item',
+        color: (item.colorName as string) || '',
+        quantity: (item.quantity as number) || 1,
+      })),
+      shippingAddress: order.shipping_address as {
+        firstName?: string;
+        lastName?: string;
+        address1?: string;
+        address?: string;
+        street?: string;
+        city?: string;
+        state?: string;
+        zipCode?: string;
+        zip?: string;
+      } | null,
+    };
+
+    const { data: emailData, error: sendErr } = await resend.emails.send({
+      from: 'Garment Decor <noreply@garmentdecor.com>',
+      to: customerEmail,
+      subject: getOrderShippedSubject(order.order_number),
+      html: generateOrderShippedHtml(emailProps),
+      text: generateOrderShippedText(emailProps),
+    });
+
+    if (sendErr) {
+      console.error(`[order-shipped-email] Resend API error for ${order.order_number}:`, sendErr);
+
+      await serviceSupabase.from('order_activities').insert({
+        order_id: order.id,
+        user_id: userId,
+        activity_type: 'email_failed',
+        details: {
+          email_type: 'order_shipped',
+          recipient: customerEmail,
+          error: sendErr.message || 'Unknown Resend error',
+          tracking_number: trackingNumber,
+          carrier: carrierName,
+        },
+      });
+
+      return { sent: false, error: sendErr.message || 'Email delivery failed' };
+    }
+
+    console.log(`[order-shipped-email] Sent to ${customerEmail} for ${order.order_number} (id: ${emailData?.id})`);
+
+    await serviceSupabase.from('order_activities').insert({
+      order_id: order.id,
+      user_id: userId,
+      activity_type: 'email_sent',
+      details: {
+        email_type: 'order_shipped',
+        email_id: emailData?.id,
+        subject: getOrderShippedSubject(order.order_number),
+        recipient: customerEmail,
+        tracking_number: trackingNumber,
+        carrier: carrierName,
+      },
+    });
+
+    return { sent: true };
+  } catch (emailError) {
+    console.error(`[order-shipped-email] Exception for ${order.order_number}:`, emailError);
+    return {
+      sent: false,
+      error: emailError instanceof Error ? emailError.message : 'Unexpected email error',
+    };
+  }
 }
 
 export async function PATCH(
@@ -58,7 +158,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { status, tracking_number, carrier, actual_shipping_cost, shipment_id } = body;
+  const { status, tracking_number, carrier, actual_shipping_cost, shipment_id, resend_shipped_email } = body;
 
   const serviceSupabase = getServiceSupabase();
 
@@ -70,6 +170,28 @@ export async function PATCH(
 
   if (fetchError || !order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+  }
+
+  if (resend_shipped_email) {
+    try {
+      if (!order.tracking_number) {
+        return NextResponse.json({ error: 'Order has no tracking number' }, { status: 400 });
+      }
+      const emailStatus = await sendShippedEmail(
+        order,
+        order.tracking_number,
+        order.carrier || 'other',
+        user.id,
+        serviceSupabase,
+      );
+      return NextResponse.json({ order, emailStatus });
+    } catch (resendError) {
+      console.error('[resend-shipped-email] Unhandled error:', resendError);
+      return NextResponse.json(
+        { error: resendError instanceof Error ? resendError.message : 'Failed to resend email' },
+        { status: 500 }
+      );
+    }
   }
 
   const updates: Record<string, unknown> = {};
@@ -201,70 +323,20 @@ export async function PATCH(
     });
   }
 
-  if (status === 'shipped' && (tracking_number || order.tracking_number)) {
-    const finalTrackingNumber = tracking_number || order.tracking_number;
-    const finalCarrier = carrier || order.carrier || 'other';
-    const trackingUrl = CARRIER_TRACKING_URLS[finalCarrier.toLowerCase()]
-      ? `${CARRIER_TRACKING_URLS[finalCarrier.toLowerCase()]}${finalTrackingNumber}`
-      : undefined;
+  let emailStatus: { sent: boolean; error?: string; skippedReason?: string } | null = null;
 
-    try {
-      const resend = getResend();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const items = (updatedOrder.items as any[]) || [];
+  const finalStatus = (updates.status as string) || order.status;
+  const shouldSendEmail = finalStatus === 'shipped' && (tracking_number || order.tracking_number);
 
-      const emailProps = {
-        orderNumber: updatedOrder.order_number,
-        customerName: updatedOrder.customer_name || 'Customer',
-        carrier: finalCarrier,
-        trackingNumber: finalTrackingNumber,
-        trackingUrl,
-        items: items.map((item: Record<string, unknown>) => ({
-          name: `${item.brandName || ''} ${item.styleName || item.productName || ''}`.trim() || 'Item',
-          color: (item.colorName as string) || '',
-          quantity: (item.quantity as number) || 1,
-        })),
-        shippingAddress: updatedOrder.shipping_address as {
-          firstName?: string;
-          lastName?: string;
-          address1?: string;
-          address?: string;
-          street?: string;
-          city?: string;
-          state?: string;
-          zipCode?: string;
-          zip?: string;
-        } | null,
-      };
-
-      const customerEmail = updatedOrder.customer_email;
-      if (customerEmail) {
-        const { error: sendErr } = await resend.emails.send({
-          from: 'Garment Decor <noreply@garmentdecor.com>',
-          to: customerEmail,
-          subject: getOrderShippedSubject(updatedOrder.order_number),
-          html: generateOrderShippedHtml(emailProps),
-          text: generateOrderShippedText(emailProps),
-        });
-        if (!sendErr) {
-          await serviceSupabase.from('order_activities').insert({
-            order_id: params.id,
-            user_id: user.id,
-            activity_type: 'email_sent',
-            details: {
-              email_type: 'order_shipped',
-              subject: getOrderShippedSubject(updatedOrder.order_number),
-              recipient: customerEmail,
-              tracking_number: finalTrackingNumber,
-              carrier: finalCarrier,
-            },
-          });
-        }
-      }
-    } catch (emailError) {
-      console.error('Failed to send shipped email:', emailError);
-    }
+  if (shouldSendEmail) {
+    emailStatus = await sendShippedEmail(
+      updatedOrder,
+      tracking_number || order.tracking_number,
+      carrier || order.carrier || 'other',
+      user.id,
+      serviceSupabase,
+    );
   }
 
-  return NextResponse.json({ order: updatedOrder });
+  return NextResponse.json({ order: updatedOrder, emailStatus });
 }

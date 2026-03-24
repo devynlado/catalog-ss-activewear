@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+
+interface EmailStatus {
+  sent: boolean;
+  error?: string;
+  skippedReason?: string;
+}
 
 interface OrderStatusActionsProps {
   orderId: string;
@@ -38,6 +44,7 @@ export function OrderStatusActions({ orderId, currentStatus, hasTracking }: Orde
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
   const [error, setError] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null);
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === selectedStatus) {
@@ -56,6 +63,7 @@ export function OrderStatusActions({ orderId, currentStatus, hasTracking }: Orde
     setSelectedStatus(newStatus);
     setShowDropdown(false);
     setError(null);
+    setEmailStatus(null);
 
     try {
       const response = await fetch(`/api/admin/orders/${orderId}`, {
@@ -64,9 +72,15 @@ export function OrderStatusActions({ orderId, currentStatus, hasTracking }: Orde
         body: JSON.stringify({ status: newStatus }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Failed to update status');
+      }
+
+      if (data.emailStatus) {
+        setEmailStatus(data.emailStatus);
+        setTimeout(() => setEmailStatus(null), 8000);
       }
 
       router.refresh();
@@ -133,6 +147,24 @@ export function OrderStatusActions({ orderId, currentStatus, hasTracking }: Orde
 
       {error && (
         <p className="text-xs text-red-600">{error}</p>
+      )}
+
+      {emailStatus && (
+        <div className={`flex items-center gap-1.5 text-xs ${
+          emailStatus.sent
+            ? 'text-green-600'
+            : emailStatus.skippedReason
+              ? 'text-amber-600'
+              : 'text-red-600'
+        }`}>
+          {emailStatus.sent ? (
+            <><CheckCircle className="h-3.5 w-3.5" /> Tracking email sent</>
+          ) : emailStatus.skippedReason ? (
+            <><AlertTriangle className="h-3.5 w-3.5" /> {emailStatus.skippedReason}</>
+          ) : (
+            <><XCircle className="h-3.5 w-3.5" /> Email failed{emailStatus.error ? `: ${emailStatus.error}` : ''}</>
+          )}
+        </div>
       )}
     </div>
   );

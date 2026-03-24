@@ -13,30 +13,28 @@ export const maxDuration = 60;
 const BATCH_LIMIT = 50;
 
 function getServiceSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!key) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY');
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key);
 }
 
-function verifyApiKey(request: NextRequest): boolean {
+function verifyCronAuth(request: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader === `Bearer ${cronSecret}`) return true;
+  }
+
   const apiKey = request.headers.get('x-api-key');
   const expectedKey = process.env.SYNC_API_KEY;
-  if (!expectedKey) {
-    console.error('[Review Invite] SYNC_API_KEY not configured');
-    return false;
-  }
-  return apiKey === expectedKey;
+  if (expectedKey && apiKey === expectedKey) return true;
+
+  console.error('[Review Invite] Auth failed — neither CRON_SECRET nor SYNC_API_KEY matched');
+  return false;
 }
 
-/**
- * POST /api/cron/review-invite
- *
- * Called daily. Finds delivered orders (7-10 days ago) that haven't
- * received a review invite, then sends them an email.
- */
-export async function POST(request: NextRequest) {
-  if (!verifyApiKey(request)) {
+async function handleReviewInvite(request: NextRequest) {
+  if (!verifyCronAuth(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -44,11 +42,10 @@ export async function POST(request: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   const windowStart = new Date();
-  windowStart.setDate(windowStart.getDate() - 10);
+  windowStart.setDate(windowStart.getDate() - 30);
   const windowEnd = new Date();
   windowEnd.setDate(windowEnd.getDate() - 7);
 
-  // Find delivered orders in the 7-10 day window
   const { data: orders, error: ordersErr } = await supabase
     .from('orders')
     .select('id, order_number, customer_email, customer_name, items, delivered_at')
@@ -63,16 +60,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Query failed' }, { status: 500 });
   }
 
-  // Exclude orders that already have invites
-  const { data: existingInvites } = await supabase
-    .from('review_invites')
-    .select('order_id')
-    .in('order_id', orders.map(o => o.id));
+  const orderIds = orders.map(o => o.id);
+  const sentOrderIds = new Set<string>();
 
-  const sentOrderIds = new Set((existingInvites || []).map(i => i.order_id));
+  if (orderIds.length > 0) {
+    const { data: existingInvites } = await supabase
+      .from('review_invites')
+      .select('order_id')
+      .in('order_id', orderIds);
+
+    for (const inv of existingInvites || []) {
+      sentOrderIds.add(inv.order_id);
+    }
+  }
+
   const eligible = orders.filter(o => !sentOrderIds.has(o.id)).slice(0, BATCH_LIMIT);
 
-  console.log(`[Review Invite] Found ${eligible.length} eligible orders (${orders.length} total delivered)`);
+  console.log(`[Review Invite] Found ${eligible.length} eligible orders (${orders.length} total delivered in window)`);
 
   if (eligible.length === 0) {
     return NextResponse.json({ sent: 0, message: 'No eligible orders' });
@@ -84,7 +88,6 @@ export async function POST(request: NextRequest) {
 
   for (const order of eligible) {
     try {
-      // Extract product names from order items
       const items = order.items as Array<{
         brandName?: string;
         styleName?: string;
@@ -98,7 +101,6 @@ export async function POST(request: NextRequest) {
           }))
         : [];
 
-      // Create a review invite token
       const { data: invite, error: inviteErr } = await supabase
         .from('review_invites')
         .insert({
@@ -159,4 +161,12 @@ export async function POST(request: NextRequest) {
     total: eligible.length,
     results,
   });
+}
+
+export async function GET(request: NextRequest) {
+  return handleReviewInvite(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleReviewInvite(request);
 }

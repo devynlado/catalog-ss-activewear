@@ -8,6 +8,7 @@ import { ShippingForm } from './ShippingForm';
 import { ActualShippingCostEditor } from './ActualShippingCostEditor';
 import { OrderActivityLog } from './OrderActivityLog';
 import { OrderRefundUI } from './OrderRefundUI';
+import { ResendShippedEmail } from './ResendShippedEmail';
 
 export const metadata = {
   title: 'Order Details',
@@ -483,6 +484,12 @@ export default async function OrderDetailPage({
                   <Mail className="h-4 w-4" />
                   Email Customer
                 </a>
+                {order.tracking_number && order.customer_email && (
+                  <ResendShippedEmail
+                    orderId={order.id}
+                    customerEmail={order.customer_email}
+                  />
+                )}
               </div>
             </div>
 

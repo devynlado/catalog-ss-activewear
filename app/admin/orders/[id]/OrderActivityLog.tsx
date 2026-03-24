@@ -78,6 +78,7 @@ const activityIcons: Record<string, React.ReactNode> = {
   note: <MessageSquare className="h-4 w-4" />,
   cancelled: <Ban className="h-4 w-4" />,
   email_sent: <Mail className="h-4 w-4" />,
+  email_failed: <XCircle className="h-4 w-4" />,
   system_error: <AlertCircle className="h-4 w-4" />,
 };
 
@@ -366,18 +367,48 @@ export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary, adminN
         return 'Order cancelled';
       case 'email_sent': {
         const emailType = d.email_type as string;
+        const recipient = d.recipient ? ` → ${d.recipient as string}` : '';
+        const trackingInfo = d.tracking_number ? ` (${(d.carrier as string)?.toUpperCase() || 'Carrier'}: ${d.tracking_number as string})` : '';
+
+        if (emailType === 'order_shipped') {
+          return (
+            <span>
+              <span className="text-green-700 font-medium">Tracking email sent successfully</span>{recipient}{trackingInfo}
+            </span>
+          );
+        }
+
         const label =
           emailType === 'order_confirmation'
-            ? 'Order confirmation email sent to customer'
-            : emailType === 'order_shipped'
-              ? 'Shipping / tracking email sent to customer (tracking number and shipment info)'
-              : emailType === 'refund_confirmation'
-                ? 'Refund confirmation email sent to customer'
-                : emailType === 'package_order_confirmation'
-                  ? 'Package order confirmation email sent to customer'
-                  : 'Email sent to customer';
-        const recipient = d.recipient ? ` (${d.recipient as string})` : '';
+            ? 'Order confirmation email sent'
+            : emailType === 'refund_confirmation'
+              ? 'Refund confirmation email sent'
+              : emailType === 'package_order_confirmation'
+                ? 'Package order confirmation email sent'
+                : emailType === 'tracking_portal_notification'
+                  ? 'Order tracking portal notification sent'
+                  : 'Email sent';
         return `${label}${recipient}`;
+      }
+      case 'email_failed': {
+        const failedEmailType = d.email_type as string;
+        const failedRecipient = d.recipient ? ` → ${d.recipient as string}` : '';
+        const failedError = d.error ? `: ${d.error as string}` : '';
+
+        if (failedEmailType === 'order_shipped') {
+          return (
+            <span>
+              <span className="text-red-600 font-medium">Tracking email failed to send</span>{failedRecipient}{failedError}
+            </span>
+          );
+        }
+
+        return (
+          <span>
+            <span className="text-red-600 font-medium">Email failed to send</span>
+            {failedEmailType ? ` (${failedEmailType.replace(/_/g, ' ')})` : ''}{failedRecipient}{failedError}
+          </span>
+        );
       }
       case 'system_error':
         return (
@@ -405,9 +436,17 @@ export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary, adminN
         </div>
       ) : (
         <div className="space-y-4">
-          {mergedActivities.map((activity) => (
+          {mergedActivities.map((activity) => {
+            const iconBg =
+              activity.activity_type === 'email_failed' || activity.activity_type === 'payment_failed'
+                ? 'bg-red-100 text-red-600'
+                : activity.activity_type === 'email_sent'
+                  ? 'bg-green-100 text-green-600'
+                  : 'bg-stone-100 text-slate-500';
+
+            return (
             <div key={activity.id} className="flex gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-slate-500">
+              <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${iconBg}`}>
                 {activityIcons[activity.activity_type] || <FileText className="h-4 w-4" />}
               </div>
               <div className="flex-1 pt-0.5">
@@ -423,7 +462,8 @@ export function OrderActivityLog({ orderId, orderCreatedAt, orderSummary, adminN
                 </p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
