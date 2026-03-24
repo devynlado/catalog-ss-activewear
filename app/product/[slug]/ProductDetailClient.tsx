@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight, Lock, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight, Lock, ShieldCheck, Star } from 'lucide-react';
 import { Product, ProductColor, Category } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
@@ -851,6 +851,29 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
             <p className="text-xs lg:text-sm text-slate-500 font-medium">
               Style #{product.styleName}
             </p>
+            {/* Review summary (clickable, scrolls to reviews) */}
+            {product.reviewCount != null && product.reviewCount > 0 && product.avgRating != null && (
+              <button
+                onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-600 hover:text-brand-600 transition-colors"
+              >
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star
+                      key={i}
+                      className={cn(
+                        'h-3.5 w-3.5',
+                        i < Math.round(product.avgRating!)
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'fill-stone-200 text-stone-300'
+                      )}
+                    />
+                  ))}
+                </div>
+                <span className="font-medium">{product.avgRating.toFixed(1)}</span>
+                <span className="text-slate-400">({product.reviewCount} review{product.reviewCount !== 1 ? 's' : ''})</span>
+              </button>
+            )}
           </div>
 
           {/* Price Display - Clean and minimal */}

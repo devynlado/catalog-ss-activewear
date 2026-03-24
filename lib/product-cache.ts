@@ -228,6 +228,8 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
       is_on_sale,
       supplier,
       gender,
+      avg_rating,
+      review_count,
       product_colors (
         id,
         color_name,
@@ -456,6 +458,8 @@ export async function searchProductsFromCache(
       base_price,
       supplier,
       gender,
+      avg_rating,
+      review_count,
       product_colors (
         id,
         color_name,
@@ -609,6 +613,8 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
       base_price,
       supplier,
       gender,
+      avg_rating,
+      review_count,
       product_colors (
         id,
         color_name,
@@ -676,6 +682,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       base_price,
       supplier,
       gender,
+      avg_rating,
+      review_count,
       product_colors (
         id,
         color_name,
@@ -830,6 +838,8 @@ function transformProduct(row: any): Product {
     gender: row.gender || 'Unisex',
     seoTitle: row.title_optimized || undefined,
     metaDescription: row.meta_description || undefined,
+    avgRating: row.avg_rating ?? null,
+    reviewCount: row.review_count ?? 0,
   };
 }
 
@@ -952,6 +962,8 @@ function transformProductWithSkus(row: any): Product {
     gender: row.gender || 'Unisex',
     seoTitle: row.title_optimized || undefined,
     metaDescription: row.meta_description || undefined,
+    avgRating: row.avg_rating ?? null,
+    reviewCount: row.review_count ?? 0,
   };
 }
 

@@ -143,6 +143,10 @@ interface ProductJsonLdProps {
   currency?: string;
   url: string;
   availability?: 'InStock' | 'OutOfStock' | 'PreOrder';
+  aggregateRating?: {
+    ratingValue: number;
+    reviewCount: number;
+  } | null;
 }
 
 export function ProductJsonLd({
@@ -155,8 +159,9 @@ export function ProductJsonLd({
   currency = 'USD',
   url,
   availability = 'InStock',
+  aggregateRating,
 }: ProductJsonLdProps) {
-  const data = {
+  const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name,
@@ -179,6 +184,16 @@ export function ProductJsonLd({
       },
     },
   };
+
+  if (aggregateRating && aggregateRating.reviewCount > 0) {
+    data.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: aggregateRating.ratingValue.toFixed(1),
+      reviewCount: aggregateRating.reviewCount,
+      bestRating: '5',
+      worstRating: '1',
+    };
+  }
 
   return <JsonLd data={data} />;
 }

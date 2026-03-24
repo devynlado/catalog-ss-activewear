@@ -165,6 +165,34 @@ export interface Product {
   // SEO-only fields (not displayed on website, used for <title>, <meta>, JSON-LD)
   seoTitle?: string;
   metaDescription?: string;
+  // Review aggregates (denormalized from reviews table)
+  avgRating?: number | null;
+  reviewCount?: number;
+}
+
+// Review types
+export interface Review {
+  id: string;
+  styleId: number;
+  orderId: string;
+  customerEmail: string;
+  customerName: string | null;
+  rating: number;
+  title: string | null;
+  body: string;
+  reviewerAvatar: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  verifiedPurchase: boolean;
+  rewardCouponCode?: string | null;
+  adminResponse: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewAggregate {
+  avgRating: number;
+  reviewCount: number;
+  distribution: Record<number, number>; // { 5: 10, 4: 5, 3: 2, 2: 1, 1: 0 }
 }
 
 export interface ProductColor {

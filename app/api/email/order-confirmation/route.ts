@@ -149,6 +149,16 @@ export async function POST(request: NextRequest) {
             <p style="margin: 0; color: #475569;">${formattedAddress}</p>
           </div>
 
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${siteUrl}/orders?token=${order.access_token || ''}" style="display: inline-block; background: #ea580c; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; padding: 14px 32px; border-radius: 8px;">
+              Track Your Order
+            </a>
+            <p style="margin: 12px 0 0; color: #64748b; font-size: 13px;">
+              You can also track your order anytime at
+              <a href="${siteUrl}/orders" style="color: #ea580c; text-decoration: none; font-weight: 500;">garmentdecor.com/orders</a>
+            </p>
+          </div>
+
           <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">What's Next?</h2>
           <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
             <p style="margin: 0 0 8px; color: #475569;">

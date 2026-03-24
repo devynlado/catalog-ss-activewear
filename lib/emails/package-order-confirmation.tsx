@@ -123,8 +123,10 @@ export function generatePackageOrderConfirmationHtml(props: PackageOrderEmailPro
     shippingAddress,
     logoUploaded,
     notes,
+    trackingUrl,
   } = props;
   
+  const siteUrl = 'https://www.garmentdecor.com';
   const firstName = customerName.split(' ')[0];
   const totalQuantity = getTotalQuantity(items);
   const decorationDescription = getDecorationDescription(decorationMethod, decorationDetails);
@@ -261,6 +263,19 @@ export function generatePackageOrderConfirmationHtml(props: PackageOrderEmailPro
     </tr>
     ` : ''}
     
+    <!-- Track Your Order -->
+    <tr>
+      <td style="padding: 0 32px 24px; text-align: center;">
+        <a href="${trackingUrl || `${siteUrl}/orders`}" style="display: inline-block; background-color: ${EMAIL_COLORS.primary}; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; padding: 14px 32px; border-radius: 8px; font-family: ${EMAIL_FONTS.stack};">
+          Track Your Order
+        </a>
+        <p style="margin: 12px 0 0; color: ${EMAIL_COLORS.textMuted}; font-size: 13px; font-family: ${EMAIL_FONTS.stack};">
+          You can also track your order anytime at
+          <a href="${siteUrl}/orders" style="color: ${EMAIL_COLORS.primary}; text-decoration: none; font-weight: 500;">${siteUrl.replace('https://www.', '')}/orders</a>
+        </p>
+      </td>
+    </tr>
+    
     <!-- What's Next -->
     <tr>
       <td style="padding: 0 32px 32px;">
@@ -318,6 +333,7 @@ export function generatePackageOrderConfirmationText(props: PackageOrderEmailPro
     shippingAddress,
     logoUploaded,
     notes,
+    trackingUrl,
   } = props;
   
   const totalQuantity = getTotalQuantity(items);
@@ -376,6 +392,10 @@ Please reply to this email with your logo/artwork attached (PNG, SVG, AI, or EPS
 ` : ''}
 
 ${notes ? `YOUR NOTES: "${notes}"` : ''}
+
+TRACK YOUR ORDER:
+${trackingUrl || 'https://www.garmentdecor.com/orders'}
+You can track your order anytime at https://www.garmentdecor.com/orders
 
 WHAT'S NEXT:
 ${processSteps.map((step, index) => `${index + 1}. ${step.title} - ${step.description}`).join('\n')}

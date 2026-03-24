@@ -12,6 +12,7 @@ import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 import { ProductFAQ } from './ProductFAQ';
 import { getProductFaqItems } from './productFaqData';
 import { validateDiscountToken, GoogleDiscount } from '@/lib/google-discount';
+import { ReviewSection } from '@/components/reviews/ReviewSection';
 
 // Initial variant resolved from URL params (color/size from GMC feed links)
 export interface InitialVariant {
@@ -394,6 +395,11 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         sku={product.styleName}
         price={product.salePrice || product.price}
         url={jsonLdUrl}
+        aggregateRating={
+          product.reviewCount && product.reviewCount > 0 && product.avgRating
+            ? { ratingValue: product.avgRating, reviewCount: product.reviewCount }
+            : null
+        }
       />
       <BreadcrumbJsonLd items={breadcrumbItems} />
 
@@ -476,6 +482,15 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
           <ProductFAQ productName={`${product.brandName} ${product.styleName}`} />
         </div>
       </div>
+
+      {/* Customer Reviews — only rendered when product has at least one review */}
+      {product.reviewCount != null && product.reviewCount > 0 && (
+        <div className="relative bg-white border-t border-stone-200 overflow-hidden">
+          <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+            <ReviewSection styleId={product.styleId} productName={`${product.brandName} ${product.styleName}`} />
+          </div>
+        </div>
+      )}
 
       {/* Similar Products Section (using comparableGroup) */}
       <div className="relative bg-gradient-to-b from-stone-50 to-stone-100/50 border-t border-stone-200 overflow-hidden">

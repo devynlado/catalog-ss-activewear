@@ -321,6 +321,8 @@ export interface Database {
           min_retail_price: number | null;
           min_sale_price: number | null;
           is_on_sale: boolean;
+          avg_rating: number | null;
+          review_count: number;
           last_full_sync: string | null;
           created_at: string;
           updated_at: string;
@@ -354,6 +356,8 @@ export interface Database {
           min_retail_price?: number | null;
           min_sale_price?: number | null;
           is_on_sale?: boolean;
+          avg_rating?: number | null;
+          review_count?: number;
           last_full_sync?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -387,6 +391,8 @@ export interface Database {
           min_retail_price?: number | null;
           min_sale_price?: number | null;
           is_on_sale?: boolean;
+          avg_rating?: number | null;
+          review_count?: number;
           last_full_sync?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -854,6 +860,88 @@ export interface Database {
           created_at?: string;
         };
       };
+      reviews: {
+        Row: {
+          id: string;
+          style_id: number;
+          order_id: string;
+          order_item_id: string | null;
+          customer_email: string;
+          customer_name: string | null;
+          rating: number;
+          title: string | null;
+          body: string;
+          photos: Json;
+          status: 'pending' | 'approved' | 'rejected';
+          verified_purchase: boolean;
+          reward_coupon_id: string | null;
+          admin_response: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          style_id: number;
+          order_id: string;
+          order_item_id?: string | null;
+          customer_email: string;
+          customer_name?: string | null;
+          rating: number;
+          title?: string | null;
+          body: string;
+          photos?: Json;
+          status?: 'pending' | 'approved' | 'rejected';
+          verified_purchase?: boolean;
+          reward_coupon_id?: string | null;
+          admin_response?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          style_id?: number;
+          order_id?: string;
+          order_item_id?: string | null;
+          customer_email?: string;
+          customer_name?: string | null;
+          rating?: number;
+          title?: string | null;
+          body?: string;
+          photos?: Json;
+          status?: 'pending' | 'approved' | 'rejected';
+          verified_purchase?: boolean;
+          reward_coupon_id?: string | null;
+          admin_response?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      review_invites: {
+        Row: {
+          id: string;
+          order_id: string;
+          customer_email: string;
+          customer_name: string | null;
+          token: string;
+          sent_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          customer_email: string;
+          customer_name?: string | null;
+          token?: string;
+          sent_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          customer_email?: string;
+          customer_name?: string | null;
+          token?: string;
+          sent_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -897,6 +985,13 @@ export type Payment = Database['public']['Tables']['payments']['Row'];
 export type PaymentInsert = Database['public']['Tables']['payments']['Insert'];
 export type OrderActivity = Database['public']['Tables']['order_activities']['Row'];
 export type OrderActivityInsert = Database['public']['Tables']['order_activities']['Insert'];
+
+// Review System type aliases
+export type ReviewRow = Database['public']['Tables']['reviews']['Row'];
+export type ReviewInsert = Database['public']['Tables']['reviews']['Insert'];
+export type ReviewUpdate = Database['public']['Tables']['reviews']['Update'];
+export type ReviewInviteRow = Database['public']['Tables']['review_invites']['Row'];
+export type ReviewInviteInsert = Database['public']['Tables']['review_invites']['Insert'];
 
 // Available size info for cart (used to show all sizes in cart/drawer)
 export interface AvailableSize {

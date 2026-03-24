@@ -496,6 +496,7 @@ export interface PackageOrderEmailProps {
   company?: string;
   paymentIntentId?: string;
   createdAt?: string;
+  trackingUrl?: string;
 }
 
 /**

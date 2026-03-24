@@ -132,7 +132,7 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
     }
   }
 
-  // Update order status
+  // Update order status + generate access token for passwordless order tracking
   const { error: updateError } = await supabase
     .from('orders')
     .update({
@@ -140,6 +140,7 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
       status: 'awaiting_purchasing',
       stripe_charge_id: chargeId,
       paid_at: new Date().toISOString(),
+      access_token: crypto.randomUUID(),
       ...(stripeFee !== null ? { stripe_fee: stripeFee } : {}),
     })
     .eq('id', orderId);
@@ -449,6 +450,9 @@ async function sendPackageOrderEmails(
       phone: metadata.customer_phone || order.customer_phone || shippingAddress.phone,
       company: metadata.customer_company || order.company || shippingAddress.company,
       paymentIntentId: paymentIntent.id,
+      trackingUrl: order.access_token
+        ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.garmentdecor.com'}/orders?token=${order.access_token}`
+        : undefined,
       createdAt: new Date().toLocaleString('en-US', {
         timeZone: 'America/Los_Angeles',
         dateStyle: 'full',

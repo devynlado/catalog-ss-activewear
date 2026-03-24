@@ -56,17 +56,16 @@ function determineAgeGroup(category: ProductCategory): string {
   return 'Adult';
 }
 
-// Generate clean, pipe-separated title optimized for Google Shopping CTR
-// Format: "{Brand} {StyleNumber} {ProductName} | {Color} | Size {Size}"
+// Generate variant-level title matching the website's SEO title format
+// Format: "{Brand} {StyleNumber} {ProductName} - {Gender} | {Color} | {Size}"
 function generateOptimizedTitle(
   brand: string,
   productName: string,
   color: string,
   size: string,
   styleNumber?: string,
+  gender?: string,
 ): string {
-  // Build the product portion: "Gildan 5000 Heavy Cotton T-Shirt"
-  // If productName already contains the styleNumber, don't duplicate it
   const nameIncludesModel = styleNumber && productName.toLowerCase().includes(styleNumber.toLowerCase());
   const productPart = nameIncludesModel
     ? `${brand} ${productName}`
@@ -74,12 +73,9 @@ function generateOptimizedTitle(
       ? `${brand} ${styleNumber} ${productName}`
       : `${brand} ${productName}`;
 
-  // Build size label — headwear/one-size items don't need "Size" prefix
-  const sizeLower = size.toLowerCase();
-  const isOneSize = sizeLower === 'one size' || sizeLower === 'osfa' || sizeLower === 'adjustable';
-  const sizeLabel = isOneSize ? size : `Size ${size}`;
+  const genderLabel = gender || 'Unisex';
 
-  return `${productPart} | ${color} | ${sizeLabel}`;
+  return `${productPart} - ${genderLabel} | ${color} | ${size}`;
 }
 
 // Generate value-focused description (no decoration/printing language)
@@ -185,9 +181,9 @@ export interface ProductVariant {
   material?: string;
   colorSwatchImage?: string;
   styleImage?: string;
+  gender?: string;  // Gender from Supabase (e.g., "Unisex", "Men", "Women")
   slug?: string;  // SEO-friendly URL slug (e.g., "bella-canvas-3413")
-  titleOverride?: string;   // Manual title from Supabase (title_optimized)
-  descriptionOverride?: string;  // SEO meta description from Supabase (meta_description)
+  descriptionOverride?: string;  // Product description from Supabase (description_raw)
 }
 
 /**
@@ -253,13 +249,13 @@ export function generateFeedRow(
   const salePrice = Math.round(costPrice * 1.40 * 100) / 100;
   const minPrice = Math.round(costPrice * 1.12 * 100) / 100;
   
-  // Use override if provided, otherwise generate
-  const title = variant.titleOverride || generateOptimizedTitle(
+  const title = generateOptimizedTitle(
     variant.brandName,
     variant.styleName,
     variant.colorName,
     variant.sizeName,
     variant.styleNumber,
+    variant.gender,
   );
   
   const description = variant.descriptionOverride || generateDescription(

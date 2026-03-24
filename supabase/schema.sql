@@ -162,6 +162,8 @@ CREATE TABLE IF NOT EXISTS products (
     is_active           BOOLEAN DEFAULT true,    -- false if discontinued
     color_count         INT DEFAULT 0,
     base_price          DECIMAL(10,2),           -- Starting "from" price
+    avg_rating          DECIMAL(3,2) DEFAULT NULL,
+    review_count        INT DEFAULT 0,
     last_full_sync      TIMESTAMPTZ,
     created_at          TIMESTAMPTZ DEFAULT NOW(),
     updated_at          TIMESTAMPTZ DEFAULT NOW()

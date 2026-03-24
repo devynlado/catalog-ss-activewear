@@ -348,10 +348,10 @@ async function fetchFromSupabase(): Promise<{
         pieceWeight: sku.piece_weight || 0,
         material: product.material || '',
         colorSwatchImage: '',
+        gender: product.gender || 'Unisex',
         styleImage: product.primary_image_url || '',
         slug: product.slug,
-        titleOverride: product.title_optimized || undefined,
-        descriptionOverride: product.meta_description || undefined,
+        descriptionOverride: product.description_raw || undefined,
       };
       
       const row = generateFeedRow(variant, category, tier, baseUrl);
