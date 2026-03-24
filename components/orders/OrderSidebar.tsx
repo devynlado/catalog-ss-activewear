@@ -30,8 +30,9 @@ export function OrderSidebar({ email, customer }: OrderSidebarProps) {
   const initials = getInitials(customer.name, email);
 
   const handleLogout = async () => {
-    await fetch('/api/orders/verify', { method: 'DELETE' }).catch(() => {});
-    document.cookie = 'order_session=; path=/; max-age=0';
+    try {
+      await fetch('/api/orders/verify', { method: 'DELETE' });
+    } catch { /* ignore */ }
     window.location.href = '/orders';
   };
 
