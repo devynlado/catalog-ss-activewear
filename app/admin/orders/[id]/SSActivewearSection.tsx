@@ -31,7 +31,7 @@ interface SSOrder {
   ss_total: number | null;
   ss_total_weight: number | null;
   ss_total_boxes: number | null;
-  line_errors: unknown;
+  line_errors: Array<{ sku: string; error: string }> | null;
   placed_at: string;
   last_polled_at: string | null;
 }
@@ -301,11 +301,11 @@ export function SSActivewearSection({
             </div>
 
             {/* Line errors warning */}
-            {ssOrder.line_errors && Array.isArray(ssOrder.line_errors) && (ssOrder.line_errors as unknown[]).length > 0 && (
+            {ssOrder.line_errors && ssOrder.line_errors.length > 0 && (
               <div className="mt-3 rounded-md bg-amber-50 border border-amber-100 p-2">
                 <p className="text-xs font-medium text-amber-700 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  {(ssOrder.line_errors as unknown[]).length} item(s) could not be fulfilled
+                  {ssOrder.line_errors.length} item(s) could not be fulfilled
                 </p>
               </div>
             )}
