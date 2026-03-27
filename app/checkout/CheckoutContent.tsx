@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { AddressAutocomplete, loadGoogleMapsScript, ParsedAddress } from '@/components/checkout/AddressAutocomplete';
 import { OrderSummary } from './OrderSummary';
 import { getDeliveryEstimate, getDecoratedDeliveryEstimate, formatDateRange } from './ShippingOptions';
+import { DecorationSelection } from '@/lib/decoration-pricing';
 import { trackBeginCheckout, trackGenerateLead, CartItem as GA4CartItem } from '@/lib/analytics';
 import { getAttribution } from '@/lib/attribution';
 import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
@@ -209,6 +210,7 @@ interface InlinePaymentFormProps {
   missingFields: string[];
   total: number;
   appliedCoupon?: { code: string; discountAmount: number; freeShipping?: boolean } | null;
+  decoration?: DecorationSelection | null;
 }
 
 function InlinePaymentForm({
@@ -221,6 +223,7 @@ function InlinePaymentForm({
   missingFields,
   total,
   appliedCoupon,
+  decoration,
 }: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -234,7 +237,7 @@ function InlinePaymentForm({
   // Invalidate cached session when cart or shipping changes
   // (the amount would differ, so we need a fresh PaymentIntent)
   const prevCartKey = useRef('');
-  const cartKey = JSON.stringify({ items: items.map(i => i.id + i.quantity), shippingMethod });
+  const cartKey = JSON.stringify({ items: items.map(i => i.id + i.quantity), shippingMethod, decorationId: decoration?.packageId ?? null });
   if (cartKey !== prevCartKey.current) {
     prevCartKey.current = cartKey;
     sessionRef.current = null;
@@ -275,6 +278,7 @@ function InlinePaymentForm({
               items,
               shippingInfo,
               shippingMethod,
+              decoration: decoration ?? undefined,
               poNumber: poNumber || undefined,
               orderNotes: orderNotes || undefined,
               couponCode: appliedCoupon?.code ?? undefined,
@@ -424,7 +428,8 @@ export default function CheckoutContent() {
   const actualShippingCost = totalsWithCoupon.shippingCost;
   const shippingBreakdown = totalsWithCoupon.shippingBreakdown;
   const taxAmount = totalsWithCoupon.taxAmount;
-  const orderTotal = totalsWithCoupon.total;
+  const decorationTotal = decoration?.totalPrice ?? 0;
+  const orderTotal = Math.round((totalsWithCoupon.total + decorationTotal) * 100) / 100;
 
   // Track begin_checkout event when page loads with items
   useEffect(() => {
@@ -1069,6 +1074,7 @@ export default function CheckoutContent() {
                     missingFields={missingFields}
                     total={orderTotal}
                     appliedCoupon={appliedCoupon}
+                    decoration={decoration}
                   />
                 </Elements>
 

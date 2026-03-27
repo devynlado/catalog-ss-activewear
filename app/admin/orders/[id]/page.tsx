@@ -9,6 +9,8 @@ import { ActualShippingCostEditor } from './ActualShippingCostEditor';
 import { OrderActivityLog } from './OrderActivityLog';
 import { OrderRefundUI } from './OrderRefundUI';
 import { ResendShippedEmail } from './ResendShippedEmail';
+import { SSActivewearSection } from './SSActivewearSection';
+import { SSActivityLog } from './SSActivityLog';
 
 export const metadata = {
   title: 'Order Details',
@@ -77,6 +79,13 @@ export default async function OrderDetailPage({
     .eq('type', 'refund')
     .eq('status', 'succeeded')
     .order('created_at', { ascending: false });
+
+  // Fetch SS Activewear orders for this order
+  const { data: ssOrders } = await supabase
+    .from('ss_orders')
+    .select('*')
+    .eq('order_id', order.id)
+    .order('created_at', { ascending: true });
   const refunds = (refundPayments ?? []) as { amount: number; created_at?: string }[];
   const totalRefunded = refunds.reduce((sum, p) => sum + Number(p.amount), 0);
   const lastRefundedAt = refunds[0]?.created_at ?? null;
@@ -492,6 +501,18 @@ export default async function OrderDetailPage({
                 )}
               </div>
             </div>
+
+            {/* SS Activewear Section */}
+            <SSActivewearSection
+              orderId={order.id}
+              orderStatus={order.status}
+              ssAutoOrderFailed={order.ss_auto_order_failed ?? false}
+              ssAutoOrderError={order.ss_auto_order_error ?? null}
+              ssOrders={(ssOrders || []) as any[]}
+            />
+
+            {/* SS Activewear Activity Log */}
+            <SSActivityLog orderId={order.id} />
 
             {/* Activity Log */}
             <OrderActivityLog

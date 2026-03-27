@@ -19,6 +19,7 @@ import {
   DecorationMethod,
 } from '@/lib/emails/components';
 import { syncOrderToMedusa } from '@/lib/medusa';
+import { placeSSOrder } from '@/lib/ss-activewear-orders';
 
 // Lazy initialization for Resend
 function getResend() {
@@ -239,6 +240,13 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
       })
       .eq('email', customerEmail.toLowerCase().trim())
       .eq('status', 'new');
+  }
+
+  // Auto-place order with SS Activewear (fire-and-forget, non-blocking)
+  if (orderType !== 'package') {
+    placeSSOrder(orderId, supabase).catch((err) =>
+      console.error('[SS Activewear] Auto-order failed after payment:', err)
+    );
   }
 
   // Sync order to Medusa for order management (fire-and-forget)

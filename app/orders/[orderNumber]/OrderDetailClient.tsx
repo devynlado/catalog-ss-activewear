@@ -33,6 +33,11 @@ interface Shipment {
   shippedAt: string | null;
   deliveredAt: string | null;
   items: unknown;
+  expectedDeliveryDate: string | null;
+  deliveryStatus: string | null;
+  lastCheckpointLocation: string | null;
+  lastCheckpointMessage: string | null;
+  lastCheckpointAt: string | null;
 }
 
 interface ShippingAddress {
@@ -60,6 +65,7 @@ interface OrderDetail {
   paidAt: string | null;
   shippedAt: string | null;
   deliveredAt: string | null;
+  expectedDeliveryDate: string | null;
   items: OrderItem[];
   subtotal: number;
   shippingCost: number;
@@ -183,6 +189,27 @@ export function OrderDetailClient({ orderNumber }: { orderNumber: string }) {
         />
       </div>
 
+      {/* Expected delivery date */}
+      {order.expectedDeliveryDate && order.status !== 'delivered' && order.status !== 'cancelled' && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100">
+              <Truck className="h-5 w-5 text-brand-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-brand-800">Expected Delivery</p>
+              <p className="text-lg font-bold text-brand-700">
+                {new Date(order.expectedDeliveryDate).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tracking info */}
       {(order.trackingNumber || shipments.length > 0) && (
         <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -195,19 +222,39 @@ export function OrderDetailClient({ orderNumber }: { orderNumber: string }) {
               {shipments.map((s, i) => {
                 const url = getTrackingUrl(s.carrier, s.trackingNumber);
                 return (
-                  <div key={i} className="flex items-center justify-between rounded-lg bg-stone-50 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">
-                        Shipment {i + 1} {s.warehouse ? `(${s.warehouse})` : ''}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {s.carrier || 'Unknown carrier'} &middot; {s.trackingNumber || 'No tracking yet'}
-                      </p>
+                  <div key={i} className="rounded-lg bg-stone-50 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">
+                          Shipment {i + 1} {s.warehouse ? `(${s.warehouse})` : ''}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {s.carrier || 'Unknown carrier'} &middot; {s.trackingNumber || 'No tracking yet'}
+                        </p>
+                      </div>
+                      {url && (
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
                     </div>
-                    {url && (
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
+                    {/* Live checkpoint info */}
+                    {s.lastCheckpointMessage && (
+                      <div className="mt-2 border-t border-stone-200 pt-2">
+                        <p className="text-xs font-medium text-slate-600">{s.deliveryStatus || 'In Transit'}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{s.lastCheckpointMessage}</p>
+                        {s.lastCheckpointLocation && (
+                          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {s.lastCheckpointLocation}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {s.expectedDeliveryDate && !s.deliveredAt && (
+                      <p className="text-xs text-brand-600 mt-1.5 font-medium">
+                        Expected: {new Date(s.expectedDeliveryDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </p>
                     )}
                   </div>
                 );

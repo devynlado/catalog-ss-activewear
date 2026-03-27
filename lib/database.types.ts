@@ -656,6 +656,9 @@ export interface Database {
           shipped_at: string | null;
           delivered_at: string | null;
           risk_score: number | null;
+          expected_delivery_date: string | null;
+          ss_auto_order_failed: boolean;
+          ss_auto_order_error: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -690,6 +693,9 @@ export interface Database {
           shipped_at?: string | null;
           delivered_at?: string | null;
           risk_score?: number | null;
+          expected_delivery_date?: string | null;
+          ss_auto_order_failed?: boolean;
+          ss_auto_order_error?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -724,6 +730,9 @@ export interface Database {
           shipped_at?: string | null;
           delivered_at?: string | null;
           risk_score?: number | null;
+          expected_delivery_date?: string | null;
+          ss_auto_order_failed?: boolean;
+          ss_auto_order_error?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -942,6 +951,227 @@ export interface Database {
           sent_at?: string;
         };
       };
+      // SS Activewear Order Tracking
+      ss_orders: {
+        Row: {
+          id: string;
+          order_id: string;
+          shipment_id: string | null;
+          ss_order_number: string;
+          ss_invoice_number: string | null;
+          ss_guid: string;
+          ss_warehouse: string | null;
+          ss_order_status: string | null;
+          ss_delivery_status: string | null;
+          ss_expected_delivery_date: string | null;
+          ss_ship_date: string | null;
+          ss_tracking_number: string | null;
+          ss_carrier: string | null;
+          ss_subtotal: number | null;
+          ss_shipping: number | null;
+          ss_total: number | null;
+          ss_total_weight: number | null;
+          ss_total_boxes: number | null;
+          ss_raw_response: Json | null;
+          line_errors: Json | null;
+          placed_at: string;
+          last_polled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          shipment_id?: string | null;
+          ss_order_number: string;
+          ss_invoice_number?: string | null;
+          ss_guid: string;
+          ss_warehouse?: string | null;
+          ss_order_status?: string | null;
+          ss_delivery_status?: string | null;
+          ss_expected_delivery_date?: string | null;
+          ss_ship_date?: string | null;
+          ss_tracking_number?: string | null;
+          ss_carrier?: string | null;
+          ss_subtotal?: number | null;
+          ss_shipping?: number | null;
+          ss_total?: number | null;
+          ss_total_weight?: number | null;
+          ss_total_boxes?: number | null;
+          ss_raw_response?: Json | null;
+          line_errors?: Json | null;
+          placed_at?: string;
+          last_polled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          shipment_id?: string | null;
+          ss_order_number?: string;
+          ss_invoice_number?: string | null;
+          ss_guid?: string;
+          ss_warehouse?: string | null;
+          ss_order_status?: string | null;
+          ss_delivery_status?: string | null;
+          ss_expected_delivery_date?: string | null;
+          ss_ship_date?: string | null;
+          ss_tracking_number?: string | null;
+          ss_carrier?: string | null;
+          ss_subtotal?: number | null;
+          ss_shipping?: number | null;
+          ss_total?: number | null;
+          ss_total_weight?: number | null;
+          ss_total_boxes?: number | null;
+          ss_raw_response?: Json | null;
+          line_errors?: Json | null;
+          placed_at?: string;
+          last_polled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      ss_tracking_events: {
+        Row: {
+          id: string;
+          ss_order_id: string;
+          tracking_number: string;
+          carrier: string | null;
+          checkpoint_date: string | null;
+          checkpoint_location: string | null;
+          checkpoint_status: string | null;
+          actual_delivery_date: string | null;
+          signed_by: string | null;
+          raw_response: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          ss_order_id: string;
+          tracking_number: string;
+          carrier?: string | null;
+          checkpoint_date?: string | null;
+          checkpoint_location?: string | null;
+          checkpoint_status?: string | null;
+          actual_delivery_date?: string | null;
+          signed_by?: string | null;
+          raw_response?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          ss_order_id?: string;
+          tracking_number?: string;
+          carrier?: string | null;
+          checkpoint_date?: string | null;
+          checkpoint_location?: string | null;
+          checkpoint_status?: string | null;
+          actual_delivery_date?: string | null;
+          signed_by?: string | null;
+          raw_response?: Json | null;
+          created_at?: string;
+        };
+      };
+      ss_activity_log: {
+        Row: {
+          id: string;
+          order_id: string;
+          ss_order_id: string | null;
+          activity_type: string;
+          status: string;
+          title: string;
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          ss_order_id?: string | null;
+          activity_type: string;
+          status?: string;
+          title: string;
+          details?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          ss_order_id?: string | null;
+          activity_type?: string;
+          status?: string;
+          title?: string;
+          details?: Json;
+          created_at?: string;
+        };
+      };
+      ss_returns: {
+        Row: {
+          id: string;
+          order_id: string;
+          ss_order_id: string | null;
+          ss_return_number: string | null;
+          ss_rma_number: string | null;
+          status: string;
+          reason: string | null;
+          items: Json | null;
+          ss_raw_response: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          ss_order_id?: string | null;
+          ss_return_number?: string | null;
+          ss_rma_number?: string | null;
+          status?: string;
+          reason?: string | null;
+          items?: Json | null;
+          ss_raw_response?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          ss_order_id?: string | null;
+          ss_return_number?: string | null;
+          ss_rma_number?: string | null;
+          status?: string;
+          reason?: string | null;
+          items?: Json | null;
+          ss_raw_response?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      delivery_estimates_cache: {
+        Row: {
+          id: string;
+          zip_code: string;
+          warehouse_abbr: string;
+          days_in_transit: number;
+          cutoff_time: string;
+          cached_at: string;
+        };
+        Insert: {
+          id?: string;
+          zip_code: string;
+          warehouse_abbr: string;
+          days_in_transit: number;
+          cutoff_time: string;
+          cached_at?: string;
+        };
+        Update: {
+          id?: string;
+          zip_code?: string;
+          warehouse_abbr?: string;
+          days_in_transit?: number;
+          cutoff_time?: string;
+          cached_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -993,6 +1223,18 @@ export type ReviewUpdate = Database['public']['Tables']['reviews']['Update'];
 export type ReviewInviteRow = Database['public']['Tables']['review_invites']['Row'];
 export type ReviewInviteInsert = Database['public']['Tables']['review_invites']['Insert'];
 
+// SS Activewear Order type aliases
+export type SSOrderRow = Database['public']['Tables']['ss_orders']['Row'];
+export type SSOrderInsert = Database['public']['Tables']['ss_orders']['Insert'];
+export type SSOrderUpdate = Database['public']['Tables']['ss_orders']['Update'];
+export type SSTrackingEventRow = Database['public']['Tables']['ss_tracking_events']['Row'];
+export type SSTrackingEventInsert = Database['public']['Tables']['ss_tracking_events']['Insert'];
+export type SSActivityLogRow = Database['public']['Tables']['ss_activity_log']['Row'];
+export type SSActivityLogInsert = Database['public']['Tables']['ss_activity_log']['Insert'];
+export type SSReturnRow = Database['public']['Tables']['ss_returns']['Row'];
+export type SSReturnInsert = Database['public']['Tables']['ss_returns']['Insert'];
+export type DeliveryEstimateCacheRow = Database['public']['Tables']['delivery_estimates_cache']['Row'];
+
 // Available size info for cart (used to show all sizes in cart/drawer)
 export interface AvailableSize {
   name: string;
@@ -1035,6 +1277,14 @@ export interface OrderShipment {
   shipped_at: string | null;
   delivered_at: string | null;
   items: unknown;
+  ss_order_number: string | null;
+  ss_invoice_number: string | null;
+  ss_guid: string | null;
+  expected_delivery_date: string | null;
+  delivery_status: string | null;
+  last_checkpoint_location: string | null;
+  last_checkpoint_message: string | null;
+  last_checkpoint_at: string | null;
   created_at: string;
   updated_at: string;
 }

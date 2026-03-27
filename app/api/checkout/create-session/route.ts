@@ -20,10 +20,23 @@ interface ShippingInfo {
   phone: string;
 }
 
+interface DecorationData {
+  type: string;
+  packageId: string;
+  packageName: string;
+  pricePerPiece: number;
+  setupFee: number;
+  totalPrice: number;
+  quantity: number;
+  artworkFileName?: string;
+  artworkUrl?: string;
+}
+
 interface CheckoutRequest {
   items: CartItem[];
   shippingInfo: ShippingInfo;
   shippingMethod: ShippingMethod;
+  decoration?: DecorationData | null;
   poNumber?: string;
   orderNotes?: string;
   idempotencyKey?: string;
@@ -37,7 +50,7 @@ interface CheckoutRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, poNumber, orderNotes, idempotencyKey, couponCode, utm_source, utm_medium, utm_campaign, gclid } = body;
+    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, utm_source, utm_medium, utm_campaign, gclid } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -65,6 +78,9 @@ export async function POST(request: NextRequest) {
       return sum + getEffectiveItemPrice(item, totalStyleQty) * item.quantity;
     }, 0);
     const roundedSubtotal = Math.round(subtotal * 100) / 100;
+
+    // Decoration cost (screen printing, embroidery, etc.)
+    const decorationTotal = decoration ? Math.round((decoration.totalPrice ?? 0) * 100) / 100 : 0;
 
     let discountAmount = 0;
     let actualShippingCost: number;
@@ -109,6 +125,11 @@ export async function POST(request: NextRequest) {
       actualShippingCost = withCoupon.shippingCost;
       taxAmount = withCoupon.taxAmount;
       totalWithShipping = withCoupon.total;
+    }
+
+    // Add decoration cost to the total (tax is on products only, matching checkout UI)
+    if (decorationTotal > 0) {
+      totalWithShipping = Math.round((totalWithShipping + decorationTotal) * 100) / 100;
     }
 
     // Group items by warehouse for shipment records
@@ -178,21 +199,35 @@ export async function POST(request: NextRequest) {
         customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
         customer_phone: shippingInfo.phone,
         company: shippingInfo.company || null,
-        items: items.map(item => ({
-          type: 'product',
-          sku: item.sku,
-          styleId: item.styleId,
-          styleName: item.styleName,
-          brandName: item.brandName,
-          colorName: item.colorName,
-          colorCode: item.colorCode,
-          sizeName: item.sizeName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discountedPrice: item.discountedPrice,
-          imageUrl: item.imageUrl,
-          cogs: cogsMap[item.sku] ?? null,
-        })),
+        items: [
+          ...items.map(item => ({
+            type: 'product' as const,
+            sku: item.sku,
+            styleId: item.styleId,
+            styleName: item.styleName,
+            brandName: item.brandName,
+            colorName: item.colorName,
+            colorCode: item.colorCode,
+            sizeName: item.sizeName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discountedPrice: item.discountedPrice,
+            imageUrl: item.imageUrl,
+            cogs: cogsMap[item.sku] ?? null,
+          })),
+          ...(decoration ? [{
+            type: 'decoration' as const,
+            decorationType: decoration.type,
+            packageId: decoration.packageId,
+            packageName: decoration.packageName,
+            quantity: decoration.quantity,
+            unitPrice: decoration.pricePerPiece,
+            setupFee: decoration.setupFee,
+            totalPrice: decorationTotal,
+            artworkFileName: decoration.artworkFileName || null,
+            artworkUrl: decoration.artworkUrl || null,
+          }] : []),
+        ],
         subtotal: roundedSubtotal,
         shipping_cost: actualShippingCost,
         tax_amount: taxAmount,
@@ -216,6 +251,14 @@ export async function POST(request: NextRequest) {
         metadata: {
           order_type: 'cart',
           po_number: poNumber || null,
+          ...(decorationTotal > 0 ? {
+            decoration_type: decoration!.type,
+            decoration_package: decoration!.packageName,
+            decoration_total: decorationTotal,
+            decoration_quantity: decoration!.quantity,
+            decoration_price_per_piece: decoration!.pricePerPiece,
+            decoration_setup_fee: decoration!.setupFee,
+          } : {}),
         },
       })
       .select()
@@ -238,6 +281,11 @@ export async function POST(request: NextRequest) {
           total_pieces: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
           po_number: poNumber || '',
           notes: orderNotes || '',
+          ...(decorationTotal > 0 ? {
+            decoration_type: decoration!.type,
+            decoration_package: decoration!.packageName,
+            decoration_total: decorationTotal.toFixed(2),
+          } : {}),
         },
         description: `Order ${orderNumber} - ${itemSummary}`,
       },
@@ -342,6 +390,7 @@ export async function POST(request: NextRequest) {
       orderNumber,
       pricing: {
         subtotal: roundedSubtotal,
+        decoration: decorationTotal,
         tax: taxAmount,
         shipping: actualShippingCost,
         discount: discountAmount,
