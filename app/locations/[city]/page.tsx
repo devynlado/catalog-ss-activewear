@@ -19,6 +19,7 @@ import {
   Maximize,
   ExternalLink
 } from 'lucide-react';
+import { CuratedPortfolioGrid } from '@/components/services';
 
 // Calculate business days from today
 function addBusinessDays(days: number): Date {
@@ -53,6 +54,7 @@ const locations: Record<string, {
   heroDescription: string;
   targetAudience: { name: string; icon: React.ElementType; description: string }[];
   testimonials: { quote: string; name: string; company?: string }[];
+  portfolioSlugs?: string[];
   faq: { question: string; answer: string }[];
   seoKeywords: string[];
 }> = {
@@ -80,6 +82,16 @@ const locations: Record<string, {
       { question: 'Do you provide artwork and design help?', answer: 'Yes! If you have a logo or concept, our team can help prepare print-ready artwork. We provide digital proofs for approval before any production begins—no surprises.' },
       { question: 'Can I see a sample before ordering?', answer: 'Absolutely. We create a sample (pre-production proof) for your approval before running the full order. You only pay for production after you approve the sample.' },
       { question: 'Do you work with production companies and film sets?', answer: 'Yes! We regularly work with film, TV, and commercial productions throughout LA. We understand tight schedules and offer rush services to meet production deadlines.' },
+    ],
+    portfolioSlugs: [
+      'jumbo-8-color-screen-printing-for-kill-bill-inspired-t-shirts-delivered-in-just-2-days',
+      'rush-jumbo-screen-printing-simulated-process-on-la-apparel-1801gd-shirts',
+      'elevate-your-brand-with-jumbo-prints-on-shaka-wear-7-5oz-max-heavyweight-tees',
+      'screen-printing-250-custom-la-apparel-hf09gd-hoodies-for-h-e-r-s-concert',
+      'jumbo-8-color-screen-printing-for-scarface-on-la-apparel-1801gd-t-shirts',
+      'boost-your-brands-buzz-why-jumbo-screen-printing-is-a-game-changer-for-your-merch',
+      'netflix-tonal-technique-embroidered-logo',
+      'custom-puff-embroidery-for-yupoong-6089-caps-elevate-your-streetwear-brand',
     ],
     seoKeywords: ['Hollywood screen printing', 'LA custom apparel', 'entertainment merchandise', 'production crew shirts', 'tour merch Los Angeles'],
   },
@@ -487,6 +499,16 @@ export default function LocationPage({ params }: { params: { city: string } }) {
           </div>
         </div>
       </section>
+
+      {/* Portfolio — curated projects */}
+      {location.portfolioSlugs && location.portfolioSlugs.length > 0 && (
+        <CuratedPortfolioGrid
+          title={`Our Work in ${location.name}`}
+          subtitle="Real projects delivered to real clients"
+          slugs={location.portfolioSlugs}
+          viewAllLink="/portfolio"
+        />
+      )}
 
       {/* FAQ */}
       <section className="py-16 sm:py-20">
