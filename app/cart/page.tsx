@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, ShoppingCart, Trash2, Tag, Truck, Shield, BadgeCheck, Package, Pencil, Phone, ChevronDown, Paintbrush, Scissors } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ShoppingCart, Trash2, Tag, Truck, Shield, BadgeCheck, Package, Pencil, Phone, ChevronDown, Paintbrush, Scissors, X } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -148,6 +148,7 @@ export default function CartPage() {
     getDecorationTotal,
     getGrandTotal,
     decoration,
+    clearDecoration,
     hasHydrated,
     openDecorationModal,
     appliedCoupon,
@@ -692,7 +693,16 @@ export default function CartPage() {
                             <p className="text-sm font-semibold text-slate-800">
                               {decoration.type === 'screen-print' ? 'Screen Printing' : 'Embroidery'} - {decoration.packageName}
                             </p>
-                            <span className="font-semibold text-slate-800">{formatPrice(getDecorationTotal())}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800">{formatPrice(getDecorationTotal())}</span>
+                              <button
+                                onClick={clearDecoration}
+                                className="rounded-full p-0.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                title="Remove decoration"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </div>
                           <p className="text-xs text-slate-500 mt-0.5">
                             {totalUnits} pcs × {formatPrice(decoration.pricePerPiece)}/pc • Arrives {formatDateRange(decoratedDelivery.min, decoratedDelivery.max)}

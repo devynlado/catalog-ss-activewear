@@ -19,6 +19,8 @@ import {
   Phone,
   CreditCard,
   AlertCircle,
+  Tag,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
@@ -387,7 +389,7 @@ function InlinePaymentForm({
 // ---------- Main Checkout Page ----------
 
 export default function CheckoutContent() {
-  const { items, decoration, getDecorationTotal, appliedCoupon } = useCartStore();
+  const { items, decoration, getDecorationTotal, clearDecoration, appliedCoupon, setAppliedCoupon, clearCoupon } = useCartStore();
   
   // Form state
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(initialShippingInfo);
@@ -397,8 +399,92 @@ export default function CheckoutContent() {
   const [poNumber, setPoNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  
   // General error state (for non-payment errors)
   const [error, setError] = useState<string | null>(null);
+  // $0 order: completing without payment
+  const [freeOrderSubmitting, setFreeOrderSubmitting] = useState(false);
+  const [freeOrderError, setFreeOrderError] = useState<string | null>(null);
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return;
+    setPromoError(null);
+    setPromoLoading(true);
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          items: items.map((i) => ({
+            sku: i.sku,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          })),
+          context: 'cart',
+        }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedCoupon({
+          code: data.code,
+          couponId: data.couponId,
+          discountAmount: data.discountAmount,
+          freeShipping: data.freeShipping,
+        });
+        setCouponCode('');
+        setPromoExpanded(false);
+      } else {
+        setPromoError(data.message || 'Invalid or expired code.');
+      }
+    } catch {
+      setPromoError('Something went wrong. Please try again.');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleCompleteFreeOrder = async () => {
+    if (!isFormValid || orderTotal >= 0.01) return;
+    setFreeOrderError(null);
+    setFreeOrderSubmitting(true);
+    try {
+      const res = await fetch('/api/checkout/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          shippingInfo,
+          shippingMethod,
+          decoration: decoration ?? undefined,
+          poNumber: poNumber || undefined,
+          orderNotes: orderNotes || undefined,
+          couponCode: appliedCoupon?.code ?? undefined,
+          ...getAttribution(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFreeOrderError(data.error || 'Failed to complete order');
+        return;
+      }
+      if (data.freeOrder && data.orderNumber) {
+        window.location.href = `/checkout/success?order=${encodeURIComponent(data.orderNumber)}`;
+        return;
+      }
+      setFreeOrderError('Something went wrong. Please try again.');
+    } catch {
+      setFreeOrderError('Something went wrong. Please try again.');
+    } finally {
+      setFreeOrderSubmitting(false);
+    }
+  };
 
   // Multi-warehouse grouping
   const shipmentGroups = useMemo(() => groupCartByWarehouse(items), [items]);
@@ -915,9 +1001,73 @@ export default function CheckoutContent() {
                 taxAmount={taxAmount}
                 isEditable={true}
                 decoration={decoration}
+                onRemoveDecoration={clearDecoration}
                 couponDiscount={appliedCoupon?.discountAmount}
                 couponCode={appliedCoupon?.code}
               />
+
+              {/* Coupon Code */}
+              <div className={glassCard + ' p-4'}>
+                {appliedCoupon ? (
+                  <div className="rounded-lg border border-green-200 bg-green-50/80 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-green-600 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-green-800">
+                            {appliedCoupon.code} — {formatPrice(appliedCoupon.discountAmount)} off
+                          </p>
+                          {appliedCoupon.freeShipping && (
+                            <p className="text-xs text-green-700 mt-0.5">Free economy shipping applied</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-600 hover:text-slate-800 shrink-0"
+                        onClick={() => { clearCoupon(); setPromoError(null); }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setPromoExpanded(!promoExpanded); setPromoError(null); }}
+                      className="flex w-full items-center justify-between text-left"
+                    >
+                      <span className="text-sm font-medium text-slate-700">Have a promo code?</span>
+                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${promoExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {promoExpanded && (
+                      <div className="mt-3 space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            value={couponCode}
+                            onChange={(e) => { setCouponCode(e.target.value); setPromoError(null); }}
+                            placeholder="Enter code"
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleApplyCoupon}
+                            disabled={promoLoading || !couponCode.trim()}
+                          >
+                            {promoLoading ? 'Applying…' : 'Apply'}
+                          </Button>
+                        </div>
+                        {promoError && (
+                          <p className="text-sm text-red-600">{promoError}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
 
               {/* Shipping Method */}
               <div className={glassCard + " p-5"}>
@@ -1055,28 +1205,66 @@ export default function CheckoutContent() {
                   </div>
                 </div>
 
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    mode: 'payment',
-                    amount: toStripeCents(orderTotal),
-                    currency: 'usd',
-                    appearance: stripeAppearance,
-                  }}
-                >
-                  <InlinePaymentForm
-                    items={items}
-                    shippingInfo={shippingInfo}
-                    shippingMethod={shippingMethod}
-                    poNumber={poNumber}
-                    orderNotes={orderNotes}
-                    isFormValid={isFormValid}
-                    missingFields={missingFields}
-                    total={orderTotal}
-                    appliedCoupon={appliedCoupon}
-                    decoration={decoration}
-                  />
-                </Elements>
+                {orderTotal < 0.01 ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <BadgeCheck className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">No payment required</span>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Your order total is $0. Fill in your details above and click below to place the order.
+                    </p>
+                    {!isFormValid && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                        <p className="text-sm font-medium text-amber-800 mb-2">
+                          Complete the form above to place your order:
+                        </p>
+                        <ul className="text-sm text-amber-700 space-y-1">
+                          {missingFields.map((field) => (
+                            <li key={field} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                              {field}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {freeOrderError && (
+                      <p className="text-sm text-red-600 mb-3">{freeOrderError}</p>
+                    )}
+                    <Button
+                      size="lg"
+                      className="w-full"
+                      onClick={handleCompleteFreeOrder}
+                      disabled={!isFormValid || freeOrderSubmitting}
+                    >
+                      {freeOrderSubmitting ? 'Placing order…' : 'Complete order'}
+                    </Button>
+                  </>
+                ) : stripePromise ? (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      mode: 'payment',
+                      amount: Math.max(toStripeCents(orderTotal), 50),
+                      currency: 'usd',
+                      appearance: stripeAppearance,
+                    }}
+                  >
+                    <InlinePaymentForm
+                      items={items}
+                      shippingInfo={shippingInfo}
+                      shippingMethod={shippingMethod}
+                      poNumber={poNumber}
+                      orderNotes={orderNotes}
+                      isFormValid={isFormValid}
+                      missingFields={missingFields}
+                      total={orderTotal}
+                      appliedCoupon={appliedCoupon}
+                      decoration={decoration}
+                    />
+                  </Elements>
+                ) : null}
 
                 {/* Reassurance message */}
                 <p className="mt-4 text-center text-xs text-slate-500">

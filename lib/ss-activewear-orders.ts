@@ -274,15 +274,34 @@ export async function placeSSOrder(
     return { success: true, ssOrders: [], lineErrors: [], error: 'Already placed' };
   }
 
-  // Build order lines from items
+  // Build order lines — only include items supplied by SS Activewear
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = Array.isArray(order.items) ? order.items : [];
-  const lines: SSOrderLine[] = items
-    .filter(item => item.warehouse === 'ss_activewear' || !item.warehouse)
+  const productItems = items.filter(item => item.type !== 'decoration');
+  const skus = productItems.map((item) => item.sku).filter(Boolean);
+
+  // Look up actual supplier for each SKU from the product_skus table
+  let ssSkuSet = new Set<string>();
+  if (skus.length > 0) {
+    const { data: skuRows } = await db
+      .from('product_skus')
+      .select('sku, supplier')
+      .in('sku', skus);
+    ssSkuSet = new Set(
+      (skuRows || [])
+        .filter((r: { sku: string; supplier: string | null }) => r.supplier === 'ss_activewear')
+        .map((r: { sku: string }) => r.sku)
+    );
+  }
+
+  const lines: SSOrderLine[] = productItems
+    .filter(item => ssSkuSet.has(item.sku))
     .map(item => ({
       identifier: item.sku,
       qty: item.quantity || 1,
     }));
+
+  const skippedItems = productItems.filter(item => !ssSkuSet.has(item.sku));
 
   if (lines.length === 0) {
     await logSSActivity({
@@ -290,6 +309,9 @@ export async function placeSSOrder(
       activityType: 'auto_order_skipped',
       status: 'info',
       title: 'No SS Activewear items in this order',
+      details: skippedItems.length > 0
+        ? { skipped_skus: skippedItems.map((i: { sku: string; brandName?: string }) => i.sku), reason: 'Items belong to other suppliers' }
+        : undefined,
       supabase: db,
     });
     return { success: true, ssOrders: [], lineErrors: [] };
@@ -344,10 +366,12 @@ export async function placeSSOrder(
     orderId,
     activityType: 'order_placing',
     status: 'info',
-    title: `Placing order with SS Activewear (${lines.length} line items)`,
+    title: `Placing order with SS Activewear (${lines.length} line items${skippedItems.length > 0 ? `, ${skippedItems.length} non-SS items skipped` : ''})`,
     details: {
       po_number: order.order_number,
       line_count: lines.length,
+      skipped_count: skippedItems.length,
+      skipped_skus: skippedItems.length > 0 ? skippedItems.map((i: { sku: string }) => i.sku) : undefined,
       shipping_method: payload.shippingMethod,
       autoselect_warehouse: true,
       test_order: payload.testOrder,

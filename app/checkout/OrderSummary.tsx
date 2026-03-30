@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Package, ChevronDown, ChevronUp, Pencil, Paintbrush, Scissors } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Pencil, Paintbrush, Scissors, X } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { CartItem } from '@/lib/database.types';
 import { formatPrice, cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ interface OrderSummaryProps {
   taxAmount?: number;
   isEditable?: boolean;
   decoration?: DecorationSelection | null;
+  onRemoveDecoration?: () => void;
   couponDiscount?: number;
   couponCode?: string;
 }
@@ -134,6 +135,7 @@ export function OrderSummary({
   taxAmount,
   isEditable = true,
   decoration,
+  onRemoveDecoration,
   couponDiscount = 0,
   couponCode,
 }: OrderSummaryProps) {
@@ -387,7 +389,18 @@ export function OrderSummary({
                     <p className="text-sm font-semibold text-slate-800">
                       {decoration.type === 'screen-print' ? 'Screen Printing' : 'Embroidery'} - {decoration.packageName}
                     </p>
-                    <span className="font-semibold text-slate-800">{formatPrice(decorationTotal)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-800">{formatPrice(decorationTotal)}</span>
+                      {onRemoveDecoration && (
+                        <button
+                          onClick={onRemoveDecoration}
+                          className="rounded-full p-0.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title="Remove decoration"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
                     {decoration.quantity} pcs × {formatPrice(decoration.pricePerPiece)}/pc • Arrives {formatDateRange(deliveryEstimate.min, deliveryEstimate.max)}
