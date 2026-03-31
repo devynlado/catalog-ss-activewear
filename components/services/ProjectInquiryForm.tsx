@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Loader2, CheckCircle, MessageSquare, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getVisitorSource } from '@/lib/attribution';
 
 interface FormData {
   name: string;
@@ -77,7 +78,8 @@ BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not sp
           message: formattedMessage,
           service: 'Project Inquiry',
           source: 'services_page_inquiry_form',
-          quantity: formData.budget, // Use budget field for quantity tracking
+          quantity: formData.budget,
+          visitor_source: getVisitorSource(),
         }),
       });
 

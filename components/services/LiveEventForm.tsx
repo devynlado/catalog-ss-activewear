@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Send, Loader2, CheckCircle2, Phone, MessageCircle, User, Calendar } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 
 export function LiveEventForm() {
   const [formData, setFormData] = useState({
@@ -46,6 +47,7 @@ ${formData.message || 'None provided'}
           message: fullMessage,
           service: 'Live Screen Printing',
           source: 'service_live-screen-printing',
+          visitor_source: getVisitorSource(),
         }),
       });
 

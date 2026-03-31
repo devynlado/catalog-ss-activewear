@@ -1,11 +1,22 @@
 const COOKIE_NAME = 'gd_attribution';
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
+export type VisitorSource =
+  | 'Direct'
+  | 'Google Ads'
+  | 'Organic Search'
+  | 'Organic Social'
+  | 'Organic Shopping'
+  | 'Referral'
+  | 'Cross-network'
+  | 'Other';
+
 export interface AttributionData {
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
   gclid?: string;
+  referrer?: string;
 }
 
 function setCookie(name: string, value: string, maxAge: number) {
@@ -34,13 +45,16 @@ export function captureAttribution(): void {
   const utm_campaign = params.get('utm_campaign');
   const gclid = params.get('gclid');
 
-  if (!utm_source && !gclid) return;
+  const referrer = document.referrer || '';
+
+  if (!utm_source && !gclid && !referrer) return;
 
   const data: AttributionData = {};
   if (utm_source) data.utm_source = utm_source;
   if (utm_medium) data.utm_medium = utm_medium;
   if (utm_campaign) data.utm_campaign = utm_campaign;
   if (gclid) data.gclid = gclid;
+  if (referrer) data.referrer = referrer;
 
   setCookie(COOKIE_NAME, JSON.stringify(data), COOKIE_MAX_AGE);
 }
@@ -60,4 +74,47 @@ export function getAttribution(): AttributionData {
   } catch {
     return {};
   }
+}
+
+const SEARCH_ENGINES = ['google', 'bing', 'yahoo', 'duckduckgo', 'baidu', 'yandex'];
+const SOCIAL_NETWORKS = ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'pinterest', 'youtube', 'reddit', 'threads', 'x.com'];
+
+function domainFromUrl(url: string): string {
+  try { return new URL(url).hostname.replace('www.', '').toLowerCase(); }
+  catch { return ''; }
+}
+
+/**
+ * Classifies the visitor's traffic source into a GA4-style channel label.
+ * Uses first-touch attribution data (UTM params, gclid, referrer).
+ */
+export function getVisitorSource(): VisitorSource {
+  const attr = getAttribution();
+  const medium = (attr.utm_medium || '').toLowerCase();
+  const source = (attr.utm_source || '').toLowerCase();
+  const referrerDomain = attr.referrer ? domainFromUrl(attr.referrer) : '';
+
+  if (attr.gclid) return 'Google Ads';
+  if (medium === 'cpc' || medium === 'ppc' || medium === 'paid') return 'Google Ads';
+  if (medium === 'cross-network') return 'Cross-network';
+
+  if (medium === 'organic' && source.includes('shopping')) return 'Organic Shopping';
+  if (attr.utm_campaign?.toLowerCase().includes('shopping') && medium === 'organic') return 'Organic Shopping';
+
+  if (medium === 'organic' || medium === 'organic search') return 'Organic Search';
+  if (source && SEARCH_ENGINES.some(se => source.includes(se)) && !medium) return 'Organic Search';
+
+  if (medium === 'social' || medium === 'organic social') return 'Organic Social';
+  if (source && SOCIAL_NETWORKS.some(sn => source.includes(sn))) return 'Organic Social';
+
+  if (source || medium) return 'Other';
+
+  if (referrerDomain) {
+    if (SEARCH_ENGINES.some(se => referrerDomain.includes(se))) return 'Organic Search';
+    if (SOCIAL_NETWORKS.some(sn => referrerDomain.includes(sn))) return 'Organic Social';
+    if (referrerDomain.includes('shopping.google')) return 'Organic Shopping';
+    return 'Referral';
+  }
+
+  return 'Direct';
 }

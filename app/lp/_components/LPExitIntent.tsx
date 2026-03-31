@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Phone, Clock, MessageSquare, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 
 interface LPExitIntentProps {
   service: 'screen-printing' | 'embroidery';
@@ -91,6 +92,7 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
           service: service,
           source: `lp_${service}_exit_intent`,
           message: 'Exit intent capture - requested callback',
+          visitor_source: getVisitorSource(),
         }),
       });
       
