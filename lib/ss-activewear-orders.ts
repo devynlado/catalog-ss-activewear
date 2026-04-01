@@ -323,11 +323,25 @@ export async function placeSSOrder(
     throw new Error('Order has no shipping address');
   }
 
+  // If the order includes decoration services, ship blanks to the Garment Decor
+  // warehouse in Montclair so they can be decorated before forwarding to the customer.
+  const hasDecoration = items.some(item => item.type === 'decoration');
+
+  const GARMENT_DECOR_WAREHOUSE = {
+    customer: 'Garment Decor',
+    attn: 'Production Team',
+    address: '4778 W Mission Blvd',
+    city: 'Montclair',
+    state: 'CA',
+    zip: '91762',
+    residential: false,
+  };
+
   // Determine shipping speed
   const isExpress = (order as Record<string, unknown>).shipping_method === 'express';
 
   const payload: SSPlaceOrderPayload = {
-    shippingAddress: {
+    shippingAddress: hasDecoration ? GARMENT_DECOR_WAREHOUSE : {
       customer: shippingAddr.company || `${shippingAddr.firstName || ''} ${shippingAddr.lastName || ''}`.trim(),
       attn: `${shippingAddr.firstName || ''} ${shippingAddr.lastName || ''}`.trim(),
       address: shippingAddr.address1 || shippingAddr.address || shippingAddr.street || '',
@@ -366,13 +380,15 @@ export async function placeSSOrder(
     orderId,
     activityType: 'order_placing',
     status: 'info',
-    title: `Placing order with SS Activewear (${lines.length} line items${skippedItems.length > 0 ? `, ${skippedItems.length} non-SS items skipped` : ''})`,
+    title: `Placing order with SS Activewear (${lines.length} line items${skippedItems.length > 0 ? `, ${skippedItems.length} non-SS items skipped` : ''}${hasDecoration ? ', shipping to GD warehouse for decoration' : ''})`,
     details: {
       po_number: order.order_number,
       line_count: lines.length,
       skipped_count: skippedItems.length,
       skipped_skus: skippedItems.length > 0 ? skippedItems.map((i: { sku: string }) => i.sku) : undefined,
       shipping_method: payload.shippingMethod,
+      ship_to: hasDecoration ? 'Garment Decor Warehouse (Montclair)' : 'Customer address',
+      has_decoration: hasDecoration,
       autoselect_warehouse: true,
       test_order: payload.testOrder,
     },

@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, 
 import { Badge } from '@/components/ui/Badge';
 
 interface OrderItem {
+  type?: string;
   sku?: string;
   styleName?: string;
   productTitle?: string;
@@ -18,9 +19,12 @@ interface OrderItem {
   unitPrice?: number;
   discountedPrice?: number;
   imageUrl?: string;
-  // Package order fields
   packageType?: string;
   packageDisplayName?: string;
+  decorationType?: string;
+  packageName?: string;
+  setupFee?: number;
+  totalPrice?: number;
 }
 
 interface Order {
@@ -89,6 +93,15 @@ function deriveChannel(order: Pick<Order, 'utm_source' | 'utm_medium' | 'gclid'>
     return { label: src || med, color: 'bg-stone-100 text-stone-600' };
 
   return null;
+}
+
+function formatDecoLabel(item: OrderItem): string {
+  const type = item.decorationType
+    ? item.decorationType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : '';
+  const name = item.packageName || '';
+  if (type && name) return `${type} - ${name}`;
+  return type || name || 'Decoration Service';
 }
 
 const carriers = [
@@ -235,9 +248,19 @@ export function OrderCard({ order }: { order: Order }) {
     }
   };
 
-  const items = Array.isArray(order.items) ? order.items : [];
-  const itemCount = items.length;
-  const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const allItems = Array.isArray(order.items) ? order.items : [];
+  const productItems = allItems.filter(item => item.type !== 'decoration');
+  const decorationItems = allItems.filter(item => item.type === 'decoration');
+  const itemCount = productItems.length;
+  const totalQuantity = productItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+  const hasSSItems = productItems.some(i => i.brandName && !i.brandName.toLowerCase().includes('los angeles apparel'));
+  const hasLAAItems = productItems.some(i => i.brandName?.toLowerCase().includes('los angeles apparel'));
+  const supplierTag: { label: string; color: string } | null =
+    hasSSItems && hasLAAItems ? { label: 'SS + LAA', color: 'bg-violet-100 text-violet-700 border-violet-200' }
+    : hasSSItems ? { label: 'SS', color: 'bg-sky-100 text-sky-700 border-sky-200' }
+    : hasLAAItems ? { label: 'LA Apparel', color: 'bg-orange-100 text-orange-700 border-orange-200' }
+    : null;
 
   const createdDate = new Date(order.created_at).toLocaleDateString('en-US', {
     month: 'short',
@@ -297,12 +320,20 @@ export function OrderCard({ order }: { order: Order }) {
           </h3>
           <p className="text-sm text-slate-600">
             {itemCount} item{itemCount !== 1 ? 's' : ''} &middot; {totalQuantity} pcs
+            {decorationItems.length > 0 && (
+              <> &middot; <span className="text-brand-600 font-medium">{decorationItems.map(d => formatDecoLabel(d)).join(', ')}</span></>
+            )}
             {order.po_number && <> &middot; PO: {order.po_number}</>}
           </p>
         </div>
 
         <div className="flex flex-col items-end gap-1.5">
           <div className="flex items-center gap-2">
+            {supplierTag && (
+              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold leading-none ${supplierTag.color}`}>
+                {supplierTag.label}
+              </span>
+            )}
             <Badge variant={payment.variant} size="sm">{payment.label}</Badge>
             <Badge variant={status.variant} size="sm">{status.label}</Badge>
           </div>
@@ -425,9 +456,9 @@ export function OrderCard({ order }: { order: Order }) {
           </div>
 
           <div className="mt-6">
-            <h4 className="mb-3 text-sm font-semibold text-navy-800">Items ({itemCount})</h4>
+            <h4 className="mb-3 text-sm font-semibold text-navy-800">Products ({itemCount})</h4>
             <div className="space-y-2">
-              {(showAllItems ? items : items.slice(0, 5)).map((item, index) => {
+              {(showAllItems ? productItems : productItems.slice(0, 5)).map((item, index) => {
                 const name = item.packageDisplayName
                   || `${item.brandName || ''} ${item.styleName || item.productTitle || ''}`.trim()
                   || 'Item';
@@ -456,7 +487,7 @@ export function OrderCard({ order }: { order: Order }) {
                   </div>
                 );
               })}
-              {items.length > 5 && (
+              {productItems.length > 5 && (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setShowAllItems(!showAllItems); }}
@@ -464,11 +495,45 @@ export function OrderCard({ order }: { order: Order }) {
                 >
                   {showAllItems
                     ? 'Show less'
-                    : `+${items.length - 5} more item${items.length - 5 !== 1 ? 's' : ''}`}
+                    : `+${productItems.length - 5} more item${productItems.length - 5 !== 1 ? 's' : ''}`}
                 </button>
               )}
             </div>
           </div>
+
+          {decorationItems.length > 0 && (
+            <div className="mt-4">
+              <h4 className="mb-3 text-sm font-semibold text-navy-800">Decoration Services ({decorationItems.length})</h4>
+              <div className="space-y-2">
+                {decorationItems.map((item, index) => (
+                  <div
+                    key={`deco-${index}`}
+                    className="flex items-center gap-3 rounded-lg bg-brand-50 p-3 border border-brand-200"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-brand-800">
+                        {formatDecoLabel(item)}
+                      </p>
+                      <p className="text-xs text-brand-600">
+                        {item.quantity} pcs
+                        {item.setupFee ? ` · Setup fee: $${Number(item.setupFee).toFixed(2)}` : ''}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-brand-800">
+                        ${Number(item.totalPrice || 0).toFixed(2)}
+                      </p>
+                      {item.unitPrice != null && (
+                        <p className="text-xs text-brand-600">
+                          ${Number(item.unitPrice).toFixed(2)}/ea
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 flex items-center justify-between border-t border-stone-200 pt-4">
             <div className="text-sm text-slate-600">

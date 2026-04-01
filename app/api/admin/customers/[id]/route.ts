@@ -125,9 +125,11 @@ export async function GET(
   const lastOrder = paidOrders.length > 0 ? paidOrders[0].paid_at || paidOrders[0].created_at : null;
 
   const orderSummaries = (orders || []).map(o => {
-    const items = Array.isArray(o.items) ? o.items : [];
-    const itemCount = items.reduce((s: number, i: any) => s + (i.quantity || 1), 0);
-    const productCount = items.length;
+    const allOrderItems = Array.isArray(o.items) ? o.items : [];
+    const productOnlyItems = allOrderItems.filter((i: any) => i.type !== 'decoration');
+    const decoItems = allOrderItems.filter((i: any) => i.type === 'decoration');
+    const itemCount = productOnlyItems.reduce((s: number, i: any) => s + (i.quantity || 1), 0);
+    const productCount = productOnlyItems.length;
     return {
       id: o.id,
       order_number: o.order_number,
@@ -140,6 +142,12 @@ export async function GET(
       coupon_code: o.coupon_code,
       item_count: itemCount,
       product_count: productCount,
+      decoration_services: decoItems.map((d: any) => {
+        const type = d.decorationType ? d.decorationType.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : '';
+        const name = d.packageName || '';
+        if (type && name) return `${type} - ${name}`;
+        return type || name || 'Decoration';
+      }).join(', ') || null,
       created_at: o.created_at,
       paid_at: o.paid_at,
       shipped_at: o.shipped_at,
