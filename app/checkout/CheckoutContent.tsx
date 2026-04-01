@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Tag,
   ChevronDown,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
@@ -47,6 +48,8 @@ import {
   FREE_ECONOMY_THRESHOLD,
   WAREHOUSE_CONFIG,
   type ShipmentGroup,
+  type LiveShippingRate,
+  type LiveRatesResponse,
 } from '@/lib/shipping';
 
 // Initialize Stripe
@@ -213,6 +216,7 @@ interface InlinePaymentFormProps {
   total: number;
   appliedCoupon?: { code: string; discountAmount: number; freeShipping?: boolean } | null;
   decoration?: DecorationSelection | null;
+  liveShippingCost?: number | null;
 }
 
 function InlinePaymentForm({
@@ -226,6 +230,7 @@ function InlinePaymentForm({
   total,
   appliedCoupon,
   decoration,
+  liveShippingCost,
 }: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -284,6 +289,7 @@ function InlinePaymentForm({
               poNumber: poNumber || undefined,
               orderNotes: orderNotes || undefined,
               couponCode: appliedCoupon?.code ?? undefined,
+              liveShippingCost: liveShippingCost ?? undefined,
               ...getAttribution(),
             }),
             signal: controller.signal,
@@ -411,6 +417,11 @@ export default function CheckoutContent() {
   const [freeOrderSubmitting, setFreeOrderSubmitting] = useState(false);
   const [freeOrderError, setFreeOrderError] = useState<string | null>(null);
 
+  // Live shipping rates from ShipStation
+  const [liveRates, setLiveRates] = useState<LiveShippingRate[] | null>(null);
+  const [liveRatesLoading, setLiveRatesLoading] = useState(false);
+  const liveRatesFetchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleApplyCoupon = async () => {
     const code = couponCode.trim();
     if (!code) return;
@@ -466,6 +477,7 @@ export default function CheckoutContent() {
           poNumber: poNumber || undefined,
           orderNotes: orderNotes || undefined,
           couponCode: appliedCoupon?.code ?? undefined,
+          liveShippingCost: liveShippingCost ?? undefined,
           ...getAttribution(),
         }),
       });
@@ -485,6 +497,45 @@ export default function CheckoutContent() {
       setFreeOrderSubmitting(false);
     }
   };
+
+  // Fetch live shipping rates when zip code or items change (debounced)
+  useEffect(() => {
+    if (liveRatesFetchRef.current) clearTimeout(liveRatesFetchRef.current);
+
+    const zip = shippingInfo.zipCode.trim();
+    if (!/^\d{5}$/.test(zip) || items.length === 0) {
+      setLiveRates(null);
+      return;
+    }
+
+    setLiveRatesLoading(true);
+    liveRatesFetchRef.current = setTimeout(async () => {
+      try {
+        const hasDecoration = !!decoration;
+        const res = await fetch('/api/shipping/rates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            destinationZip: zip,
+            items: items.map(i => ({ sku: i.sku, quantity: i.quantity, styleId: i.styleId })),
+            hasDecoration,
+          }),
+        });
+        if (!res.ok) throw new Error('Rate fetch failed');
+        const data: LiveRatesResponse = await res.json();
+        setLiveRates(data.rates);
+      } catch {
+        setLiveRates(null);
+      } finally {
+        setLiveRatesLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      if (liveRatesFetchRef.current) clearTimeout(liveRatesFetchRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingInfo.zipCode, items.length, decoration?.packageId]);
 
   // Multi-warehouse grouping
   const shipmentGroups = useMemo(() => groupCartByWarehouse(items), [items]);
@@ -511,11 +562,25 @@ export default function CheckoutContent() {
     couponResult,
     items,
   );
-  const actualShippingCost = totalsWithCoupon.shippingCost;
+  // If live rates are available, override shipping cost
+  const liveStdRate = liveRates?.find(r => r.method === 'standard');
+  const liveExpRate = liveRates?.find(r => r.method === 'express');
+  const isFreeStandard = roundedSubtotal >= FREE_ECONOMY_THRESHOLD || !!couponResult?.freeShipping;
+  const liveShippingCost = (() => {
+    if (!liveRates) return null;
+    if (shippingMethod === 'economy') {
+      return isFreeStandard ? 0 : (liveStdRate?.price ?? null);
+    }
+    return liveExpRate?.price ?? null;
+  })();
+
+  const actualShippingCost = liveShippingCost !== null ? liveShippingCost : totalsWithCoupon.shippingCost;
   const shippingBreakdown = totalsWithCoupon.shippingBreakdown;
   const taxAmount = totalsWithCoupon.taxAmount;
   const decorationTotal = decoration?.totalPrice ?? 0;
-  const orderTotal = Math.round((totalsWithCoupon.total + decorationTotal) * 100) / 100;
+  const orderTotal = Math.round(
+    (roundedSubtotal - (couponResult?.discountAmount ?? 0) + actualShippingCost + taxAmount + decorationTotal) * 100
+  ) / 100;
 
   // Track begin_checkout event when page loads with items
   useEffect(() => {
@@ -1004,6 +1069,10 @@ export default function CheckoutContent() {
                 onRemoveDecoration={clearDecoration}
                 couponDiscount={appliedCoupon?.discountAmount}
                 couponCode={appliedCoupon?.code}
+                shippingCarrier={
+                  shippingMethod === 'economy' ? liveStdRate?.carrier : liveExpRate?.carrier
+                }
+                shippingIsLive={!!liveRates}
               />
 
               {/* Coupon Code */}
@@ -1085,14 +1154,14 @@ export default function CheckoutContent() {
                     const shippingInfo_ = primaryShipment
                       ? getShipmentDeliveryEstimate(primaryShipment, option.id)
                       : (option.id === 'economy' ? economyDelivery : expressDelivery);
-                    const breakdown = shippingBreakdown.shipments.find(
-                      s => s.warehouse === primaryShipment?.warehouse
-                    );
-                    const price = option.id === 'economy'
-                      ? (breakdown?.method === 'economy' ? breakdown.cost : (roundedSubtotal >= FREE_ECONOMY_THRESHOLD ? 0 : 15))
-                      : 25;
-                    const isFreeEconomy = option.id === 'economy' && (roundedSubtotal >= FREE_ECONOMY_THRESHOLD || couponResult?.freeShipping);
-                    const displayPrice = option.id === 'economy' && isFreeEconomy ? 0 : price;
+
+                    // Determine the price to display: prefer live rate, fall back to flat rate
+                    const liveRate = option.id === 'economy' ? liveStdRate : liveExpRate;
+                    const flatPrice = option.id === 'economy' ? 15 : 25;
+                    const basePrice = liveRate?.price ?? flatPrice;
+                    const isFreeEconomy = option.id === 'economy' && isFreeStandard;
+                    const displayPrice = isFreeEconomy ? 0 : basePrice;
+                    const carrierHint = liveRate?.carrier || null;
                     const Icon = option.icon;
 
                     return (
@@ -1131,12 +1200,17 @@ export default function CheckoutContent() {
                           <p className="text-sm text-slate-600">
                             Arrives {formatDateRange(shippingInfo_.min, shippingInfo_.max)}
                           </p>
+                          {carrierHint && (
+                            <p className="text-xs text-slate-400 mt-0.5">via {carrierHint}</p>
+                          )}
                         </div>
                         <div className="text-right">
-                          {displayPrice === 0 ? (
+                          {liveRatesLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-slate-400 ml-auto" />
+                          ) : displayPrice === 0 ? (
                             <>
                               <p className="font-semibold text-green-600">Free</p>
-                              <p className="text-xs text-slate-400 line-through">{formatPrice(option.id === 'economy' ? 15 : 25)}</p>
+                              <p className="text-xs text-slate-400 line-through">{formatPrice(liveRate?.price ?? flatPrice)}</p>
                             </>
                           ) : (
                             <p className="font-semibold text-slate-900">{formatPrice(displayPrice)}</p>
@@ -1262,6 +1336,7 @@ export default function CheckoutContent() {
                       total={orderTotal}
                       appliedCoupon={appliedCoupon}
                       decoration={decoration}
+                      liveShippingCost={liveShippingCost}
                     />
                   </Elements>
                 ) : null}

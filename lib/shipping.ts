@@ -37,10 +37,36 @@ export interface ShippingBreakdown {
   totalShippingCost: number;
 }
 
+export interface LiveShippingRate {
+  method: 'standard' | 'express';
+  price: number;
+  estimatedDays: [number, number];
+  carrier: string | null;
+  isLive: boolean;
+}
+
+export interface LiveRatesResponse {
+  rates: LiveShippingRate[];
+  fallback: boolean;
+}
+
 // ── Constants ──────────────────────────────────────────────────────────────
 
 export const FREE_ECONOMY_THRESHOLD = 500;
 export const TAX_RATE = 0.0825;
+export const SHIPPING_MARKUP = 8;
+
+export const WAREHOUSE_ORIGIN_ZIP: Record<Warehouse, string> = {
+  ss_activewear: '89506',
+  los_angeles_apparel: '90001',
+  as_colour: '90001',
+};
+export const GARMENT_DECOR_ZIP = '91762';
+
+export const FLAT_RATE_FALLBACK: LiveShippingRate[] = [
+  { method: 'standard', price: 15, estimatedDays: [3, 7], carrier: null, isLive: false },
+  { method: 'express', price: 25, estimatedDays: [1, 3], carrier: null, isLive: false },
+];
 
 export const WAREHOUSE_CONFIG: Record<Warehouse, WarehouseConfig> = {
   ss_activewear: {

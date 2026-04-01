@@ -22,6 +22,8 @@ interface OrderSummaryProps {
   onRemoveDecoration?: () => void;
   couponDiscount?: number;
   couponCode?: string;
+  shippingCarrier?: string | null;
+  shippingIsLive?: boolean;
 }
 
 // Standard size order for consistent display
@@ -138,6 +140,8 @@ export function OrderSummary({
   onRemoveDecoration,
   couponDiscount = 0,
   couponCode,
+  shippingCarrier,
+  shippingIsLive,
 }: OrderSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -410,7 +414,7 @@ export function OrderSummary({
             </div>
           )}
           
-          {shippingBreakdown && shippingBreakdown.shipments.length > 1 ? (
+          {shippingBreakdown && shippingBreakdown.shipments.length > 1 && !shippingIsLive ? (
             <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">
@@ -439,9 +443,14 @@ export function OrderSummary({
             </div>
           ) : (
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">
-                Shipping ({shippingMethod === 'economy' ? 'Economy' : 'Express'})
-              </span>
+              <div>
+                <span className="text-slate-600">
+                  Shipping ({shippingMethod === 'economy' ? 'Standard' : 'Express'})
+                </span>
+                {shippingCarrier && (
+                  <p className="text-xs text-slate-400">via {shippingCarrier}</p>
+                )}
+              </div>
               <span className={cn(
                 'font-medium',
                 shippingCost === 0 ? 'text-green-600' : 'text-slate-800'

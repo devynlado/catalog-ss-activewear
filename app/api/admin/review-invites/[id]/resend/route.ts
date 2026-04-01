@@ -88,9 +88,9 @@ export async function POST(
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { data: sendData, error: sendErr } = await resend.emails.send({
-    from: 'Garment Decor <noreply@garmentdecor.com>',
+    from: 'Garment Decor <orders@garmentdecor.com>',
     to: invite.customer_email,
-    subject: getReviewInviteSubject(),
+    subject: getReviewInviteSubject(invite.customer_name),
     html: generateReviewInviteHtml(emailProps),
     text: generateReviewInviteText(emailProps),
   });

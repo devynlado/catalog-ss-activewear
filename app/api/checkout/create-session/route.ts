@@ -42,6 +42,7 @@ interface CheckoutRequest {
   orderNotes?: string;
   idempotencyKey?: string;
   couponCode?: string | null;
+  liveShippingCost?: number | null;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -51,7 +52,7 @@ interface CheckoutRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, utm_source, utm_medium, utm_campaign, gclid } = body;
+    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, liveShippingCost, utm_source, utm_medium, utm_campaign, gclid } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -126,6 +127,13 @@ export async function POST(request: NextRequest) {
       actualShippingCost = withCoupon.shippingCost;
       taxAmount = withCoupon.taxAmount;
       totalWithShipping = withCoupon.total;
+    }
+
+    // Override shipping cost with live ShipStation rate when provided by the frontend
+    if (typeof liveShippingCost === 'number' && liveShippingCost >= 0) {
+      const shippingDiff = liveShippingCost - actualShippingCost;
+      actualShippingCost = liveShippingCost;
+      totalWithShipping = Math.round((totalWithShipping + shippingDiff) * 100) / 100;
     }
 
     // Add decoration cost to the total (tax is on products only, matching checkout UI)
