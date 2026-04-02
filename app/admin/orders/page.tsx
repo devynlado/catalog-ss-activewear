@@ -105,7 +105,7 @@ export default async function OrdersPage({
       .select('order_id')
       .in('order_id', orderIds)
       .eq('sender_type', 'customer')
-      .is('read_at', null);
+      .is('read_at', null) as { data: { order_id: string }[] | null };
 
     if (unreadRows) {
       for (const row of unreadRows) {
