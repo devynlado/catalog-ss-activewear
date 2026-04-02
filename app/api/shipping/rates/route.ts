@@ -157,6 +157,7 @@ export async function POST(request: NextRequest) {
     console.error('[Shipping Rates API] Error:', err);
     return NextResponse.json({
       rates: FLAT_RATE_FALLBACK,
+      warehouseRates: [],
       fallback: true,
     } satisfies LiveRatesResponse);
   }
