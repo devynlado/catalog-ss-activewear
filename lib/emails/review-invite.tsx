@@ -53,7 +53,7 @@ export function generateReviewInviteHtml(props: ReviewInviteProps): string {
     : 'Hi there,';
 
   const reviewUrl = buildUTMUrl(
-    `https://garmentdecor.com/orders/reviews?token=${token}`,
+    `https://garmentdecor.com/reviews/write?token=${token}`,
     UTM
   );
 
@@ -126,7 +126,7 @@ export function generateReviewInviteText(props: ReviewInviteProps): string {
     : 'Hi there,';
 
   const reviewUrl = buildUTMUrl(
-    `https://garmentdecor.com/orders/reviews?token=${token}`,
+    `https://garmentdecor.com/reviews/write?token=${token}`,
     UTM
   );
 

@@ -41,15 +41,14 @@ import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 import {
   type ShippingMethod,
   groupCartByWarehouse,
-  isMultiWarehouseCart,
   calculateShippingBreakdown,
   getShipmentDeliveryEstimate,
   getShipmentBrandLabel,
   FREE_ECONOMY_THRESHOLD,
-  WAREHOUSE_CONFIG,
   type ShipmentGroup,
   type LiveShippingRate,
   type LiveRatesResponse,
+  type WarehouseLiveRates,
 } from '@/lib/shipping';
 
 // Initialize Stripe
@@ -419,6 +418,7 @@ export default function CheckoutContent() {
 
   // Live shipping rates from ShipStation
   const [liveRates, setLiveRates] = useState<LiveShippingRate[] | null>(null);
+  const [liveWarehouseRates, setLiveWarehouseRates] = useState<WarehouseLiveRates[]>([]);
   const [liveRatesLoading, setLiveRatesLoading] = useState(false);
   const liveRatesFetchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -498,7 +498,7 @@ export default function CheckoutContent() {
     }
   };
 
-  // Fetch live shipping rates when zip code or items change (debounced)
+  // Fetch live shipping rates when zip/city/state or items change (debounced)
   useEffect(() => {
     if (liveRatesFetchRef.current) clearTimeout(liveRatesFetchRef.current);
 
@@ -517,6 +517,8 @@ export default function CheckoutContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             destinationZip: zip,
+            destinationCity: shippingInfo.city.trim(),
+            destinationState: shippingInfo.state.trim(),
             items: items.map(i => ({ sku: i.sku, quantity: i.quantity, styleId: i.styleId })),
             hasDecoration,
           }),
@@ -524,8 +526,10 @@ export default function CheckoutContent() {
         if (!res.ok) throw new Error('Rate fetch failed');
         const data: LiveRatesResponse = await res.json();
         setLiveRates(data.rates);
+        setLiveWarehouseRates(data.warehouseRates || []);
       } catch {
         setLiveRates(null);
+        setLiveWarehouseRates([]);
       } finally {
         setLiveRatesLoading(false);
       }
@@ -535,7 +539,7 @@ export default function CheckoutContent() {
       if (liveRatesFetchRef.current) clearTimeout(liveRatesFetchRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shippingInfo.zipCode, items.length, decoration?.packageId]);
+  }, [shippingInfo.zipCode, shippingInfo.city, shippingInfo.state, items.length, decoration?.packageId]);
 
   // Multi-warehouse grouping
   const shipmentGroups = useMemo(() => groupCartByWarehouse(items), [items]);
@@ -1142,127 +1146,90 @@ export default function CheckoutContent() {
               <div className={glassCard + " p-5"}>
                 <h3 className="font-bold text-slate-800 mb-4">Shipping Method</h3>
 
-                {/* Primary shipment — always has economy/express choice */}
-                {multiWarehouse && shipmentGroups[0] && (
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Shipment 1 — {getShipmentBrandLabel(shipmentGroups[0])} ({shipmentGroups[0].itemCount} {shipmentGroups[0].itemCount === 1 ? 'item' : 'items'})
-                  </p>
-                )}
-                <div className="space-y-3">
-                  {primaryShippingOptions.map((option) => {
-                    const primaryShipment = shipmentGroups[0];
-                    const shippingInfo_ = primaryShipment
-                      ? getShipmentDeliveryEstimate(primaryShipment, option.id)
-                      : (option.id === 'economy' ? economyDelivery : expressDelivery);
-
-                    // Determine the price to display: prefer live rate, fall back to flat rate
-                    const liveRate = option.id === 'economy' ? liveStdRate : liveExpRate;
-                    const flatPrice = option.id === 'economy' ? 15 : 25;
-                    const basePrice = liveRate?.price ?? flatPrice;
-                    const isFreeEconomy = option.id === 'economy' && isFreeStandard;
-                    const displayPrice = isFreeEconomy ? 0 : basePrice;
-                    const carrierHint = liveRate?.carrier || null;
-                    const Icon = option.icon;
-
-                    return (
-                      <label
-                        key={option.id}
-                        className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-all ${
-                          shippingMethod === option.id
-                            ? 'border-brand-500 bg-white/80 ring-2 ring-brand-500/20'
-                            : 'border-stone-200 hover:border-stone-300 bg-white/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="shipping"
-                          value={option.id}
-                          checked={shippingMethod === option.id}
-                          onChange={() => setShippingMethod(option.id)}
-                          className="sr-only"
-                        />
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                          shippingMethod === option.id 
-                            ? 'bg-brand-500 text-white' 
-                            : 'bg-stone-100 text-slate-600'
-                        }`}>
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-900">{option.name}</p>
-                            {displayPrice === 0 && (
-                              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                FREE
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-600">
-                            Arrives {formatDateRange(shippingInfo_.min, shippingInfo_.max)}
-                          </p>
-                          {carrierHint && (
-                            <p className="text-xs text-slate-400 mt-0.5">via {carrierHint}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {liveRatesLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-slate-400 ml-auto" />
-                          ) : displayPrice === 0 ? (
-                            <>
-                              <p className="font-semibold text-green-600">Free</p>
-                              <p className="text-xs text-slate-400 line-through">{formatPrice(liveRate?.price ?? flatPrice)}</p>
-                            </>
-                          ) : (
-                            <p className="font-semibold text-slate-900">{formatPrice(displayPrice)}</p>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                {/* Secondary shipments — economy only, no choice */}
-                {multiWarehouse && shipmentGroups.slice(1).map((shipment, idx) => {
-                  const config = WAREHOUSE_CONFIG[shipment.warehouse];
-                  const secondaryBreakdown = shippingBreakdown.shipments.find(
-                    s => s.warehouse === shipment.warehouse
+                {shipmentGroups.map((shipment, groupIdx) => {
+                  const whRates = liveWarehouseRates.find(
+                    wr => wr.warehouse === shipment.warehouse
                   );
-                  const secondaryDelivery = getShipmentDeliveryEstimate(shipment, 'economy');
-                  const isFree = secondaryBreakdown?.isFree ?? false;
-                  const cost = secondaryBreakdown?.cost ?? config?.economy.price ?? 15;
+                  const whStdRate = whRates?.rates.find(r => r.method === 'standard');
+                  const whExpRate = whRates?.rates.find(r => r.method === 'express');
 
                   return (
-                    <div key={shipment.warehouse} className="mt-4">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                        Shipment {idx + 2} — {getShipmentBrandLabel(shipment)} ({shipment.itemCount} {shipment.itemCount === 1 ? 'item' : 'items'})
-                      </p>
-                      <div className="flex items-center gap-4 rounded-xl border-2 border-brand-500 bg-white/80 ring-2 ring-brand-500/20 p-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white">
-                          <Truck className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-900">Economy Shipping</p>
-                            {isFree && (
-                              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                FREE
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-600">
-                            Arrives {formatDateRange(secondaryDelivery.min, secondaryDelivery.max)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          {isFree ? (
-                            <>
-                              <p className="font-semibold text-green-600">Free</p>
-                              <p className="text-xs text-slate-400 line-through">{formatPrice(config?.economy.price ?? 15)}</p>
-                            </>
-                          ) : (
-                            <p className="font-semibold text-slate-900">{formatPrice(cost)}</p>
-                          )}
-                        </div>
+                    <div key={shipment.warehouse} className={groupIdx > 0 ? 'mt-5' : ''}>
+                      {multiWarehouse && (
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                          Shipment {groupIdx + 1} — {getShipmentBrandLabel(shipment)} ({shipment.itemCount} {shipment.itemCount === 1 ? 'item' : 'items'})
+                        </p>
+                      )}
+                      <div className="space-y-3">
+                        {primaryShippingOptions.map((option) => {
+                          const shippingInfo_ = getShipmentDeliveryEstimate(shipment, option.id);
+                          const liveRate = option.id === 'economy' ? (whStdRate ?? liveStdRate) : (whExpRate ?? liveExpRate);
+                          const flatPrice = option.id === 'economy' ? 15 : 25;
+                          const basePrice = liveRate?.price ?? flatPrice;
+                          const isFreeEconomy = option.id === 'economy' && isFreeStandard;
+                          const displayPrice = isFreeEconomy ? 0 : basePrice;
+                          const carrierHint = liveRate?.carrier || null;
+                          const Icon = option.icon;
+                          const isSelected = shippingMethod === option.id;
+
+                          return (
+                            <label
+                              key={option.id}
+                              className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-brand-500 bg-white/80 ring-2 ring-brand-500/20'
+                                  : 'border-stone-200 hover:border-stone-300 bg-white/50'
+                              }`}
+                              onClick={() => setShippingMethod(option.id)}
+                            >
+                              {groupIdx === 0 && (
+                                <input
+                                  type="radio"
+                                  name="shipping"
+                                  value={option.id}
+                                  checked={isSelected}
+                                  onChange={() => setShippingMethod(option.id)}
+                                  className="sr-only"
+                                />
+                              )}
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                                isSelected
+                                  ? 'bg-brand-500 text-white'
+                                  : 'bg-stone-100 text-slate-600'
+                              }`}>
+                                <Icon className="h-5 w-5" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-slate-900">{option.name}</p>
+                                  {displayPrice === 0 && (
+                                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                      FREE
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-slate-600">
+                                  Arrives {formatDateRange(shippingInfo_.min, shippingInfo_.max)}
+                                </p>
+                                {carrierHint && (
+                                  <p className="text-xs text-slate-400 mt-0.5">via {carrierHint}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                {liveRatesLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-slate-400 ml-auto" />
+                                ) : displayPrice === 0 ? (
+                                  <>
+                                    <p className="font-semibold text-green-600">Free</p>
+                                    <p className="text-xs text-slate-400 line-through">{formatPrice(liveRate?.price ?? flatPrice)}</p>
+                                  </>
+                                ) : (
+                                  <p className="font-semibold text-slate-900">{formatPrice(displayPrice)}</p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
                   );

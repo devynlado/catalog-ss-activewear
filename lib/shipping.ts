@@ -45,8 +45,15 @@ export interface LiveShippingRate {
   isLive: boolean;
 }
 
+export interface WarehouseLiveRates {
+  warehouse: Warehouse;
+  label: string;
+  rates: LiveShippingRate[];
+}
+
 export interface LiveRatesResponse {
   rates: LiveShippingRate[];
+  warehouseRates: WarehouseLiveRates[];
   fallback: boolean;
 }
 
@@ -55,6 +62,20 @@ export interface LiveRatesResponse {
 export const FREE_ECONOMY_THRESHOLD = 500;
 export const TAX_RATE = 0.0825;
 export const SHIPPING_MARKUP = 8;
+
+export interface OriginAddress {
+  zip: string;
+  city: string;
+  state: string;
+}
+
+export const WAREHOUSE_ORIGIN: Record<Warehouse, OriginAddress> = {
+  ss_activewear: { zip: '89506', city: 'Reno', state: 'NV' },
+  los_angeles_apparel: { zip: '90001', city: 'Los Angeles', state: 'CA' },
+  as_colour: { zip: '90001', city: 'Los Angeles', state: 'CA' },
+};
+
+export const GARMENT_DECOR_ORIGIN: OriginAddress = { zip: '91762', city: 'Montclair', state: 'CA' };
 
 export const WAREHOUSE_ORIGIN_ZIP: Record<Warehouse, string> = {
   ss_activewear: '89506',

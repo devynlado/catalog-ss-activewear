@@ -3,12 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import { getShipStationRates } from '@/lib/shipstation';
 import {
   getItemWarehouse,
-  WAREHOUSE_ORIGIN_ZIP,
-  GARMENT_DECOR_ZIP,
+  WAREHOUSE_ORIGIN,
+  GARMENT_DECOR_ORIGIN,
+  WAREHOUSE_CONFIG,
   FLAT_RATE_FALLBACK,
   type Warehouse,
   type LiveShippingRate,
   type LiveRatesResponse,
+  type WarehouseLiveRates,
 } from '@/lib/shipping';
 
 function getServiceSupabase() {
@@ -26,18 +28,20 @@ interface RateRequestItem {
 
 interface RateRequestBody {
   destinationZip: string;
+  destinationCity?: string;
+  destinationState?: string;
   items: RateRequestItem[];
   hasDecoration?: boolean;
 }
 
 /**
  * POST /api/shipping/rates
- * Returns live shipping rates from ShipStation for the given destination and items.
+ * Returns live shipping rates from ShipStation V2 for the given destination and items.
  */
 export async function POST(request: NextRequest) {
   try {
     const body: RateRequestBody = await request.json();
-    const { destinationZip, items, hasDecoration } = body;
+    const { destinationZip, destinationCity, destinationState, items, hasDecoration } = body;
 
     if (!destinationZip || !/^\d{5}$/.test(destinationZip)) {
       return NextResponse.json({ error: 'Valid 5-digit zip code required' }, { status: 400 });
@@ -47,9 +51,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Items array required' }, { status: 400 });
     }
 
+    const destination = {
+      zip: destinationZip,
+      city: destinationCity || '',
+      state: destinationState || '',
+    };
+
     const supabase = getServiceSupabase();
 
-    // 1. Look up piece_weight for all SKUs in one batch
     const skus = items.map(i => i.sku).filter(Boolean);
     const { data: skuRows } = await supabase
       .from('product_skus')
@@ -63,7 +72,6 @@ export async function POST(request: NextRequest) {
       styleMap.set(row.sku, row.style_id);
     }
 
-    // 2. Group items by warehouse and calculate total weight per group
     interface WarehouseGroup {
       warehouse: Warehouse;
       totalWeightLbs: number;
@@ -73,7 +81,7 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       const styleId = styleMap.get(item.sku) ?? item.styleId;
       const wh = getItemWarehouse(styleId);
-      const pieceWeight = weightMap.get(item.sku) || 0.5; // fallback 0.5 lb if missing
+      const pieceWeight = weightMap.get(item.sku) || 0.5;
       const itemWeight = pieceWeight * item.quantity;
       groupMap.set(wh, (groupMap.get(wh) || 0) + itemWeight);
     }
@@ -81,34 +89,26 @@ export async function POST(request: NextRequest) {
     const warehouseGroups: WarehouseGroup[] = Array.from(groupMap.entries()).map(
       ([warehouse, totalWeightLbs]) => ({ warehouse, totalWeightLbs })
     );
-
-    // Sort by weight desc — heaviest group is primary
     warehouseGroups.sort((a, b) => b.totalWeightLbs - a.totalWeightLbs);
 
-    // 3. Fetch rates for each warehouse group (in parallel)
     const ratePromises = warehouseGroups.map(async (group) => {
-      const originZip = hasDecoration
-        ? GARMENT_DECOR_ZIP
-        : WAREHOUSE_ORIGIN_ZIP[group.warehouse];
+      const origin = hasDecoration
+        ? GARMENT_DECOR_ORIGIN
+        : WAREHOUSE_ORIGIN[group.warehouse];
 
-      const rates = await getShipStationRates(
-        originZip,
-        destinationZip,
-        group.totalWeightLbs,
-      );
-
+      const rates = await getShipStationRates(origin, destination, group.totalWeightLbs);
       return { warehouse: group.warehouse, rates, weightLbs: group.totalWeightLbs };
     });
 
     const groupResults = await Promise.all(ratePromises);
 
-    // 4. Aggregate rates across warehouse groups
-    // For multi-warehouse orders, sum the standard rates and sum the express rates
     let standardTotal = 0;
     let expressTotal = 0;
     let standardCarrier: string | null = null;
     let expressCarrier: string | null = null;
     let isLive = true;
+
+    const warehouseRates: WarehouseLiveRates[] = [];
 
     for (const gr of groupResults) {
       const std = gr.rates.find(r => r.method === 'standard');
@@ -123,6 +123,12 @@ export async function POST(request: NextRequest) {
         if (!expressCarrier && exp.carrier) expressCarrier = exp.carrier;
         if (!exp.isLive) isLive = false;
       }
+
+      warehouseRates.push({
+        warehouse: gr.warehouse,
+        label: WAREHOUSE_CONFIG[gr.warehouse]?.shortLabel || gr.warehouse,
+        rates: gr.rates,
+      });
     }
 
     standardTotal = Math.round(standardTotal * 100) / 100;
@@ -145,11 +151,7 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const response: LiveRatesResponse = {
-      rates,
-      fallback: !isLive,
-    };
-
+    const response: LiveRatesResponse = { rates, warehouseRates, fallback: !isLive };
     return NextResponse.json(response);
   } catch (err) {
     console.error('[Shipping Rates API] Error:', err);

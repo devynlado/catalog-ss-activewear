@@ -11,6 +11,8 @@ import { OrderRefundUI } from './OrderRefundUI';
 import { ResendShippedEmail } from './ResendShippedEmail';
 import { SSActivewearSection } from './SSActivewearSection';
 import { SSActivityLog } from './SSActivityLog';
+import { OrderChat } from './OrderChat';
+import { ChatNotificationBanner } from './ChatNotificationBanner';
 
 export const metadata = {
   title: 'Order Details',
@@ -154,6 +156,11 @@ export default async function OrderDetailPage({
             hasTracking={!!order.tracking_number}
           />
         </div>
+
+        <ChatNotificationBanner
+          orderId={order.id}
+          customerName={order.customer_name || 'Customer'}
+        />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
@@ -550,6 +557,13 @@ export default async function OrderDetailPage({
                 )}
               </div>
             </div>
+
+            {/* Customer Chat */}
+            <OrderChat
+              orderId={order.id}
+              customerName={order.customer_name || 'Customer'}
+              customerEmail={order.customer_email}
+            />
 
             {/* SS Activewear Section */}
             <SSActivewearSection

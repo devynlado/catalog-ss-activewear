@@ -112,7 +112,7 @@ const carriers = [
   { id: 'other', label: 'Other' },
 ];
 
-export function OrderCard({ order }: { order: Order }) {
+export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unreadChatCount?: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [carrier, setCarrier] = useState(order.carrier || '');
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
@@ -291,6 +291,11 @@ export function OrderCard({ order }: { order: Order }) {
       >
         <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-stone-100">
           <Package className="h-5 w-5 text-stone-500" />
+          {unreadChatCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 animate-pulse">
+              <MessageSquare className="h-3 w-3 text-white" />
+            </span>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">

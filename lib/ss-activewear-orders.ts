@@ -211,7 +211,14 @@ interface SSOrderResponse {
 
 interface SSOrderWithLineErrors {
   Orders?: SSOrderResponse[];
+  orders?: SSOrderResponse[];
   LineErrors?: Array<{
+    sku: string;
+    identifier: string;
+    qty: number;
+    error: string;
+  }>;
+  lineErrors?: Array<{
     sku: string;
     identifier: string;
     qty: number;
@@ -401,15 +408,25 @@ export async function placeSSOrder(
       { method: 'POST', body: payload, timeoutMs: 60_000 }
     );
 
-    // Parse response (may be array of orders or object with Orders + LineErrors)
+    // Parse response — SS API returns camelCase keys when rejectLineErrors is false:
+    //   { orders: [...], lineErrors: [...] }
+    // But may also return PascalCase or a plain array. Handle all cases.
     let ssOrders: SSOrderResponse[] = [];
     let lineErrors: Array<{ sku: string; identifier: string; qty: number; error: string }> = [];
 
     if (Array.isArray(rawResponse)) {
       ssOrders = rawResponse;
     } else {
-      ssOrders = (rawResponse as SSOrderWithLineErrors).Orders || [];
-      lineErrors = (rawResponse as SSOrderWithLineErrors).LineErrors || [];
+      const wrapped = rawResponse as SSOrderWithLineErrors;
+      ssOrders = wrapped.Orders || wrapped.orders || [];
+      lineErrors = wrapped.LineErrors || wrapped.lineErrors || [];
+    }
+
+    console.log(`[SS Orders] POST response parsed: ${ssOrders.length} orders, ${lineErrors.length} line errors`);
+
+    if (ssOrders.length === 0 && lineErrors.length === 0) {
+      console.error('[SS Orders] WARNING: Both orders and lineErrors are empty. Raw response keys:', 
+        Array.isArray(rawResponse) ? 'Array' : Object.keys(rawResponse as Record<string, unknown>));
     }
 
     if (ssOrders.length === 0 && lineErrors.length > 0) {

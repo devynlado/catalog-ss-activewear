@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Search, Package } from 'lucide-react';
+import { ArrowLeft, Search, Package, MessageCircle } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { OrderCard } from './OrderCard';
 import { OrderFilters } from './OrderFilters';
@@ -96,6 +96,31 @@ export default async function OrdersPage({
     delivered: deliveredCount || 0,
   };
 
+  // Fetch unread chat counts for displayed orders
+  const orderIds = (orders || []).map((o: { id: string }) => o.id);
+  let chatUnreadMap: Record<string, number> = {};
+  if (orderIds.length > 0) {
+    const { data: unreadRows } = await supabase
+      .from('order_chat_messages')
+      .select('order_id')
+      .in('order_id', orderIds)
+      .eq('sender_type', 'customer')
+      .is('read_at', null);
+
+    if (unreadRows) {
+      for (const row of unreadRows) {
+        chatUnreadMap[row.order_id] = (chatUnreadMap[row.order_id] || 0) + 1;
+      }
+    }
+  }
+
+  // Total unread chat messages for the badge on "Customer Chat" link
+  const { count: totalChatUnread } = await supabase
+    .from('order_chat_messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('sender_type', 'customer')
+    .is('read_at', null);
+
   return (
     <div className="min-h-screen bg-stone-50">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -107,13 +132,27 @@ export default async function OrdersPage({
           Back to Admin Dashboard
         </Link>
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-navy-800 sm:text-3xl">
-            Orders
-          </h1>
-          <p className="mt-1 text-slate-600">
-            View and manage customer orders, update statuses, and add tracking.
-          </p>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-navy-800 sm:text-3xl">
+              Orders
+            </h1>
+            <p className="mt-1 text-slate-600">
+              View and manage customer orders, update statuses, and add tracking.
+            </p>
+          </div>
+          <Link
+            href="/admin/chat"
+            className="relative flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 shadow-sm transition-colors"
+          >
+            <MessageCircle className="h-4 w-4 text-brand-500" />
+            Customer Chat
+            {(totalChatUnread ?? 0) > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+                {totalChatUnread}
+              </span>
+            )}
+          </Link>
         </div>
 
         <OrderFilters
@@ -137,7 +176,7 @@ export default async function OrdersPage({
         <div className="mt-4 space-y-4">
           {orders && orders.length > 0 ? (
             orders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={order.id} order={order} unreadChatCount={chatUnreadMap[order.id] || 0} />
             ))
           ) : (
             <div className="rounded-xl border border-stone-200 bg-white p-12 text-center shadow-sm">
