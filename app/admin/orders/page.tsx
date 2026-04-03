@@ -12,17 +12,24 @@ export const metadata = {
 
 const PER_PAGE = 25;
 
+
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: { status?: string; payment?: string; search?: string; page?: string };
+  searchParams: {
+    status?: string;
+    payment?: string;
+    search?: string;
+    page?: string;
+    date_from?: string;
+    date_to?: string;
+    supplier?: string;
+    content?: string;
+  };
 }) {
   const supabase = await createSupabaseServerClient();
 
-  const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
-  const from = (currentPage - 1) * PER_PAGE;
-  const to = from + PER_PAGE - 1;
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const applyFilters = (q: any) => {
     if (searchParams.status && searchParams.status !== 'all') {
       q = q.eq('status', searchParams.status);
@@ -37,25 +44,86 @@ export default async function OrdersPage({
         `order_number.ilike.%${searchParams.search}%,customer_name.ilike.%${searchParams.search}%,customer_email.ilike.%${searchParams.search}%,po_number.ilike.%${searchParams.search}%,company.ilike.%${searchParams.search}%`
       );
     }
+    if (searchParams.date_from) {
+      q = q.gte('created_at', `${searchParams.date_from}T00:00:00`);
+    }
+    if (searchParams.date_to) {
+      q = q.lte('created_at', `${searchParams.date_to}T23:59:59`);
+    }
     return q;
   };
 
-  // Fetch filtered count
-  let countQuery = supabase.from('orders').select('*', { count: 'exact', head: true });
-  countQuery = applyFilters(countQuery);
-  const { count: filteredCount } = await countQuery;
-  const totalFiltered = filteredCount || 0;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / PER_PAGE));
-
-  // Fetch paginated orders
-  let query = supabase
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false });
-  query = applyFilters(query);
+  const needsClientFilter = !!(searchParams.supplier || searchParams.content);
+  const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
+  const pageFrom = (currentPage - 1) * PER_PAGE;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: orders } = await query.range(from, to) as { data: any[] | null };
+  let orders: any[] = [];
+  let totalFiltered = 0;
+
+  if (needsClientFilter) {
+    // Supplier/content filters require inspecting the JSONB items column,
+    // so we fetch a larger batch and filter in JS.
+    let query = supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    query = applyFilters(query);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: allOrders } = await query.range(0, 999) as { data: any[] | null };
+    let filtered = allOrders || [];
+
+    if (searchParams.supplier) {
+      filtered = filtered.filter((order) => {
+        const items = Array.isArray(order.items) ? order.items : [];
+        const productItems = items.filter((i: { type?: string }) => i.type !== 'decoration');
+        const hasSSItems = productItems.some(
+          (i: { brandName?: string }) => i.brandName && !i.brandName.toLowerCase().includes('los angeles apparel')
+        );
+        const hasLAAItems = productItems.some(
+          (i: { brandName?: string }) => i.brandName?.toLowerCase().includes('los angeles apparel')
+        );
+        switch (searchParams.supplier) {
+          case 'ss': return hasSSItems && !hasLAAItems;
+          case 'laa': return hasLAAItems && !hasSSItems;
+          case 'ss_laa': return hasSSItems && hasLAAItems;
+          default: return true;
+        }
+      });
+    }
+
+    if (searchParams.content) {
+      filtered = filtered.filter((order) => {
+        const items = Array.isArray(order.items) ? order.items : [];
+        const hasDeco = items.some((i: { type?: string }) => i.type === 'decoration');
+        switch (searchParams.content) {
+          case 'product_only': return !hasDeco;
+          case 'product_deco': return hasDeco;
+          default: return true;
+        }
+      });
+    }
+
+    totalFiltered = filtered.length;
+    orders = filtered.slice(pageFrom, pageFrom + PER_PAGE);
+  } else {
+    // Server-side pagination — fast path
+    let countQuery = supabase.from('orders').select('*', { count: 'exact', head: true });
+    countQuery = applyFilters(countQuery);
+    const { count: filteredCount } = await countQuery;
+    totalFiltered = filteredCount || 0;
+
+    let query = supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    query = applyFilters(query);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await query.range(pageFrom, pageFrom + PER_PAGE - 1) as { data: any[] | null };
+    orders = data || [];
+  }
+
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PER_PAGE));
 
   const { count: allCount } = await supabase
     .from('orders')
