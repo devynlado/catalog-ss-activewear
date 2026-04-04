@@ -8,14 +8,15 @@ import { useGeoLocation, mapToServiceArea } from '@/hooks/useGeoLocation';
 import { getLocationContent } from '@/lib/location-content';
 
 interface LPHeroProps {
-  service: 'screen-printing' | 'embroidery';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
   headline: string;
   subheadline: string;
   location?: string;
   variant?: string;
+  valuePropOverrides?: string[];
 }
 
-export function LPHero({ service, headline: defaultHeadline, subheadline: defaultSubheadline, location: propLocation, variant: propVariant }: LPHeroProps) {
+export function LPHero({ service, headline: defaultHeadline, subheadline: defaultSubheadline, location: propLocation, variant: propVariant, valuePropOverrides }: LPHeroProps) {
   const searchParams = useSearchParams();
   const urlVariant = searchParams.get('variant');
   const urlLocation = searchParams.get('location'); // For testing: ?location=Los%20Angeles
@@ -46,9 +47,17 @@ export function LPHero({ service, headline: defaultHeadline, subheadline: defaul
   const headline = locationContent?.headline || defaultHeadline;
   const subheadline = locationContent?.subhead || defaultSubheadline;
 
-  const gradient = service === 'screen-printing' 
-    ? 'from-brand-500 to-brand-700' 
-    : 'from-indigo-500 to-indigo-700';
+  const gradient = service === 'embroidery' 
+    ? 'from-indigo-500 to-indigo-700' 
+    : 'from-brand-500 to-brand-700';
+
+  const defaultValueProps = [
+    'Save 20-40% with factory-direct pricing',
+    'Get your order in as little as 5 days',
+    'Perfect for orders 50-10,000+ pieces',
+    'Free shipping on orders over $500',
+  ];
+  const valueProps = valuePropOverrides || defaultValueProps;
 
   return (
     <section className="relative overflow-hidden">
@@ -89,22 +98,12 @@ export function LPHero({ service, headline: defaultHeadline, subheadline: defaul
 
             {/* Value props - customer focused */}
             <ul className="mt-8 space-y-3">
-              <li className="flex items-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">✓</span>
-                <span>Save 20-40% with factory-direct pricing</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">✓</span>
-                <span>Get your order in as little as 5 days</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">✓</span>
-                <span>Perfect for orders 50-10,000+ pieces</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">✓</span>
-                <span>Free shipping on orders over $500</span>
-              </li>
+              {valueProps.map((prop) => (
+                <li key={prop} className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">✓</span>
+                  <span>{prop}</span>
+                </li>
+              ))}
             </ul>
 
             {/* Phone CTA - Desktop */}

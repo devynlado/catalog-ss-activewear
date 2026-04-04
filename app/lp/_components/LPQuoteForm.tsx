@@ -6,7 +6,7 @@ import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
 
 interface LPQuoteFormProps {
-  service: 'screen-printing' | 'embroidery';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
   source?: string;
   variant?: string;
 }

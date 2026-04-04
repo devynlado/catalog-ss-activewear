@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 interface LPPortfolioProps {
-  service: 'screen-printing' | 'embroidery';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
 }
 
 const portfolioImages = {
@@ -28,6 +28,28 @@ const portfolioImages = {
       src: '/images/services/jumbo-screen-printing/jumbo-screen-printed-hoodies-for-spirit-wear-uniforms.webp',
       alt: 'Jumbo screen printed hoodies',
       label: 'Jumbo Print',
+    },
+  ],
+  't-shirt-printing': [
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-la-apparel-1801gd-elevate-streetwear-style.webp',
+      alt: 'Custom printed LA Apparel 1801GD streetwear t-shirts',
+      label: 'Streetwear Tees',
+    },
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-alternative-apparel-aa1070-tees-stand-out.webp',
+      alt: 'Custom printed Alternative Apparel t-shirts',
+      label: 'Brand Merch',
+    },
+    {
+      src: '/images/services/puff-printing/custom-3d-puff-screen-printed-la-apparel-1801gd-t-shirts-with-vibrant-orange-ink.webp',
+      alt: '3D puff printed custom t-shirts',
+      label: 'Puff Print Tees',
+    },
+    {
+      src: '/images/services/screen-printing/custom-jumbo-screen-printed-los-angeles-apparel-style-1801gd-t-shirts.webp',
+      alt: 'Jumbo screen printed custom t-shirts',
+      label: 'Jumbo Print Tees',
     },
   ],
   'embroidery': [

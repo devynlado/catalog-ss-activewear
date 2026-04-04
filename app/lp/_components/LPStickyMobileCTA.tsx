@@ -4,7 +4,7 @@ import { Phone, MessageSquare } from 'lucide-react';
 import { trackPhoneClick } from '@/lib/analytics';
 
 interface LPStickyMobileCTAProps {
-  service: 'screen-printing' | 'embroidery';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
 }
 
 export function LPStickyMobileCTA({ service }: LPStickyMobileCTAProps) {

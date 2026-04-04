@@ -6,7 +6,7 @@ import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
 
 interface LPExitIntentProps {
-  service: 'screen-printing' | 'embroidery';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
 }
 
 // Helper function to check if business is currently open
@@ -118,7 +118,12 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
 
   if (!isVisible) return null;
 
-  const serviceLabel = service === 'screen-printing' ? 'screen printing' : 'embroidery';
+  const serviceLabels: Record<string, string> = {
+    'screen-printing': 'screen printing',
+    'embroidery': 'embroidery',
+    't-shirt-printing': 'custom t-shirt printing',
+  };
+  const serviceLabel = serviceLabels[service] || 'screen printing';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
