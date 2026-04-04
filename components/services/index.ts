@@ -5,6 +5,7 @@ export { ComparisonTable } from './ComparisonTable';
 export { TipsSection } from './TipsSection';
 export { PortfolioGrid } from './PortfolioGrid';
 export { DynamicPortfolioGrid } from './DynamicPortfolioGrid';
+export { CuratedPortfolioGrid } from './CuratedPortfolioGrid';
 export { ServiceFAQ } from './ServiceFAQ';
 export type { ServiceFaqItem } from './ServiceFAQ';
 export { RetailFinishingUpsell } from './RetailFinishingUpsell';

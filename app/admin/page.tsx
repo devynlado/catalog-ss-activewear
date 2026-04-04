@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Users, FileText, ShieldCheck, TrendingUp, Clock, CheckCircle, Eye, Package, Tag, Filter, Zap } from 'lucide-react';
+import { Users, FileText, ShieldCheck, TrendingUp, Clock, CheckCircle, Eye, Package, Tag, Filter, Zap, Star, Mail, MessageSquareText, MessageCircle } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 
 export const metadata = {
@@ -188,6 +188,34 @@ export default async function AdminDashboardPage() {
               >
                 <Tag className="h-5 w-5 text-brand-500" />
                 <span className="font-medium text-slate-700">Coupons</span>
+              </Link>
+              <Link
+                href="/admin/reviews"
+                className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+              >
+                <Star className="h-5 w-5 text-brand-500" />
+                <span className="font-medium text-slate-700">Reviews</span>
+              </Link>
+              <Link
+                href="/admin/review-invites"
+                className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+              >
+                <Mail className="h-5 w-5 text-brand-500" />
+                <span className="font-medium text-slate-700">Review Invitations</span>
+              </Link>
+              <Link
+                href="/admin/contacts"
+                className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+              >
+                <MessageSquareText className="h-5 w-5 text-brand-500" />
+                <span className="font-medium text-slate-700">Contact Leads</span>
+              </Link>
+              <Link
+                href="/admin/chat"
+                className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+              >
+                <MessageCircle className="h-5 w-5 text-brand-500" />
+                <span className="font-medium text-slate-700">Customer Chat</span>
               </Link>
               {isAdmin && (
                 <>

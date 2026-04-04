@@ -126,20 +126,32 @@ async function handleReviewInvite(request: NextRequest) {
         products,
       };
 
-      const { error: sendErr } = await resend.emails.send({
-        from: 'Garment Decor <noreply@garmentdecor.com>',
+      const { data: sendData, error: sendErr } = await resend.emails.send({
+        from: 'Garment Decor <orders@garmentdecor.com>',
         to: order.customer_email,
-        subject: getReviewInviteSubject(),
+        subject: getReviewInviteSubject(order.customer_name),
         html: generateReviewInviteHtml(emailProps),
         text: generateReviewInviteText(emailProps),
       });
 
       if (sendErr) {
         console.error(`[Review Invite] Resend error for ${order.customer_email}:`, sendErr);
+        await supabase
+          .from('review_invites')
+          .update({ email_status: 'failed', error_message: sendErr.message } as Record<string, unknown>)
+          .eq('order_id', order.id);
         results.push({ email: order.customer_email, status: 'failed', error: sendErr.message });
         failed++;
         continue;
       }
+
+      await supabase
+        .from('review_invites')
+        .update({
+          email_status: 'sent',
+          resend_message_id: sendData?.id || null,
+        } as Record<string, unknown>)
+        .eq('order_id', order.id);
 
       sent++;
       results.push({ email: order.customer_email, status: 'sent' });
@@ -147,6 +159,10 @@ async function handleReviewInvite(request: NextRequest) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       console.error(`[Review Invite] Error for ${order.customer_email}:`, message);
+      await supabase
+        .from('review_invites')
+        .update({ email_status: 'failed', error_message: message } as Record<string, unknown>)
+        .eq('order_id', order.id);
       results.push({ email: order.customer_email, status: 'failed', error: message });
       failed++;
     }

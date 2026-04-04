@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 import { trackContactFormSubmit, trackPhoneClick, trackContactEmailClick, trackContactLocationClick } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 
 // Service name mapping for pre-filling the message
 const serviceNames: Record<string, string> = {
@@ -76,6 +77,8 @@ function ContactForm() {
         body: JSON.stringify({
           ...formState,
           service: serviceParam ? serviceNames[serviceParam] : undefined,
+          source: 'contact_page',
+          visitor_source: getVisitorSource(),
         }),
       });
 

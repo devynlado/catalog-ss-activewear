@@ -3,6 +3,7 @@ import {
   projectListQuery,
   projectBySlugQuery,
   projectSlugsQuery,
+  projectsBySlugsQuery,
   relatedProjectsQuery,
   categoriesQuery,
   projectArchiveFilterQuery,
@@ -84,6 +85,14 @@ export async function getRelatedProjects(
     currentSlug,
   });
   return data ?? [];
+}
+
+export async function getProjectsBySlugs(slugs: string[]): Promise<ProjectListItem[]> {
+  if (!client || slugs.length === 0) return [];
+  const data = await client.fetch<ProjectListItem[]>(projectsBySlugsQuery, { slugs });
+  if (!data) return [];
+  const slugOrder = new Map(slugs.map((s, i) => [s, i]));
+  return [...data].sort((a, b) => (slugOrder.get(a.slug) ?? 99) - (slugOrder.get(b.slug) ?? 99));
 }
 
 export async function getCategories(): Promise<PortfolioCategory[]> {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 
 interface LPQuoteFormProps {
   service: 'screen-printing' | 'embroidery';
@@ -45,6 +46,7 @@ export function LPQuoteForm({ service, source, variant }: LPQuoteFormProps) {
           service: service,
           source: source || `lp_${service}`,
           variant: variant,
+          visitor_source: getVisitorSource(),
         }),
       });
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Send, Loader2, CheckCircle2, Phone, MessageCircle, User } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 
 interface ServiceQuoteFormProps {
   service: string;
@@ -40,6 +41,7 @@ export function ServiceQuoteForm({
           ...formData,
           service: serviceName,
           source: `service_${service}`,
+          visitor_source: getVisitorSource(),
         }),
       });
 

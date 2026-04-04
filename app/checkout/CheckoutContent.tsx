@@ -19,6 +19,9 @@ import {
   Phone,
   CreditCard,
   AlertCircle,
+  Tag,
+  ChevronDown,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '@/lib/cart-store';
@@ -38,13 +41,14 @@ import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 import {
   type ShippingMethod,
   groupCartByWarehouse,
-  isMultiWarehouseCart,
   calculateShippingBreakdown,
   getShipmentDeliveryEstimate,
   getShipmentBrandLabel,
   FREE_ECONOMY_THRESHOLD,
-  WAREHOUSE_CONFIG,
   type ShipmentGroup,
+  type LiveShippingRate,
+  type LiveRatesResponse,
+  type WarehouseLiveRates,
 } from '@/lib/shipping';
 
 // Initialize Stripe
@@ -211,6 +215,7 @@ interface InlinePaymentFormProps {
   total: number;
   appliedCoupon?: { code: string; discountAmount: number; freeShipping?: boolean } | null;
   decoration?: DecorationSelection | null;
+  liveShippingCost?: number | null;
 }
 
 function InlinePaymentForm({
@@ -224,6 +229,7 @@ function InlinePaymentForm({
   total,
   appliedCoupon,
   decoration,
+  liveShippingCost,
 }: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -282,6 +288,7 @@ function InlinePaymentForm({
               poNumber: poNumber || undefined,
               orderNotes: orderNotes || undefined,
               couponCode: appliedCoupon?.code ?? undefined,
+              liveShippingCost: liveShippingCost ?? undefined,
               ...getAttribution(),
             }),
             signal: controller.signal,
@@ -387,7 +394,7 @@ function InlinePaymentForm({
 // ---------- Main Checkout Page ----------
 
 export default function CheckoutContent() {
-  const { items, decoration, getDecorationTotal, appliedCoupon } = useCartStore();
+  const { items, decoration, getDecorationTotal, clearDecoration, appliedCoupon, setAppliedCoupon, clearCoupon } = useCartStore();
   
   // Form state
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(initialShippingInfo);
@@ -397,8 +404,142 @@ export default function CheckoutContent() {
   const [poNumber, setPoNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  
   // General error state (for non-payment errors)
   const [error, setError] = useState<string | null>(null);
+  // $0 order: completing without payment
+  const [freeOrderSubmitting, setFreeOrderSubmitting] = useState(false);
+  const [freeOrderError, setFreeOrderError] = useState<string | null>(null);
+
+  // Live shipping rates from ShipStation
+  const [liveRates, setLiveRates] = useState<LiveShippingRate[] | null>(null);
+  const [liveWarehouseRates, setLiveWarehouseRates] = useState<WarehouseLiveRates[]>([]);
+  const [liveRatesLoading, setLiveRatesLoading] = useState(false);
+  const liveRatesFetchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return;
+    setPromoError(null);
+    setPromoLoading(true);
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          items: items.map((i) => ({
+            sku: i.sku,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          })),
+          context: 'cart',
+        }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedCoupon({
+          code: data.code,
+          couponId: data.couponId,
+          discountAmount: data.discountAmount,
+          freeShipping: data.freeShipping,
+        });
+        setCouponCode('');
+        setPromoExpanded(false);
+      } else {
+        setPromoError(data.message || 'Invalid or expired code.');
+      }
+    } catch {
+      setPromoError('Something went wrong. Please try again.');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleCompleteFreeOrder = async () => {
+    if (!isFormValid || orderTotal >= 0.01) return;
+    setFreeOrderError(null);
+    setFreeOrderSubmitting(true);
+    try {
+      const res = await fetch('/api/checkout/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          shippingInfo,
+          shippingMethod,
+          decoration: decoration ?? undefined,
+          poNumber: poNumber || undefined,
+          orderNotes: orderNotes || undefined,
+          couponCode: appliedCoupon?.code ?? undefined,
+          liveShippingCost: liveShippingCost ?? undefined,
+          ...getAttribution(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFreeOrderError(data.error || 'Failed to complete order');
+        return;
+      }
+      if (data.freeOrder && data.orderNumber) {
+        window.location.href = `/checkout/success?order=${encodeURIComponent(data.orderNumber)}`;
+        return;
+      }
+      setFreeOrderError('Something went wrong. Please try again.');
+    } catch {
+      setFreeOrderError('Something went wrong. Please try again.');
+    } finally {
+      setFreeOrderSubmitting(false);
+    }
+  };
+
+  // Fetch live shipping rates when zip/city/state or items change (debounced)
+  useEffect(() => {
+    if (liveRatesFetchRef.current) clearTimeout(liveRatesFetchRef.current);
+
+    const zip = shippingInfo.zipCode.trim();
+    if (!/^\d{5}$/.test(zip) || items.length === 0) {
+      setLiveRates(null);
+      return;
+    }
+
+    setLiveRatesLoading(true);
+    liveRatesFetchRef.current = setTimeout(async () => {
+      try {
+        const hasDecoration = !!decoration;
+        const res = await fetch('/api/shipping/rates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            destinationZip: zip,
+            destinationCity: shippingInfo.city.trim(),
+            destinationState: shippingInfo.state.trim(),
+            items: items.map(i => ({ sku: i.sku, quantity: i.quantity, styleId: i.styleId })),
+            hasDecoration,
+          }),
+        });
+        if (!res.ok) throw new Error('Rate fetch failed');
+        const data: LiveRatesResponse = await res.json();
+        setLiveRates(data.rates);
+        setLiveWarehouseRates(data.warehouseRates || []);
+      } catch {
+        setLiveRates(null);
+        setLiveWarehouseRates([]);
+      } finally {
+        setLiveRatesLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      if (liveRatesFetchRef.current) clearTimeout(liveRatesFetchRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingInfo.zipCode, shippingInfo.city, shippingInfo.state, items.length, decoration?.packageId]);
 
   // Multi-warehouse grouping
   const shipmentGroups = useMemo(() => groupCartByWarehouse(items), [items]);
@@ -425,11 +566,25 @@ export default function CheckoutContent() {
     couponResult,
     items,
   );
-  const actualShippingCost = totalsWithCoupon.shippingCost;
+  // If live rates are available, override shipping cost
+  const liveStdRate = liveRates?.find(r => r.method === 'standard');
+  const liveExpRate = liveRates?.find(r => r.method === 'express');
+  const isFreeStandard = roundedSubtotal >= FREE_ECONOMY_THRESHOLD || !!couponResult?.freeShipping;
+  const liveShippingCost = (() => {
+    if (!liveRates) return null;
+    if (shippingMethod === 'economy') {
+      return isFreeStandard ? 0 : (liveStdRate?.price ?? null);
+    }
+    return liveExpRate?.price ?? null;
+  })();
+
+  const actualShippingCost = liveShippingCost !== null ? liveShippingCost : totalsWithCoupon.shippingCost;
   const shippingBreakdown = totalsWithCoupon.shippingBreakdown;
   const taxAmount = totalsWithCoupon.taxAmount;
   const decorationTotal = decoration?.totalPrice ?? 0;
-  const orderTotal = Math.round((totalsWithCoupon.total + decorationTotal) * 100) / 100;
+  const orderTotal = Math.round(
+    (roundedSubtotal - (couponResult?.discountAmount ?? 0) + actualShippingCost + taxAmount + decorationTotal) * 100
+  ) / 100;
 
   // Track begin_checkout event when page loads with items
   useEffect(() => {
@@ -915,130 +1070,166 @@ export default function CheckoutContent() {
                 taxAmount={taxAmount}
                 isEditable={true}
                 decoration={decoration}
+                onRemoveDecoration={clearDecoration}
                 couponDiscount={appliedCoupon?.discountAmount}
                 couponCode={appliedCoupon?.code}
+                shippingCarrier={
+                  shippingMethod === 'economy' ? liveStdRate?.carrier : liveExpRate?.carrier
+                }
+                shippingIsLive={!!liveRates}
               />
+
+              {/* Coupon Code */}
+              <div className={glassCard + ' p-4'}>
+                {appliedCoupon ? (
+                  <div className="rounded-lg border border-green-200 bg-green-50/80 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-green-600 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-green-800">
+                            {appliedCoupon.code} — {formatPrice(appliedCoupon.discountAmount)} off
+                          </p>
+                          {appliedCoupon.freeShipping && (
+                            <p className="text-xs text-green-700 mt-0.5">Free economy shipping applied</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-600 hover:text-slate-800 shrink-0"
+                        onClick={() => { clearCoupon(); setPromoError(null); }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setPromoExpanded(!promoExpanded); setPromoError(null); }}
+                      className="flex w-full items-center justify-between text-left"
+                    >
+                      <span className="text-sm font-medium text-slate-700">Have a promo code?</span>
+                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${promoExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {promoExpanded && (
+                      <div className="mt-3 space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            value={couponCode}
+                            onChange={(e) => { setCouponCode(e.target.value); setPromoError(null); }}
+                            placeholder="Enter code"
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleApplyCoupon}
+                            disabled={promoLoading || !couponCode.trim()}
+                          >
+                            {promoLoading ? 'Applying…' : 'Apply'}
+                          </Button>
+                        </div>
+                        {promoError && (
+                          <p className="text-sm text-red-600">{promoError}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
 
               {/* Shipping Method */}
               <div className={glassCard + " p-5"}>
                 <h3 className="font-bold text-slate-800 mb-4">Shipping Method</h3>
 
-                {/* Primary shipment — always has economy/express choice */}
-                {multiWarehouse && shipmentGroups[0] && (
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Shipment 1 — {getShipmentBrandLabel(shipmentGroups[0])} ({shipmentGroups[0].itemCount} {shipmentGroups[0].itemCount === 1 ? 'item' : 'items'})
-                  </p>
-                )}
-                <div className="space-y-3">
-                  {primaryShippingOptions.map((option) => {
-                    const primaryShipment = shipmentGroups[0];
-                    const shippingInfo_ = primaryShipment
-                      ? getShipmentDeliveryEstimate(primaryShipment, option.id)
-                      : (option.id === 'economy' ? economyDelivery : expressDelivery);
-                    const breakdown = shippingBreakdown.shipments.find(
-                      s => s.warehouse === primaryShipment?.warehouse
-                    );
-                    const price = option.id === 'economy'
-                      ? (breakdown?.method === 'economy' ? breakdown.cost : (roundedSubtotal >= FREE_ECONOMY_THRESHOLD ? 0 : 15))
-                      : 25;
-                    const isFreeEconomy = option.id === 'economy' && (roundedSubtotal >= FREE_ECONOMY_THRESHOLD || couponResult?.freeShipping);
-                    const displayPrice = option.id === 'economy' && isFreeEconomy ? 0 : price;
-                    const Icon = option.icon;
-
-                    return (
-                      <label
-                        key={option.id}
-                        className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-all ${
-                          shippingMethod === option.id
-                            ? 'border-brand-500 bg-white/80 ring-2 ring-brand-500/20'
-                            : 'border-stone-200 hover:border-stone-300 bg-white/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="shipping"
-                          value={option.id}
-                          checked={shippingMethod === option.id}
-                          onChange={() => setShippingMethod(option.id)}
-                          className="sr-only"
-                        />
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                          shippingMethod === option.id 
-                            ? 'bg-brand-500 text-white' 
-                            : 'bg-stone-100 text-slate-600'
-                        }`}>
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-900">{option.name}</p>
-                            {displayPrice === 0 && (
-                              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                FREE
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-600">
-                            Arrives {formatDateRange(shippingInfo_.min, shippingInfo_.max)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          {displayPrice === 0 ? (
-                            <>
-                              <p className="font-semibold text-green-600">Free</p>
-                              <p className="text-xs text-slate-400 line-through">{formatPrice(option.id === 'economy' ? 15 : 25)}</p>
-                            </>
-                          ) : (
-                            <p className="font-semibold text-slate-900">{formatPrice(displayPrice)}</p>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                {/* Secondary shipments — economy only, no choice */}
-                {multiWarehouse && shipmentGroups.slice(1).map((shipment, idx) => {
-                  const config = WAREHOUSE_CONFIG[shipment.warehouse];
-                  const secondaryBreakdown = shippingBreakdown.shipments.find(
-                    s => s.warehouse === shipment.warehouse
+                {shipmentGroups.map((shipment, groupIdx) => {
+                  const whRates = liveWarehouseRates.find(
+                    wr => wr.warehouse === shipment.warehouse
                   );
-                  const secondaryDelivery = getShipmentDeliveryEstimate(shipment, 'economy');
-                  const isFree = secondaryBreakdown?.isFree ?? false;
-                  const cost = secondaryBreakdown?.cost ?? config?.economy.price ?? 15;
+                  const whStdRate = whRates?.rates.find(r => r.method === 'standard');
+                  const whExpRate = whRates?.rates.find(r => r.method === 'express');
 
                   return (
-                    <div key={shipment.warehouse} className="mt-4">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                        Shipment {idx + 2} — {getShipmentBrandLabel(shipment)} ({shipment.itemCount} {shipment.itemCount === 1 ? 'item' : 'items'})
-                      </p>
-                      <div className="flex items-center gap-4 rounded-xl border-2 border-brand-500 bg-white/80 ring-2 ring-brand-500/20 p-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white">
-                          <Truck className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-900">Economy Shipping</p>
-                            {isFree && (
-                              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                FREE
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-600">
-                            Arrives {formatDateRange(secondaryDelivery.min, secondaryDelivery.max)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          {isFree ? (
-                            <>
-                              <p className="font-semibold text-green-600">Free</p>
-                              <p className="text-xs text-slate-400 line-through">{formatPrice(config?.economy.price ?? 15)}</p>
-                            </>
-                          ) : (
-                            <p className="font-semibold text-slate-900">{formatPrice(cost)}</p>
-                          )}
-                        </div>
+                    <div key={shipment.warehouse} className={groupIdx > 0 ? 'mt-5' : ''}>
+                      {multiWarehouse && (
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                          Shipment {groupIdx + 1} — {getShipmentBrandLabel(shipment)} ({shipment.itemCount} {shipment.itemCount === 1 ? 'item' : 'items'})
+                        </p>
+                      )}
+                      <div className="space-y-3">
+                        {primaryShippingOptions.map((option) => {
+                          const shippingInfo_ = getShipmentDeliveryEstimate(shipment, option.id);
+                          const liveRate = option.id === 'economy' ? (whStdRate ?? liveStdRate) : (whExpRate ?? liveExpRate);
+                          const flatPrice = option.id === 'economy' ? 15 : 25;
+                          const basePrice = liveRate?.price ?? flatPrice;
+                          const isFreeEconomy = option.id === 'economy' && isFreeStandard;
+                          const displayPrice = isFreeEconomy ? 0 : basePrice;
+                          const carrierHint = liveRate?.carrier || null;
+                          const Icon = option.icon;
+                          const isSelected = shippingMethod === option.id;
+
+                          return (
+                            <label
+                              key={option.id}
+                              className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-brand-500 bg-white/80 ring-2 ring-brand-500/20'
+                                  : 'border-stone-200 hover:border-stone-300 bg-white/50'
+                              }`}
+                              onClick={() => setShippingMethod(option.id)}
+                            >
+                              {groupIdx === 0 && (
+                                <input
+                                  type="radio"
+                                  name="shipping"
+                                  value={option.id}
+                                  checked={isSelected}
+                                  onChange={() => setShippingMethod(option.id)}
+                                  className="sr-only"
+                                />
+                              )}
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                                isSelected
+                                  ? 'bg-brand-500 text-white'
+                                  : 'bg-stone-100 text-slate-600'
+                              }`}>
+                                <Icon className="h-5 w-5" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-slate-900">{option.name}</p>
+                                  {displayPrice === 0 && (
+                                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                      FREE
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-slate-600">
+                                  Arrives {formatDateRange(shippingInfo_.min, shippingInfo_.max)}
+                                </p>
+                                {carrierHint && (
+                                  <p className="text-xs text-slate-400 mt-0.5">via {carrierHint}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                {liveRatesLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-slate-400 ml-auto" />
+                                ) : displayPrice === 0 ? (
+                                  <>
+                                    <p className="font-semibold text-green-600">Free</p>
+                                    <p className="text-xs text-slate-400 line-through">{formatPrice(liveRate?.price ?? flatPrice)}</p>
+                                  </>
+                                ) : (
+                                  <p className="font-semibold text-slate-900">{formatPrice(displayPrice)}</p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -1055,28 +1246,67 @@ export default function CheckoutContent() {
                   </div>
                 </div>
 
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    mode: 'payment',
-                    amount: toStripeCents(orderTotal),
-                    currency: 'usd',
-                    appearance: stripeAppearance,
-                  }}
-                >
-                  <InlinePaymentForm
-                    items={items}
-                    shippingInfo={shippingInfo}
-                    shippingMethod={shippingMethod}
-                    poNumber={poNumber}
-                    orderNotes={orderNotes}
-                    isFormValid={isFormValid}
-                    missingFields={missingFields}
-                    total={orderTotal}
-                    appliedCoupon={appliedCoupon}
-                    decoration={decoration}
-                  />
-                </Elements>
+                {orderTotal < 0.01 ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <BadgeCheck className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">No payment required</span>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Your order total is $0. Fill in your details above and click below to place the order.
+                    </p>
+                    {!isFormValid && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                        <p className="text-sm font-medium text-amber-800 mb-2">
+                          Complete the form above to place your order:
+                        </p>
+                        <ul className="text-sm text-amber-700 space-y-1">
+                          {missingFields.map((field) => (
+                            <li key={field} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                              {field}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {freeOrderError && (
+                      <p className="text-sm text-red-600 mb-3">{freeOrderError}</p>
+                    )}
+                    <Button
+                      size="lg"
+                      className="w-full"
+                      onClick={handleCompleteFreeOrder}
+                      disabled={!isFormValid || freeOrderSubmitting}
+                    >
+                      {freeOrderSubmitting ? 'Placing order…' : 'Complete order'}
+                    </Button>
+                  </>
+                ) : stripePromise ? (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      mode: 'payment',
+                      amount: Math.max(toStripeCents(orderTotal), 50),
+                      currency: 'usd',
+                      appearance: stripeAppearance,
+                    }}
+                  >
+                    <InlinePaymentForm
+                      items={items}
+                      shippingInfo={shippingInfo}
+                      shippingMethod={shippingMethod}
+                      poNumber={poNumber}
+                      orderNotes={orderNotes}
+                      isFormValid={isFormValid}
+                      missingFields={missingFields}
+                      total={orderTotal}
+                      appliedCoupon={appliedCoupon}
+                      decoration={decoration}
+                      liveShippingCost={liveShippingCost}
+                    />
+                  </Elements>
+                ) : null}
 
                 {/* Reassurance message */}
                 <p className="mt-4 text-center text-xs text-slate-500">

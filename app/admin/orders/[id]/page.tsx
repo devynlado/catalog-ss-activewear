@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Package, User, Building2, Mail, Phone, MapPin, CreditCard, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, Package, PenTool, User, Building2, Mail, Phone, MapPin, CreditCard, ExternalLink, Download } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { Badge } from '@/components/ui/Badge';
 import { OrderStatusActions } from './OrderStatusActions';
@@ -11,6 +11,8 @@ import { OrderRefundUI } from './OrderRefundUI';
 import { ResendShippedEmail } from './ResendShippedEmail';
 import { SSActivewearSection } from './SSActivewearSection';
 import { SSActivityLog } from './SSActivityLog';
+import { OrderChat } from './OrderChat';
+import { ChatNotificationBanner } from './ChatNotificationBanner';
 
 export const metadata = {
   title: 'Order Details',
@@ -34,6 +36,15 @@ const WAREHOUSE_LABELS: Record<string, string> = {
   los_angeles_apparel: 'LA Apparel',
   as_colour: 'AS Colour',
 };
+
+function formatDecoLabel(item: { decorationType?: string; packageName?: string }): string {
+  const type = item.decorationType
+    ? item.decorationType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : '';
+  const name = item.packageName || '';
+  if (type && name) return `${type} - ${name}`;
+  return type || name || 'Decoration Service';
+}
 
 const paymentConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
   pending: { label: 'Unpaid', variant: 'warning' },
@@ -62,7 +73,9 @@ export default async function OrderDetailPage({
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const items: any[] = Array.isArray(order.items) ? order.items : [];
+  const allItems: any[] = Array.isArray(order.items) ? order.items : [];
+  const items = allItems.filter((item: any) => item.type !== 'decoration');
+  const decorationItems = allItems.filter((item: any) => item.type === 'decoration');
 
   // Fetch order shipments
   const { data: shipments } = await supabase
@@ -144,6 +157,11 @@ export default async function OrderDetailPage({
           />
         </div>
 
+        <ChatNotificationBanner
+          orderId={order.id}
+          customerName={order.customer_name || 'Customer'}
+        />
+
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             {/* Customer */}
@@ -188,10 +206,10 @@ export default async function OrderDetailPage({
             {/* Items */}
             <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-navy-800">
-                Items ({items.length})
+                Products ({items.length})
               </h2>
               <div className="space-y-3">
-                {items.map((item, index) => {
+                {items.map((item: any, index: number) => {
                   const name = item.packageDisplayName
                     || `${item.brandName || ''} ${item.styleName || item.productTitle || ''}`.trim()
                     || 'Item';
@@ -223,6 +241,44 @@ export default async function OrderDetailPage({
                   );
                 })}
               </div>
+
+              {decorationItems.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="mb-3 text-base font-semibold text-navy-800">
+                    Decoration Services ({decorationItems.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {decorationItems.map((item: any, index: number) => (
+                      <div
+                        key={`deco-${index}`}
+                        className="flex items-center gap-4 rounded-lg border border-brand-200 bg-brand-50 p-4"
+                      >
+                        <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+                          <PenTool className="h-6 w-6 text-brand-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-brand-800">
+                            {formatDecoLabel(item)}
+                          </p>
+                          <p className="text-sm text-brand-600">
+                            {item.quantity} pcs &times; ${Number(item.unitPrice || 0).toFixed(2)}/ea
+                          </p>
+                          {item.setupFee > 0 && (
+                            <p className="text-xs text-brand-500">
+                              Setup fee: ${Number(item.setupFee).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-brand-800">
+                            ${Number(item.totalPrice || 0).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="mt-4 space-y-2 border-t border-stone-200 pt-4">
                 <div className="flex items-center justify-between text-sm">
@@ -501,6 +557,13 @@ export default async function OrderDetailPage({
                 )}
               </div>
             </div>
+
+            {/* Customer Chat */}
+            <OrderChat
+              orderId={order.id}
+              customerName={order.customer_name || 'Customer'}
+              customerEmail={order.customer_email}
+            />
 
             {/* SS Activewear Section */}
             <SSActivewearSection

@@ -23,9 +23,10 @@ interface ContactFormData {
   company?: string;
   message: string;
   service?: string;
-  source?: string;      // Lead source (e.g., lp_screen_printing)
-  variant?: string;     // A/B test variant
-  quantity?: string;    // Estimated quantity from LP form
+  source?: string;         // Lead source (e.g., lp_screen_printing)
+  variant?: string;        // A/B test variant
+  quantity?: string;       // Estimated quantity from LP form
+  visitor_source?: string; // Traffic channel (e.g., Google Ads, Organic Search)
 }
 
 export async function POST(request: NextRequest) {
@@ -52,6 +53,39 @@ export async function POST(request: NextRequest) {
         { error: 'Message is required' },
         { status: 400 }
       );
+    }
+
+    // Check if email is blocked — silently return success so spammers don't adapt
+    try {
+      const supabase = createServerSupabaseClient() as ReturnType<typeof createServerSupabaseClient>;
+      const { data: blocked } = await (supabase as any)
+        .from('blocked_emails')
+        .select('id')
+        .eq('email', body.email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (blocked) {
+        console.log(`[Contact] Blocked email rejected silently: ${body.email}`);
+        // Save to DB anyway as spam for audit trail
+        await (supabase as any).from('contacts').insert({
+          name: body.name,
+          email: body.email,
+          phone: body.phone || null,
+          company: body.company || null,
+          service: body.service || null,
+          message: body.message,
+          source: body.source || null,
+          variant: body.variant || null,
+          quantity: body.quantity || null,
+          visitor_source: body.visitor_source || null,
+          status: 'spam',
+          is_spam: true,
+          blocked_at: new Date().toISOString(),
+        });
+        return NextResponse.json({ success: true, message: 'Message sent successfully' });
+      }
+    } catch (blockCheckErr) {
+      console.error('[Contact] Block check failed, proceeding normally:', blockCheckErr);
     }
 
     const resend = getResend();
@@ -124,6 +158,7 @@ export async function POST(request: NextRequest) {
         source: body.source || null,
         variant: body.variant || null,
         quantity: body.quantity || null,
+        visitor_source: body.visitor_source || null,
         status: 'new',
       });
       console.log(`Contact saved to Supabase for ${body.email}`);

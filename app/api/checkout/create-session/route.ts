@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase';
 import { validateCoupon, calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
 import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 import { groupCartByWarehouse, calculateShippingBreakdown } from '@/lib/shipping';
+import { placeSSOrder } from '@/lib/ss-activewear-orders';
 
 interface ShippingInfo {
   email: string;
@@ -41,6 +42,7 @@ interface CheckoutRequest {
   orderNotes?: string;
   idempotencyKey?: string;
   couponCode?: string | null;
+  liveShippingCost?: number | null;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -50,7 +52,7 @@ interface CheckoutRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, utm_source, utm_medium, utm_campaign, gclid } = body;
+    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, liveShippingCost, utm_source, utm_medium, utm_campaign, gclid } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -127,6 +129,13 @@ export async function POST(request: NextRequest) {
       totalWithShipping = withCoupon.total;
     }
 
+    // Override shipping cost with live ShipStation rate when provided by the frontend
+    if (typeof liveShippingCost === 'number' && liveShippingCost >= 0) {
+      const shippingDiff = liveShippingCost - actualShippingCost;
+      actualShippingCost = liveShippingCost;
+      totalWithShipping = Math.round((totalWithShipping + shippingDiff) * 100) / 100;
+    }
+
     // Add decoration cost to the total (tax is on products only, matching checkout UI)
     if (decorationTotal > 0) {
       totalWithShipping = Math.round((totalWithShipping + decorationTotal) * 100) / 100;
@@ -152,6 +161,7 @@ export async function POST(request: NextRequest) {
 
     // Generate order number
     const orderNumber = generateOrderNumber();
+    const roundedTotal = Math.round(totalWithShipping * 100) / 100;
 
     // Build shipping address object for database
     const shippingAddressData = {
@@ -167,6 +177,153 @@ export async function POST(request: NextRequest) {
     };
 
     const supabase = authClient;
+
+    // --- $0 orders (e.g. 100% discount + free shipping): no payment, complete immediately ---
+    if (roundedTotal < 0.01) {
+      const { data: order, error: orderError } = await (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_id: user?.id || null,
+          customer_email: shippingInfo.email,
+          customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+          customer_phone: shippingInfo.phone,
+          company: shippingInfo.company || null,
+          items: [
+            ...items.map(item => ({
+              type: 'product' as const,
+              sku: item.sku,
+              styleId: item.styleId,
+              styleName: item.styleName,
+              brandName: item.brandName,
+              colorName: item.colorName,
+              colorCode: item.colorCode,
+              sizeName: item.sizeName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              discountedPrice: item.discountedPrice,
+              imageUrl: item.imageUrl,
+            })),
+            ...(decoration ? [{
+              type: 'decoration' as const,
+              decorationType: decoration.type,
+              packageId: decoration.packageId,
+              packageName: decoration.packageName,
+              quantity: decoration.quantity,
+              unitPrice: decoration.pricePerPiece,
+              setupFee: decoration.setupFee,
+              totalPrice: decorationTotal,
+              artworkFileName: decoration.artworkFileName || null,
+              artworkUrl: decoration.artworkUrl || null,
+            }] : []),
+          ],
+          subtotal: roundedSubtotal,
+          shipping_cost: actualShippingCost,
+          tax_amount: taxAmount,
+          discount_amount: discountAmount,
+          total: roundedTotal,
+          coupon_id: couponId,
+          coupon_code: appliedCouponCode,
+          shipping_address: shippingAddressData,
+          billing_address: shippingAddressData,
+          shipping_method: shippingMethod,
+          payment_method: 'card',
+          payment_status: 'paid',
+          status: 'awaiting_purchasing',
+          paid_at: new Date().toISOString(),
+          access_token: crypto.randomUUID(),
+          notes: orderNotes || null,
+          utm_source: utm_source || null,
+          utm_medium: utm_medium || null,
+          utm_campaign: utm_campaign || null,
+          gclid: gclid || null,
+          metadata: {
+            order_type: 'cart',
+            po_number: poNumber || null,
+            free_order: true,
+          },
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('Error creating free order:', orderError);
+        return NextResponse.json(
+          { error: 'Failed to create order' },
+          { status: 500 }
+        );
+      }
+
+      // Increment coupon used_count
+      if (couponId) {
+        const svc = createServerSupabaseClient();
+        const { data: coupon } = await (svc as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+          .from('coupons')
+          .select('used_count')
+          .eq('id', couponId)
+          .single();
+        if (coupon) {
+          await (svc as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+            .from('coupons')
+            .update({ used_count: ((coupon as any).used_count ?? 0) + 1 }) // eslint-disable-line @typescript-eslint/no-explicit-any
+            .eq('id', couponId);
+        }
+      }
+
+      await Promise.all([
+        (supabase as any).from('order_activities').insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          order_id: order.id,
+          user_id: user?.id || null,
+          activity_type: 'created',
+          details: {
+            order_number: orderNumber,
+            order_type: 'cart',
+            item_count: items.length,
+            total_pieces: items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0),
+            total: roundedTotal,
+            free_order: true,
+          },
+        }),
+        (supabase as any).from('order_activities').insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          order_id: order.id,
+          user_id: user?.id || null,
+          activity_type: 'payment_received',
+          details: { amount: 0, free_order: true },
+        }),
+        (supabase as any).from('order_activities').insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          order_id: order.id,
+          activity_type: 'awaiting_purchasing',
+          details: { order_number: orderNumber },
+        }),
+        (supabase as any).from('payments').insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          order_id: order.id,
+          amount: 0,
+          currency: 'usd',
+          type: 'charge',
+          status: 'succeeded',
+          metadata: { free_order: true },
+        }),
+      ]);
+
+      // Auto-place order with SS Activewear (fire-and-forget, non-blocking)
+      placeSSOrder(order.id).catch((err) =>
+        console.error('[SS Activewear] Auto-order failed for free order:', err)
+      );
+
+      return NextResponse.json({
+        orderId: order.id,
+        orderNumber,
+        freeOrder: true,
+        pricing: {
+          subtotal: roundedSubtotal,
+          decoration: decorationTotal,
+          tax: taxAmount,
+          shipping: actualShippingCost,
+          discount: discountAmount,
+          total: roundedTotal,
+        },
+      });
+    }
 
     // Build item summary for Stripe metadata
     const itemSummary = items.slice(0, 3).map(item => 
@@ -232,7 +389,7 @@ export async function POST(request: NextRequest) {
         shipping_cost: actualShippingCost,
         tax_amount: taxAmount,
         discount_amount: discountAmount,
-        total: Math.round(totalWithShipping * 100) / 100,
+        total: roundedTotal,
         total_cogs: Math.round(totalCogs * 100) / 100,
         cogs_source: 'live',
         coupon_id: couponId,
@@ -394,7 +551,7 @@ export async function POST(request: NextRequest) {
         tax: taxAmount,
         shipping: actualShippingCost,
         discount: discountAmount,
-        total: Math.round(totalWithShipping * 100) / 100,
+        total: roundedTotal,
       },
     });
   } catch (error) {

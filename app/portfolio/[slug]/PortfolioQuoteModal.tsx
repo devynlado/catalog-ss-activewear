@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Send, Loader2, CheckCircle2, Phone } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 
 const DECORATION_OPTIONS = [
   { value: 'screen-printing', label: 'Screen Printing' },
@@ -117,6 +118,7 @@ export function PortfolioQuoteModal({
           service: DECORATION_OPTIONS.find((o) => o.value === formData.decoration)?.label || 'Portfolio Inquiry',
           source: 'portfolio_quote_modal',
           quantity: formData.quantity || undefined,
+          visitor_source: getVisitorSource(),
         }),
       });
 

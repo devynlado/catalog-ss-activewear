@@ -65,6 +65,22 @@ export const relatedProjectsQuery = `
   }
 `;
 
+/** Fetch specific projects by an array of slugs, preserving the order given */
+export const projectsBySlugsQuery = `
+  *[_type == "project" && defined(publishedAt) && slug.current in $slugs] {
+    _id,
+    title,
+    "slug": slug.current,
+    shortDescription,
+    "category": category->{ title, "slug": slug.current },
+    decoration,
+    client,
+    "featuredImage": featuredImage.asset->url,
+    "gallery": gallery[].asset->url,
+    publishedAt
+  }
+`;
+
 export const categoriesQuery = `
   *[_type == "portfolioCategory"] | order(title asc) {
     _id,

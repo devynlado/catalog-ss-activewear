@@ -19,6 +19,7 @@ import {
   Maximize,
   ExternalLink
 } from 'lucide-react';
+import { CuratedPortfolioGrid } from '@/components/services';
 
 // Calculate business days from today
 function addBusinessDays(days: number): Date {
@@ -53,6 +54,7 @@ const locations: Record<string, {
   heroDescription: string;
   targetAudience: { name: string; icon: React.ElementType; description: string }[];
   testimonials: { quote: string; name: string; company?: string }[];
+  portfolioSlugs?: string[];
   faq: { question: string; answer: string }[];
   seoKeywords: string[];
 }> = {
@@ -81,6 +83,16 @@ const locations: Record<string, {
       { question: 'Can I see a sample before ordering?', answer: 'Absolutely. We create a sample (pre-production proof) for your approval before running the full order. You only pay for production after you approve the sample.' },
       { question: 'Do you work with production companies and film sets?', answer: 'Yes! We regularly work with film, TV, and commercial productions throughout LA. We understand tight schedules and offer rush services to meet production deadlines.' },
     ],
+    portfolioSlugs: [
+      'jumbo-8-color-screen-printing-for-kill-bill-inspired-t-shirts-delivered-in-just-2-days',
+      'rush-jumbo-screen-printing-simulated-process-on-la-apparel-1801gd-shirts',
+      'elevate-your-brand-with-jumbo-prints-on-shaka-wear-7-5oz-max-heavyweight-tees',
+      'screen-printing-250-custom-la-apparel-hf09gd-hoodies-for-h-e-r-s-concert',
+      'jumbo-8-color-screen-printing-for-scarface-on-la-apparel-1801gd-t-shirts',
+      'boost-your-brands-buzz-why-jumbo-screen-printing-is-a-game-changer-for-your-merch',
+      'netflix-tonal-technique-embroidered-logo',
+      'custom-puff-embroidery-for-yupoong-6089-caps-elevate-your-streetwear-brand',
+    ],
     seoKeywords: ['Hollywood screen printing', 'LA custom apparel', 'entertainment merchandise', 'production crew shirts', 'tour merch Los Angeles'],
   },
   'orange-county': {
@@ -108,6 +120,16 @@ const locations: Record<string, {
       { question: 'Do you do embroidery on hats and polos?', answer: 'Yes! We have 5 Barudan embroidery machines with 30 heads total. We do flat embroidery, 3D puff embroidery, and can embroider on caps, polos, jackets, bags, and more.' },
       { question: 'How do I get started with a quote?', answer: 'Request a quote on our website, call (855) 942-7636, or email info@garmentdecor.com. We typically respond within 2 hours with pricing and recommendations.' },
     ],
+    portfolioSlugs: [
+      'digital-squeegee-screen-printing-on-la-apparel-1801gd-t-shirts',
+      'jumbo-8-color-screen-printing-on-1500-los-angeles-apparel-1801gd-t-shirts',
+      'ari-lennox-concert-tshirt-world-tour-2023-setlist',
+      'custom-wholesale-screen-printed-jogger-pants-by-garment-decor',
+      'wholesale-customized-embroidered-trucker-hats-for-scoville',
+      'alignment-health-custom-embroidered-backpack',
+      'rush-screen-printing-on-a4-n4190-mesh-football-jerseys',
+      'screen-printing-250-custom-la-apparel-hf09gd-hoodies-for-h-e-r-s-concert',
+    ],
     seoKeywords: ['Orange County screen printing', 'OC custom apparel', 'Irvine embroidery', 'surf brand printing', 'school spirit wear OC'],
   },
   'santa-barbara': {
@@ -134,6 +156,16 @@ const locations: Record<string, {
       { question: 'How fast can I get my order?', answer: 'Standard turnaround is 7-10 business days. Rush orders can be done in 48-72 hours for events with tight deadlines. Just tell us your event date when requesting a quote.' },
       { question: 'Can you help with design and artwork?', answer: 'Yes! If you have a logo or idea, we can prepare print-ready artwork. We send digital proofs for approval before production—no surprises. Basic artwork setup is included.' },
       { question: 'Do you work with fraternities and sororities?', answer: 'Absolutely! We work with Greek organizations at UCSB and other colleges. We understand rush timelines, chapter requirements, and can handle group orders with mixed sizes.' },
+    ],
+    portfolioSlugs: [
+      'promotional-hats-made-in-usa',
+      'otto-cap-embroidery-cactus-club',
+      'custom-embroidered-new-era-9fifty-snapbacks-delivered-in-just-3-days',
+      'rush-screen-printing-for-the-2024-boston-celtics-nba-championship-t-shirts',
+      'combining-screen-printing-and-transfers-on-independent-ss4500-for-lqhs',
+      'rush-screen-printing-on-a4-n4190-mesh-football-jerseys',
+      'custom-screen-printing-for-alternative-apparel-aa1070-tees-stand-out',
+      'custom-embroidered-lane-seven-ls14001-premium-pullover-hoodies',
     ],
     seoKeywords: ['Santa Barbara screen printing', 'UCSB custom apparel', 'winery merchandise', 'Central Coast embroidery', 'college apparel Santa Barbara'],
   },
@@ -487,6 +519,16 @@ export default function LocationPage({ params }: { params: { city: string } }) {
           </div>
         </div>
       </section>
+
+      {/* Portfolio — curated projects */}
+      {location.portfolioSlugs && location.portfolioSlugs.length > 0 && (
+        <CuratedPortfolioGrid
+          title={`Our Work in ${location.name}`}
+          subtitle="Real projects delivered to real clients"
+          slugs={location.portfolioSlugs}
+          viewAllLink="/portfolio"
+        />
+      )}
 
       {/* FAQ */}
       <section className="py-16 sm:py-20">

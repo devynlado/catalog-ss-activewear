@@ -34,8 +34,11 @@ const UTM = {
   campaign: 'post_delivery_review',
 } as const;
 
-export function getReviewInviteSubject(): string {
-  return 'How was your order? Share your experience and get 10% off';
+export function getReviewInviteSubject(customerName?: string | null): string {
+  const name = customerName?.split(/\s+/)[0];
+  return name
+    ? `Did You Like Your Order, ${name}? - Garment Decor`
+    : 'Did You Like Your Order? - Garment Decor';
 }
 
 export function getReviewInvitePreheader(): string {
@@ -50,7 +53,7 @@ export function generateReviewInviteHtml(props: ReviewInviteProps): string {
     : 'Hi there,';
 
   const reviewUrl = buildUTMUrl(
-    `https://garmentdecor.com/orders/reviews?token=${token}`,
+    `https://garmentdecor.com/reviews/write?token=${token}`,
     UTM
   );
 
@@ -66,8 +69,8 @@ export function generateReviewInviteHtml(props: ReviewInviteProps): string {
 
   const content = `
     ${emailHeader(
-      'How Was Your Order?',
-      'We\u2019d love to hear your feedback',
+      'We\u2019d Love to Hear Your Feedback',
+      '',
       { showLogo: true }
     )}
     <tr>
@@ -76,13 +79,13 @@ export function generateReviewInviteHtml(props: ReviewInviteProps): string {
           ${greeting}
         </p>
         <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: ${EMAIL_COLORS.textBody}; font-family: ${EMAIL_FONTS.stack};">
-          We hope you\u2019re enjoying your order <strong>${orderNumber}</strong>! Your feedback helps other customers and helps us improve.
+          We hope you\u2019re enjoying your order <strong>${orderNumber}</strong>! Your review helps us improve and others choose wisely.
         </p>
 
         ${emailAccentCard(
           `
-          <p style="margin: 0 0 4px; font-size: 15px; font-weight: 600; color: ${EMAIL_COLORS.textDark}; font-family: ${EMAIL_FONTS.stack};">
-            Leave a review and get <span style="color: ${EMAIL_COLORS.primary};">10% off</span> your next order!
+          <p style="margin: 0 0 4px; font-size: 18px; font-weight: 700; color: ${EMAIL_COLORS.textDark}; font-family: ${EMAIL_FONTS.stack};">
+            Leave a Review, Get <span style="color: ${EMAIL_COLORS.primary};">10% OFF</span>
           </p>
           <p style="margin: 0; font-size: 13px; color: ${EMAIL_COLORS.textMuted}; font-family: ${EMAIL_FONTS.stack};">
             Your unique discount code will be sent instantly after you submit your review.
@@ -123,7 +126,7 @@ export function generateReviewInviteText(props: ReviewInviteProps): string {
     : 'Hi there,';
 
   const reviewUrl = buildUTMUrl(
-    `https://garmentdecor.com/orders/reviews?token=${token}`,
+    `https://garmentdecor.com/reviews/write?token=${token}`,
     UTM
   );
 
@@ -132,9 +135,9 @@ export function generateReviewInviteText(props: ReviewInviteProps): string {
   return [
     greeting,
     '',
-    `We hope you're enjoying your order ${orderNumber}! Your feedback helps other customers and helps us improve.`,
+    `We hope you're enjoying your order ${orderNumber}! Your review helps us improve and others choose wisely.`,
     '',
-    'Leave a review and get 10% off your next order!',
+    'Leave a Review, Get 10% OFF your next order!',
     '',
     products.length > 0 ? `Products to review:\n${productNames}` : '',
     '',

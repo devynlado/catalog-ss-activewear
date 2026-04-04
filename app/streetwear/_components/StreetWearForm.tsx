@@ -6,6 +6,7 @@ import { Send, Loader2, CheckCircle2, Phone, Trash2 } from 'lucide-react';
 import { useStreetWearInquiry } from '@/lib/streetwear-inquiry-store';
 import { VOLUME_TIERS, type TierQty } from '@/lib/streetwear-config';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 
 export function StreetWearForm() {
   const { selectedProducts, removeProduct, updateQty, clearAll } =
@@ -50,6 +51,7 @@ export function StreetWearForm() {
           message,
           service: 'Streetwear Brand Inquiry',
           source: 'streetwear',
+          visitor_source: getVisitorSource(),
           quantity:
             selectedProducts.length > 0
               ? `${selectedProducts.length} products`

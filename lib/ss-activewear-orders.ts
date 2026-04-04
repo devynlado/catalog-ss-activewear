@@ -211,7 +211,14 @@ interface SSOrderResponse {
 
 interface SSOrderWithLineErrors {
   Orders?: SSOrderResponse[];
+  orders?: SSOrderResponse[];
   LineErrors?: Array<{
+    sku: string;
+    identifier: string;
+    qty: number;
+    error: string;
+  }>;
+  lineErrors?: Array<{
     sku: string;
     identifier: string;
     qty: number;
@@ -274,15 +281,34 @@ export async function placeSSOrder(
     return { success: true, ssOrders: [], lineErrors: [], error: 'Already placed' };
   }
 
-  // Build order lines from items
+  // Build order lines — only include items supplied by SS Activewear
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = Array.isArray(order.items) ? order.items : [];
-  const lines: SSOrderLine[] = items
-    .filter(item => item.warehouse === 'ss_activewear' || !item.warehouse)
+  const productItems = items.filter(item => item.type !== 'decoration');
+  const skus = productItems.map((item) => item.sku).filter(Boolean);
+
+  // Look up actual supplier for each SKU from the product_skus table
+  let ssSkuSet = new Set<string>();
+  if (skus.length > 0) {
+    const { data: skuRows } = await db
+      .from('product_skus')
+      .select('sku, supplier')
+      .in('sku', skus);
+    ssSkuSet = new Set(
+      (skuRows || [])
+        .filter((r: { sku: string; supplier: string | null }) => r.supplier === 'ss_activewear')
+        .map((r: { sku: string }) => r.sku)
+    );
+  }
+
+  const lines: SSOrderLine[] = productItems
+    .filter(item => ssSkuSet.has(item.sku))
     .map(item => ({
       identifier: item.sku,
       qty: item.quantity || 1,
     }));
+
+  const skippedItems = productItems.filter(item => !ssSkuSet.has(item.sku));
 
   if (lines.length === 0) {
     await logSSActivity({
@@ -290,6 +316,9 @@ export async function placeSSOrder(
       activityType: 'auto_order_skipped',
       status: 'info',
       title: 'No SS Activewear items in this order',
+      details: skippedItems.length > 0
+        ? { skipped_skus: skippedItems.map((i: { sku: string; brandName?: string }) => i.sku), reason: 'Items belong to other suppliers' }
+        : undefined,
       supabase: db,
     });
     return { success: true, ssOrders: [], lineErrors: [] };
@@ -301,11 +330,25 @@ export async function placeSSOrder(
     throw new Error('Order has no shipping address');
   }
 
+  // If the order includes decoration services, ship blanks to the Garment Decor
+  // warehouse in Montclair so they can be decorated before forwarding to the customer.
+  const hasDecoration = items.some(item => item.type === 'decoration');
+
+  const GARMENT_DECOR_WAREHOUSE = {
+    customer: 'Garment Decor',
+    attn: 'Production Team',
+    address: '4778 W Mission Blvd',
+    city: 'Montclair',
+    state: 'CA',
+    zip: '91762',
+    residential: false,
+  };
+
   // Determine shipping speed
   const isExpress = (order as Record<string, unknown>).shipping_method === 'express';
 
   const payload: SSPlaceOrderPayload = {
-    shippingAddress: {
+    shippingAddress: hasDecoration ? GARMENT_DECOR_WAREHOUSE : {
       customer: shippingAddr.company || `${shippingAddr.firstName || ''} ${shippingAddr.lastName || ''}`.trim(),
       attn: `${shippingAddr.firstName || ''} ${shippingAddr.lastName || ''}`.trim(),
       address: shippingAddr.address1 || shippingAddr.address || shippingAddr.street || '',
@@ -344,11 +387,15 @@ export async function placeSSOrder(
     orderId,
     activityType: 'order_placing',
     status: 'info',
-    title: `Placing order with SS Activewear (${lines.length} line items)`,
+    title: `Placing order with SS Activewear (${lines.length} line items${skippedItems.length > 0 ? `, ${skippedItems.length} non-SS items skipped` : ''}${hasDecoration ? ', shipping to GD warehouse for decoration' : ''})`,
     details: {
       po_number: order.order_number,
       line_count: lines.length,
+      skipped_count: skippedItems.length,
+      skipped_skus: skippedItems.length > 0 ? skippedItems.map((i: { sku: string }) => i.sku) : undefined,
       shipping_method: payload.shippingMethod,
+      ship_to: hasDecoration ? 'Garment Decor Warehouse (Montclair)' : 'Customer address',
+      has_decoration: hasDecoration,
       autoselect_warehouse: true,
       test_order: payload.testOrder,
     },
@@ -361,15 +408,25 @@ export async function placeSSOrder(
       { method: 'POST', body: payload, timeoutMs: 60_000 }
     );
 
-    // Parse response (may be array of orders or object with Orders + LineErrors)
+    // Parse response — SS API returns camelCase keys when rejectLineErrors is false:
+    //   { orders: [...], lineErrors: [...] }
+    // But may also return PascalCase or a plain array. Handle all cases.
     let ssOrders: SSOrderResponse[] = [];
     let lineErrors: Array<{ sku: string; identifier: string; qty: number; error: string }> = [];
 
     if (Array.isArray(rawResponse)) {
       ssOrders = rawResponse;
     } else {
-      ssOrders = (rawResponse as SSOrderWithLineErrors).Orders || [];
-      lineErrors = (rawResponse as SSOrderWithLineErrors).LineErrors || [];
+      const wrapped = rawResponse as SSOrderWithLineErrors;
+      ssOrders = wrapped.Orders || wrapped.orders || [];
+      lineErrors = wrapped.LineErrors || wrapped.lineErrors || [];
+    }
+
+    console.log(`[SS Orders] POST response parsed: ${ssOrders.length} orders, ${lineErrors.length} line errors`);
+
+    if (ssOrders.length === 0 && lineErrors.length === 0) {
+      console.error('[SS Orders] WARNING: Both orders and lineErrors are empty. Raw response keys:', 
+        Array.isArray(rawResponse) ? 'Array' : Object.keys(rawResponse as Record<string, unknown>));
     }
 
     if (ssOrders.length === 0 && lineErrors.length > 0) {

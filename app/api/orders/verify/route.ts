@@ -188,20 +188,46 @@ export async function POST(request: NextRequest) {
     // ── Step 1: Validate email/token and send OTP ──
 
     if (token) {
-      const { data: order, error } = await supabase
+      // Try order access token first, then review invite token as fallback
+      let emailMatch = false;
+
+      const { data: order } = await supabase
         .from('orders')
         .select('id, customer_email')
         .eq('access_token', token)
         .single();
 
-      if (error || !order) {
-        return NextResponse.json(
-          { error: 'Invalid or expired link. Please check your email and try again.' },
-          { status: 401 }
-        );
+      if (order) {
+        emailMatch = order.customer_email.toLowerCase().trim() === normalizedEmail;
+      } else {
+        // The token may come from a review invitation email link
+        const { data: invite } = await supabase
+          .from('review_invites')
+          .select('customer_email')
+          .eq('token', token)
+          .single();
+
+        if (invite) {
+          emailMatch = invite.customer_email.toLowerCase().trim() === normalizedEmail;
+        }
       }
 
-      if (order.customer_email.toLowerCase().trim() !== normalizedEmail) {
+      if (!order && !emailMatch) {
+        // Token didn't match either table — also fall back to the
+        // no-token path so the customer can still verify by email alone
+        const { count } = await supabase
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .ilike('customer_email', normalizedEmail)
+          .neq('payment_status', 'pending');
+
+        if (!count || count === 0) {
+          return NextResponse.json(
+            { error: 'Invalid or expired link. Please check your email and try again.' },
+            { status: 401 }
+          );
+        }
+      } else if (!emailMatch) {
         return NextResponse.json(
           { error: 'Email does not match this order.' },
           { status: 401 }
