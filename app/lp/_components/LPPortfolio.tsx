@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 interface LPPortfolioProps {
-  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
 }
 
 const portfolioImages = {
@@ -28,6 +28,28 @@ const portfolioImages = {
       src: '/images/services/jumbo-screen-printing/jumbo-screen-printed-hoodies-for-spirit-wear-uniforms.webp',
       alt: 'Jumbo screen printed hoodies',
       label: 'Jumbo Print',
+    },
+  ],
+  'jumbo-screen-printing': [
+    {
+      src: '/images/services/jumbo-screen-printing/jumbo-screen-printed-hoodies-for-spirit-wear-uniforms.webp',
+      alt: 'Custom jumbo screen printed hoodies for spirit wear',
+      label: 'Oversized Hoodies',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/custom-jumbo-screen-printing-for-jpeg-mafia-american-apparel-1304-long-sleeve.webp',
+      alt: 'Jumbo screen printing on American Apparel long sleeve',
+      label: 'Jumbo Long Sleeves',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/los-angeles-apparel-1801gd-6.5oz-garment-dye-crew-neck-t-shirt-white-custom-jumbo-screen-print-back-view.webp',
+      alt: 'Oversized screen print on LA Apparel 1801GD tee',
+      label: 'Oversized Tees',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/shaka-wear-7.5oz-max-heavyweight-garment-dye-shadow-custom-jumbo-screen-print-front-view.webp',
+      alt: 'Jumbo screen print on Shaka Wear heavyweight tee',
+      label: 'Heavyweight Prints',
     },
   ],
   't-shirt-printing': [

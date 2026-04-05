@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, X } from 'lucide-react';
 
 interface LPFloatingCTAProps {
-  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
 }
 
 export function LPFloatingCTA({ service }: LPFloatingCTAProps) {

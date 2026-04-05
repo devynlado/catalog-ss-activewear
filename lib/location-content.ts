@@ -9,7 +9,7 @@ export interface LocationContent {
   localBenefit: string;
 }
 
-type ServiceType = 'screen-printing' | 'embroidery' | 't-shirt-printing';
+type ServiceType = 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
 
 interface LocationContentMap {
   [location: string]: {
@@ -37,6 +37,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Downtown LA, Hollywood, West LA, South LA, and surrounding areas',
       localBenefit: 'Local pickup available in LA',
     },
+    'jumbo-screen-printing': {
+      headline: 'Jumbo & Oversized Screen Printing in Los Angeles',
+      subhead: 'LA\'s factory-direct jumbo printer. Oversized prints up to 18" x 23" on tees, hoodies, and long sleeves.',
+      serviceAreaText: 'Serving Downtown LA, Hollywood, West LA, South LA, and surrounding areas',
+      localBenefit: 'Local pickup available in LA',
+    },
   },
   'Orange County': {
     'screen-printing': {
@@ -54,6 +60,12 @@ const locationContent: LocationContentMap = {
     't-shirt-printing': {
       headline: 'Custom T-Shirt Printing in Orange County',
       subhead: 'Factory-direct custom t-shirts near OC. Same week turnaround available.',
+      serviceAreaText: 'Serving Anaheim, Irvine, Santa Ana, Newport Beach, and all of Orange County',
+      localBenefit: 'Quick delivery to Orange County',
+    },
+    'jumbo-screen-printing': {
+      headline: 'Jumbo & Oversized Screen Printing in Orange County',
+      subhead: 'Custom oversized prints up to 18" x 23" near OC. Factory-direct pricing, same week rush available.',
       serviceAreaText: 'Serving Anaheim, Irvine, Santa Ana, Newport Beach, and all of Orange County',
       localBenefit: 'Quick delivery to Orange County',
     },
@@ -77,6 +89,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving San Diego, La Jolla, Chula Vista, Oceanside, and North County',
       localBenefit: 'Regular shipping to San Diego',
     },
+    'jumbo-screen-printing': {
+      headline: 'Jumbo & Oversized Screen Printing for San Diego',
+      subhead: 'Custom oversized prints up to 18" x 23". Factory-direct jumbo screen printing with fast turnaround.',
+      serviceAreaText: 'Serving San Diego, La Jolla, Chula Vista, Oceanside, and North County',
+      localBenefit: 'Regular shipping to San Diego',
+    },
   },
   'Riverside': {
     'screen-printing': {
@@ -94,6 +112,12 @@ const locationContent: LocationContentMap = {
     't-shirt-printing': {
       headline: 'Custom T-Shirt Printing in Riverside',
       subhead: 'Inland Empire\'s factory-direct t-shirt printer. Same week rush available.',
+      serviceAreaText: 'Serving Riverside, Corona, Moreno Valley, Temecula, and the Inland Empire',
+      localBenefit: 'Fast delivery to the Inland Empire',
+    },
+    'jumbo-screen-printing': {
+      headline: 'Jumbo & Oversized Screen Printing in Riverside',
+      subhead: 'Inland Empire\'s oversized print specialists. Jumbo prints up to 18" x 23", same week rush available.',
       serviceAreaText: 'Serving Riverside, Corona, Moreno Valley, Temecula, and the Inland Empire',
       localBenefit: 'Fast delivery to the Inland Empire',
     },
@@ -117,6 +141,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Ontario, Rancho Cucamonga, Fontana, and San Bernardino County',
       localBenefit: 'Fast delivery to San Bernardino area',
     },
+    'jumbo-screen-printing': {
+      headline: 'Jumbo & Oversized Screen Printing in San Bernardino',
+      subhead: 'Factory-direct oversized printing in the Inland Empire. Jumbo prints up to 18" x 23".',
+      serviceAreaText: 'Serving Ontario, Rancho Cucamonga, Fontana, and San Bernardino County',
+      localBenefit: 'Fast delivery to San Bernardino area',
+    },
   },
   'Southern California': {
     'screen-printing': {
@@ -137,6 +167,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
       localBenefit: 'Local to Southern California',
     },
+    'jumbo-screen-printing': {
+      headline: 'Jumbo & Oversized Screen Printing in Southern California',
+      subhead: 'Custom oversized prints up to 18" x 23". Factory-direct pricing, 50 piece minimum.',
+      serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
+      localBenefit: 'Local to Southern California',
+    },
   },
   'default': {
     'screen-printing': {
@@ -154,6 +190,12 @@ const locationContent: LocationContentMap = {
     't-shirt-printing': {
       headline: 'Custom T-Shirt Printing in Southern California',
       subhead: 'Factory-direct pricing on custom printed t-shirts. Same week turnaround available, 50 piece minimum.',
+      serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
+      localBenefit: 'Nationwide shipping available',
+    },
+    'jumbo-screen-printing': {
+      headline: 'Jumbo & Oversized Screen Printing in Southern California',
+      subhead: 'Custom oversized prints up to 18" x 23". Large-format screen printing with factory-direct pricing, 50 piece minimum.',
       serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
       localBenefit: 'Nationwide shipping available',
     },

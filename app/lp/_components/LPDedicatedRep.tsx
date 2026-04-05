@@ -6,7 +6,7 @@ import { User, MessageCircle, Clock, Phone, CheckCircle } from 'lucide-react';
 import { trackPhoneClick } from '@/lib/analytics';
 
 interface LPDedicatedRepProps {
-  service: 'screen-printing' | 'embroidery' | 't-shirt-printing';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
 }
 
 const benefits = [
