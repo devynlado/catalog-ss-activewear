@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 interface LPPortfolioProps {
-  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing' | 'puff-screen-printing';
 }
 
 const portfolioImages = {
@@ -72,6 +72,28 @@ const portfolioImages = {
       src: '/images/services/digital-screen-printing/as-colour-5080-heavy-tee-custom-digital-squeegee-front-view.webp',
       alt: 'Digital squeegee print on AS Colour heavy tee',
       label: 'Unlimited Colors',
+    },
+  ],
+  'puff-screen-printing': [
+    {
+      src: '/images/services/puff-printing/custom-3d-puff-screen-printed-la-apparel-1801gd-t-shirts-with-vibrant-orange-ink.webp',
+      alt: 'Custom 3D puff screen printed LA Apparel 1801GD t-shirts',
+      label: 'Puff Print Tees',
+    },
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-independent-trading-ss4500-hoodies.webp',
+      alt: 'Custom puff screen printed hoodies',
+      label: 'Puff Hoodies',
+    },
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-la-apparel-1801gd-elevate-streetwear-style.webp',
+      alt: 'Raised 3D puff printing for streetwear brands',
+      label: 'Streetwear Brand',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/shaka-wear-7.5oz-max-heavyweight-garment-dye-shadow-custom-jumbo-screen-print-front-view.webp',
+      alt: 'Custom puff printing on heavyweight garment dye tee',
+      label: 'Heavyweight Puff',
     },
   ],
   't-shirt-printing': [

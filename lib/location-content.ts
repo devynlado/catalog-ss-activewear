@@ -9,7 +9,7 @@ export interface LocationContent {
   localBenefit: string;
 }
 
-type ServiceType = 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing';
+type ServiceType = 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing' | 'puff-screen-printing';
 
 interface LocationContentMap {
   [location: string]: {
@@ -49,6 +49,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Downtown LA, Hollywood, West LA, South LA, and surrounding areas',
       localBenefit: 'Local pickup available in LA',
     },
+    'puff-screen-printing': {
+      headline: 'Puff Screen Printing in Los Angeles',
+      subhead: 'LA\'s factory-direct puff printer. Raised 3D texture, premium hand feel, 50 piece minimum.',
+      serviceAreaText: 'Serving Downtown LA, Hollywood, West LA, South LA, and surrounding areas',
+      localBenefit: 'Local pickup available in LA',
+    },
   },
   'Orange County': {
     'screen-printing': {
@@ -78,6 +84,12 @@ const locationContent: LocationContentMap = {
     'digital-screen-printing': {
       headline: 'Digital Screen Printing in Orange County',
       subhead: 'Full-color digital screen printing near OC. Unlimited colors, soft water-based feel, factory-direct pricing.',
+      serviceAreaText: 'Serving Anaheim, Irvine, Santa Ana, Newport Beach, and all of Orange County',
+      localBenefit: 'Quick delivery to Orange County',
+    },
+    'puff-screen-printing': {
+      headline: 'Puff Screen Printing in Orange County',
+      subhead: 'Custom 3D puff printing near OC. Raised texture, premium finish, factory-direct pricing.',
       serviceAreaText: 'Serving Anaheim, Irvine, Santa Ana, Newport Beach, and all of Orange County',
       localBenefit: 'Quick delivery to Orange County',
     },
@@ -113,6 +125,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving San Diego, La Jolla, Chula Vista, Oceanside, and North County',
       localBenefit: 'Regular shipping to San Diego',
     },
+    'puff-screen-printing': {
+      headline: 'Puff Screen Printing for San Diego',
+      subhead: 'Custom 3D puff printing for San Diego brands. Raised texture, premium finish, factory-direct pricing.',
+      serviceAreaText: 'Serving San Diego, La Jolla, Chula Vista, Oceanside, and North County',
+      localBenefit: 'Regular shipping to San Diego',
+    },
   },
   'Riverside': {
     'screen-printing': {
@@ -142,6 +160,12 @@ const locationContent: LocationContentMap = {
     'digital-screen-printing': {
       headline: 'Digital Screen Printing in Riverside',
       subhead: 'Inland Empire\'s full-color digital screen printer. Unlimited colors, soft hand feel, same week rush available.',
+      serviceAreaText: 'Serving Riverside, Corona, Moreno Valley, Temecula, and the Inland Empire',
+      localBenefit: 'Fast delivery to the Inland Empire',
+    },
+    'puff-screen-printing': {
+      headline: 'Puff Screen Printing in Riverside',
+      subhead: 'Inland Empire\'s puff screen printing specialists. Raised 3D texture, premium finish, same week rush available.',
       serviceAreaText: 'Serving Riverside, Corona, Moreno Valley, Temecula, and the Inland Empire',
       localBenefit: 'Fast delivery to the Inland Empire',
     },
@@ -177,6 +201,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Ontario, Rancho Cucamonga, Fontana, and San Bernardino County',
       localBenefit: 'Fast delivery to San Bernardino area',
     },
+    'puff-screen-printing': {
+      headline: 'Puff Screen Printing in San Bernardino',
+      subhead: 'Factory-direct 3D puff printing in the Inland Empire. Raised texture, premium finish, volume discounts.',
+      serviceAreaText: 'Serving Ontario, Rancho Cucamonga, Fontana, and San Bernardino County',
+      localBenefit: 'Fast delivery to San Bernardino area',
+    },
   },
   'Southern California': {
     'screen-printing': {
@@ -209,6 +239,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
       localBenefit: 'Local to Southern California',
     },
+    'puff-screen-printing': {
+      headline: 'Puff Screen Printing in Southern California',
+      subhead: 'Custom 3D puff printing with raised tactile texture. Factory-direct pricing, 50 piece minimum.',
+      serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
+      localBenefit: 'Local to Southern California',
+    },
   },
   'default': {
     'screen-printing': {
@@ -238,6 +274,12 @@ const locationContent: LocationContentMap = {
     'digital-screen-printing': {
       headline: 'Digital Screen Printing — Full Color, Bulk Speed',
       subhead: 'Hybrid screen + digital printing for unlimited colors and photo-realistic detail. Factory-direct pricing, 50 piece minimum.',
+      serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
+      localBenefit: 'Nationwide shipping available',
+    },
+    'puff-screen-printing': {
+      headline: 'Puff Screen Printing — Bold 3D Raised Prints',
+      subhead: 'Heat-activated puff ink for raised, tactile 3D texture. Factory-direct pricing, 50 piece minimum.',
       serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
       localBenefit: 'Nationwide shipping available',
     },
