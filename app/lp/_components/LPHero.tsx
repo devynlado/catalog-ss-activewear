@@ -8,7 +8,7 @@ import { useGeoLocation, mapToServiceArea } from '@/hooks/useGeoLocation';
 import { getLocationContent } from '@/lib/location-content';
 
 interface LPHeroProps {
-  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing';
   headline: string;
   subheadline: string;
   location?: string;

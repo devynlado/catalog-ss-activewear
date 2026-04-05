@@ -6,7 +6,7 @@ import { Building2, Cog, Package, Palette, Factory as FactoryIcon, Scissors } fr
 import { warehouseImages, factoryTourImages } from '@/lib/service-images';
 
 interface LPFactoryProps {
-  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing';
 }
 
 const screenPrintingCapabilities = [

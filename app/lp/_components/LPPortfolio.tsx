@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 interface LPPortfolioProps {
-  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing';
 }
 
 const portfolioImages = {
@@ -50,6 +50,28 @@ const portfolioImages = {
       src: '/images/services/jumbo-screen-printing/shaka-wear-7.5oz-max-heavyweight-garment-dye-shadow-custom-jumbo-screen-print-front-view.webp',
       alt: 'Jumbo screen print on Shaka Wear heavyweight tee',
       label: 'Heavyweight Prints',
+    },
+  ],
+  'digital-screen-printing': [
+    {
+      src: '/images/services/digital-screen-printing/digital-screen-printing-by-garment-decor-on-la-apparel-tee.webp',
+      alt: 'Full-color digital screen printing on LA Apparel tee',
+      label: 'Full Color Tees',
+    },
+    {
+      src: '/images/services/digital-screen-printing/comfort-colors-1717-garment-dyed-heavyweight-t-shirt-black-custom-digital-squeegee-front-view.webp',
+      alt: 'Digital squeegee print on Comfort Colors heavyweight tee',
+      label: 'Photo-Realistic Print',
+    },
+    {
+      src: '/images/services/digital-screen-printing/independent-trading-style-ind420xd-pullover-hoodie-black-custom-digitial-squeegee-back-view-1.webp',
+      alt: 'Digital screen printing on Independent Trading hoodie',
+      label: 'Digital Hoodies',
+    },
+    {
+      src: '/images/services/digital-screen-printing/as-colour-5080-heavy-tee-custom-digital-squeegee-front-view.webp',
+      alt: 'Digital squeegee print on AS Colour heavy tee',
+      label: 'Unlimited Colors',
     },
   ],
   't-shirt-printing': [

@@ -9,7 +9,7 @@ export interface LocationContent {
   localBenefit: string;
 }
 
-type ServiceType = 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing';
+type ServiceType = 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing';
 
 interface LocationContentMap {
   [location: string]: {
@@ -43,6 +43,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Downtown LA, Hollywood, West LA, South LA, and surrounding areas',
       localBenefit: 'Local pickup available in LA',
     },
+    'digital-screen-printing': {
+      headline: 'Digital Screen Printing in Los Angeles',
+      subhead: 'LA\'s hybrid digital screen printer. Unlimited colors, photo-realistic prints at bulk speed. 50 piece minimum.',
+      serviceAreaText: 'Serving Downtown LA, Hollywood, West LA, South LA, and surrounding areas',
+      localBenefit: 'Local pickup available in LA',
+    },
   },
   'Orange County': {
     'screen-printing': {
@@ -66,6 +72,12 @@ const locationContent: LocationContentMap = {
     'jumbo-screen-printing': {
       headline: 'Jumbo & Oversized Screen Printing in Orange County',
       subhead: 'Custom oversized prints up to 18" x 23" near OC. Factory-direct pricing, same week rush available.',
+      serviceAreaText: 'Serving Anaheim, Irvine, Santa Ana, Newport Beach, and all of Orange County',
+      localBenefit: 'Quick delivery to Orange County',
+    },
+    'digital-screen-printing': {
+      headline: 'Digital Screen Printing in Orange County',
+      subhead: 'Full-color digital screen printing near OC. Unlimited colors, soft water-based feel, factory-direct pricing.',
       serviceAreaText: 'Serving Anaheim, Irvine, Santa Ana, Newport Beach, and all of Orange County',
       localBenefit: 'Quick delivery to Orange County',
     },
@@ -95,6 +107,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving San Diego, La Jolla, Chula Vista, Oceanside, and North County',
       localBenefit: 'Regular shipping to San Diego',
     },
+    'digital-screen-printing': {
+      headline: 'Digital Screen Printing for San Diego',
+      subhead: 'Full-color hybrid screen printing for San Diego. Photo-realistic prints, 400 garments/hour, soft water-based feel.',
+      serviceAreaText: 'Serving San Diego, La Jolla, Chula Vista, Oceanside, and North County',
+      localBenefit: 'Regular shipping to San Diego',
+    },
   },
   'Riverside': {
     'screen-printing': {
@@ -118,6 +136,12 @@ const locationContent: LocationContentMap = {
     'jumbo-screen-printing': {
       headline: 'Jumbo & Oversized Screen Printing in Riverside',
       subhead: 'Inland Empire\'s oversized print specialists. Jumbo prints up to 18" x 23", same week rush available.',
+      serviceAreaText: 'Serving Riverside, Corona, Moreno Valley, Temecula, and the Inland Empire',
+      localBenefit: 'Fast delivery to the Inland Empire',
+    },
+    'digital-screen-printing': {
+      headline: 'Digital Screen Printing in Riverside',
+      subhead: 'Inland Empire\'s full-color digital screen printer. Unlimited colors, soft hand feel, same week rush available.',
       serviceAreaText: 'Serving Riverside, Corona, Moreno Valley, Temecula, and the Inland Empire',
       localBenefit: 'Fast delivery to the Inland Empire',
     },
@@ -147,6 +171,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Ontario, Rancho Cucamonga, Fontana, and San Bernardino County',
       localBenefit: 'Fast delivery to San Bernardino area',
     },
+    'digital-screen-printing': {
+      headline: 'Digital Screen Printing in San Bernardino',
+      subhead: 'Full-color digital screen printing in the Inland Empire. Factory-direct, unlimited colors, soft hand feel.',
+      serviceAreaText: 'Serving Ontario, Rancho Cucamonga, Fontana, and San Bernardino County',
+      localBenefit: 'Fast delivery to San Bernardino area',
+    },
   },
   'Southern California': {
     'screen-printing': {
@@ -173,6 +203,12 @@ const locationContent: LocationContentMap = {
       serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
       localBenefit: 'Local to Southern California',
     },
+    'digital-screen-printing': {
+      headline: 'Digital Screen Printing in Southern California',
+      subhead: 'Full-color hybrid screen printing with unlimited colors. Factory-direct pricing, 50 piece minimum.',
+      serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
+      localBenefit: 'Local to Southern California',
+    },
   },
   'default': {
     'screen-printing': {
@@ -196,6 +232,12 @@ const locationContent: LocationContentMap = {
     'jumbo-screen-printing': {
       headline: 'Jumbo & Oversized Screen Printing in Southern California',
       subhead: 'Custom oversized prints up to 18" x 23". Large-format screen printing with factory-direct pricing, 50 piece minimum.',
+      serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
+      localBenefit: 'Nationwide shipping available',
+    },
+    'digital-screen-printing': {
+      headline: 'Digital Screen Printing — Full Color, Bulk Speed',
+      subhead: 'Hybrid screen + digital printing for unlimited colors and photo-realistic detail. Factory-direct pricing, 50 piece minimum.',
       serviceAreaText: 'Serving Los Angeles, Orange County, Riverside, San Bernardino, and San Diego',
       localBenefit: 'Nationwide shipping available',
     },
