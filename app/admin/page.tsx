@@ -27,6 +27,13 @@ export default async function AdminDashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('status', 'new');
 
+  // Unread customer chat messages
+  const { count: unreadChatCount } = await supabase
+    .from('order_chat_messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('sender_type', 'customer')
+    .is('read_at', null);
+
   // Trade partners count
   const { count: tradePartners } = await supabase
     .from('profiles')
@@ -212,10 +219,15 @@ export default async function AdminDashboardPage() {
               </Link>
               <Link
                 href="/admin/chat"
-                className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                className="relative flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
               >
                 <MessageCircle className="h-5 w-5 text-brand-500" />
                 <span className="font-medium text-slate-700">Customer Chat</span>
+                {(unreadChatCount ?? 0) > 0 && (
+                  <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                    {unreadChatCount! > 99 ? '99+' : unreadChatCount}
+                  </span>
+                )}
               </Link>
               {isAdmin && (
                 <>
