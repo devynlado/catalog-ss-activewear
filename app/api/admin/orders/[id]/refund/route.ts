@@ -50,6 +50,7 @@ export async function POST(
   const body = await request.json().catch(() => ({}));
   const fullOrder = body.fullOrder === true;
   const lineIndices = Array.isArray(body.lineIndices) ? body.lineIndices as number[] : [];
+  const customAmount = typeof body.customAmount === 'number' ? body.customAmount : null;
   const reason = typeof body.reason === 'string' ? body.reason : undefined;
   const note = typeof body.note === 'string' ? body.note : undefined;
 
@@ -98,6 +99,14 @@ export async function POST(
 
   if (fullOrder) {
     refundAmount = Math.round(maxRefundable * 100) / 100;
+  } else if (customAmount !== null && customAmount > 0) {
+    refundAmount = Math.round(customAmount * 100) / 100;
+    if (refundAmount > maxRefundable) {
+      return NextResponse.json(
+        { error: `Amount exceeds refundable balance ($${maxRefundable.toFixed(2)})` },
+        { status: 400 }
+      );
+    }
   } else if (lineIndices.length > 0) {
     const items = (order.items as OrderItem[]) ?? [];
     refundAmount = 0;
@@ -124,7 +133,7 @@ export async function POST(
     }
   } else {
     return NextResponse.json(
-      { error: 'Provide fullOrder: true or lineIndices array' },
+      { error: 'Provide fullOrder: true, customAmount, or lineIndices array' },
       { status: 400 }
     );
   }

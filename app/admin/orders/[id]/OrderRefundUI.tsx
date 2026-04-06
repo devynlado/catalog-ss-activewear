@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { RotateCcw, Loader2 } from 'lucide-react';
+import { RotateCcw, Loader2, Truck } from 'lucide-react';
 
 type OrderItem = {
   type?: string;
@@ -20,6 +20,7 @@ type Props = {
   orderNumber: string;
   total: number;
   totalRefunded: number;
+  shippingCost: number;
   items: OrderItem[];
   paymentStatus: string;
   stripeChargeId: string | null;
@@ -36,13 +37,15 @@ export function OrderRefundUI({
   orderNumber,
   total,
   totalRefunded,
+  shippingCost,
   items,
   paymentStatus,
   stripeChargeId,
 }: Props) {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
-  const [refundMode, setRefundMode] = useState<'full' | 'partial' | null>(null);
+  const [refundMode, setRefundMode] = useState<'full' | 'partial' | 'custom' | null>(null);
+  const [customAmount, setCustomAmount] = useState('');
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,6 +64,14 @@ export function OrderRefundUI({
     selectedIndices.size > 0 &&
     partialAmount > 0 &&
     partialAmount <= maxRefundable;
+
+  const parsedCustom = parseFloat(customAmount);
+  const canRefundCustom =
+    stripeChargeId &&
+    paymentStatus !== 'refunded' &&
+    !isNaN(parsedCustom) &&
+    parsedCustom > 0 &&
+    parsedCustom <= maxRefundable;
 
   const toggleLine = (index: number) => {
     setSelectedIndices((prev) => {
@@ -83,6 +94,17 @@ export function OrderRefundUI({
     setError(null);
   };
 
+  const openCustomModal = () => {
+    setRefundMode('custom');
+    setModalOpen(true);
+    setError(null);
+  };
+
+  const prefillShipping = () => {
+    const amount = Math.min(shippingCost, maxRefundable);
+    setCustomAmount(amount.toFixed(2));
+  };
+
   const closeModal = () => {
     setModalOpen(false);
     setRefundMode(null);
@@ -102,6 +124,7 @@ export function OrderRefundUI({
         body: JSON.stringify({
           fullOrder: refundMode === 'full',
           lineIndices: refundMode === 'partial' ? Array.from(selectedIndices) : undefined,
+          customAmount: refundMode === 'custom' ? parsedCustom : undefined,
           reason: reason || undefined,
           note: note || undefined,
         }),
@@ -154,6 +177,59 @@ export function OrderRefundUI({
             Refund selected items
           </button>
         )}
+      </div>
+
+      {/* Shipping / Custom Amount Refund */}
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Shipping / Custom Refund
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          {shippingCost > 0 && (
+            <button
+              type="button"
+              onClick={() => { prefillShipping(); }}
+              disabled={maxRefundable <= 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Truck className="h-4 w-4" />
+              Refund shipping (${Math.min(shippingCost, maxRefundable).toFixed(2)})
+            </button>
+          )}
+          <div className="flex items-end gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">
+                Custom amount
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={maxRefundable}
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-32 rounded-lg border border-stone-200 bg-white py-2 pl-6 pr-2.5 text-sm text-slate-800 placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={openCustomModal}
+              disabled={!canRefundCustom}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-navy-700 px-4 py-2 text-sm font-medium text-white hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Refund
+            </button>
+          </div>
+          {maxRefundable > 0 && (
+            <span className="text-xs text-slate-400 self-end pb-2">
+              Max: ${maxRefundable.toFixed(2)}
+            </span>
+          )}
+        </div>
       </div>
 
       {items.length > 0 && (
@@ -222,9 +298,14 @@ export function OrderRefundUI({
                 $
                 {refundMode === 'full'
                   ? maxRefundable.toFixed(2)
-                  : partialAmount.toFixed(2)}
-              </strong>{' '}
-              for order <strong>{orderNumber}</strong>. The customer will receive an email
+                  : refundMode === 'custom'
+                    ? parsedCustom.toFixed(2)
+                    : partialAmount.toFixed(2)}
+              </strong>
+              {refundMode === 'custom' && parsedCustom === shippingCost && (
+                <span className="text-brand-600"> (shipping cost)</span>
+              )}
+              {' '}for order <strong>{orderNumber}</strong>. The customer will receive an email
               confirmation.
             </p>
             <div className="mt-4 space-y-2">
@@ -238,6 +319,7 @@ export function OrderRefundUI({
               >
                 <option value="">Select...</option>
                 <option value="customer_request">Customer request</option>
+                <option value="shipping_refund">Shipping cost refund</option>
                 <option value="defective">Defective / Wrong item</option>
                 <option value="duplicate">Duplicate order</option>
                 <option value="other">Other</option>

@@ -431,6 +431,7 @@ export default async function OrderDetailPage({
                 orderNumber={order.order_number}
                 total={Number(order.total)}
                 totalRefunded={totalRefunded}
+                shippingCost={Number(order.shipping_cost) || 0}
                 items={items}
                 paymentStatus={order.payment_status}
                 stripeChargeId={order.stripe_charge_id ?? null}
