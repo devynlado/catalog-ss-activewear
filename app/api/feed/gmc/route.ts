@@ -4,8 +4,7 @@ import {
   generateFeedRow, 
   generateCSV, 
   GMCFeedRow,
-  ProductVariant,
-  isValidGtin,
+  ProductVariant 
 } from '@/lib/gmc-feed';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { hasTieredPricing, getBaseTierPrice } from '@/lib/tiered-pricing';
@@ -131,7 +130,7 @@ function resolveCategory(
 async function fetchFromSupabase(): Promise<{
   rows: GMCFeedRow[];
   fromCache: boolean;
-  debug?: { colorRecords: number; colorProducts: number; totalProducts: number; skippedSkus: number; skippedNoImage?: number; gtinsCleaned?: number };
+  debug?: { colorRecords: number; colorProducts: number; totalProducts: number; skippedSkus: number };
 }> {
   const supabase = createServerSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
@@ -308,19 +307,11 @@ async function fetchFromSupabase(): Promise<{
   const feedRows: GMCFeedRow[] = [];
   let skippedProducts = 0;
   let skippedSkus = 0;
-  let skippedNoImage = 0;
-  let skippedNoSlugPage = 0;
-  let gtinsCleaned = 0;
   
   for (const product of allProducts) {
+    // Skip products without slugs (shouldn't happen after query filter, but be safe)
     if (!product.slug) {
       skippedProducts++;
-      continue;
-    }
-    
-    // Skip products whose slugs are clearly invalid (empty or placeholder)
-    if (product.slug.length < 3) {
-      skippedNoSlugPage++;
       continue;
     }
     
@@ -328,54 +319,18 @@ async function fetchFromSupabase(): Promise<{
     const category = resolveCategory(product, popularCategoryMap);
     const tier = (product.popular_tier || 'value') as ProductTier;
     
+    // Get color images for this product from the pre-built map
     const productColorMap = colorImageMap.get(product.style_id);
-
-    // Pre-compute a fallback image for this product: any front_image from any color
-    let productFallbackImage: string | null = product.primary_image_url || null;
-    if (!productFallbackImage && productColorMap) {
-      for (const [, imgs] of productColorMap) {
-        if (imgs.front) {
-          productFallbackImage = imgs.front.replace('www.ssactivewear.com', 'cdn.ssactivewear.com');
-          break;
-        }
-      }
-    }
     
     for (const sku of skus) {
+      // Skip SKUs without valid COGS or auto_min_price
+      // These would send invalid data to Google and hurt the "valid COGS / min price" share
       if (!sku.cogs || sku.cogs <= 0 || !sku.auto_min_price || sku.auto_min_price <= 0) {
         skippedSkus++;
         continue;
       }
-
-      // ── Image resolution (fallback chain) ──────────────────────────
-      // 1. Color-specific front image from product_colors
-      // 2. Product primary_image_url
-      // 3. Any front image from another color of the same product
-      // If none found, skip this SKU entirely — Google rejects items without images
-      const colorImages = productColorMap?.get(String(sku.color_code));
-      const normalizeCdnUrl = (url: string | null) => 
-        url ? url.replace('www.ssactivewear.com', 'cdn.ssactivewear.com') : null;
       
-      const colorFront = normalizeCdnUrl(colorImages?.front ?? null);
-      const resolvedImage = colorFront || productFallbackImage || '';
-      
-      if (!resolvedImage) {
-        skippedNoImage++;
-        continue;
-      }
-
-      // ── GTIN sanitization ──────────────────────────────────────────
-      // Strip non-numeric characters and validate; pass empty if invalid
-      let cleanGtin = '';
-      if (sku.gtin) {
-        const stripped = sku.gtin.replace(/\D/g, '');
-        if (isValidGtin(stripped)) {
-          cleanGtin = stripped;
-        } else {
-          gtinsCleaned++;
-        }
-      }
-      
+      // Extract style number from the first token of style_name (e.g., "G500 Heavy Cotton Tee" → "G500")
       const styleNumber = product.style_name.split(/\s+/)[0] || '';
 
       const variant: ProductVariant = {
@@ -388,22 +343,24 @@ async function fetchFromSupabase(): Promise<{
         colorCode: sku.color_code,
         sizeName: sku.size_name,
         customerPrice: sku.cogs,
-        gtin: cleanGtin,
+        gtin: sku.gtin || '',
         qty: sku.qty || 0,
         pieceWeight: sku.piece_weight || 0,
         material: product.material || '',
         colorSwatchImage: '',
         gender: product.gender || 'Unisex',
-        styleImage: resolvedImage,
+        styleImage: product.primary_image_url || '',
         slug: product.slug,
         descriptionOverride: product.description_raw || undefined,
       };
       
       const row = generateFeedRow(variant, category, tier, baseUrl);
       
+      // Override with cached values
       row.availability = sku.availability === 'in_stock' ? 'in_stock' : 'out_of_stock';
       row.quantity = sku.availability === 'in_stock' ? String(sku.qty || 999) : '0';
 
+      // For tiered-pricing products, use the tier-1 base price; no sale price
       const tierBasePrice = hasTieredPricing(product.style_id)
         ? getBaseTierPrice(product.style_id, sku.size_name)
         : null;
@@ -418,9 +375,12 @@ async function fetchFromSupabase(): Promise<{
       row.cost_of_goods_sold = `${sku.cogs.toFixed(2)} USD`;
       row.auto_pricing_min_price = `${sku.auto_min_price.toFixed(2)} USD`;
       
+      // Use google_category_id from DB if available (more specific than the map)
       if (product.google_category_id) {
         row.google_product_category = String(product.google_category_id);
       }
+      
+      // Use gender and age_group from DB if available
       if (product.gender) {
         row.gender = product.gender;
       }
@@ -428,17 +388,26 @@ async function fetchFromSupabase(): Promise<{
         row.age_group = product.age_group;
       }
       
-      // Set the resolved image (already computed above)
-      row.image_link = resolvedImage;
-
-      // Build additional_image_link from color images (back, side)
+      // Build additional_image_link from color images (front, back, side)
+      const colorImages = productColorMap?.get(String(sku.color_code));
       if (colorImages) {
+        const normalizeCdnUrl = (url: string | null) => 
+          url ? url.replace('www.ssactivewear.com', 'cdn.ssactivewear.com') : null;
+        
+        const front = normalizeCdnUrl(colorImages.front);
         const back = normalizeCdnUrl(colorImages.back);
         const side = normalizeCdnUrl(colorImages.side);
         
         const additionalImages: string[] = [];
-        if (back && back !== resolvedImage) additionalImages.push(back);
-        if (side && side !== resolvedImage) additionalImages.push(side);
+        if (back && back !== front) {
+          additionalImages.push(back);
+        }
+        if (side && side !== front) {
+          additionalImages.push(side);
+        }
+        if (front && front !== row.image_link) {
+          row.image_link = front;
+        }
         if (additionalImages.length > 0) {
           row.additional_image_link = additionalImages.join(',');
         }
@@ -451,31 +420,15 @@ async function fetchFromSupabase(): Promise<{
   if (skippedProducts > 0) {
     console.warn(`[GMC Feed] Skipped ${skippedProducts} products without slugs`);
   }
-  if (skippedNoSlugPage > 0) {
-    console.warn(`[GMC Feed] Skipped ${skippedNoSlugPage} products with invalid slugs`);
-  }
   if (skippedSkus > 0) {
     console.warn(`[GMC Feed] Skipped ${skippedSkus} SKUs without valid COGS/auto_min_price`);
-  }
-  if (skippedNoImage > 0) {
-    console.warn(`[GMC Feed] Skipped ${skippedNoImage} SKUs with no image (would fail GMC validation)`);
-  }
-  if (gtinsCleaned > 0) {
-    console.log(`[GMC Feed] Cleaned ${gtinsCleaned} invalid GTINs (set to identifier_exists=false)`);
   }
   console.log(`[GMC Feed] Generated ${feedRows.length} rows from ${allProducts.length} products (Supabase cache)`);
   
   return { 
     rows: feedRows, 
     fromCache: true,
-    debug: {
-      colorRecords: allColorData.length,
-      colorProducts: colorImageMap.size,
-      totalProducts: allProducts.length,
-      skippedSkus,
-      skippedNoImage,
-      gtinsCleaned,
-    },
+    debug: { colorRecords: allColorData.length, colorProducts: colorImageMap.size, totalProducts: allProducts.length, skippedSkus }
   };
 }
 
@@ -608,7 +561,7 @@ export async function GET(request: NextRequest) {
     // ========================================================================
     // TRY SUPABASE CACHE FIRST (fast: ~1-2 seconds vs 30-60 seconds)
     // ========================================================================
-    let debugInfo: { colorRecords: number; colorProducts: number; totalProducts?: number; skippedSkus?: number; skippedNoImage?: number; gtinsCleaned?: number } | undefined;
+    let debugInfo: { colorRecords: number; colorProducts: number; totalProducts?: number; skippedSkus?: number } | undefined;
     if (!forceRefresh) {
       try {
         const cached = await fetchFromSupabase();
