@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 interface LPPortfolioProps {
-  service: 'screen-printing' | 'embroidery';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing' | 'puff-screen-printing';
 }
 
 const portfolioImages = {
@@ -28,6 +28,94 @@ const portfolioImages = {
       src: '/images/services/jumbo-screen-printing/jumbo-screen-printed-hoodies-for-spirit-wear-uniforms.webp',
       alt: 'Jumbo screen printed hoodies',
       label: 'Jumbo Print',
+    },
+  ],
+  'jumbo-screen-printing': [
+    {
+      src: '/images/services/jumbo-screen-printing/jumbo-screen-printed-hoodies-for-spirit-wear-uniforms.webp',
+      alt: 'Custom jumbo screen printed hoodies for spirit wear',
+      label: 'Oversized Hoodies',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/custom-jumbo-screen-printing-for-jpeg-mafia-american-apparel-1304-long-sleeve.webp',
+      alt: 'Jumbo screen printing on American Apparel long sleeve',
+      label: 'Jumbo Long Sleeves',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/los-angeles-apparel-1801gd-6.5oz-garment-dye-crew-neck-t-shirt-white-custom-jumbo-screen-print-back-view.webp',
+      alt: 'Oversized screen print on LA Apparel 1801GD tee',
+      label: 'Oversized Tees',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/shaka-wear-7.5oz-max-heavyweight-garment-dye-shadow-custom-jumbo-screen-print-front-view.webp',
+      alt: 'Jumbo screen print on Shaka Wear heavyweight tee',
+      label: 'Heavyweight Prints',
+    },
+  ],
+  'digital-screen-printing': [
+    {
+      src: '/images/services/digital-screen-printing/digital-screen-printing-by-garment-decor-on-la-apparel-tee.webp',
+      alt: 'Full-color digital screen printing on LA Apparel tee',
+      label: 'Full Color Tees',
+    },
+    {
+      src: '/images/services/digital-screen-printing/comfort-colors-1717-garment-dyed-heavyweight-t-shirt-black-custom-digital-squeegee-front-view.webp',
+      alt: 'Digital squeegee print on Comfort Colors heavyweight tee',
+      label: 'Photo-Realistic Print',
+    },
+    {
+      src: '/images/services/digital-screen-printing/independent-trading-style-ind420xd-pullover-hoodie-black-custom-digitial-squeegee-back-view-1.webp',
+      alt: 'Digital screen printing on Independent Trading hoodie',
+      label: 'Digital Hoodies',
+    },
+    {
+      src: '/images/services/digital-screen-printing/as-colour-5080-heavy-tee-custom-digital-squeegee-front-view.webp',
+      alt: 'Digital squeegee print on AS Colour heavy tee',
+      label: 'Unlimited Colors',
+    },
+  ],
+  'puff-screen-printing': [
+    {
+      src: '/images/services/puff-printing/custom-3d-puff-screen-printed-la-apparel-1801gd-t-shirts-with-vibrant-orange-ink.webp',
+      alt: 'Custom 3D puff screen printed LA Apparel 1801GD t-shirts',
+      label: 'Puff Print Tees',
+    },
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-independent-trading-ss4500-hoodies.webp',
+      alt: 'Custom puff screen printed hoodies',
+      label: 'Puff Hoodies',
+    },
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-la-apparel-1801gd-elevate-streetwear-style.webp',
+      alt: 'Raised 3D puff printing for streetwear brands',
+      label: 'Streetwear Brand',
+    },
+    {
+      src: '/images/services/jumbo-screen-printing/shaka-wear-7.5oz-max-heavyweight-garment-dye-shadow-custom-jumbo-screen-print-front-view.webp',
+      alt: 'Custom puff printing on heavyweight garment dye tee',
+      label: 'Heavyweight Puff',
+    },
+  ],
+  't-shirt-printing': [
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-la-apparel-1801gd-elevate-streetwear-style.webp',
+      alt: 'Custom printed LA Apparel 1801GD streetwear t-shirts',
+      label: 'Streetwear Tees',
+    },
+    {
+      src: '/images/services/screen-printing/custom-screen-printing-for-alternative-apparel-aa1070-tees-stand-out.webp',
+      alt: 'Custom printed Alternative Apparel t-shirts',
+      label: 'Brand Merch',
+    },
+    {
+      src: '/images/services/puff-printing/custom-3d-puff-screen-printed-la-apparel-1801gd-t-shirts-with-vibrant-orange-ink.webp',
+      alt: '3D puff printed custom t-shirts',
+      label: 'Puff Print Tees',
+    },
+    {
+      src: '/images/services/screen-printing/custom-jumbo-screen-printed-los-angeles-apparel-style-1801gd-t-shirts.webp',
+      alt: 'Jumbo screen printed custom t-shirts',
+      label: 'Jumbo Print Tees',
     },
   ],
   'embroidery': [

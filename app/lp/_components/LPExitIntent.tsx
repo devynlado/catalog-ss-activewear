@@ -6,7 +6,7 @@ import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
 
 interface LPExitIntentProps {
-  service: 'screen-printing' | 'embroidery';
+  service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing' | 'puff-screen-printing';
 }
 
 // Helper function to check if business is currently open
@@ -118,7 +118,15 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
 
   if (!isVisible) return null;
 
-  const serviceLabel = service === 'screen-printing' ? 'screen printing' : 'embroidery';
+  const serviceLabels: Record<string, string> = {
+    'screen-printing': 'screen printing',
+    'embroidery': 'embroidery',
+    't-shirt-printing': 'custom t-shirt printing',
+    'jumbo-screen-printing': 'jumbo screen printing',
+    'digital-screen-printing': 'digital screen printing',
+    'puff-screen-printing': 'puff screen printing',
+  };
+  const serviceLabel = serviceLabels[service] || 'screen printing';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -153,9 +161,9 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
           <>
             {/* Header */}
             <div className={`px-6 py-8 text-center ${
-              service === 'screen-printing' 
-                ? 'bg-gradient-to-r from-brand-500 to-brand-600' 
-                : 'bg-gradient-to-r from-indigo-500 to-indigo-600'
+              service === 'embroidery' 
+                ? 'bg-gradient-to-r from-indigo-500 to-indigo-600' 
+                : 'bg-gradient-to-r from-brand-500 to-brand-600'
             }`}>
               <h2 className="text-2xl font-bold mb-2 text-white">
                 Wait — Get a Quick Quote First
@@ -215,9 +223,9 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
                       type="submit"
                       disabled={isSubmitting}
                       className={`w-full px-4 py-3 text-white font-semibold rounded-lg transition-colors ${
-                        service === 'screen-printing'
-                          ? 'bg-brand-500 hover:bg-brand-600'
-                          : 'bg-indigo-500 hover:bg-indigo-600'
+                        service === 'embroidery'
+                          ? 'bg-indigo-500 hover:bg-indigo-600'
+                          : 'bg-brand-500 hover:bg-brand-600'
                       } disabled:opacity-50`}
                     >
                       {isSubmitting ? (
