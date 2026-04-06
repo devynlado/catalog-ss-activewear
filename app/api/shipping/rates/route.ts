@@ -103,25 +103,17 @@ export async function POST(request: NextRequest) {
     const groupResults = await Promise.all(ratePromises);
 
     let standardTotal = 0;
-    let expressTotal = 0;
     let standardCarrier: string | null = null;
-    let expressCarrier: string | null = null;
     let isLive = true;
 
     const warehouseRates: WarehouseLiveRates[] = [];
 
     for (const gr of groupResults) {
       const std = gr.rates.find(r => r.method === 'standard');
-      const exp = gr.rates.find(r => r.method === 'express');
       if (std) {
         standardTotal += std.price;
         if (!standardCarrier && std.carrier) standardCarrier = std.carrier;
         if (!std.isLive) isLive = false;
-      }
-      if (exp) {
-        expressTotal += exp.price;
-        if (!expressCarrier && exp.carrier) expressCarrier = exp.carrier;
-        if (!exp.isLive) isLive = false;
       }
 
       warehouseRates.push({
@@ -132,7 +124,6 @@ export async function POST(request: NextRequest) {
     }
 
     standardTotal = Math.round(standardTotal * 100) / 100;
-    expressTotal = Math.round(expressTotal * 100) / 100;
 
     const rates: LiveShippingRate[] = [
       {
@@ -140,13 +131,6 @@ export async function POST(request: NextRequest) {
         price: standardTotal,
         estimatedDays: [3, 7],
         carrier: standardCarrier,
-        isLive,
-      },
-      {
-        method: 'express',
-        price: expressTotal,
-        estimatedDays: [1, 3],
-        carrier: expressCarrier,
         isLive,
       },
     ];

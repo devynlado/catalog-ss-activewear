@@ -62,6 +62,7 @@ export interface LiveRatesResponse {
 export const FREE_ECONOMY_THRESHOLD = 500;
 export const TAX_RATE = 0.0825;
 export const SHIPPING_MARKUP = 8;
+export const MIN_RATE_FLOOR = 10;
 
 export interface OriginAddress {
   zip: string;

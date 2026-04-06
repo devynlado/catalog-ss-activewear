@@ -1,13 +1,15 @@
 /**
  * ShipStation V2 API client for live shipping rate lookups.
  * Uses POST /v2/rates/estimate with api-key auth.
- * Maps carrier rates to Standard/Express tiers, applies an $8 markup,
- * and caches results in memory for 1 hour.
+ * UPS Ground rates only — picks the highest ground rate,
+ * enforces a $10 minimum floor, then applies an $8 markup.
+ * Caches results in memory for 1 hour.
  * Falls back to flat rates ($15/$25) on any failure.
  */
 
 import {
   SHIPPING_MARKUP,
+  MIN_RATE_FLOOR,
   FLAT_RATE_FALLBACK,
   type LiveShippingRate,
 } from './shipping';
@@ -142,36 +144,21 @@ const EXCLUDED_PACKAGE_TYPES = new Set([
 ]);
 
 // ── Service Classification ─────────────────────────────────────────────────
+// UPS Ground rates only — no USPS, FedEx, or air/expedited services.
 
-const EXPRESS_CODES = [
-  'usps_priority_mail_express', 'ups_2nd_day_air', 'ups_2nd_day_air_am',
-  'ups_next_day_air', 'ups_next_day_air_saver', 'ups_next_day_air_early_am',
-  'fedex_2day', 'fedex_2day_am', 'fedex_express_saver',
-  'fedex_standard_overnight', 'fedex_priority_overnight', 'fedex_first_overnight',
-];
-
-const STANDARD_CODES = [
-  'usps_ground_advantage', 'usps_parcel_select', 'usps_priority_mail',
-  'usps_retail_ground', 'usps_first_class_mail',
+const UPS_GROUND_CODES = [
   'ups_ground', 'ups_3_day_select', 'ups_ground_saver',
-  'fedex_ground', 'fedex_home_delivery',
 ];
 
-const SKIP_CODES = ['usps_media_mail'];
+function isUpsCarrier(rate: SSV2RateEstimateResponse): boolean {
+  const code = (rate.carrier_code || rate.carrier_friendly_name || '').toLowerCase();
+  return code.includes('ups') && !code.includes('usps');
+}
 
-function classifyService(serviceType: string, serviceCode: string): 'standard' | 'express' | null {
+function isGroundService(serviceCode: string): boolean {
   const code = serviceCode.toLowerCase();
-
-  if (SKIP_CODES.includes(code)) return null;
-
-  if (EXPRESS_CODES.includes(code)) return 'express';
-  if (STANDARD_CODES.includes(code)) return 'standard';
-
-  const combo = `${serviceType} ${serviceCode}`.toLowerCase();
-  if (combo.includes('express') || combo.includes('2nd_day') || combo.includes('next_day')) return 'express';
-  if (combo.includes('ground') || combo.includes('parcel') || combo.includes('priority_mail')) return 'standard';
-
-  return null;
+  if (UPS_GROUND_CODES.includes(code)) return true;
+  return code.includes('ground') || code.includes('ground_saver');
 }
 
 // ── Core Rate Fetch ────────────────────────────────────────────────────────
@@ -279,12 +266,13 @@ export async function getShipStationRates(
       return FLAT_RATE_FALLBACK;
     }
 
-    const standardRates: { cost: number; carrier: string; days: number | null }[] = [];
-    const expressRates: { cost: number; carrier: string; days: number | null }[] = [];
+    const groundRates: { cost: number; carrier: string; days: number | null; code: string }[] = [];
 
     for (const rate of estimates) {
       if (rate.error_messages?.length > 0) continue;
       if (rate.package_type && EXCLUDED_PACKAGE_TYPES.has(rate.package_type)) continue;
+      if (!isUpsCarrier(rate)) continue;
+      if (!isGroundService(rate.service_code)) continue;
 
       const totalCost =
         (rate.shipping_amount?.amount || 0) +
@@ -293,52 +281,40 @@ export async function getShipStationRates(
 
       if (totalCost <= 0) continue;
 
-      const tier = classifyService(rate.service_type, rate.service_code);
-      if (!tier) continue;
-
-      const carrierLabel = rate.carrier_friendly_name || rate.carrier_code || 'Carrier';
-      const entry = { cost: totalCost, carrier: carrierLabel, days: rate.delivery_days };
-
-      if (tier === 'standard') standardRates.push(entry);
-      else expressRates.push(entry);
-    }
-
-    const result: LiveShippingRate[] = [];
-
-    if (standardRates.length > 0) {
-      standardRates.sort((a, b) => a.cost - b.cost);
-      const cheapest = standardRates[0];
-      result.push({
-        method: 'standard',
-        price: Math.round((cheapest.cost + SHIPPING_MARKUP) * 100) / 100,
-        estimatedDays: cheapest.days ? [cheapest.days, cheapest.days + 2] : [3, 7],
-        carrier: cheapest.carrier,
-        isLive: true,
+      const carrierLabel = rate.carrier_friendly_name || rate.carrier_code || 'UPS';
+      groundRates.push({
+        cost: totalCost,
+        carrier: carrierLabel,
+        days: rate.delivery_days,
+        code: rate.service_code,
       });
     }
 
-    if (expressRates.length > 0) {
-      expressRates.sort((a, b) => a.cost - b.cost);
-      const cheapest = expressRates[0];
+    console.log(`[ShipStation V2] Found ${groundRates.length} UPS Ground rates:`,
+      groundRates.map(r => `${r.code} $${r.cost.toFixed(2)}`));
+
+    const result: LiveShippingRate[] = [];
+
+    if (groundRates.length > 0) {
+      groundRates.sort((a, b) => b.cost - a.cost);
+      const highest = groundRates[0];
+      const baseCost = Math.max(highest.cost, MIN_RATE_FLOOR);
       result.push({
-        method: 'express',
-        price: Math.round((cheapest.cost + SHIPPING_MARKUP) * 100) / 100,
-        estimatedDays: cheapest.days ? [cheapest.days, cheapest.days + 1] : [1, 3],
-        carrier: cheapest.carrier,
+        method: 'standard',
+        price: Math.round((baseCost + SHIPPING_MARKUP) * 100) / 100,
+        estimatedDays: highest.days ? [highest.days, highest.days + 2] : [3, 7],
+        carrier: highest.carrier,
         isLive: true,
       });
     }
 
     if (result.length === 0) {
-      console.warn('[ShipStation V2] Could not classify any rates into Standard/Express, using fallback');
+      console.warn('[ShipStation V2] No UPS Ground rates found, using fallback');
       return FLAT_RATE_FALLBACK;
     }
 
     if (!result.find(r => r.method === 'standard')) {
       result.push(FLAT_RATE_FALLBACK[0]);
-    }
-    if (!result.find(r => r.method === 'express')) {
-      result.push(FLAT_RATE_FALLBACK[1]);
     }
 
     setCachedRates(cacheKey, result);

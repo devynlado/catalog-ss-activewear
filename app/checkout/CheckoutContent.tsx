@@ -82,17 +82,19 @@ const initialShippingInfo: ShippingInfo = {
   zipCode: '',
 };
 
+const SHOW_EXPRESS_SHIPPING = false;
+
 const primaryShippingOptions = [
   {
     id: 'economy' as ShippingMethod,
-    name: 'Economy Shipping',
+    name: 'Standard Shipping',
     icon: Truck,
   },
-  {
+  ...(SHOW_EXPRESS_SHIPPING ? [{
     id: 'same_day' as ShippingMethod,
     name: 'Express Shipping',
     icon: Zap,
-  },
+  }] : []),
 ];
 
 const usStates = [
