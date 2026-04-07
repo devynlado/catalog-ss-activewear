@@ -34,7 +34,7 @@ export default async function AdminDashboardPage() {
   const { data: customerEmails } = await supabase
     .from('orders')
     .select('customer_email')
-    .neq('payment_status', 'pending');
+    .neq('payment_status', 'pending') as { data: { customer_email: string }[] | null };
   const totalCustomers = new Set((customerEmails || []).map(r => r.customer_email?.toLowerCase()).filter(Boolean)).size;
 
   return (
