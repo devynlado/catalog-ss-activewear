@@ -204,7 +204,7 @@ export default function JumboScreenPrintingLP() {
         </div>
       </section>
 
-      <LPPortfolio service="jumbo-screen-printing" />
+      <LPPortfolio service="jumbo-screen-printing" dynamic categorySlug="jumbo-screen-printing" />
 
       <LPTestimonials />
 

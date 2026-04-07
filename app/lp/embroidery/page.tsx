@@ -253,7 +253,7 @@ export default function EmbroideryLP() {
       </section>
 
       {/* Portfolio */}
-      <LPPortfolio service="embroidery" />
+      <LPPortfolio service="embroidery" dynamic categorySlug="embroidery" />
 
       {/* Testimonials */}
       <LPTestimonials />

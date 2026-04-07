@@ -203,8 +203,8 @@ export default function ScreenPrintingLP() {
         </div>
       </section>
 
-      {/* Portfolio */}
-      <LPPortfolio service="screen-printing" />
+      {/* Portfolio — dynamic from Sanity, lightbox only (no navigation) */}
+      <LPPortfolio service="screen-printing" dynamic categorySlug="screen-printing" />
 
       {/* Testimonials */}
       <LPTestimonials />

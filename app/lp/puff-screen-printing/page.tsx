@@ -330,7 +330,7 @@ export default function PuffScreenPrintingLP() {
         </div>
       </section>
 
-      <LPPortfolio service="puff-screen-printing" />
+      <LPPortfolio service="puff-screen-printing" dynamic categorySlug="puff-screen-printing" />
 
       <LPTestimonials />
 

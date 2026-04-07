@@ -12,50 +12,30 @@ export default async function AdminDashboardPage() {
   const { profile } = await getServerProfile();
   const isAdmin = profile?.role === 'admin';
 
-  // Get stats
-  const { count: totalCustomers } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .eq('role', 'customer');
+  // Get stats (run independent queries in parallel)
+  const [
+    { count: quotesCount },
+    { count: contactsCount },
+    { count: unreadChatCount },
+    { count: totalOrders },
+    { count: activeOrders },
+  ] = await Promise.all([
+    supabase.from('quotes').select('*', { count: 'exact', head: true }),
+    supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('is_spam', false),
+    supabase.from('order_chat_messages').select('*', { count: 'exact', head: true }).eq('sender_type', 'customer').is('read_at', null),
+    supabase.from('orders').select('*', { count: 'exact', head: true }),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['awaiting_purchasing', 'ordered', 'in_production']),
+  ]);
 
-  const { count: totalQuotes } = await supabase
-    .from('quotes')
-    .select('*', { count: 'exact', head: true });
+  // Total leads = quotes + contact form entries
+  const totalLeads = (quotesCount ?? 0) + (contactsCount ?? 0);
 
-  const { count: newQuotes } = await supabase
-    .from('quotes')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'new');
-
-  // Unread customer chat messages
-  const { count: unreadChatCount } = await supabase
-    .from('order_chat_messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('sender_type', 'customer')
-    .is('read_at', null);
-
-  // Trade partners count
-  const { count: tradePartners } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .eq('customer_type', 'distributor')
-    .eq('verification_status', 'approved');
-
-  // Pending verifications
-  const { count: pendingVerifications } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .eq('verification_status', 'pending');
-
-  // Order stats
-  const { count: totalOrders } = await supabase
+  // Count unique customers by email from orders (matches /admin/customers logic)
+  const { data: customerEmails } = await supabase
     .from('orders')
-    .select('*', { count: 'exact', head: true });
-
-  const { count: activeOrders } = await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
-    .in('status', ['awaiting_purchasing', 'ordered', 'in_production']);
+    .select('customer_email')
+    .neq('payment_status', 'pending');
+  const totalCustomers = new Set((customerEmails || []).map(r => r.customer_email?.toLowerCase()).filter(Boolean)).size;
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -118,7 +98,7 @@ export default async function AdminDashboardPage() {
           </Link>
 
           <Link
-            href="/admin/quotes"
+            href="/admin/contacts"
             className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-purple-300"
           >
             <div className="flex items-center gap-4">
@@ -126,23 +106,23 @@ export default async function AdminDashboardPage() {
                 <FileText className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-navy-800">{totalQuotes || 0}</p>
-                <p className="text-sm text-slate-600">Total Quotes</p>
+                <p className="text-2xl font-bold text-navy-800">{totalLeads}</p>
+                <p className="text-sm text-slate-600">Total Leads</p>
               </div>
             </div>
           </Link>
 
           <Link
-            href="/admin/verifications"
-            className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-green-300"
+            href="/admin/chat"
+            className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-red-300"
           >
             <div className="flex items-center gap-4">
-              <div className="rounded-full bg-green-100 p-3">
-                <ShieldCheck className="h-5 w-5 text-green-600" />
+              <div className="rounded-full bg-red-100 p-3">
+                <MessageCircle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-navy-800">{pendingVerifications}</p>
-                <p className="text-sm text-slate-600">Pending Verifications</p>
+                <p className="text-2xl font-bold text-navy-800">{unreadChatCount ?? 0}</p>
+                <p className="text-sm text-slate-600">Unread Chat</p>
               </div>
             </div>
           </Link>

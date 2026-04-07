@@ -47,12 +47,13 @@ interface CheckoutRequest {
   utm_medium?: string;
   utm_campaign?: string;
   gclid?: string;
+  referrer?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, liveShippingCost, utm_source, utm_medium, utm_campaign, gclid } = body;
+    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, liveShippingCost, utm_source, utm_medium, utm_campaign, gclid, referrer } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -237,6 +238,7 @@ export async function POST(request: NextRequest) {
           utm_medium: utm_medium || null,
           utm_campaign: utm_campaign || null,
           gclid: gclid || null,
+          referrer: referrer || null,
           metadata: {
             order_type: 'cart',
             po_number: poNumber || null,
@@ -405,6 +407,7 @@ export async function POST(request: NextRequest) {
         utm_medium: utm_medium || null,
         utm_campaign: utm_campaign || null,
         gclid: gclid || null,
+        referrer: referrer || null,
         metadata: {
           order_type: 'cart',
           po_number: poNumber || null,

@@ -52,6 +52,7 @@ interface Order {
   utm_medium?: string | null;
   utm_campaign?: string | null;
   gclid?: string | null;
+  referrer?: string | null;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info' }> = {
@@ -75,7 +76,16 @@ const paymentConfig: Record<string, { label: string; variant: 'default' | 'succe
 
 type SourceChannel = { label: string; color: string };
 
-function deriveChannel(order: Pick<Order, 'utm_source' | 'utm_medium' | 'gclid'>): SourceChannel | null {
+const SEARCH_ENGINES = ['google', 'bing', 'yahoo', 'duckduckgo', 'baidu', 'yandex'];
+const SOCIAL_NETWORKS = ['facebook', 'instagram', 'tiktok', 'twitter', 'linkedin', 'pinterest', 'youtube', 'reddit', 'x.com'];
+const AI_CHATBOTS = ['chatgpt', 'chat.openai', 'perplexity', 'gemini', 'copilot'];
+
+function domainFromUrl(url: string): string {
+  try { return new URL(url).hostname.replace('www.', '').toLowerCase(); }
+  catch { return url.toLowerCase(); }
+}
+
+function deriveChannel(order: Pick<Order, 'utm_source' | 'utm_medium' | 'gclid' | 'referrer'>): SourceChannel | null {
   const src = (order.utm_source || '').toLowerCase();
   const med = (order.utm_medium || '').toLowerCase();
 
@@ -83,7 +93,7 @@ function deriveChannel(order: Pick<Order, 'utm_source' | 'utm_medium' | 'gclid'>
     return { label: 'Google Ads', color: 'bg-blue-100 text-blue-700' };
   if (med === 'organic' || src === 'google' || src === 'bing' || src === 'yahoo')
     return { label: 'Organic Search', color: 'bg-green-100 text-green-700' };
-  if (med === 'social' || ['facebook', 'instagram', 'tiktok', 'twitter', 'linkedin'].includes(src))
+  if (med === 'social' || SOCIAL_NETWORKS.includes(src))
     return { label: 'Social', color: 'bg-purple-100 text-purple-700' };
   if (med === 'referral')
     return { label: 'Referral', color: 'bg-amber-100 text-amber-700' };
@@ -91,6 +101,18 @@ function deriveChannel(order: Pick<Order, 'utm_source' | 'utm_medium' | 'gclid'>
     return { label: 'Email', color: 'bg-sky-100 text-sky-700' };
   if (src || med)
     return { label: src || med, color: 'bg-stone-100 text-stone-600' };
+
+  // Fallback: classify using referrer domain when no UTM/gclid data
+  if (order.referrer) {
+    const domain = domainFromUrl(order.referrer);
+    if (AI_CHATBOTS.some(ai => domain.includes(ai)))
+      return { label: 'AI / ChatGPT', color: 'bg-teal-100 text-teal-700' };
+    if (SEARCH_ENGINES.some(se => domain.includes(se)))
+      return { label: 'Organic Search', color: 'bg-green-100 text-green-700' };
+    if (SOCIAL_NETWORKS.some(sn => domain.includes(sn)))
+      return { label: 'Social', color: 'bg-purple-100 text-purple-700' };
+    return { label: 'Referral', color: 'bg-amber-100 text-amber-700' };
+  }
 
   return null;
 }

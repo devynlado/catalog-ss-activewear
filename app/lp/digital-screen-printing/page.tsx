@@ -306,7 +306,7 @@ export default function DigitalScreenPrintingLP() {
         </div>
       </section>
 
-      <LPPortfolio service="digital-screen-printing" />
+      <LPPortfolio service="digital-screen-printing" dynamic categorySlug="digital-screen-printing" />
 
       <LPTestimonials />
 
