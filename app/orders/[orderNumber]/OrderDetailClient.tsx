@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { OrderStatusTimeline } from '@/components/orders/OrderStatusTimeline';
-import { OrderChatWidget } from '@/components/orders/OrderChatWidget';
 
 interface OrderItem {
   sku: string;
@@ -419,12 +418,6 @@ export function OrderDetailClient({ orderNumber }: { orderNumber: string }) {
         </div>
       )}
 
-      {/* Floating chat widget */}
-      <OrderChatWidget
-        orderNumber={orderNumber}
-        customerName={order.customerName}
-        customerEmail={order.customerEmail}
-      />
     </div>
   );
 }

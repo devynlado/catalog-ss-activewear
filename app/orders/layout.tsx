@@ -1,5 +1,6 @@
 import { getOrderSession } from '@/lib/order-session';
 import { OrderSidebar } from '@/components/orders/OrderSidebar';
+import { CustomerChatWidget } from '@/components/orders/CustomerChatWidget';
 
 export const metadata = {
   title: 'My Orders | Garment Decor',
@@ -43,6 +44,12 @@ export default async function OrdersLayout({
           </div>
         </div>
       </div>
+
+      {/* Customer chat — visible on all /orders pages */}
+      <CustomerChatWidget
+        customerEmail={session.email}
+        customerName={session.customer.name}
+      />
     </div>
   );
 }

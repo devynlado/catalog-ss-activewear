@@ -28,11 +28,17 @@ export function getAutoReplyMessage(): string {
   return "Thank you for your message! Our team is currently offline. We're available Monday–Friday, 8 AM – 6 PM Pacific Time. We'll get back to you as soon as possible during business hours.";
 }
 
-export async function sendAutoReply(orderId: string, customerEmail: string, customerName: string | null) {
+export async function sendAutoReply(
+  customerEmail: string,
+  customerName: string | null,
+  orderId?: string | null,
+) {
   const db = getServiceSupabase();
 
+  // Try with customer_email column first
   const { error } = await db.from('order_chat_messages').insert({
-    order_id: orderId,
+    order_id: orderId || null,
+    customer_email: customerEmail.toLowerCase(),
     sender_type: 'admin',
     sender_email: 'system@garmentdecor.com',
     sender_name: 'Garment Decor',
@@ -41,13 +47,39 @@ export async function sendAutoReply(orderId: string, customerEmail: string, cust
   });
 
   if (error) {
-    console.error('[Chat] Auto-reply insert error:', error.message);
+    // Fallback: insert without customer_email if column doesn't exist
+    let fallbackOrderId = orderId;
+    if (!fallbackOrderId) {
+      const { data: recentOrder } = await db
+        .from('orders')
+        .select('id')
+        .ilike('customer_email', customerEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      fallbackOrderId = recentOrder?.id || null;
+    }
+
+    if (fallbackOrderId) {
+      const { error: fbErr } = await db.from('order_chat_messages').insert({
+        order_id: fallbackOrderId,
+        sender_type: 'admin',
+        sender_email: 'system@garmentdecor.com',
+        sender_name: 'Garment Decor',
+        content: getAutoReplyMessage(),
+        is_auto_reply: true,
+      });
+      if (fbErr) console.error('[Chat] Auto-reply fallback error:', fbErr.message);
+    } else {
+      console.error('[Chat] Auto-reply skipped — no order_id available');
+    }
   }
 }
 
 export interface ChatMessage {
   id: string;
-  order_id: string;
+  order_id: string | null;
+  customer_email: string;
   sender_type: 'customer' | 'admin';
   sender_email: string;
   sender_name: string | null;
@@ -60,13 +92,13 @@ export interface ChatMessage {
 }
 
 export interface ConversationSummary {
-  order_id: string;
-  order_number: string;
-  customer_name: string | null;
   customer_email: string;
+  customer_name: string | null;
+  order_count: number;
   last_message: string;
   last_message_at: string;
   last_sender_type: 'customer' | 'admin';
   unread_count: number;
-  order_status: string;
+  latest_order_number: string | null;
+  latest_order_status: string | null;
 }

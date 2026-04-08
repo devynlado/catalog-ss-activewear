@@ -4,15 +4,23 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Send, MessageCircle, Loader2, Search, Filter,
-  ExternalLink, Clock, User,
+  ExternalLink, Clock, User, Package,
 } from 'lucide-react';
-import { useOrderChatRealtime } from '@/hooks/useOrderChatRealtime';
+import { useCustomerChatRealtime } from '@/hooks/useCustomerChatRealtime';
 import type { ChatMessage, ConversationSummary } from '@/lib/chat-helpers';
+
+interface CustomerOrder {
+  id: string;
+  order_number: string;
+  status: string;
+  created_at: string;
+}
 
 export function ChatDashboard() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -22,13 +30,14 @@ export function ChatDashboard() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleNewRealtimeMessage = useCallback((msg: ChatMessage) => {
-    setMessages(prev => {
-      if (prev.some(m => m.id === msg.id)) return prev;
-      return [...prev, msg];
-    });
-    // Update conversation list too
+    if (msg.customer_email?.toLowerCase() === selectedEmail?.toLowerCase()) {
+      setMessages(prev => {
+        if (prev.some(m => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    }
     setConversations(prev => prev.map(c => {
-      if (c.order_id === msg.order_id) {
+      if (c.customer_email.toLowerCase() === (msg.customer_email || '').toLowerCase()) {
         return {
           ...c,
           last_message: msg.content,
@@ -39,9 +48,9 @@ export function ChatDashboard() {
       }
       return c;
     }));
-  }, []);
+  }, [selectedEmail]);
 
-  useOrderChatRealtime({ orderId: selectedOrderId, onNewMessage: handleNewRealtimeMessage });
+  useCustomerChatRealtime({ customerEmail: selectedEmail, onNewMessage: handleNewRealtimeMessage });
 
   useEffect(() => {
     fetchConversations();
@@ -66,17 +75,19 @@ export function ChatDashboard() {
     }
   };
 
-  const selectConversation = async (orderId: string) => {
-    setSelectedOrderId(orderId);
+  const selectConversation = async (email: string) => {
+    setSelectedEmail(email);
     setIsLoadingMessages(true);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}/chat`);
+      const res = await fetch(`/api/admin/chat/${encodeURIComponent(email)}`);
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages || []);
-        // Mark as read in the list
+        setCustomerOrders(data.orders || []);
         setConversations(prev => prev.map(c =>
-          c.order_id === orderId ? { ...c, unread_count: 0 } : c
+          c.customer_email.toLowerCase() === email.toLowerCase()
+            ? { ...c, unread_count: 0 }
+            : c
         ));
       }
     } catch (err) {
@@ -87,13 +98,13 @@ export function ChatDashboard() {
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !selectedOrderId || isSending) return;
+    if (!newMessage.trim() || !selectedEmail || isSending) return;
     setIsSending(true);
     const content = newMessage.trim();
     setNewMessage('');
 
     try {
-      const res = await fetch(`/api/admin/orders/${selectedOrderId}/chat`, {
+      const res = await fetch(`/api/admin/chat/${encodeURIComponent(selectedEmail)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -104,9 +115,8 @@ export function ChatDashboard() {
           if (prev.some(m => m.id === data.message.id)) return prev;
           return [...prev, data.message];
         });
-        // Update the conversation summary
         setConversations(prev => prev.map(c =>
-          c.order_id === selectedOrderId
+          c.customer_email.toLowerCase() === selectedEmail.toLowerCase()
             ? { ...c, last_message: content, last_message_at: data.message.created_at, last_sender_type: 'admin' }
             : c
         ));
@@ -134,23 +144,23 @@ export function ChatDashboard() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const selectedConversation = conversations.find(c => c.order_id === selectedOrderId);
+  const selectedConversation = conversations.find(
+    c => c.customer_email.toLowerCase() === selectedEmail?.toLowerCase()
+  );
 
   const filteredConversations = conversations.filter(c => {
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
     return (
-      c.order_number.toLowerCase().includes(q) ||
       (c.customer_name || '').toLowerCase().includes(q) ||
-      c.customer_email.toLowerCase().includes(q)
+      c.customer_email.toLowerCase().includes(q) ||
+      (c.latest_order_number || '').toLowerCase().includes(q)
     );
   });
 
-  const statusColors: Record<string, string> = {
-    ordered: 'bg-blue-100 text-blue-700',
-    shipped: 'bg-green-100 text-green-700',
-    delivered: 'bg-emerald-100 text-emerald-700',
-    cancelled: 'bg-red-100 text-red-700',
+  const getOrderNumber = (orderId: string | null) => {
+    if (!orderId) return null;
+    return customerOrders.find(o => o.id === orderId)?.order_number || null;
   };
 
   return (
@@ -163,7 +173,7 @@ export function ChatDashboard() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search orders, customers..."
+              placeholder="Search customers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full rounded-lg border border-stone-200 bg-stone-50 pl-9 pr-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/20"
@@ -206,10 +216,12 @@ export function ChatDashboard() {
           ) : (
             filteredConversations.map((conv) => (
               <button
-                key={conv.order_id}
-                onClick={() => selectConversation(conv.order_id)}
+                key={conv.customer_email}
+                onClick={() => selectConversation(conv.customer_email)}
                 className={`w-full border-b border-stone-50 px-4 py-3 text-left transition-colors hover:bg-stone-50 ${
-                  selectedOrderId === conv.order_id ? 'bg-brand-50 border-l-2 border-l-brand-500' : ''
+                  selectedEmail?.toLowerCase() === conv.customer_email.toLowerCase()
+                    ? 'bg-brand-50 border-l-2 border-l-brand-500'
+                    : ''
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -224,7 +236,14 @@ export function ChatDashboard() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500">{conv.order_number}</p>
+                    <p className="text-xs text-slate-500">
+                      {conv.customer_email}
+                      {conv.order_count > 0 && (
+                        <span className="ml-1 text-slate-400">
+                          · {conv.order_count} order{conv.order_count !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </p>
                     <p className="mt-1 truncate text-xs text-slate-400">
                       {conv.last_sender_type === 'admin' ? 'You: ' : ''}
                       {conv.last_message}
@@ -234,9 +253,11 @@ export function ChatDashboard() {
                     <span className="whitespace-nowrap text-[10px] text-slate-400">
                       {formatTime(conv.last_message_at)}
                     </span>
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${statusColors[conv.order_status] || 'bg-stone-100 text-stone-600'}`}>
-                      {conv.order_status}
-                    </span>
+                    {conv.latest_order_number && (
+                      <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600">
+                        {conv.latest_order_number}
+                      </span>
+                    )}
                   </div>
                 </div>
               </button>
@@ -247,11 +268,11 @@ export function ChatDashboard() {
 
       {/* Chat area */}
       <div className="flex flex-1 flex-col">
-        {!selectedOrderId ? (
+        {!selectedEmail ? (
           <div className="flex flex-1 flex-col items-center justify-center text-center px-8">
             <MessageCircle className="h-12 w-12 text-stone-200" />
             <h3 className="mt-3 text-lg font-semibold text-slate-600">Select a conversation</h3>
-            <p className="mt-1 text-sm text-slate-400">Choose a conversation from the left to view messages</p>
+            <p className="mt-1 text-sm text-slate-400">Choose a customer from the left to view messages</p>
           </div>
         ) : (
           <>
@@ -265,15 +286,29 @@ export function ChatDashboard() {
                   <p className="text-sm font-semibold text-navy-800">
                     {selectedConversation?.customer_name || selectedConversation?.customer_email || 'Customer'}
                   </p>
-                  <p className="text-xs text-slate-500">{selectedConversation?.order_number}</p>
+                  <p className="text-xs text-slate-500">{selectedConversation?.customer_email}</p>
                 </div>
               </div>
-              <Link
-                href={`/admin/orders/${selectedOrderId}`}
-                className="flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-stone-50"
-              >
-                View Order <ExternalLink className="h-3 w-3" />
-              </Link>
+              {customerOrders.length > 0 && (
+                <div className="flex items-center gap-2">
+                  {customerOrders.slice(0, 3).map(o => (
+                    <Link
+                      key={o.id}
+                      href={`/admin/orders/${o.id}`}
+                      className="flex items-center gap-1 rounded-lg border border-stone-200 px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-stone-50"
+                      title={`View ${o.order_number}`}
+                    >
+                      <Package className="h-3 w-3" />
+                      {o.order_number}
+                    </Link>
+                  ))}
+                  {customerOrders.length > 3 && (
+                    <span className="text-[11px] text-slate-400">
+                      +{customerOrders.length - 3} more
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Messages */}
@@ -289,63 +324,72 @@ export function ChatDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[70%] ${msg.sender_type === 'customer' ? 'flex gap-2.5' : ''}`}>
-                        {msg.sender_type === 'customer' && (
-                          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-600">
-                            <User className="h-3.5 w-3.5" />
-                          </div>
-                        )}
-                        <div>
+                  {messages.map((msg) => {
+                    const orderRef = getOrderNumber(msg.order_id);
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[70%] ${msg.sender_type === 'customer' ? 'flex gap-2.5' : ''}`}>
                           {msg.sender_type === 'customer' && (
-                            <p className="mb-1 text-xs font-medium text-slate-500">
-                              {msg.sender_name || selectedConversation?.customer_name || 'Customer'}
-                            </p>
-                          )}
-                          {msg.sender_type === 'admin' && !msg.is_auto_reply && (
-                            <p className="mb-1 text-right text-xs font-medium text-slate-500">
-                              {msg.sender_name || 'You'}
-                            </p>
-                          )}
-                          {msg.attachment_url && (
-                            <div className="mb-1.5">
-                              <img
-                                src={msg.attachment_url}
-                                alt="Attachment"
-                                className="max-h-[200px] w-auto rounded-lg object-cover cursor-pointer border border-stone-200"
-                                onClick={() => window.open(msg.attachment_url!, '_blank')}
-                              />
+                            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-600">
+                              <User className="h-3.5 w-3.5" />
                             </div>
                           )}
-                          <div
-                            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                              msg.sender_type === 'admin'
-                                ? msg.is_auto_reply
-                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                  : 'bg-brand-600 text-white'
-                                : 'bg-stone-100 text-slate-800'
-                            }`}
-                          >
-                            {msg.content}
-                          </div>
-                          <div className={`mt-1 flex items-center gap-1 text-[10px] text-slate-400 ${msg.sender_type === 'admin' ? 'justify-end' : ''}`}>
-                            {msg.is_auto_reply && (
-                              <>
-                                <Clock className="h-2.5 w-2.5" />
-                                <span>Auto-reply</span>
-                                <span>•</span>
-                              </>
+                          <div>
+                            {msg.sender_type === 'customer' && (
+                              <p className="mb-1 text-xs font-medium text-slate-500">
+                                {msg.sender_name || selectedConversation?.customer_name || 'Customer'}
+                              </p>
                             )}
-                            <span>{formatTime(msg.created_at)}</span>
+                            {msg.sender_type === 'admin' && !msg.is_auto_reply && (
+                              <p className="mb-1 text-right text-xs font-medium text-slate-500">
+                                {msg.sender_name || 'You'}
+                              </p>
+                            )}
+                            {orderRef && (
+                              <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                                <Package className="h-2.5 w-2.5" />
+                                {orderRef}
+                              </span>
+                            )}
+                            {msg.attachment_url && (
+                              <div className="mb-1.5">
+                                <img
+                                  src={msg.attachment_url}
+                                  alt="Attachment"
+                                  className="max-h-[200px] w-auto rounded-lg object-cover cursor-pointer border border-stone-200"
+                                  onClick={() => window.open(msg.attachment_url!, '_blank')}
+                                />
+                              </div>
+                            )}
+                            <div
+                              className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                                msg.sender_type === 'admin'
+                                  ? msg.is_auto_reply
+                                    ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                    : 'bg-brand-600 text-white'
+                                  : 'bg-stone-100 text-slate-800'
+                              }`}
+                            >
+                              {msg.content}
+                            </div>
+                            <div className={`mt-1 flex items-center gap-1 text-[10px] text-slate-400 ${msg.sender_type === 'admin' ? 'justify-end' : ''}`}>
+                              {msg.is_auto_reply && (
+                                <>
+                                  <Clock className="h-2.5 w-2.5" />
+                                  <span>Auto-reply</span>
+                                  <span>·</span>
+                                </>
+                              )}
+                              <span>{formatTime(msg.created_at)}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div ref={messagesEndRef} />
                 </div>
               )}

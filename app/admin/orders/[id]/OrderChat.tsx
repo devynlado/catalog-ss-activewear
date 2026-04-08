@@ -97,7 +97,7 @@ export function OrderChat({ orderId, customerName, customerEmail }: OrderChatPro
       ' ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
-  const unreadCustomerMessages = messages.filter(m => m.sender_type === 'customer' && !m.read_at).length;
+  const unreadCustomerMessages = messages.filter(m => m.sender_type === 'customer' && m.read_at === null).length;
   const hasUnread = unreadCustomerMessages > 0;
 
   return (

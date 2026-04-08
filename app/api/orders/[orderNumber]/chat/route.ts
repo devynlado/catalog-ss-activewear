@@ -91,6 +91,7 @@ export async function POST(
     .from('order_chat_messages')
     .insert({
       order_id: order.id,
+      customer_email: session.email.toLowerCase(),
       sender_type: 'customer',
       sender_email: session.email,
       sender_name: session.customer.name || order.customer_name,
@@ -119,13 +120,13 @@ export async function POST(
     const { data: recentAutoReply } = await db
       .from('order_chat_messages')
       .select('id')
-      .eq('order_id', order.id)
+      .ilike('customer_email', session.email)
       .eq('is_auto_reply', true)
       .gte('created_at', fourHoursAgo)
       .limit(1);
 
     if (!recentAutoReply?.length) {
-      sendAutoReply(order.id, session.email, session.customer.name).catch(
+      sendAutoReply(session.email, session.customer.name, order.id).catch(
         err => console.error('[Chat] Auto-reply failed:', err)
       );
     }

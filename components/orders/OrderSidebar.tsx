@@ -70,14 +70,14 @@ export function OrderSidebar({ email, customer }: OrderSidebarProps) {
           )}
         </div>
 
-        {/* Contact button */}
-        <a
-          href="mailto:support@garmentdecor.com"
+        {/* Contact button — opens the chat widget */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('open-customer-chat'))}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-stone-100 hover:border-stone-300 transition-colors"
         >
           <MessageCircle className="h-3.5 w-3.5" />
           Contact Support
-        </a>
+        </button>
       </div>
 
       {/* Navigation */}

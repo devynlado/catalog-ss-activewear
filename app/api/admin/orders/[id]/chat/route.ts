@@ -86,6 +86,7 @@ export async function POST(
     .from('order_chat_messages')
     .insert({
       order_id: orderId,
+      customer_email: order.customer_email?.toLowerCase() || null,
       sender_type: 'admin',
       sender_email: profile.email || user.email || 'admin@garmentdecor.com',
       sender_name: profile.full_name || 'Garment Decor Team',
