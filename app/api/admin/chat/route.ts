@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
     const conversations: ConversationSummary[] = [];
 
     for (const [email, custOrders] of emailOrderMap.entries()) {
+      if (!custOrders) continue;
       const custOrderIds = custOrders.map(o => o.id);
 
       // Latest message across all this customer's orders
