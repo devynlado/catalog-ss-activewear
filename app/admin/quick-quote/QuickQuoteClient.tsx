@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Search, X, Plus, Zap, Loader2, Info, Award,
   ChevronDown, ChevronUp, RotateCcw, Check, Star, Phone, Download,
+  TrendingDown, Sparkles, CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/types';
@@ -16,6 +17,7 @@ import {
   DEFAULT_CUSTOMIZATIONS,
   STITCH_LABELS,
   LOCATION_LABELS,
+  HIGH_STITCH_RATE_PER_1K,
   type QuickQuoteCustomizations,
   type TierRow,
   type DecorationMode,
@@ -56,14 +58,6 @@ const ADDON_ITEMS = [
   { name: 'PMS Color Match', price: '+$30 one-time', description: 'Exact Pantone color matching for brand consistency.', popular: false },
 ];
 
-const SCREEN_PRINT_COLOR_TABLE = [
-  { colors: '1 color', price: '$2.45' },
-  { colors: '2 colors', price: '$2.95' },
-  { colors: '3 colors', price: '$3.35' },
-  { colors: '4 colors', price: '$3.75' },
-  { colors: '5+ colors', price: '$4.25+' },
-];
-
 function mapProductToQuote(product: Product): QuickQuoteProduct {
   return {
     styleId: product.styleId,
@@ -86,7 +80,8 @@ function isDefaultCustomizations(c: QuickQuoteCustomizations): boolean {
     c.embroideryStitchIndex === d.embroideryStitchIndex &&
     c.embroideryLocations === d.embroideryLocations &&
     c.isFleece === d.isFleece &&
-    c.isDarkGarment === d.isDarkGarment
+    c.isDarkGarment === d.isDarkGarment &&
+    !c.advancedMode
   );
 }
 
@@ -105,7 +100,11 @@ function buildOverrideSummary(c: QuickQuoteCustomizations): string {
     parts.push(c.screenPrintLocations.map(l => LOCATION_LABELS[l] || l).join(' + '));
   }
   if (c.embroideryStitchIndex !== d.embroideryStitchIndex) {
-    parts.push(STITCH_LABELS[c.embroideryStitchIndex]);
+    if (c.embroideryStitchIndex === 4 && c.embroideryCustomStitchCount) {
+      parts.push(`${(c.embroideryCustomStitchCount / 1000).toFixed(0)}K stitches`);
+    } else {
+      parts.push(STITCH_LABELS[c.embroideryStitchIndex]);
+    }
   }
   if (c.embroideryLocations !== d.embroideryLocations) {
     parts.push(`${c.embroideryLocations} emb. locations`);
@@ -134,6 +133,16 @@ export default function QuickQuoteClient() {
   const [isPdfCapturing, setIsPdfCapturing] = useState(false);
   const [markupPerPiece, setMarkupPerPiece] = useState(0);
   const [beautifyPrices, setBeautifyPrices] = useState(false);
+  const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
+
+  const toggleAddOn = (name: string) => {
+    setSelectedAddOns(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -210,6 +219,7 @@ export default function QuickQuoteClient() {
     setOverridesOpen(false);
     setMarkupPerPiece(0);
     setBeautifyPrices(false);
+    setSelectedAddOns(new Set());
     searchInputRef.current?.focus();
   };
 
@@ -310,19 +320,6 @@ export default function QuickQuoteClient() {
   }, []);
 
   // ---- Customization Handlers ----
-
-  const toggleLocation = (loc: string) => {
-    setCustomizations(prev => {
-      const has = prev.screenPrintLocations.includes(loc);
-      if (has && prev.screenPrintLocations.length <= 1) return prev;
-      return {
-        ...prev,
-        screenPrintLocations: has
-          ? prev.screenPrintLocations.filter(l => l !== loc)
-          : [...prev.screenPrintLocations, loc],
-      };
-    });
-  };
 
   // ============ RENDER ============
 
@@ -520,6 +517,27 @@ export default function QuickQuoteClient() {
                   {amt === 0 ? 'None' : `+$${amt}`}
                 </button>
               ))}
+              <div className="relative">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  step={0.25}
+                  value={![0, 1, 2, 3, 5].includes(markupPerPiece) ? markupPerPiece : ''}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    setMarkupPerPiece(isNaN(val) ? 0 : Math.max(0, Math.min(50, val)));
+                  }}
+                  placeholder="Custom"
+                  className={cn(
+                    'w-20 rounded-md border py-1.5 pl-5 pr-2 text-xs font-medium transition-colors focus:border-brand-300 focus:ring-1 focus:ring-brand-300 focus:outline-none',
+                    ![0, 1, 2, 3, 5].includes(markupPerPiece)
+                      ? 'border-navy-300 bg-navy-800 text-white placeholder:text-navy-300'
+                      : 'border-stone-200 bg-stone-50 text-slate-600 placeholder:text-slate-400'
+                  )}
+                />
+              </div>
             </div>
 
             <div className="h-5 w-px bg-stone-200" />
@@ -584,132 +602,269 @@ export default function QuickQuoteClient() {
             </button>
 
             {overridesOpen && (
-              <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Screen Print Colors */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-2">
-                    Screen Print Colors
-                  </label>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                      <button
-                        key={num}
-                        onClick={() => setCustomizations(prev => ({ ...prev, screenPrintColors: num }))}
-                        className={cn(
-                          'h-9 w-9 rounded-lg text-sm font-medium transition-colors',
-                          customizations.screenPrintColors === num
-                            ? 'bg-brand-500 text-white'
-                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
-                        )}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Screen Print Locations */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-2">
-                    Print Locations
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {PRINT_LOCATIONS.map(loc => (
-                      <button
-                        key={loc}
-                        onClick={() => toggleLocation(loc)}
-                        className={cn(
-                          'rounded-lg px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5',
-                          customizations.screenPrintLocations.includes(loc)
-                            ? 'bg-brand-500 text-white'
-                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
-                        )}
-                      >
-                        {customizations.screenPrintLocations.includes(loc) && (
-                          <Check className="h-3 w-3" />
-                        )}
-                        {LOCATION_LABELS[loc]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Embroidery Stitch Count */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-2">
-                    Embroidery Stitch Count
-                  </label>
-                  <div className="space-y-1.5">
-                    {STITCH_LABELS.map((label, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCustomizations(prev => ({ ...prev, embroideryStitchIndex: idx }))}
-                        className={cn(
-                          'w-full rounded-lg px-3 py-2 text-xs text-left font-medium transition-colors',
-                          customizations.embroideryStitchIndex === idx
-                            ? 'bg-brand-50 border border-brand-300 text-brand-700'
-                            : 'bg-stone-50 border border-transparent text-slate-700 hover:bg-stone-100'
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Embroidery Locations */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-2">
-                    Embroidery Locations
-                  </label>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4].map(num => (
-                      <button
-                        key={num}
-                        onClick={() => setCustomizations(prev => ({ ...prev, embroideryLocations: num }))}
-                        className={cn(
-                          'flex-1 rounded-lg py-2 text-sm font-medium transition-colors',
-                          customizations.embroideryLocations === num
-                            ? 'bg-brand-500 text-white'
-                            : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
-                        )}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Fleece + Dark Garment */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-2">
-                    Garment Options
-                  </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={customizations.isFleece}
-                        onChange={(e) => setCustomizations(prev => ({ ...prev, isFleece: e.target.checked }))}
-                        className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
-                      />
-                      <span className="text-sm text-slate-700">Fleece (+$1.00/pc)</span>
+              <div className="mt-4 grid gap-6 sm:grid-cols-2">
+                {/* ---- LEFT COLUMN: Screen Print ---- */}
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-2">
+                      Print Locations
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={customizations.isDarkGarment}
-                        onChange={(e) => setCustomizations(prev => ({ ...prev, isDarkGarment: e.target.checked }))}
-                        className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
-                      />
-                      <span className="text-sm text-slate-700">Dark garment (+1 color)</span>
-                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {PRINT_LOCATIONS.map(loc => (
+                        <button
+                          key={loc}
+                          onClick={() => {
+                            setCustomizations(prev => {
+                              const has = prev.screenPrintLocations.includes(loc);
+                              if (has && prev.screenPrintLocations.length <= 1) return prev;
+                              const nextLocs = has
+                                ? prev.screenPrintLocations.filter(l => l !== loc)
+                                : [...prev.screenPrintLocations, loc];
+
+                              if (nextLocs.length <= 1) {
+                                return { ...prev, screenPrintLocations: nextLocs, advancedMode: false, screenPrintColorsPerLocation: undefined };
+                              }
+
+                              const nextPerLoc = { ...prev.screenPrintColorsPerLocation };
+                              for (const l of nextLocs) {
+                                if (nextPerLoc[l] === undefined) nextPerLoc[l] = prev.screenPrintColors;
+                              }
+                              return { ...prev, screenPrintLocations: nextLocs, advancedMode: true, screenPrintColorsPerLocation: nextPerLoc };
+                            });
+                          }}
+                          className={cn(
+                            'rounded-lg px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1.5',
+                            customizations.screenPrintLocations.includes(loc)
+                              ? 'bg-brand-500 text-white'
+                              : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
+                          )}
+                        >
+                          {customizations.screenPrintLocations.includes(loc) && (
+                            <Check className="h-3 w-3" />
+                          )}
+                          {LOCATION_LABELS[loc]}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Per-location color pickers (or single picker) */}
+                  {customizations.screenPrintLocations.length === 1 ? (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-2">
+                        Screen Print Colors
+                      </label>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                          <button
+                            key={num}
+                            onClick={() => setCustomizations(prev => ({ ...prev, screenPrintColors: num }))}
+                            className={cn(
+                              'h-9 w-9 rounded-lg text-sm font-medium transition-colors',
+                              customizations.screenPrintColors === num
+                                ? 'bg-brand-500 text-white'
+                                : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
+                            )}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Colors per Location
+                      </label>
+                      {customizations.screenPrintLocations.map(loc => (
+                        <div key={loc}>
+                          <span className="text-[11px] font-medium text-slate-500 mb-1 block">{LOCATION_LABELS[loc] || loc}</span>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                              <button
+                                key={num}
+                                onClick={() => setCustomizations(prev => ({
+                                  ...prev,
+                                  advancedMode: true,
+                                  screenPrintColorsPerLocation: {
+                                    ...Object.fromEntries(prev.screenPrintLocations.map(l => [l, prev.screenPrintColorsPerLocation?.[l] ?? prev.screenPrintColors])),
+                                    [loc]: num,
+                                  },
+                                }))}
+                                className={cn(
+                                  'h-8 w-8 rounded-lg text-xs font-medium transition-colors',
+                                  (customizations.screenPrintColorsPerLocation?.[loc] ?? customizations.screenPrintColors) === num
+                                    ? 'bg-brand-500 text-white'
+                                    : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
+                                )}
+                              >
+                                {num}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Garment Options */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-2">
+                      Garment Options
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={customizations.isFleece}
+                          onChange={(e) => setCustomizations(prev => ({ ...prev, isFleece: e.target.checked }))}
+                          className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
+                        />
+                        <span className="text-sm text-slate-700">Fleece (+$1.00/pc)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={customizations.isDarkGarment}
+                          onChange={(e) => setCustomizations(prev => ({ ...prev, isDarkGarment: e.target.checked }))}
+                          className="rounded border-stone-300 text-brand-500 focus:ring-brand-500"
+                        />
+                        <span className="text-sm text-slate-700">Dark garment (+1 color)</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ---- RIGHT COLUMN: Embroidery ---- */}
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-2">
+                      Embroidery Locations
+                    </label>
+                    <div className="flex gap-1.5">
+                      {[1, 2, 3, 4].map(num => (
+                        <button
+                          key={num}
+                          onClick={() => setCustomizations(prev => ({ ...prev, embroideryLocations: num }))}
+                          className={cn(
+                            'flex-1 rounded-lg py-2 text-sm font-medium transition-colors',
+                            customizations.embroideryLocations === num
+                              ? 'bg-brand-500 text-white'
+                              : 'bg-stone-100 text-slate-700 hover:bg-stone-200'
+                          )}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Stitch count — single picker when 1 location, per-location when 2+ */}
+                  {customizations.embroideryLocations === 1 ? (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-2">
+                        Stitch Count
+                      </label>
+                      <div className="space-y-1.5">
+                        {STITCH_LABELS.slice(0, 4).map((label, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCustomizations(prev => ({
+                              ...prev,
+                              embroideryStitchIndex: idx,
+                              embroideryCustomStitchCount: undefined,
+                            }))}
+                            className={cn(
+                              'w-full rounded-lg px-3 py-2 text-xs text-left font-medium transition-colors',
+                              customizations.embroideryStitchIndex === idx
+                                ? 'bg-brand-50 border border-brand-300 text-brand-700'
+                                : 'bg-stone-50 border border-transparent text-slate-700 hover:bg-stone-100'
+                            )}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setCustomizations(prev => ({
+                            ...prev,
+                            embroideryStitchIndex: 4,
+                            embroideryCustomStitchCount: prev.embroideryCustomStitchCount || 15000,
+                          }))}
+                          className={cn(
+                            'w-full rounded-lg px-3 py-2 text-xs text-left font-medium transition-colors',
+                            customizations.embroideryStitchIndex === 4
+                              ? 'bg-brand-50 border border-brand-300 text-brand-700'
+                              : 'bg-stone-50 border border-transparent text-slate-700 hover:bg-stone-100'
+                          )}
+                        >
+                          Custom stitch count
+                        </button>
+                        {customizations.embroideryStitchIndex === 4 && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={10001}
+                              step={1000}
+                              value={customizations.embroideryCustomStitchCount || ''}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setCustomizations(prev => ({
+                                  ...prev,
+                                  embroideryCustomStitchCount: isNaN(val) ? undefined : val,
+                                }));
+                              }}
+                              placeholder="e.g. 40000"
+                              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-brand-300 focus:ring-1 focus:ring-brand-300 focus:outline-none"
+                            />
+                            <span className="shrink-0 text-[10px] text-slate-400">stitches</span>
+                          </div>
+                        )}
+                        {customizations.embroideryStitchIndex === 4 && customizations.embroideryCustomStitchCount && customizations.embroideryCustomStitchCount > 10000 && (
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            +${((Math.ceil((customizations.embroideryCustomStitchCount - 10000) / 1000)) * HIGH_STITCH_RATE_PER_1K).toFixed(2)}/pc above 10K base
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-2">
+                        Stitch Count per Location
+                      </label>
+                      <div className="space-y-2.5">
+                        {Array.from({ length: customizations.embroideryLocations }).map((_, locIdx) => (
+                          <div key={locIdx}>
+                            <span className="text-[11px] font-medium text-slate-500 mb-1 block">Location {locIdx + 1}</span>
+                            <div className="flex flex-wrap gap-1">
+                              {STITCH_LABELS.slice(0, 4).map((label, stitchIdx) => (
+                                <button
+                                  key={stitchIdx}
+                                  onClick={() => setCustomizations(prev => {
+                                    const arr = [...(prev.embroideryStitchPerLocation || Array.from({ length: prev.embroideryLocations }, () => prev.embroideryStitchIndex))];
+                                    arr[locIdx] = stitchIdx;
+                                    return { ...prev, advancedMode: true, embroideryStitchPerLocation: arr };
+                                  })}
+                                  className={cn(
+                                    'rounded-md px-2 py-1 text-[10px] font-medium transition-colors',
+                                    (customizations.embroideryStitchPerLocation?.[locIdx] ?? customizations.embroideryStitchIndex) === stitchIdx
+                                      ? 'bg-brand-50 border border-brand-300 text-brand-700'
+                                      : 'bg-stone-50 border border-transparent text-slate-600 hover:bg-stone-100'
+                                  )}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Reset Defaults */}
                 {!isDefault && (
-                  <div className="flex items-end">
+                  <div className="sm:col-span-2 flex justify-end">
                     <button
                       onClick={() => setCustomizations({
                         ...DEFAULT_CUSTOMIZATIONS,
@@ -772,12 +927,17 @@ export default function QuickQuoteClient() {
                     isCapturing={isPdfCapturing}
                     markupPerPiece={markupPerPiece}
                     beautifyPrices={beautifyPrices}
+                    selectedAddOns={selectedAddOns}
                   />
                 ))}
               </div>
 
               {/* Add-Ons Menu */}
-              <AddOnsMenu />
+              <AddOnsMenu
+                selectedAddOns={selectedAddOns}
+                onToggle={toggleAddOn}
+                isCapturing={isPdfCapturing}
+              />
 
               {/* Presentation Footer */}
               <PresentationFooter />
@@ -801,6 +961,7 @@ function ProductCard({
   isCapturing = false,
   markupPerPiece = 0,
   beautifyPrices = false,
+  selectedAddOns = new Set<string>(),
 }: {
   product: QuickQuoteProduct;
   onRemove: () => void;
@@ -811,6 +972,7 @@ function ProductCard({
   isCapturing?: boolean;
   markupPerPiece?: number;
   beautifyPrices?: boolean;
+  selectedAddOns?: Set<string>;
 }) {
   const [qtyInput, setQtyInput] = useState('');
   const mode = product.decorationMode;
@@ -959,10 +1121,7 @@ function ProductCard({
                 <th className="pb-3 pr-4 text-left font-semibold text-navy-800">Quantity</th>
                 <th className="pb-3 px-3 text-right font-semibold text-navy-800">Garment</th>
                 {showScreen && (
-                  <th className="pb-3 px-3 text-right font-semibold text-navy-800">
-                    <span>Screen Print</span>
-                    {!isCapturing && <ColorMicroTable />}
-                  </th>
+                  <th className="pb-3 px-3 text-right font-semibold text-navy-800">Screen Print</th>
                 )}
                 {showEmb && (
                   <th className="pb-3 px-3 text-right font-semibold text-navy-800">Embroidery</th>
@@ -1028,27 +1187,82 @@ function ProductCard({
         const spTotal = spPerPc * product.customQuantity + pricing.screenPrintSetupFee;
         const embTotal = embPerPc * product.customQuantity;
 
+        const baselineSpPerPc = applyMarkupAndRound(
+          customerSuppliesBlanks ? pricing.rows[0]?.screenPrintPerPiece ?? 0 : pricing.rows[0]?.allInScreen ?? 0, m, b
+        );
+        const baselineEmbPerPc = applyMarkupAndRound(
+          customerSuppliesBlanks ? pricing.rows[0]?.embroideryPerPiece ?? 0 : pricing.rows[0]?.allInEmbroidery ?? 0, m, b
+        );
+        const savingsPerPcScreen = baselineSpPerPc - spPerPc;
+        const savingsPerPcEmb = baselineEmbPerPc - embPerPc;
+        const primarySavings = mode === 'embroidery' ? savingsPerPcEmb : savingsPerPcScreen;
+
+        const activeAddOns = ADDON_ITEMS.filter(a => selectedAddOns.has(a.name));
+
         return (
-          <div className="mx-5 mb-5 rounded-lg bg-navy-800 px-5 py-4 text-white">
-            <p className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">
-              Estimated Total for {product.customQuantity.toLocaleString()} pieces
-            </p>
-            <div className="flex items-center gap-6">
-              {showScreen && (
-                <div>
-                  <p className="text-xs text-white/60">Screen Print</p>
-                  <p className="text-xl font-bold">
-                    ${spTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className="mx-5 mb-5 rounded-xl border border-brand-200 bg-gradient-to-br from-brand-50/80 via-white to-brand-50/40 px-6 py-5 shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-500 to-brand-400 rounded-l-xl" />
+
+            <div className="flex items-start justify-between gap-6">
+              {/* Left: Totals */}
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-xs font-semibold text-navy-800 uppercase tracking-wider">
+                    Estimate for {product.customQuantity.toLocaleString()} pieces
                   </p>
+                  {primarySavings > 0.005 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                      <TrendingDown className="h-3.5 w-3.5" />
+                      Saving ${primarySavings.toFixed(2)}/pc
+                    </span>
+                  )}
+                  {customRow.isBestValue && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                      <Award className="h-3 w-3" />
+                      Best Price Tier
+                    </span>
+                  )}
                 </div>
-              )}
-              {showScreen && showEmb && <div className="h-8 w-px bg-white/20" />}
-              {showEmb && (
-                <div>
-                  <p className="text-xs text-white/60">Embroidery</p>
-                  <p className="text-xl font-bold">
-                    ${embTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+
+                <div className="flex items-end gap-6">
+                  {showScreen && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">Screen Print</p>
+                      <p className="text-2xl font-bold text-navy-800">
+                        ${spTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">${spPerPc.toFixed(2)}/pc + ${pricing.screenPrintSetupFee} setup</p>
+                    </div>
+                  )}
+                  {showScreen && showEmb && <div className="h-10 w-px bg-stone-200" />}
+                  {showEmb && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">Embroidery</p>
+                      <p className="text-2xl font-bold text-navy-800">
+                        ${embTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">${embPerPc.toFixed(2)}/pc &middot; no setup fee</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Selected Add-Ons */}
+              {activeAddOns.length > 0 && (
+                <div className="shrink-0 text-right">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Optional Upgrades</p>
+                  <div className="flex flex-col gap-1.5 items-end">
+                    {activeAddOns.map(addon => (
+                      <span
+                        key={addon.name}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white border border-brand-200 px-2.5 py-1 text-xs font-medium text-navy-800 shadow-sm"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-500" />
+                        {addon.name}
+                        <span className="text-brand-600 font-semibold">{addon.price}</span>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1111,10 +1325,10 @@ function PricingRow({
     >
       <td className={cn(
         'py-3 pr-4',
-        row.isCustomQuantity && 'shadow-[inset_3px_0_0_0] shadow-brand-500',
+        row.isCustomQuantity && 'shadow-[inset_3px_0_0_0] shadow-brand-500 pl-3',
       )}>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-navy-800">{row.quantity.toLocaleString()}</span>
+        <div className="flex items-center gap-2 flex-nowrap">
+          <span className="font-semibold text-navy-800 shrink-0">{row.quantity.toLocaleString()}</span>
           {row.isBestValue && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 uppercase tracking-wider">
               <Award className="h-3 w-3" />
@@ -1177,35 +1391,6 @@ function PricingRow({
   );
 }
 
-// ============ Color Micro-Table ============
-
-function ColorMicroTable() {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="mt-1">
-      <button
-        onClick={() => setOpen(prev => !prev)}
-        className="text-[10px] text-brand-500 hover:text-brand-600 flex items-center gap-0.5"
-      >
-        {open ? 'Hide' : 'More colors?'}
-        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-      </button>
-      {open && (
-        <div className="mt-1.5 rounded-md bg-stone-50 p-2 text-[10px]">
-          <p className="text-slate-500 mb-1 font-medium">Per-location at 100 pcs:</p>
-          {SCREEN_PRINT_COLOR_TABLE.map(item => (
-            <div key={item.colors} className="flex justify-between py-0.5 text-slate-600">
-              <span>{item.colors}</span>
-              <span className="font-medium">{item.price}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ============ Presentation Header ============
 
 function PresentationHeader() {
@@ -1241,43 +1426,109 @@ function PresentationHeader() {
 
 // ============ Add-Ons Menu ============
 
-function AddOnsMenu() {
+function AddOnsMenu({
+  selectedAddOns,
+  onToggle,
+  isCapturing = false,
+}: {
+  selectedAddOns: Set<string>;
+  onToggle: (name: string) => void;
+  isCapturing?: boolean;
+}) {
+  const selected = ADDON_ITEMS.filter(a => selectedAddOns.has(a.name));
+  const available = ADDON_ITEMS.filter(a => !selectedAddOns.has(a.name));
+
   return (
     <div className="px-8 py-6 bg-stone-50/50">
-      <h3 className="text-sm font-semibold text-navy-800 mb-1">
-        Upgrade Your Order
-      </h3>
-      <p className="text-xs text-slate-500 mb-4">
-        Enhance your project with these popular add-ons.
-      </p>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {ADDON_ITEMS.map((addon) => (
-          <div
-            key={addon.name}
-            className="rounded-lg border border-stone-200 bg-white px-4 py-3 relative"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800">
-                  {addon.name}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                  {addon.description}
-                </p>
-              </div>
-              <span className="shrink-0 text-sm font-semibold text-brand-600 whitespace-nowrap">
-                {addon.price}
-              </span>
-            </div>
-            {addon.popular && (
-              <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 uppercase tracking-wider">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                Most Popular
-              </div>
-            )}
+      {/* Selected Upgrades */}
+      {selected.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-brand-500" />
+            <h3 className="text-sm font-semibold text-navy-800">
+              Your Upgrades
+            </h3>
           </div>
-        ))}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {selected.map((addon) => (
+              <button
+                key={addon.name}
+                onClick={() => !isCapturing && onToggle(addon.name)}
+                className={cn(
+                  'rounded-lg border-2 border-brand-300 bg-brand-50/50 px-4 py-3 text-left transition-colors relative',
+                  !isCapturing && 'hover:bg-brand-50 cursor-pointer'
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-brand-500 shrink-0" />
+                      <p className="text-sm font-medium text-navy-800">
+                        {addon.name}
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 ml-6 leading-relaxed">
+                      {addon.description}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-brand-600 whitespace-nowrap">
+                    {addon.price}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Available Upgrades */}
+      <div>
+        <h3 className="text-sm font-semibold text-navy-800 mb-1">
+          {selected.length > 0 ? 'More Upgrades Available' : 'Upgrade Your Order'}
+        </h3>
+        {selected.length === 0 && (
+          <p className="text-xs text-slate-500 mb-4">
+            Enhance your project with these popular add-ons.
+          </p>
+        )}
+        {selected.length > 0 && (
+          <p className="text-xs text-slate-500 mb-3">
+            {isCapturing ? 'Ask your rep about these additional options.' : 'Click to add to your quote.'}
+          </p>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {available.map((addon) => (
+            <button
+              key={addon.name}
+              onClick={() => !isCapturing && onToggle(addon.name)}
+              className={cn(
+                'rounded-lg border border-stone-200 bg-white px-4 py-3 text-left transition-all relative',
+                !isCapturing && 'hover:border-brand-300 hover:shadow-sm cursor-pointer'
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800">
+                    {addon.name}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    {addon.description}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-brand-600 whitespace-nowrap">
+                  {addon.price}
+                </span>
+              </div>
+              {addon.popular && (
+                <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 uppercase tracking-wider">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  Most Popular
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
