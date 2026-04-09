@@ -71,7 +71,7 @@ export function generateReviewInviteHtml(props: ReviewInviteProps): string {
     ${emailHeader(
       'We\u2019d Love to Hear Your Feedback',
       '',
-      { showLogo: true }
+      { showLogo: true, backgroundColor: EMAIL_COLORS.secondary }
     )}
     <tr>
       <td style="padding: 32px;">

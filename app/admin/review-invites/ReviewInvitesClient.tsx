@@ -16,6 +16,8 @@ import {
   AlertCircle,
   CheckCircle2,
   BarChart3,
+  Package,
+  MailPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,9 +26,9 @@ interface InviteItem {
   order_id: string;
   customer_email: string;
   customer_name: string | null;
-  token: string;
-  sent_at: string;
-  email_status: 'sent' | 'failed' | 'pending';
+  token: string | null;
+  sent_at: string | null;
+  email_status: 'sent' | 'failed' | 'pending' | 'not_sent';
   resend_message_id: string | null;
   error_message: string | null;
   last_resent_at: string | null;
@@ -41,14 +43,17 @@ interface InviteItem {
 }
 
 interface Stats {
-  total: number;
+  totalDelivered: number;
+  totalInvited: number;
+  notSent: number;
   sent: number;
   reviewed: number;
   failed: number;
 }
 
 const TABS = [
-  { key: 'all', label: 'All Invitations', Icon: Mail },
+  { key: 'all', label: 'All Delivered', Icon: Package },
+  { key: 'not_sent', label: 'Not Sent', Icon: MailPlus },
   { key: 'sent', label: 'Awaiting Review', Icon: Clock },
   { key: 'reviewed', label: 'Reviewed', Icon: Star },
   { key: 'failed', label: 'Failed', Icon: MailX },
@@ -90,7 +95,9 @@ function StarDisplay({ rating }: { rating: number }) {
 
 export function ReviewInvitesClient() {
   const [invites, setInvites] = useState<InviteItem[]>([]);
-  const [stats, setStats] = useState<Stats>({ total: 0, sent: 0, reviewed: 0, failed: 0 });
+  const [stats, setStats] = useState<Stats>({
+    totalDelivered: 0, totalInvited: 0, notSent: 0, sent: 0, reviewed: 0, failed: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [page, setPage] = useState(1);
@@ -104,10 +111,7 @@ export function ReviewInvitesClient() {
   const fetchInvites = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        tab: activeTab,
-        page: String(page),
-      });
+      const params = new URLSearchParams({ tab: activeTab, page: String(page) });
       if (search) params.set('search', search);
 
       const res = await fetch(`/api/admin/review-invites?${params}`);
@@ -133,6 +137,28 @@ export function ReviewInvitesClient() {
     }
   }, [toast]);
 
+  const handleSend = async (orderId: string) => {
+    setActionLoading(orderId);
+    try {
+      const res = await fetch('/api/admin/review-invites/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setToast({ type: 'success', message: data.message || 'Invitation sent!' });
+        fetchInvites();
+      } else {
+        setToast({ type: 'error', message: data.error || 'Failed to send' });
+      }
+    } catch {
+      setToast({ type: 'error', message: 'Network error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleResend = async (inviteId: string) => {
     setActionLoading(inviteId);
     try {
@@ -141,7 +167,7 @@ export function ReviewInvitesClient() {
       });
       const data = await res.json();
       if (res.ok) {
-        setToast({ type: 'success', message: data.message });
+        setToast({ type: 'success', message: data.message || 'Invitation resent!' });
         fetchInvites();
       } else {
         setToast({ type: 'error', message: data.error || 'Failed to resend' });
@@ -159,8 +185,8 @@ export function ReviewInvitesClient() {
     setPage(1);
   };
 
-  const reviewRate = stats.total > 0
-    ? Math.round((stats.reviewed / stats.total) * 100)
+  const reviewRate = stats.totalInvited > 0
+    ? Math.round((stats.reviewed / stats.totalInvited) * 100)
     : 0;
 
   return (
@@ -177,15 +203,39 @@ export function ReviewInvitesClient() {
       )}
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-indigo-50 p-2">
+              <Package className="h-4 w-4 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-navy-800">{stats.totalDelivered}</p>
+              <p className="text-xs text-slate-500">Delivered</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-slate-50 p-2">
+              <MailPlus className="h-4 w-4 text-slate-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-navy-800">{stats.notSent}</p>
+              <p className="text-xs text-slate-500">Not Sent</p>
+            </div>
+          </div>
+        </div>
+
         <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-blue-50 p-2">
               <Mail className="h-4 w-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-navy-800">{stats.total}</p>
-              <p className="text-xs text-slate-500">Total Sent</p>
+              <p className="text-2xl font-bold text-navy-800">{stats.totalInvited}</p>
+              <p className="text-xs text-slate-500">Invited</p>
             </div>
           </div>
         </div>
@@ -197,7 +247,7 @@ export function ReviewInvitesClient() {
             </div>
             <div>
               <p className="text-2xl font-bold text-navy-800">{stats.sent}</p>
-              <p className="text-xs text-slate-500">Awaiting Review</p>
+              <p className="text-xs text-slate-500">Awaiting</p>
             </div>
           </div>
         </div>
@@ -211,7 +261,7 @@ export function ReviewInvitesClient() {
               <p className="text-2xl font-bold text-navy-800">{stats.reviewed}</p>
               <p className="text-xs text-slate-500">
                 Reviewed
-                {stats.total > 0 && (
+                {stats.totalInvited > 0 && (
                   <span className="ml-1 text-green-600 font-semibold">({reviewRate}%)</span>
                 )}
               </p>
@@ -232,8 +282,8 @@ export function ReviewInvitesClient() {
         </div>
       </div>
 
-      {/* Conversion funnel mini-chart */}
-      {stats.total > 0 && (
+      {/* Conversion funnel */}
+      {stats.totalInvited > 0 && (
         <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 className="h-4 w-4 text-slate-400" />
@@ -246,7 +296,7 @@ export function ReviewInvitesClient() {
             />
           </div>
           <div className="flex justify-between mt-1.5">
-            <span className="text-xs text-slate-400">{stats.total} invitations</span>
+            <span className="text-xs text-slate-400">{stats.totalInvited} invitations sent</span>
             <span className="text-xs font-semibold text-green-600">{reviewRate}% conversion</span>
           </div>
         </div>
@@ -254,7 +304,7 @@ export function ReviewInvitesClient() {
 
       {/* Tabs + Search */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-lg bg-stone-100 p-1">
+        <div className="flex gap-1 rounded-lg bg-stone-100 p-1 overflow-x-auto">
           {TABS.map(({ key, label, Icon }) => (
             <button
               key={key}
@@ -268,7 +318,9 @@ export function ReviewInvitesClient() {
             >
               <Icon className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{label}</span>
-              <span className="sm:hidden">{key === 'all' ? 'All' : key === 'sent' ? 'Waiting' : key === 'reviewed' ? 'Done' : 'Failed'}</span>
+              <span className="sm:hidden">
+                {key === 'all' ? 'All' : key === 'not_sent' ? 'Unsent' : key === 'sent' ? 'Waiting' : key === 'reviewed' ? 'Done' : 'Failed'}
+              </span>
             </button>
           ))}
         </div>
@@ -293,7 +345,7 @@ export function ReviewInvitesClient() {
         </form>
       </div>
 
-      <p className="text-sm text-slate-500">{total} invitation{total !== 1 ? 's' : ''}</p>
+      <p className="text-sm text-slate-500">{total} {activeTab === 'not_sent' ? 'order' : 'item'}{total !== 1 ? 's' : ''}</p>
 
       {/* Table */}
       {loading ? (
@@ -305,7 +357,9 @@ export function ReviewInvitesClient() {
       ) : invites.length === 0 ? (
         <div className="text-center py-16 rounded-xl border border-stone-200 bg-white">
           <Mail className="h-10 w-10 text-stone-300 mx-auto mb-3" />
-          <p className="text-sm text-slate-500">No invitations found</p>
+          <p className="text-sm text-slate-500">
+            {activeTab === 'not_sent' ? 'All delivered orders have been invited' : 'No items found'}
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
@@ -350,12 +404,18 @@ export function ReviewInvitesClient() {
 
                   {/* Sent date */}
                   <td className="px-4 py-3">
-                    <p className="text-xs text-slate-500">{formatDateTime(inv.sent_at)}</p>
-                    {inv.last_resent_at && (
-                      <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                        <RefreshCw className="h-3 w-3" />
-                        Resent {formatDate(inv.last_resent_at)}
-                      </p>
+                    {inv.sent_at ? (
+                      <>
+                        <p className="text-xs text-slate-500">{formatDateTime(inv.sent_at)}</p>
+                        {inv.last_resent_at && (
+                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                            <RefreshCw className="h-3 w-3" />
+                            Resent {formatDate(inv.last_resent_at)}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
                     )}
                   </td>
 
@@ -380,11 +440,25 @@ export function ReviewInvitesClient() {
 
                   {/* Actions */}
                   <td className="px-4 py-3">
+                    {inv.email_status === 'not_sent' && !inv.review && (
+                      <button
+                        onClick={() => handleSend(inv.order_id)}
+                        disabled={actionLoading === inv.order_id}
+                        className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                      >
+                        {actionLoading === inv.order_id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Send className="h-3 w-3" />
+                        )}
+                        Send Invite
+                      </button>
+                    )}
                     {inv.email_status === 'failed' && !inv.review && (
                       <button
                         onClick={() => handleResend(inv.id)}
                         disabled={actionLoading === inv.id}
-                        className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
                       >
                         {actionLoading === inv.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -471,6 +545,15 @@ function EmailStatusBadge({ status, error }: { status: string; error: string | n
           </p>
         )}
       </div>
+    );
+  }
+
+  if (status === 'not_sent') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-stone-50 border border-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-500">
+        <Clock className="h-3 w-3" />
+        Not Sent
+      </span>
     );
   }
 

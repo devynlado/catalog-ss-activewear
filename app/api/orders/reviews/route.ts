@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
     status,
     couponCode: coupon?.code || null,
     message: status === 'approved'
-      ? 'Thank you! Your review is now live.'
+      ? 'Awesome! Your review is now live.'
       : 'Thank you! Your review is being processed and will appear soon.',
   });
 }
