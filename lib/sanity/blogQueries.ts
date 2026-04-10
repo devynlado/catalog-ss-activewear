@@ -1,10 +1,13 @@
 /**
  * GROQ queries for blog articles and categories.
- * Only published articles (publishedAt is set) are returned.
+ * Only articles that are live for the public: publishedAt set and not in the future
+ * (scheduled posts in Sanity set publishedAt ahead of time — exclude until then).
  */
 
+const publishedPublicPredicate = `defined(publishedAt) && publishedAt <= now()`;
+
 export const blogArticleListQuery = `
-  *[_type == "blogArticle" && defined(publishedAt)] | order(publishedAt desc) {
+  *[_type == "blogArticle" && ${publishedPublicPredicate}] | order(publishedAt desc) {
     _id,
     title,
     "slug": slug.current,
@@ -19,7 +22,7 @@ export const blogArticleListQuery = `
 `;
 
 export const blogArticleBySlugQuery = `
-  *[_type == "blogArticle" && slug.current == $slug && defined(publishedAt)][0] {
+  *[_type == "blogArticle" && slug.current == $slug && ${publishedPublicPredicate}][0] {
     _id,
     title,
     "slug": slug.current,
@@ -45,7 +48,7 @@ export const blogArticleBySlugQuery = `
 `;
 
 export const blogArticleSlugsQuery = `
-  *[_type == "blogArticle" && defined(publishedAt)] {
+  *[_type == "blogArticle" && ${publishedPublicPredicate}] {
     "slug": slug.current,
     "categorySlug": category->slug.current
   }
@@ -53,9 +56,9 @@ export const blogArticleSlugsQuery = `
 
 export const blogRelatedArticlesQuery = `
   *[_type == "blogArticle"
-    && defined(publishedAt)
+    && ${publishedPublicPredicate}
     && slug.current != $currentSlug
-    && category._ref == *[_type == "blogArticle" && slug.current == $currentSlug][0].category._ref
+    && category._ref == *[_type == "blogArticle" && slug.current == $currentSlug && ${publishedPublicPredicate}][0].category._ref
   ] | order(publishedAt desc) [0...3] {
     _id,
     title,
@@ -74,13 +77,13 @@ export const blogCategoriesQuery = `
     _id,
     title,
     "slug": slug.current,
-    "articleCount": count(*[_type == "blogArticle" && defined(publishedAt) && category._ref == ^._id])
+    "articleCount": count(*[_type == "blogArticle" && ${publishedPublicPredicate} && category._ref == ^._id])
   }
 `;
 
 export const blogArticlesByCategoryQuery = `
   *[_type == "blogArticle"
-    && defined(publishedAt)
+    && ${publishedPublicPredicate}
     && category->slug.current == $categorySlug
   ] | order(publishedAt desc) {
     _id,

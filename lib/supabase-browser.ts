@@ -8,7 +8,13 @@ import { Database } from './database.types';
 export function createSupabaseBrowserClient() {
   return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        // Skip Navigator LockManager (avoids 10s timeouts / orphaned locks from Strict Mode, multi-tab, HMR)
+        lock: async (_name, _acquireTimeout, fn) => fn(),
+      },
+    }
   );
 }
 
