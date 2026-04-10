@@ -13,10 +13,14 @@ export type DecorationMode = 'screen' | 'embroidery' | 'both';
 export interface QuickQuoteCustomizations {
   screenPrintColors: number;       // 1-8, default 2
   screenPrintLocations: string[];  // default ['front']
-  embroideryStitchIndex: number;   // 0-3, default 0 (Under 5K)
+  embroideryStitchIndex: number;   // 0-4, default 0 (Under 5K). 4 = custom
+  embroideryCustomStitchCount?: number;
   embroideryLocations: number;     // 1-4, default 1
   isFleece: boolean;
   isDarkGarment: boolean;
+  advancedMode: boolean;
+  screenPrintColorsPerLocation?: Record<string, number>;
+  embroideryStitchPerLocation?: number[];  // stitch index per location
 }
 
 export interface TierRow {
@@ -46,6 +50,7 @@ export const DEFAULT_CUSTOMIZATIONS: QuickQuoteCustomizations = {
   embroideryLocations: 1,
   isFleece: false,
   isDarkGarment: false,
+  advancedMode: false,
 };
 
 export const STANDARD_TIERS = [50, 100, 250, 500, 1000];
@@ -55,7 +60,10 @@ export const STITCH_LABELS = [
   '5K–7.5K stitches',
   '7.5K–10K stitches',
   'Over 10K stitches',
+  'Custom',
 ];
+
+export const HIGH_STITCH_RATE_PER_1K = 0.50;
 
 export const LOCATION_LABELS: Record<string, string> = {
   front: 'Front',
@@ -78,11 +86,38 @@ function getScreenPrintPerPiece(
   const tier = getScreenPrintTier(quantity);
   if (!tier) return 0;
 
-  const colorIndex = Math.min(getEffectiveColors(customizations), 8) - 1;
-  const perLocation = SCREEN_PRINT_PRICING[tier]?.[colorIndex] ?? 0;
   const fleeceSurcharge = customizations.isFleece ? 1.0 : 0;
 
+  if (customizations.advancedMode && customizations.screenPrintColorsPerLocation) {
+    let total = 0;
+    for (const loc of customizations.screenPrintLocations) {
+      const colors = customizations.screenPrintColorsPerLocation[loc] ?? customizations.screenPrintColors;
+      const effective = customizations.isDarkGarment ? colors + 1 : colors;
+      const colorIndex = Math.min(effective, 8) - 1;
+      const perLoc = SCREEN_PRINT_PRICING[tier]?.[colorIndex] ?? 0;
+      total += perLoc + fleeceSurcharge;
+    }
+    return total;
+  }
+
+  const colorIndex = Math.min(getEffectiveColors(customizations), 8) - 1;
+  const perLocation = SCREEN_PRINT_PRICING[tier]?.[colorIndex] ?? 0;
+
   return (perLocation + fleeceSurcharge) * customizations.screenPrintLocations.length;
+}
+
+function getEmbroideryPriceForStitchIndex(
+  tier: string,
+  stitchIndex: number,
+  customStitchCount?: number,
+): number {
+  if (stitchIndex === 4 && customStitchCount && customStitchCount > 10000) {
+    const base10k = EMBROIDERY_PRICING[tier]?.[3] ?? 0;
+    const extraThousands = Math.ceil((customStitchCount - 10000) / 1000);
+    return base10k + extraThousands * HIGH_STITCH_RATE_PER_1K;
+  }
+  const idx = Math.min(stitchIndex, 3);
+  return EMBROIDERY_PRICING[tier]?.[idx] ?? 0;
 }
 
 function getEmbroideryPerPiece(
@@ -92,9 +127,19 @@ function getEmbroideryPerPiece(
   const tier = getEmbroideryTier(quantity);
   if (!tier) return 0;
 
-  const perLocation =
-    EMBROIDERY_PRICING[tier]?.[customizations.embroideryStitchIndex] ?? 0;
+  if (customizations.advancedMode && customizations.embroideryStitchPerLocation) {
+    let total = 0;
+    const locCount = customizations.embroideryLocations;
+    for (let i = 0; i < locCount; i++) {
+      const stitchIdx = customizations.embroideryStitchPerLocation[i] ?? customizations.embroideryStitchIndex;
+      total += getEmbroideryPriceForStitchIndex(tier, stitchIdx, customizations.embroideryCustomStitchCount);
+    }
+    return total;
+  }
 
+  const perLocation = getEmbroideryPriceForStitchIndex(
+    tier, customizations.embroideryStitchIndex, customizations.embroideryCustomStitchCount
+  );
   return perLocation * customizations.embroideryLocations;
 }
 
@@ -112,15 +157,28 @@ export function calculateQuotePricing(
     quantities.sort((a, b) => a - b);
   }
 
-  const effectiveColors = getEffectiveColors(customizations);
   const locationCount = customizations.screenPrintLocations.length;
-  const screenPrintSetupFee =
-    SETUP_FEES.screenPrint * effectiveColors * locationCount;
+  let screenPrintSetupFee: number;
+  let screenPrintSetupBreakdown: string;
 
-  const colorLabel = `${effectiveColors} color${effectiveColors !== 1 ? 's' : ''}`;
-  const locLabel = `${locationCount} location${locationCount !== 1 ? 's' : ''}`;
-  const screenPrintSetupBreakdown =
-    `$${SETUP_FEES.screenPrint}/color × ${colorLabel} × ${locLabel} = $${screenPrintSetupFee} one-time`;
+  if (customizations.advancedMode && customizations.screenPrintColorsPerLocation) {
+    let totalColors = 0;
+    const parts: string[] = [];
+    for (const loc of customizations.screenPrintLocations) {
+      const colors = customizations.screenPrintColorsPerLocation[loc] ?? customizations.screenPrintColors;
+      const effective = customizations.isDarkGarment ? colors + 1 : colors;
+      totalColors += effective;
+      parts.push(`${LOCATION_LABELS[loc] || loc}: ${effective}c`);
+    }
+    screenPrintSetupFee = SETUP_FEES.screenPrint * totalColors;
+    screenPrintSetupBreakdown = `$${SETUP_FEES.screenPrint}/color × (${parts.join(' + ')}) = $${screenPrintSetupFee} one-time`;
+  } else {
+    const effectiveColors = getEffectiveColors(customizations);
+    screenPrintSetupFee = SETUP_FEES.screenPrint * effectiveColors * locationCount;
+    const colorLabel = `${effectiveColors} color${effectiveColors !== 1 ? 's' : ''}`;
+    const locLabel = `${locationCount} location${locationCount !== 1 ? 's' : ''}`;
+    screenPrintSetupBreakdown = `$${SETUP_FEES.screenPrint}/color × ${colorLabel} × ${locLabel} = $${screenPrintSetupFee} one-time`;
+  }
 
   const rows: TierRow[] = quantities.map((qty) => {
     const sp = getScreenPrintPerPiece(qty, customizations);
@@ -190,13 +248,26 @@ export function buildAssumptionsLabel(c: QuickQuoteCustomizations, mode: Decorat
   const parts: string[] = [];
 
   if (mode !== 'embroidery') {
-    const effectiveColors = getEffectiveColors(c);
-    const locationNames = c.screenPrintLocations.map((l) => LOCATION_LABELS[l] || l);
-    parts.push(`${effectiveColors}-color screen print (${locationNames.join(' + ')})`);
+    if (c.advancedMode && c.screenPrintColorsPerLocation) {
+      const locParts = c.screenPrintLocations.map(loc => {
+        const colors = c.screenPrintColorsPerLocation![loc] ?? c.screenPrintColors;
+        const effective = c.isDarkGarment ? colors + 1 : colors;
+        return `${LOCATION_LABELS[loc] || loc} ${effective}c`;
+      });
+      parts.push(`Screen print (${locParts.join(', ')})`);
+    } else {
+      const effectiveColors = getEffectiveColors(c);
+      const locationNames = c.screenPrintLocations.map((l) => LOCATION_LABELS[l] || l);
+      parts.push(`${effectiveColors}-color screen print (${locationNames.join(' + ')})`);
+    }
   }
 
   if (mode !== 'screen') {
-    parts.push(`${STITCH_LABELS[c.embroideryStitchIndex]} embroidery (${c.embroideryLocations} location${c.embroideryLocations !== 1 ? 's' : ''})`);
+    if (c.embroideryStitchIndex === 4 && c.embroideryCustomStitchCount) {
+      parts.push(`${(c.embroideryCustomStitchCount / 1000).toFixed(0)}K stitch embroidery (${c.embroideryLocations} loc${c.embroideryLocations !== 1 ? 's' : ''})`);
+    } else {
+      parts.push(`${STITCH_LABELS[c.embroideryStitchIndex]} embroidery (${c.embroideryLocations} location${c.embroideryLocations !== 1 ? 's' : ''})`);
+    }
   }
 
   if (c.isFleece) parts.push('fleece surcharge');
