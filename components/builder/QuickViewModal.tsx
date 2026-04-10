@@ -5,6 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingBag, ExternalLink, Check, Info, Loader2 } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
+import {
+  isLa1801gdSamplePriceProduct,
+  LA_1801GD_SAMPLE_PRICE_USD,
+} from '@/lib/la-1801gd-sample-price';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useCartStore } from '@/lib/cart-store';
 import { trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
@@ -95,7 +99,10 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
     }
   };
   const imageUrl = getActiveImageUrl();
-  const displayPrice = product.salePrice || product.price;
+  const isLa1801gdSample = isLa1801gdSamplePriceProduct(product);
+  const displayPrice = isLa1801gdSample
+    ? LA_1801GD_SAMPLE_PRICE_USD
+    : product.salePrice || product.price;
 
   // Calculate total pieces across all colors and sizes
   const totalPieces = useMemo(() => {
@@ -121,7 +128,9 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
       Object.entries(sizeQtys).forEach(([sizeName, qty]) => {
         if (qty > 0) {
           const size = color.sizes.find((s) => s.name === sizeName);
-          const unitPrice = size?.salePrice || size?.price || 0;
+          const unitPrice = isLa1801gdSample
+            ? LA_1801GD_SAMPLE_PRICE_USD
+            : size?.salePrice || size?.price || 0;
           colorPieces += qty;
           colorTotal += unitPrice * qty;
         }
@@ -139,7 +148,7 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
     });
 
     return { colorSubtotals: subtotals, grandTotal: grand };
-  }, [selectedColors, colorQuantities]);
+  }, [selectedColors, colorQuantities, isLa1801gdSample]);
 
   // Handle color swatch click - toggle selection
   const handleColorClick = (color: ProductColor | null) => {
@@ -195,7 +204,9 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
 
         const sizeInfo = color.sizes.find((s) => s.name === sizeName);
         const sku = `${product.styleId}-${colorCode}-${sizeName}`;
-        const unitPrice = sizeInfo?.price || displayPrice;
+        const unitPrice = isLa1801gdSample
+          ? LA_1801GD_SAMPLE_PRICE_USD
+          : sizeInfo?.salePrice || sizeInfo?.price || displayPrice;
 
         addItem({
           sku,
@@ -208,6 +219,7 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
           sizeName,
           quantity,
           unitPrice,
+          overrideUnitPrice: isLa1801gdSample ? LA_1801GD_SAMPLE_PRICE_USD : undefined,
           imageUrl: color.frontImage || product.imageUrl,
         });
 
@@ -486,6 +498,11 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
                     onQuantitiesChange={(qtys) => handleQuantitiesChange(color.colorCode, qtys)}
                     onRemove={() => handleRemoveColor(color.colorCode)}
                     showRemoveButton={selectedColors.length > 1}
+                    styleId={product.styleId}
+                    totalStylePieces={totalPieces}
+                    sampleUnitPrice={
+                      isLa1801gdSample ? LA_1801GD_SAMPLE_PRICE_USD : undefined
+                    }
                   />
                 ))}
               </div>

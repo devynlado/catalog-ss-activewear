@@ -28,6 +28,8 @@ interface SizeDistributionRowProps {
   discountPercent?: number;
   styleId?: number;
   totalStylePieces?: number;
+  /** Flat sample price: disables tiers, strikes, and tier labels for this row */
+  sampleUnitPrice?: number;
 }
 
 // Stock level thresholds
@@ -57,6 +59,7 @@ export function SizeDistributionRow({
   discountPercent = 0,
   styleId,
   totalStylePieces = 0,
+  sampleUnitPrice,
 }: SizeDistributionRowProps) {
   const handleQuantityChange = (sizeName: string, value: string) => {
     const numValue = parseInt(value, 10);
@@ -73,12 +76,17 @@ export function SizeDistributionRow({
 
   const totalQty = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
 
-  const isTiered = styleId != null && hasTieredPricing(styleId);
-  const tierSavings = isTiered && styleId != null
-    ? getCurrentTierSavings(styleId, totalStylePieces)
-    : null;
+  const useSampleFlat =
+    sampleUnitPrice != null && sampleUnitPrice > 0;
+  const isTiered =
+    !useSampleFlat && styleId != null && hasTieredPricing(styleId);
+  const tierSavings =
+    isTiered && styleId != null
+      ? getCurrentTierSavings(styleId, totalStylePieces)
+      : null;
 
   const getBasePrice = (size: { name: string; price: number; salePrice: number | null }) => {
+    if (useSampleFlat) return sampleUnitPrice!;
     if (isTiered && styleId != null) {
       const qty = Math.max(totalStylePieces, 1);
       return getTieredPrice(styleId, size.name, qty, size.salePrice || size.price);
@@ -87,6 +95,7 @@ export function SizeDistributionRow({
   };
 
   const getEffectivePrice = (size: { name: string; price: number; salePrice: number | null }) => {
+    if (useSampleFlat) return sampleUnitPrice!;
     const base = getBasePrice(size);
     if (discountPercent > 0) {
       return Math.round(base * (1 - discountPercent) * 100) / 100;
@@ -98,7 +107,7 @@ export function SizeDistributionRow({
     return getBasePrice(size);
   };
 
-  const hasDiscount = discountPercent > 0;
+  const hasDiscount = !useSampleFlat && discountPercent > 0;
 
   // Calculate subtotal for this color (uses discounted prices when active)
   const subtotal = Object.entries(quantities).reduce((sum, [sizeName, qty]) => {

@@ -1274,6 +1274,8 @@ export interface CartItem {
   sizeName: string;
   quantity: number;
   unitPrice: number;
+  /** When set, cart/checkout use this unit price (bypasses volume tiers) */
+  overrideUnitPrice?: number;
   discountedPrice?: number;  // Google automated discount price
   discountSource?: 'google';  // Track discount origin
   imageUrl?: string;

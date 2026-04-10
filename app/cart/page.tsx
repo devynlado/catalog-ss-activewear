@@ -64,6 +64,7 @@ interface GroupedItem {
   basePrice: number;
   hasDiscount: boolean;
   hasVolumePrice: boolean;
+  hasFlatOverride: boolean;
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
@@ -98,7 +99,10 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         totalPrice: 0,
         basePrice: effectivePrice,
         hasDiscount: !!(item.discountedPrice && item.discountedPrice < item.unitPrice),
-        hasVolumePrice: isVolumePriced(item.styleId, item.sizeName, totalStyleQty),
+        hasVolumePrice:
+          !item.overrideUnitPrice &&
+          isVolumePriced(item.styleId, item.sizeName, totalStyleQty),
+        hasFlatOverride: !!(item.overrideUnitPrice && item.overrideUnitPrice > 0),
       });
     }
 
@@ -116,6 +120,11 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
       discountedPrice: item.discountedPrice,
       originalSize: item.sizeName,
     });
+
+    if (item.overrideUnitPrice && item.overrideUnitPrice > 0) {
+      group.hasFlatOverride = true;
+      group.hasVolumePrice = false;
+    }
     
     group.totalQuantity += item.quantity;
     group.totalPrice += effectivePrice * item.quantity;
@@ -562,6 +571,7 @@ export default function CartPage() {
                       </div>
                       {/* Tier upsell nudge */}
                       {(() => {
+                        if (group.hasFlatOverride) return null;
                         const upsell = getTierUpsell(group.styleId);
                         if (!upsell) return null;
                         return (

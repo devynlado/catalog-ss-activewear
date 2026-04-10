@@ -9,6 +9,8 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 const STYLE_ID = 9001801;
+/** GMC `auto_pricing_min_price` source: product_skus.auto_min_price */
+const AUTO_MIN_PRICE_USD = 26;
 
 const TIER1_PRICES: Record<string, number> = {
   standard: 12.49,
@@ -89,6 +91,17 @@ async function main() {
     console.error(`\nFailed to update products row: ${prodErr.message}`);
   } else {
     console.log(`\nUpdated products.min_retail_price → $${minPrice}`);
+  }
+
+  const { error: autoMinErr } = await supabase
+    .from('product_skus')
+    .update({ auto_min_price: AUTO_MIN_PRICE_USD })
+    .eq('style_id', STYLE_ID);
+
+  if (autoMinErr) {
+    console.error(`\nFailed to set auto_min_price: ${autoMinErr.message}`);
+  } else {
+    console.log(`\nSet auto_min_price → $${AUTO_MIN_PRICE_USD} for all style_id ${STYLE_ID} SKUs`);
   }
 
   console.log(`\nDone. Updated ${updated} of ${skus.length} SKUs.`);

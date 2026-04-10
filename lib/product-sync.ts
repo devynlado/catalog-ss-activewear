@@ -28,6 +28,15 @@ const MARKET_MARKUP = 1.40;     // 40% markup on SS prices to match competitor p
 const RETAIL_MARKUP = 1.40;      // Fallback only - used if SS piecePrice unavailable
 const AUTO_MIN_MARKUP = 1.12;   // 12% markup on COGS for Google auto-pricing floor
 
+/** Fixed GMC auto-pricing floor for LA Apparel 1801GD (overrides cogs × 1.12 on sync) */
+const LA_APPAREL_1801GD_STYLE_ID = 9001801;
+const LA_APPAREL_1801GD_AUTO_MIN_PRICE_USD = 26;
+
+function resolveAutoMinPrice(styleId: number, cogsBasedMin: number): number {
+  if (styleId === LA_APPAREL_1801GD_STYLE_ID) return LA_APPAREL_1801GD_AUTO_MIN_PRICE_USD;
+  return cogsBasedMin;
+}
+
 // Google category mappings
 const GOOGLE_CATEGORY_MAP: Record<ProductCategory, { id: number; name: string }> = {
   't-shirts': { id: 212, name: 'Apparel & Accessories > Clothing > Shirts & Tops' },
@@ -537,7 +546,7 @@ export async function syncPopularProducts(): Promise<SyncResult> {
                   size_code: sku.sizeCode,
                   size_order: sku.sizeOrder,
                   cogs: cogs,
-                  auto_min_price: autoMinPrice,
+                  auto_min_price: resolveAutoMinPrice(style.styleID, autoMinPrice),
                   gtin: sku.gtin || '',
                   piece_weight: sku.unitWeight || 0,
                   qty: sku.qty || 0,
@@ -1050,7 +1059,7 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
                   size_code: sku.sizeCode,
                   size_order: sku.sizeOrder,
                   cogs: cogs,
-                  auto_min_price: autoMinPrice,
+                  auto_min_price: resolveAutoMinPrice(style.styleID, autoMinPrice),
                   gtin: sku.gtin || '',
                   piece_weight: sku.unitWeight || 0,
                   qty: sku.qty || 0,

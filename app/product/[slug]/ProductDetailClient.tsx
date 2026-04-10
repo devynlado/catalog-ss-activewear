@@ -20,6 +20,10 @@ import { DecorationMethodModal } from '@/components/builder/DecorationMethodModa
 import { trackViewItem, trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
 import { ProductDescription } from './ProductDescription';
 import { hasTieredPricing, getTierTable, getTieredPrice, getBaseTierPrice, getNextTierSavings, getTierProgress, getCurrentTierSavings } from '@/lib/tiered-pricing';
+import {
+  isLa1801gdSamplePriceProduct,
+  LA_1801GD_SAMPLE_PRICE_USD,
+} from '@/lib/la-1801gd-sample-price';
 import { ValuePropsStrip, SocialProofBanner, UseCaseCallouts, CuratedDescription, WhyThe1801GD, DecorationUpsell, BottomCTA } from '@/components/product/LA1801GDSections';
 
 /**
@@ -76,7 +80,9 @@ const isLAApparel = (styleId: number) => styleId >= 9001000 && styleId < 9010000
 export function ProductDetailClient({ product, googleDiscount: initialDiscount, initialVariant }: ProductDetailClientProps) {
   // Check if this is an LA Apparel product (needs special handling)
   const isLAApparelProduct = isLAApparel(product.styleId);
-  
+
+  const isLa1801gdSamplePricePage = isLa1801gdSamplePriceProduct(product);
+
   // Check if this product uses tiered (volume-discount) pricing
   const isTieredProduct = hasTieredPricing(product.styleId);
   const tierTable = isTieredProduct ? getTierTable(product.styleId) : null;
@@ -314,6 +320,14 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
   // When landing from Google, scope to the initial color so the "From" price
   // matches the hero and size table — no conflicting numbers on the page.
   const basePriceDisplay = useMemo(() => {
+    if (isLa1801gdSamplePricePage) {
+      return {
+        hasPrice: true,
+        price: LA_1801GD_SAMPLE_PRICE_USD,
+        originalMinPrice: null as number | null,
+        originalMinRetail: null as number | null,
+      };
+    }
     // For tiered products, use the tier-1 base price from config (authoritative)
     if (isTieredProduct) {
       const tierBase = getBaseTierPrice(product.styleId, 'M') ?? 0;
@@ -383,7 +397,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
       originalMinPrice: googleDiscountPercent > 0 ? minPrice : null,
       originalMinRetail: minRetailPrice, // color-scoped retail for sale strikethrough
     };
-  }, [product.colors, product.styleId, googleDiscountPercent, isDiscountLanding, effectiveResolvedColor, isTieredProduct]);
+  }, [product.colors, product.styleId, googleDiscountPercent, isDiscountLanding, effectiveResolvedColor, isTieredProduct, isLa1801gdSamplePricePage]);
   
   // Helper to validate image URLs (must be http/https)
   const isValidImageUrl = (url: string | undefined | null): url is string => {
@@ -432,12 +446,14 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           if (size) {
             const fallback = size.salePrice || size.price;
             let unitPrice: number;
-            if (isTieredProduct) {
+            if (isLa1801gdSamplePricePage) {
+              unitPrice = LA_1801GD_SAMPLE_PRICE_USD;
+            } else if (isTieredProduct) {
               unitPrice = getTieredPrice(product.styleId, sizeName, Math.max(totalPieces, 1), fallback);
             } else {
               unitPrice = fallback;
             }
-            if (googleDiscountPercent > 0) {
+            if (!isLa1801gdSamplePricePage && googleDiscountPercent > 0) {
               unitPrice = Math.round(unitPrice * (1 - googleDiscountPercent) * 100) / 100;
             }
             colorPieces += qty;
@@ -458,7 +474,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
     });
 
     return { colorSubtotals: subtotals, grandTotal: grand };
-  }, [selectedColors, colorQuantities, googleDiscountPercent, totalPieces, isTieredProduct, product.styleId]);
+  }, [selectedColors, colorQuantities, googleDiscountPercent, totalPieces, isTieredProduct, product.styleId, isLa1801gdSamplePricePage]);
 
   // Handle color swatch click - toggle selection
   const handleColorClick = (color: ProductColor | null) => {
@@ -531,7 +547,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           colorCode: color.colorCode,
           sizeName,
           quantity,
-          unitPrice: sizeInfo?.salePrice || sizeInfo?.price || basePrice,
+          unitPrice: isLa1801gdSamplePricePage
+            ? LA_1801GD_SAMPLE_PRICE_USD
+            : (sizeInfo?.salePrice || sizeInfo?.price || basePrice),
           imageUrl: color.frontImage || product.imageUrl,
         });
       });
@@ -575,14 +593,18 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
 
         // For tiered products, store the tier-1 base price; the cart computes
         // the actual volume-discounted price dynamically.
-        const regularPrice = isTieredProduct
-          ? (getBaseTierPrice(product.styleId, sizeName) ?? (sizeInfo?.salePrice || sizeInfo?.price || basePrice))
-          : (sizeInfo?.salePrice || sizeInfo?.price || basePrice);
-        const finalPrice = googleDiscountPercent > 0
-          ? Math.round(regularPrice * (1 - googleDiscountPercent) * 100) / 100
-          : regularPrice;
-        const hasActiveDiscount = googleDiscountPercent > 0 && finalPrice < regularPrice;
-        
+        const regularPrice = isLa1801gdSamplePricePage
+          ? LA_1801GD_SAMPLE_PRICE_USD
+          : isTieredProduct
+            ? (getBaseTierPrice(product.styleId, sizeName) ?? (sizeInfo?.salePrice || sizeInfo?.price || basePrice))
+            : (sizeInfo?.salePrice || sizeInfo?.price || basePrice);
+        const finalPrice =
+          !isLa1801gdSamplePricePage && googleDiscountPercent > 0
+            ? Math.round(regularPrice * (1 - googleDiscountPercent) * 100) / 100
+            : regularPrice;
+        const hasActiveDiscount =
+          !isLa1801gdSamplePricePage && googleDiscountPercent > 0 && finalPrice < regularPrice;
+
         addToCart({
           sku,
           styleId: product.styleId,
@@ -594,6 +616,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           sizeName,
           quantity,
           unitPrice: regularPrice,
+          overrideUnitPrice: isLa1801gdSamplePricePage ? LA_1801GD_SAMPLE_PRICE_USD : undefined,
           discountedPrice: hasActiveDiscount ? finalPrice : undefined,
           discountSource: hasActiveDiscount ? 'google' : undefined,
           imageUrl: color.frontImage || product.imageUrl,
@@ -884,8 +907,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
               </span>
             ) : (
               <div className="flex flex-wrap items-baseline gap-2">
-                {/* From prefix */}
-                <span className="text-base text-slate-500 font-medium">From</span>
+                <span className="text-base text-slate-500 font-medium">
+                  {isLa1801gdSamplePricePage ? 'Sample price' : 'From'}
+                </span>
                 
                 {/* Main price - bold and prominent */}
                 <span className="text-3xl lg:text-4xl font-bold text-slate-900">
@@ -894,7 +918,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                 
                 {/* Per piece label + volume floor hint for tiered products */}
                 <span className="text-base text-slate-500 font-medium">each</span>
-                {isTieredProduct && tierTable && (
+                {isTieredProduct && tierTable && !isLa1801gdSamplePricePage && (
                   <span className="text-xs text-brand-600 font-semibold">
                     · As low as {formatPrice(tierTable.tiers[tierTable.tiers.length - 1].prices[0])} at {tierTable.tiers[tierTable.tiers.length - 1].label}
                   </span>
@@ -926,7 +950,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           </div>
 
           {/* Tiered Pricing Table */}
-          {tierTable && (
+          {tierTable && !isLa1801gdSamplePricePage && (
             <div className="mt-4 rounded-xl border border-brand-100 bg-gradient-to-br from-brand-50/40 to-white p-3 lg:p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-brand-700 mb-2">Volume Pricing</p>
               <table className="w-full text-sm">
@@ -1208,6 +1232,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                   discountPercent={googleDiscountPercent}
                   styleId={product.styleId}
                   totalStylePieces={totalPieces}
+                  sampleUnitPrice={
+                    isLa1801gdSamplePricePage ? LA_1801GD_SAMPLE_PRICE_USD : undefined
+                  }
                 />
               ))}
             </div>
@@ -1269,7 +1296,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
             )}
 
             {/* Upsell nudge at point of decision */}
-            {isTieredProduct && totalPieces > 0 && (() => {
+            {isTieredProduct && !isLa1801gdSamplePricePage && totalPieces > 0 && (() => {
               const upsell = getNextTierSavings(product.styleId, totalPieces);
               if (!upsell) return null;
               return (

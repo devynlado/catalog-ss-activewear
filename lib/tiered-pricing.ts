@@ -99,9 +99,12 @@ export function getTieredPrice(
  * products just return discountedPrice ?? unitPrice as before.
  */
 export function getEffectiveItemPrice(
-  item: { styleId: number; sizeName: string; unitPrice: number; discountedPrice?: number },
+  item: { styleId: number; sizeName: string; unitPrice: number; discountedPrice?: number; overrideUnitPrice?: number },
   totalStyleQty: number,
 ): number {
+  if (item.overrideUnitPrice != null && item.overrideUnitPrice > 0) {
+    return item.overrideUnitPrice;
+  }
   if (!hasTieredPricing(item.styleId)) {
     return item.discountedPrice ?? item.unitPrice;
   }
@@ -269,7 +272,14 @@ export function isVolumePriced(styleId: number, sizeName: string, totalStyleQty:
  * Returns the difference between what the user would pay at tier-1 vs what they actually pay.
  */
 export function calculateVolumeSavings(
-  items: Array<{ styleId: number; sizeName: string; quantity: number; unitPrice: number; discountedPrice?: number }>,
+  items: Array<{
+    styleId: number;
+    sizeName: string;
+    quantity: number;
+    unitPrice: number;
+    discountedPrice?: number;
+    overrideUnitPrice?: number;
+  }>,
 ): number {
   let totalSavings = 0;
 
@@ -282,6 +292,7 @@ export function calculateVolumeSavings(
 
   for (const item of items) {
     if (!hasTieredPricing(item.styleId)) continue;
+    if (item.overrideUnitPrice != null && item.overrideUnitPrice > 0) continue;
     const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
     const tier1Price = getBaseTierPrice(item.styleId, item.sizeName) ?? item.unitPrice;
     const effectivePrice = getEffectiveItemPrice(item, totalStyleQty);

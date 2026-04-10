@@ -5,6 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Plus, ShoppingBag, Leaf, Sparkles, Flame, Star, TrendingUp, BadgeDollarSign } from 'lucide-react';
 import { Product, ProductColor } from '@/lib/types';
+import {
+  isLa1801gdSamplePriceProduct,
+  LA_1801GD_SAMPLE_PRICE_USD,
+} from '@/lib/la-1801gd-sample-price';
 import { formatPrice, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
 
@@ -85,8 +89,12 @@ export function ProductCard({
     setSelectedColor(color);
     setImageError(false);
   };
-  const displayPrice = product.salePrice || product.price;
-  const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const useSamplePrice = isLa1801gdSamplePriceProduct(product);
+  const displayPrice = useSamplePrice
+    ? LA_1801GD_SAMPLE_PRICE_USD
+    : product.salePrice || product.price;
+  const hasDiscount =
+    !useSamplePrice && product.salePrice && product.salePrice < product.price;
   const discountPercent = hasDiscount ? Math.round((1 - product.salePrice! / product.price) * 100) : 0;
   const hasPrice = displayPrice > 0;
   

@@ -65,6 +65,7 @@ interface GroupedItem {
   unitPrice: number;
   hasDiscount: boolean;
   hasVolumePrice: boolean;
+  hasFlatOverride: boolean;
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
@@ -98,7 +99,10 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         totalPrice: 0,
         unitPrice: effectivePrice,
         hasDiscount: !!(item.discountedPrice && item.discountedPrice < item.unitPrice),
-        hasVolumePrice: isVolumePriced(item.styleId, item.sizeName, totalStyleQty),
+        hasVolumePrice:
+          !item.overrideUnitPrice &&
+          isVolumePriced(item.styleId, item.sizeName, totalStyleQty),
+        hasFlatOverride: !!(item.overrideUnitPrice && item.overrideUnitPrice > 0),
       });
     }
 
@@ -114,6 +118,11 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
         price: item.unitPrice,
         discountedPrice: item.discountedPrice,
       });
+    }
+
+    if (item.overrideUnitPrice && item.overrideUnitPrice > 0) {
+      group.hasFlatOverride = true;
+      group.hasVolumePrice = false;
     }
     
     group.totalQuantity += item.quantity;

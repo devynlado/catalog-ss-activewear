@@ -72,6 +72,8 @@ interface GroupedItem {
   unitPrice: number;
   hasDiscount: boolean;
   hasVolumePrice: boolean;
+  /** Cart lines use overrideUnitPrice (no volume tier UI) */
+  hasFlatOverride: boolean;
 }
 
 function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
@@ -520,6 +522,7 @@ export function CartDrawer() {
                       </span>
                     </div>
                     {(() => {
+                      if (group.hasFlatOverride) return null;
                       const upsell = getTierUpsell(group.styleId);
                       if (!upsell) return null;
                       return (
