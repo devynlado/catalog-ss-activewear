@@ -125,6 +125,15 @@ export function SSActivewearSection({
         return;
       }
 
+      if (data && typeof data === 'object' && 'success' in data && data.success === false) {
+        setError(
+          typeof data.error === 'string' && data.error.trim()
+            ? data.error
+            : 'S&S could not place this order (see message above or SS Activity log).'
+        );
+        return;
+      }
+
       window.location.reload();
     } catch {
       setError('Failed to retry order');
@@ -201,7 +210,7 @@ export function SSActivewearSection({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        <div className="mb-4 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 p-3 text-sm leading-relaxed text-red-800">
           {error}
         </div>
       )}
@@ -232,7 +241,9 @@ export function SSActivewearSection({
                   : 'No S&S order on file yet'}
               </p>
               {ssAutoOrderFailed && ssAutoOrderError && (
-                <p className="text-xs text-amber-600 mt-1">{ssAutoOrderError}</p>
+                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-amber-800">
+                  {ssAutoOrderError}
+                </p>
               )}
               {!ssAutoOrderFailed && (
                 <p className="text-xs text-slate-600 mt-1">

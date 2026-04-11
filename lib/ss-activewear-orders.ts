@@ -77,6 +77,129 @@ async function ssOrderRequest<T>(
   }
 }
 
+/** S&S "Identifier SKU (Brand, Style, Color, Size) - Out Of Stock …" line from POST /orders/ errors[].message */
+const SS_OOS_LINE =
+  /Identifier\s+(\S+)\s*\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^)]+)\s*\)\s*-\s*Out Of Stock/i;
+
+interface ParsedOosLine {
+  brand: string;
+  style: string;
+  color: string;
+  size: string;
+}
+
+function parseSsOosMessages(messages: string[]): ParsedOosLine[] {
+  const out: ParsedOosLine[] = [];
+  for (const msg of messages) {
+    const m = msg.match(SS_OOS_LINE);
+    if (!m) continue;
+    out.push({
+      brand: m[2].trim(),
+      style: m[3].trim(),
+      color: m[4].trim(),
+      size: m[5].trim(),
+    });
+  }
+  return out;
+}
+
+function joinSizeList(sizes: string[]): string {
+  const u = [...new Set(sizes.map((s) => s.trim()).filter(Boolean))];
+  u.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (u.length === 0) return '';
+  if (u.length === 1) return u[0];
+  if (u.length === 2) return `${u[0]} and ${u[1]}`;
+  return `${u.slice(0, -1).join(', ')}, and ${u[u.length - 1]}`;
+}
+
+/**
+ * Staff-facing copy for the order row + SS Activewear admin card.
+ * Full raw API text stays in ss_activity_log.details.error only.
+ */
+function formatStaffOosSummary(lines: ParsedOosLine[]): string {
+  if (lines.length === 0) return '';
+
+  const byVariant = new Map<string, { brand: string; style: string; color: string; sizes: string[] }>();
+  for (const l of lines) {
+    const key = `${l.brand}\0${l.style}\0${l.color}`;
+    if (!byVariant.has(key)) {
+      byVariant.set(key, { brand: l.brand, style: l.style, color: l.color, sizes: [] });
+    }
+    byVariant.get(key)!.sizes.push(l.size);
+  }
+
+  const sentences: string[] = [];
+  for (const { brand, style, color, sizes } of byVariant.values()) {
+    const uniq = [...new Set(sizes.map((s) => s.trim()).filter(Boolean))];
+    const sizePart = joinSizeList(uniq);
+    const noun = uniq.length === 1 ? 'is' : 'are';
+    sentences.push(`${brand} · ${style} · ${color} / ${sizePart} ${noun} out of stock at S&S.`);
+  }
+
+  if (sentences.length === 1) {
+    return sentences[0];
+  }
+  if (sentences.length <= 3) {
+    return `${sentences.join('\n')}\nS&S did not place any part of this order (no in-stock lines).`;
+  }
+  return `${sentences.slice(0, 2).join('\n')}\n… and ${sentences.length - 2} more color/style group(s) with no stock. S&S did not place this order.\nSee SS Activity log for every SKU.`;
+}
+
+/**
+ * Short summary for admin SS card + orders.ss_auto_order_error.
+ * SS Activity log keeps details.error = full raw message unchanged.
+ */
+function summarizeSsPlaceOrderError(rawMessage: string): string {
+  const m = rawMessage.match(/^SS API (\d+):\s*(.*)$/is);
+  const body = (m?.[2] || rawMessage).trim();
+
+  try {
+    const json = JSON.parse(body) as {
+      message?: string;
+      errors?: Array<{ field?: string; message?: string }>;
+    };
+    const errors = json?.errors;
+    if (Array.isArray(errors) && errors.length > 0) {
+      const lineMsgs = errors
+        .map((e) => e.message)
+        .filter((msg): msg is string => Boolean(msg));
+      const linesSummary = errors.find((e) => e.field === 'Lines')?.message;
+      const oosParsed = parseSsOosMessages(lineMsgs);
+      const hasOosPattern =
+        oosParsed.length > 0 || lineMsgs.some((msg) => /out of stock/i.test(msg));
+      const noLines = /no lines in stock/i.test(linesSummary || '');
+
+      if (hasOosPattern || noLines) {
+        if (oosParsed.length > 0) {
+          return formatStaffOosSummary(oosParsed);
+        }
+        if (noLines || lineMsgs.length > 0) {
+          return 'S&S had no inventory for anything on this order — every requested SKU/lines came back with no stock (see SS Activity log for raw API details).';
+        }
+      }
+
+      const short = lineMsgs
+        .filter((msg) => msg.length < 220)
+        .slice(0, 3);
+      if (short.length > 0) {
+        const more = lineMsgs.length > short.length ? `\n(+${lineMsgs.length - short.length} more messages in the activity log.)` : '';
+        return `S&S rejected the order:\n${short.join('\n')}${more}`;
+      }
+      const joined = lineMsgs[0]?.slice(0, 280) || json.message || 'Unknown S&S error.';
+      const tail = lineMsgs[0] && lineMsgs[0].length > 280 ? '…' : '';
+      return `S&S rejected the order: ${joined}${tail}\n(Full response is in SS Activity log.)`;
+    }
+    if (json?.message) {
+      return `S&S: ${json.message}`;
+    }
+  } catch {
+    /* body is not JSON */
+  }
+
+  const clipped = rawMessage.length > 420 ? `${rawMessage.slice(0, 420)}…` : rawMessage;
+  return `S&S order could not be placed.\n${clipped}\n(See SS Activity log for the full message.)`;
+}
+
 // ------------------------------------------------------------------
 // SS Activity Log helper
 // ------------------------------------------------------------------
@@ -622,10 +745,11 @@ export async function placeSSOrder(
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    const summary = summarizeSsPlaceOrderError(errorMsg);
 
     await db.from('orders').update({
       ss_auto_order_failed: true,
-      ss_auto_order_error: errorMsg,
+      ss_auto_order_error: summary,
     }).eq('id', orderId);
 
     await logSSActivity({
@@ -633,11 +757,11 @@ export async function placeSSOrder(
       activityType: 'order_failed',
       status: 'error',
       title: 'Failed to place SS Activewear order',
-      details: { error: errorMsg },
+      details: { error: errorMsg, summary },
       supabase: db,
     });
 
-    return { success: false, ssOrders: [], lineErrors: [], error: errorMsg };
+    return { success: false, ssOrders: [], lineErrors: [], error: summary };
   }
 }
 

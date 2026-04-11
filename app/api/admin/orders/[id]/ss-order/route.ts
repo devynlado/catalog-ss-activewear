@@ -29,7 +29,8 @@ export async function POST(
     const serviceSupabase = getServiceSupabase();
     const result = await placeSSOrder(params.id, serviceSupabase);
 
-    return NextResponse.json(result);
+    const httpStatus = result.success ? 200 : 422;
+    return NextResponse.json(result, { status: httpStatus });
   } catch (error) {
     console.error('[SS Order] Error:', error);
     return NextResponse.json(
