@@ -285,30 +285,76 @@ export async function placeSSOrder(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = Array.isArray(order.items) ? order.items : [];
   const productItems = items.filter(item => item.type !== 'decoration');
-  const skus = productItems.map((item) => item.sku).filter(Boolean);
 
-  // Look up actual supplier for each SKU from the product_skus table
-  let ssSkuSet = new Set<string>();
-  if (skus.length > 0) {
-    const { data: skuRows } = await db
+  type CartLine = { sku?: string; styleId?: number; colorCode?: string; sizeName?: string; quantity?: number };
+  const cartLines = productItems as CartLine[];
+
+  const skuList = [...new Set(cartLines.map((item) => item.sku).filter(Boolean) as string[])];
+  const styleIds = [
+    ...new Set(
+      cartLines
+        .map((item) => item.styleId)
+        .filter((id): id is number => typeof id === 'number' && !Number.isNaN(id))
+    ),
+  ];
+
+  type SsSkuRow = { sku: string; style_id: number; color_code: string; size_name: string };
+  const ssSkuRows: SsSkuRow[] = [];
+
+  if (skuList.length > 0) {
+    const { data: bySku } = await db
       .from('product_skus')
-      .select('sku, supplier')
-      .in('sku', skus);
-    ssSkuSet = new Set(
-      (skuRows || [])
-        .filter((r: { sku: string; supplier: string | null }) => r.supplier === 'ss_activewear')
-        .map((r: { sku: string }) => r.sku)
-    );
+      .select('sku, style_id, color_code, size_name')
+      .in('sku', skuList)
+      .eq('supplier', 'ss_activewear');
+    ssSkuRows.push(...((bySku || []) as SsSkuRow[]));
+  }
+  if (styleIds.length > 0) {
+    const { data: byStyle } = await db
+      .from('product_skus')
+      .select('sku, style_id, color_code, size_name')
+      .in('style_id', styleIds)
+      .eq('supplier', 'ss_activewear');
+    const seen = new Set(ssSkuRows.map((r) => r.sku));
+    for (const row of (byStyle || []) as SsSkuRow[]) {
+      if (!seen.has(row.sku)) {
+        seen.add(row.sku);
+        ssSkuRows.push(row);
+      }
+    }
   }
 
-  const lines: SSOrderLine[] = productItems
-    .filter(item => ssSkuSet.has(item.sku))
-    .map(item => ({
-      identifier: item.sku,
-      qty: item.quantity || 1,
-    }));
+  const normPart = (s: string | undefined) => (s || '').trim().toLowerCase();
 
-  const skippedItems = productItems.filter(item => !ssSkuSet.has(item.sku));
+  function resolveSsMasterSku(item: CartLine): string | null {
+    const direct = ssSkuRows.find((r) => r.sku === item.sku);
+    if (direct) return direct.sku;
+    if (item.styleId == null || item.colorCode == null || item.sizeName == null) return null;
+    const cc = normPart(item.colorCode);
+    const sn = normPart(item.sizeName);
+    const match = ssSkuRows.find(
+      (r) =>
+        r.style_id === item.styleId &&
+        normPart(r.color_code) === cc &&
+        normPart(r.size_name) === sn
+    );
+    return match?.sku ?? null;
+  }
+
+  const qtyByIdentifier = new Map<string, number>();
+  for (const item of cartLines) {
+    const master = resolveSsMasterSku(item);
+    if (!master) continue;
+    const qty = item.quantity || 1;
+    qtyByIdentifier.set(master, (qtyByIdentifier.get(master) || 0) + qty);
+  }
+
+  const lines: SSOrderLine[] = [...qtyByIdentifier.entries()].map(([identifier, qty]) => ({
+    identifier,
+    qty,
+  }));
+
+  const skippedItems = cartLines.filter((item) => !resolveSsMasterSku(item));
 
   if (lines.length === 0) {
     await logSSActivity({
@@ -317,7 +363,7 @@ export async function placeSSOrder(
       status: 'info',
       title: 'No SS Activewear items in this order',
       details: skippedItems.length > 0
-        ? { skipped_skus: skippedItems.map((i: { sku: string; brandName?: string }) => i.sku), reason: 'Items belong to other suppliers' }
+        ? { skipped_skus: skippedItems.map((i) => i.sku || '(no sku)'), reason: 'Items belong to other suppliers' }
         : undefined,
       supabase: db,
     });
@@ -369,14 +415,16 @@ export async function placeSSOrder(
     AutoSelectWarehouse_Preference: isExpress ? 'fastest' : 'fewest',
     AutoSelectWarehouse_Fewest_MaxDIT: 10,
     rejectLineErrors: false,
-    rejectLineErrors_Email: true,
+    // SS sends "line error" emails to emailConfirmation when true; we log in ss_activity_log instead.
+    rejectLineErrors_Email: process.env.SS_REJECT_LINE_ERRORS_EMAIL === 'true',
     lines,
   };
 
-  // Add payment profile if configured
+  // Saved payment profiles (card/ECHECK) force prepay and override Net terms. Only attach when explicitly enabled.
+  const useSavedPaymentProfile = process.env.SS_USE_PAYMENT_PROFILE === 'true';
   const profileId = process.env.SS_PAYMENT_PROFILE_ID;
   const profileEmail = process.env.SS_PAYMENT_EMAIL;
-  if (profileId && profileEmail) {
+  if (useSavedPaymentProfile && profileId && profileEmail) {
     payload.paymentProfile = {
       email: profileEmail,
       profileID: parseInt(profileId, 10),
@@ -392,7 +440,7 @@ export async function placeSSOrder(
       po_number: order.order_number,
       line_count: lines.length,
       skipped_count: skippedItems.length,
-      skipped_skus: skippedItems.length > 0 ? skippedItems.map((i: { sku: string }) => i.sku) : undefined,
+      skipped_skus: skippedItems.length > 0 ? skippedItems.map((i) => i.sku || '(no sku)') : undefined,
       shipping_method: payload.shippingMethod,
       ship_to: hasDecoration ? 'Garment Decor Warehouse (Montclair)' : 'Customer address',
       has_decoration: hasDecoration,

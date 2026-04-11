@@ -203,7 +203,7 @@ export function QuickViewModal({ product: initialProduct, isOpen, onClose }: Qui
         if (quantity <= 0) return;
 
         const sizeInfo = color.sizes.find((s) => s.name === sizeName);
-        const sku = `${product.styleId}-${colorCode}-${sizeName}`;
+        const sku = sizeInfo?.sku || `${product.styleId}-${colorCode}-${sizeName}`;
         const unitPrice = isLa1801gdSample
           ? LA_1801GD_SAMPLE_PRICE_USD
           : sizeInfo?.salePrice || sizeInfo?.price || displayPrice;
