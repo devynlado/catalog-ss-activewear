@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, generateOrderNumber, calculateOrderTotals, toStripeCents, ShippingMethod } from '@/lib/stripe';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { CartItem, ShippingAddress } from '@/lib/database.types';
+import { prepareCartItemsForPricing } from '@/lib/cart-pricing-server';
 
 interface CreatePaymentIntentRequest {
   items: CartItem[];
@@ -18,20 +19,20 @@ interface CreatePaymentIntentRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CreatePaymentIntentRequest = await request.json();
-    const { 
-      items, 
-      customerEmail, 
-      customerName, 
+    const {
+      items: rawItems,
+      customerEmail,
+      customerName,
       customerPhone,
       company,
       shippingAddress,
       billingAddress,
       shippingMethod = 'economy',
-      poNumber 
+      poNumber,
     } = body;
 
     // Validate request
-    if (!items || items.length === 0) {
+    if (!rawItems || rawItems.length === 0) {
       return NextResponse.json(
         { error: 'No items in cart' },
         { status: 400 }
@@ -51,6 +52,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const items = await prepareCartItemsForPricing(rawItems);
 
     // Calculate totals with shipping method
     const { subtotal, taxAmount, shippingCost, total } = calculateOrderTotals(items, shippingMethod);

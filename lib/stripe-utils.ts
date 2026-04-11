@@ -26,7 +26,15 @@ export function generateOrderNumber(): string {
 
 // Calculate subtotal with tiered pricing
 function computeSubtotal(
-  items: Array<{ unitPrice: number; quantity: number; discountedPrice?: number; styleId?: number; sizeName?: string }>
+  items: Array<{
+    unitPrice: number;
+    quantity: number;
+    discountedPrice?: number;
+    styleId?: number;
+    sizeName?: string;
+    overrideUnitPrice?: number;
+    googleDiscountPercent?: number;
+  }>,
 ): number {
   const styleQtys = new Map<number, number>();
   for (const item of items) {
@@ -38,7 +46,14 @@ function computeSubtotal(
     if (item.styleId && item.sizeName) {
       const totalStyleQty = styleQtys.get(item.styleId) ?? 0;
       return sum + getEffectiveItemPrice(
-        { styleId: item.styleId, sizeName: item.sizeName, unitPrice: item.unitPrice, discountedPrice: item.discountedPrice },
+        {
+          styleId: item.styleId,
+          sizeName: item.sizeName,
+          unitPrice: item.unitPrice,
+          discountedPrice: item.discountedPrice,
+          overrideUnitPrice: item.overrideUnitPrice,
+          googleDiscountPercent: item.googleDiscountPercent,
+        },
         totalStyleQty,
       ) * item.quantity;
     }
@@ -48,8 +63,17 @@ function computeSubtotal(
 
 // Calculate order totals with multi-warehouse shipping support
 export function calculateOrderTotals(
-  items: Array<{ unitPrice: number; quantity: number; discountedPrice?: number; styleId?: number; sizeName?: string; warehouse?: string }>,
-  shippingMethod: ShippingMethod = 'economy'
+  items: Array<{
+    unitPrice: number;
+    quantity: number;
+    discountedPrice?: number;
+    styleId?: number;
+    sizeName?: string;
+    warehouse?: string;
+    overrideUnitPrice?: number;
+    googleDiscountPercent?: number;
+  }>,
+  shippingMethod: ShippingMethod = 'economy',
 ) {
   const subtotal = computeSubtotal(items);
   const taxAmount = subtotal * TAX_RATE;

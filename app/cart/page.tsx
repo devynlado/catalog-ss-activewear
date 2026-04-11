@@ -236,7 +236,13 @@ export default function CartPage() {
         sizeName: availableSize.name,
         quantity: newQuantity,
         unitPrice: availableSize.price,
-        discountedPrice: existingItem.discountedPrice ? availableSize.price : undefined,
+        googleDiscountPercent: existingItem.googleDiscountPercent,
+        discountedPrice:
+          existingItem.googleDiscountPercent != null
+            ? undefined
+            : existingItem.discountedPrice
+              ? availableSize.price
+              : undefined,
         discountSource: existingItem.discountSource,
         imageUrl: group.imageUrl,
         availableSizes: group.availableSizes,
@@ -262,11 +268,7 @@ export default function CartPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code,
-          items: items.map((i) => ({
-            unitPrice: i.unitPrice,
-            quantity: i.quantity,
-            discountedPrice: i.discountedPrice,
-          })),
+          items,
           context: 'cart',
         }),
       });

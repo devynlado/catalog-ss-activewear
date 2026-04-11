@@ -1,10 +1,13 @@
 /**
- * Product-level tiered pricing configuration.
+ * Optional product-level tiered (volume) pricing.
  *
- * Quantity thresholds are based on total units of the SAME STYLE in the cart
- * (all colors/sizes pool together). The sync in product-sync.ts skips
- * retail_price updates for any styleId listed here so the DB always holds the
- * correct tier-1 base price.
+ * When a styleId is listed here, quantity thresholds are based on total units
+ * of that style in the cart (all colors/sizes). product-sync skips
+ * retail_price updates for those styleIds so the DB can hold a stable tier-1
+ * base when tiers are in use.
+ *
+ * Currently empty: all styles (including 9001801 / 1801GD) use standard
+ * SKU/DB pricing only.
  */
 
 // ---------------------------------------------------------------------------
@@ -39,21 +42,10 @@ interface TieredPricingRule {
 }
 
 // ---------------------------------------------------------------------------
-// Rules
+// Rules (empty = no volume tiers; add TieredPricingRule entries to enable)
 // ---------------------------------------------------------------------------
 
-const TIERED_PRICING_RULES: TieredPricingRule[] = [
-  {
-    styleId: 9001801,
-    styleName: '1801GD',
-    tiers: [
-      { minQty: 1,  maxQty: 5,        label: '1–5 pcs',   prices: { standard: 12.49, '2xl': 14.49, '3xl': 16.99, '4xl': 18.99 } },
-      { minQty: 6,  maxQty: 23,       label: '6–23 pcs',  prices: { standard: 11.49, '2xl': 13.49, '3xl': 15.99, '4xl': 17.99 } },
-      { minQty: 24, maxQty: 71,       label: '24–71 pcs', prices: { standard: 10.49, '2xl': 12.49, '3xl': 14.99, '4xl': 16.99 } },
-      { minQty: 72, maxQty: Infinity, label: '72+ pcs',   prices: { standard: 9.85,  '2xl': 11.49, '3xl': 13.49, '4xl': 14.99 } },
-    ],
-  },
-];
+const TIERED_PRICING_RULES: TieredPricingRule[] = [];
 
 const rulesByStyleId = new Map(TIERED_PRICING_RULES.map((r) => [r.styleId, r]));
 
@@ -94,23 +86,96 @@ export function getTieredPrice(
 }
 
 /**
+ * List price used as the base for Google discount % (tier-1 for volume-priced
+ * styles, otherwise SKU list / sale price from the cart line).
+ */
+export function getListPriceForCartItem(item: {
+  styleId: number;
+  sizeName: string;
+  unitPrice: number;
+}): number {
+  if (hasTieredPricing(item.styleId)) {
+    return getBaseTierPrice(item.styleId, item.sizeName) ?? item.unitPrice;
+  }
+  return item.unitPrice;
+}
+
+function resolveGoogleDiscountFraction(item: {
+  googleDiscountPercent?: number;
+  discountedPrice?: number;
+  unitPrice: number;
+}): number | undefined {
+  if (
+    item.googleDiscountPercent != null &&
+    item.googleDiscountPercent > 0 &&
+    item.googleDiscountPercent < 1
+  ) {
+    return item.googleDiscountPercent;
+  }
+  if (
+    item.unitPrice > 0 &&
+    item.discountedPrice != null &&
+    item.discountedPrice > 0 &&
+    item.discountedPrice < item.unitPrice
+  ) {
+    const inferred = 1 - item.discountedPrice / item.unitPrice;
+    if (inferred > 0 && inferred < 1) return inferred;
+  }
+  return undefined;
+}
+
+function googleDiscountedUnitPrice(item: {
+  styleId: number;
+  sizeName: string;
+  unitPrice: number;
+  discountedPrice?: number;
+  googleDiscountPercent?: number;
+}): number | undefined {
+  const frac = resolveGoogleDiscountFraction(item);
+  if (frac == null) return undefined;
+  const list = getListPriceForCartItem(item);
+  if (!(list > 0)) return undefined;
+  return Math.round(list * (1 - frac) * 100) / 100;
+}
+
+/**
  * Resolve the best price for a cart item: the lower of the tiered volume
  * price and the Google automated discount price (if present). Non-tiered
- * products just return discountedPrice ?? unitPrice as before.
+ * products use list price with the same Google rule.
+ *
+ * Google discounts are applied as a fraction of the **current** list price so
+ * stale `discountedPrice` snapshots from an old cart cannot undercut updated
+ * catalog or tier prices.
  */
 export function getEffectiveItemPrice(
-  item: { styleId: number; sizeName: string; unitPrice: number; discountedPrice?: number; overrideUnitPrice?: number },
+  item: {
+    styleId: number;
+    sizeName: string;
+    unitPrice: number;
+    discountedPrice?: number;
+    overrideUnitPrice?: number;
+    googleDiscountPercent?: number;
+  },
   totalStyleQty: number,
 ): number {
   if (item.overrideUnitPrice != null && item.overrideUnitPrice > 0) {
     return item.overrideUnitPrice;
   }
+
+  const googlePrice = googleDiscountedUnitPrice(item);
+  const listBase = getListPriceForCartItem(item);
+
   if (!hasTieredPricing(item.styleId)) {
-    return item.discountedPrice ?? item.unitPrice;
+    const shelf = item.unitPrice;
+    if (googlePrice != null && googlePrice < shelf) return googlePrice;
+    return shelf;
   }
-  const tieredPrice = getTieredPrice(item.styleId, item.sizeName, totalStyleQty, item.unitPrice);
-  const googlePrice = item.discountedPrice ?? Infinity;
-  return Math.min(tieredPrice, googlePrice);
+
+  const tieredPrice = getTieredPrice(item.styleId, item.sizeName, totalStyleQty, listBase);
+  if (googlePrice != null) {
+    return Math.min(tieredPrice, googlePrice);
+  }
+  return tieredPrice;
 }
 
 /**

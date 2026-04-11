@@ -3,8 +3,11 @@ import { createServerSupabaseClient } from '@/lib/supabase';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { validateCoupon } from '@/lib/coupon-utils';
 import type { ValidateContext } from '@/lib/coupon-utils';
+import type { CartItem } from '@/lib/database.types';
+import { prepareCartItemsForPricing } from '@/lib/cart-pricing-server';
+import { getEffectiveItemPrice, hasTieredPricing } from '@/lib/tiered-pricing';
 
-/** Minimal cart item shape for subtotal calculation */
+/** Minimal cart item shape for subtotal calculation (legacy clients) */
 interface ValidateBodyItem {
   unitPrice: number;
   quantity: number;
@@ -13,8 +16,32 @@ interface ValidateBodyItem {
 
 interface ValidateBody {
   code: string;
-  items: ValidateBodyItem[];
+  items: ValidateBodyItem[] | CartItem[];
   context?: ValidateContext;
+}
+
+function isFullCartItem(x: unknown): x is CartItem {
+  return (
+    typeof x === 'object' &&
+    x !== null &&
+    'styleId' in x &&
+    'sizeName' in x &&
+    'sku' in x &&
+    typeof (x as CartItem).styleId === 'number'
+  );
+}
+
+function subtotalFromPreparedCart(items: CartItem[]): number {
+  const styleQtyMap = new Map<number, number>();
+  for (const item of items) {
+    if (hasTieredPricing(item.styleId)) {
+      styleQtyMap.set(item.styleId, (styleQtyMap.get(item.styleId) || 0) + item.quantity);
+    }
+  }
+  return items.reduce((sum, item) => {
+    const tq = styleQtyMap.get(item.styleId) ?? 0;
+    return sum + getEffectiveItemPrice(item, tq) * (item.quantity || 0);
+  }, 0);
 }
 
 /**
@@ -34,11 +61,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const subtotal = items.reduce(
-      (sum, item) =>
-        sum + (item.discountedPrice ?? item.unitPrice) * (item.quantity || 0),
-      0
-    );
+    let subtotal = 0;
+    if (Array.isArray(items) && items.length > 0 && isFullCartItem(items[0])) {
+      const prepared = await prepareCartItemsForPricing(items as CartItem[]);
+      subtotal = subtotalFromPreparedCart(prepared);
+    } else {
+      subtotal = (items as ValidateBodyItem[]).reduce(
+        (sum, item) =>
+          sum + (item.discountedPrice ?? item.unitPrice) * (item.quantity || 0),
+        0,
+      );
+    }
 
     const supabase = createServerSupabaseClient();
     let customerId: string | null = null;

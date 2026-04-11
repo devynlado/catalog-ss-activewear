@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { validateCoupon, calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
 import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
+import { prepareCartItemsForPricing, toOrderProductRow } from '@/lib/cart-pricing-server';
 import { groupCartByWarehouse, calculateShippingBreakdown } from '@/lib/shipping';
 import { placeSSOrder } from '@/lib/ss-activewear-orders';
 
@@ -53,9 +54,24 @@ interface CheckoutRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { items, shippingInfo, shippingMethod, decoration, poNumber, orderNotes, idempotencyKey, couponCode, liveShippingCost, utm_source, utm_medium, utm_campaign, gclid, referrer } = body;
+    const {
+      items: rawItems,
+      shippingInfo,
+      shippingMethod,
+      decoration,
+      poNumber,
+      orderNotes,
+      idempotencyKey,
+      couponCode,
+      liveShippingCost,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      gclid,
+      referrer,
+    } = body;
 
-    if (!items || items.length === 0) {
+    if (!rawItems || rawItems.length === 0) {
       return NextResponse.json(
         { error: 'No items in cart' },
         { status: 400 }
@@ -68,6 +84,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const items = await prepareCartItemsForPricing(rawItems);
 
     // Apply tiered pricing on the server side (min of volume tier vs Google discount)
     const styleQtyMap = new Map<number, number>();
@@ -191,20 +209,9 @@ export async function POST(request: NextRequest) {
           customer_phone: shippingInfo.phone,
           company: shippingInfo.company || null,
           items: [
-            ...items.map(item => ({
-              type: 'product' as const,
-              sku: item.sku,
-              styleId: item.styleId,
-              styleName: item.styleName,
-              brandName: item.brandName,
-              colorName: item.colorName,
-              colorCode: item.colorCode,
-              sizeName: item.sizeName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              discountedPrice: item.discountedPrice,
-              imageUrl: item.imageUrl,
-            })),
+            ...items.map((item) =>
+              toOrderProductRow(item, styleQtyMap.get(item.styleId) ?? 0),
+            ),
             ...(decoration ? [{
               type: 'decoration' as const,
               decorationType: decoration.type,
@@ -359,21 +366,11 @@ export async function POST(request: NextRequest) {
         customer_phone: shippingInfo.phone,
         company: shippingInfo.company || null,
         items: [
-          ...items.map(item => ({
-            type: 'product' as const,
-            sku: item.sku,
-            styleId: item.styleId,
-            styleName: item.styleName,
-            brandName: item.brandName,
-            colorName: item.colorName,
-            colorCode: item.colorCode,
-            sizeName: item.sizeName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            discountedPrice: item.discountedPrice,
-            imageUrl: item.imageUrl,
-            cogs: cogsMap[item.sku] ?? null,
-          })),
+          ...items.map((item) =>
+            toOrderProductRow(item, styleQtyMap.get(item.styleId) ?? 0, {
+              cogs: cogsMap[item.sku] ?? null,
+            }),
+          ),
           ...(decoration ? [{
             type: 'decoration' as const,
             decorationType: decoration.type,
@@ -480,18 +477,21 @@ export async function POST(request: NextRequest) {
         warehouse: group.warehouse,
         shipping_method: group.isPrimary ? shippingMethod : 'economy',
         shipping_cost: breakdownEntry?.cost ?? 0,
-        items: group.items.map(item => ({
-          sku: item.sku,
-          styleId: item.styleId,
-          styleName: item.styleName,
-          brandName: item.brandName,
-          colorName: item.colorName,
-          colorCode: item.colorCode,
-          sizeName: item.sizeName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          imageUrl: item.imageUrl,
-        })),
+        items: group.items.map((item) => {
+          const tq = styleQtyMap.get(item.styleId) ?? 0;
+          return {
+            sku: item.sku,
+            styleId: item.styleId,
+            styleName: item.styleName,
+            brandName: item.brandName,
+            colorName: item.colorName,
+            colorCode: item.colorCode,
+            sizeName: item.sizeName,
+            quantity: item.quantity,
+            unitPrice: getEffectiveItemPrice(item, tq),
+            imageUrl: item.imageUrl,
+          };
+        }),
       };
     });
 

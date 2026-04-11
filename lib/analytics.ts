@@ -46,6 +46,7 @@ export interface CartItem {
   sizeName: string;
   quantity: number;
   unitPrice: number;
+  googleDiscountPercent?: number;
   discountedPrice?: number;
 }
 

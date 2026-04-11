@@ -91,7 +91,17 @@ export const useCartStore = create<CartStore>()(
         if (existingIndex >= 0) {
           // Update quantity of existing item
           const items = [...get().items];
-          items[existingIndex].quantity += item.quantity;
+          const existing = items[existingIndex];
+          existing.quantity += item.quantity;
+          if (item.googleDiscountPercent != null) {
+            existing.googleDiscountPercent = item.googleDiscountPercent;
+          }
+          if (item.discountedPrice != null) {
+            existing.discountedPrice = item.discountedPrice;
+          }
+          if (item.discountSource) {
+            existing.discountSource = item.discountSource;
+          }
           set({ 
             items, 
             isDrawerOpen: openDrawer ? true : get().isDrawerOpen, 
@@ -217,6 +227,21 @@ export const useCartStore = create<CartStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        const snapshot = state?.items;
+        if (snapshot && snapshot.length > 0) {
+          void fetch('/api/cart/refresh-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: snapshot }),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data: { items?: CartItem[] } | null) => {
+              if (data?.items && Array.isArray(data.items)) {
+                useCartStore.setState({ items: data.items });
+              }
+            })
+            .catch(() => {});
+        }
       },
     }
   )

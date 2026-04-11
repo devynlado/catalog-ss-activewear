@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, calculateOrderTotals, toStripeCents, ShippingMethod } from '@/lib/stripe';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { CartItem } from '@/lib/database.types';
+import { prepareCartItemsForPricing } from '@/lib/cart-pricing-server';
 
 interface UpdatePaymentIntentRequest {
   paymentIntentId: string;
@@ -13,14 +14,16 @@ interface UpdatePaymentIntentRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: UpdatePaymentIntentRequest = await request.json();
-    const { paymentIntentId, orderId, items, shippingMethod } = body;
+    const { paymentIntentId, orderId, items: rawItems, shippingMethod } = body;
 
-    if (!paymentIntentId || !orderId || !items?.length) {
+    if (!paymentIntentId || !orderId || !rawItems?.length) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
+
+    const items = await prepareCartItemsForPricing(rawItems);
 
     // Calculate new totals with updated shipping method
     const { subtotal, taxAmount, shippingCost, total } = calculateOrderTotals(items, shippingMethod);

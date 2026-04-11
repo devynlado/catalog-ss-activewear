@@ -244,7 +244,13 @@ export function CartDrawer() {
       sizeName: originalSizeName,
       quantity: 1,
       unitPrice: price,
-      discountedPrice: existingItem.discountedPrice ? price : undefined,
+      googleDiscountPercent: existingItem.googleDiscountPercent,
+      discountedPrice:
+        existingItem.googleDiscountPercent != null
+          ? undefined
+          : existingItem.discountedPrice
+            ? price
+            : undefined,
       discountSource: existingItem.discountSource,
       imageUrl: group.imageUrl,
       availableSizes: group.availableSizes,

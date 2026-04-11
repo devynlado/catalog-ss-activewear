@@ -4,6 +4,7 @@
  */
 
 import type { CartItem } from './database.types';
+import { getEffectiveItemPrice, hasTieredPricing } from './tiered-pricing';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,13 @@ export function getItemWarehouse(styleId: number, supplier?: string): Warehouse 
 // ── Cart Grouping ──────────────────────────────────────────────────────────
 
 export function groupCartByWarehouse(items: CartItem[]): ShipmentGroup[] {
+  const styleQtys = new Map<number, number>();
+  for (const item of items) {
+    if (hasTieredPricing(item.styleId)) {
+      styleQtys.set(item.styleId, (styleQtys.get(item.styleId) || 0) + item.quantity);
+    }
+  }
+
   const warehouseMap = new Map<Warehouse, CartItem[]>();
 
   for (const item of items) {
@@ -149,10 +157,10 @@ export function groupCartByWarehouse(items: CartItem[]): ShipmentGroup[] {
       items: warehouseItems,
       isPrimary: false,
       itemCount: warehouseItems.reduce((sum, i) => sum + i.quantity, 0),
-      subtotal: warehouseItems.reduce(
-        (sum, i) => sum + (i.discountedPrice ?? i.unitPrice) * i.quantity,
-        0
-      ),
+      subtotal: warehouseItems.reduce((sum, i) => {
+        const totalStyleQty = styleQtys.get(i.styleId) ?? 0;
+        return sum + getEffectiveItemPrice(i, totalStyleQty) * i.quantity;
+      }, 0),
     })
   );
 

@@ -1276,6 +1276,8 @@ export interface CartItem {
   unitPrice: number;
   /** When set, cart/checkout use this unit price (bypasses volume tiers) */
   overrideUnitPrice?: number;
+  /** Google discount as 0–1 (e.g. 0.15); used to recompute price when list price changes */
+  googleDiscountPercent?: number;
   discountedPrice?: number;  // Google automated discount price
   discountSource?: 'google';  // Track discount origin
   imageUrl?: string;
