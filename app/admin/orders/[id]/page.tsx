@@ -570,6 +570,8 @@ export default async function OrderDetailPage({
             <SSActivewearSection
               orderId={order.id}
               orderStatus={order.status}
+              paymentStatus={order.payment_status ?? 'pending'}
+              paidAt={order.paid_at ?? null}
               ssAutoOrderFailed={order.ss_auto_order_failed ?? false}
               ssAutoOrderError={order.ss_auto_order_error ?? null}
               ssOrders={(ssOrders || []) as any[]}

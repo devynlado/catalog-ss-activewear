@@ -36,9 +36,14 @@ interface SSOrder {
   last_polled_at: string | null;
 }
 
+/** After payment, wait this long before offering manual "Place SS order" (avoids racing the Stripe webhook auto-place). */
+const STALE_AWAITING_MS = 3 * 60 * 1000;
+
 interface SSActivewearSectionProps {
   orderId: string;
   orderStatus: string;
+  paymentStatus: string;
+  paidAt: string | null;
   ssAutoOrderFailed: boolean;
   ssAutoOrderError: string | null;
   ssOrders: SSOrder[];
@@ -67,6 +72,8 @@ const WAREHOUSE_NAMES: Record<string, string> = {
 export function SSActivewearSection({
   orderId,
   orderStatus,
+  paymentStatus,
+  paidAt,
   ssAutoOrderFailed,
   ssAutoOrderError,
   ssOrders: initialSSOrders,
@@ -76,8 +83,31 @@ export function SSActivewearSection({
   const [cancellingOrder, setCancellingOrder] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const canRetry = ssAutoOrderFailed && orderStatus === 'awaiting_purchasing';
   const hasOrders = ssOrders.length > 0;
+  // Re-render periodically so "Place SS order" appears after the stale window without a full page refresh.
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setClock(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const paidAtMs = paidAt ? new Date(paidAt).getTime() : 0;
+  const isStaleAwaiting =
+    paymentStatus === 'paid' &&
+    orderStatus === 'awaiting_purchasing' &&
+    !hasOrders &&
+    paidAtMs > 0 &&
+    clock - paidAtMs > STALE_AWAITING_MS;
+
+  // Retry/place: explicit failure, or paid + still no ss_orders after webhook window (covers old "silent skip" rows).
+  const canRetry =
+    orderStatus === 'awaiting_purchasing' &&
+    paymentStatus === 'paid' &&
+    !hasOrders &&
+    (ssAutoOrderFailed || isStaleAwaiting);
+
+  const retryButtonLabel =
+    ssAutoOrderFailed ? 'Retry order' : 'Place SS order';
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -176,33 +206,63 @@ export function SSActivewearSection({
         </div>
       )}
 
-      {/* Failed auto-order state */}
-      {ssAutoOrderFailed && (
-        <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
+      {/* Failed auto-order, or stale paid awaiting with no ss_orders (manual place) */}
+      {canRetry && (
+        <div
+          className={`mb-4 rounded-lg border p-4 ${
+            ssAutoOrderFailed
+              ? 'bg-amber-50 border-amber-200'
+              : 'bg-slate-50 border-slate-200'
+          }`}
+        >
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <AlertTriangle
+              className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                ssAutoOrderFailed ? 'text-amber-500' : 'text-slate-500'
+              }`}
+            />
             <div className="flex-1">
-              <p className="text-sm font-medium text-amber-800">Auto-order failed</p>
-              {ssAutoOrderError && (
+              <p
+                className={`text-sm font-medium ${
+                  ssAutoOrderFailed ? 'text-amber-800' : 'text-slate-800'
+                }`}
+              >
+                {ssAutoOrderFailed
+                  ? 'Auto-order failed'
+                  : 'No S&S order on file yet'}
+              </p>
+              {ssAutoOrderFailed && ssAutoOrderError && (
                 <p className="text-xs text-amber-600 mt-1">{ssAutoOrderError}</p>
               )}
-              {canRetry && (
-                <button
-                  onClick={handleRetry}
-                  disabled={isRetrying}
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
-                  {isRetrying ? 'Retrying…' : 'Retry Order'}
-                </button>
+              {!ssAutoOrderFailed && (
+                <p className="text-xs text-slate-600 mt-1">
+                  Automatic placement may still be running right after checkout. If this order is paid
+                  and you still see no S&S order after a few minutes, use the button below (waits ~3
+                  minutes after payment before offering this, to avoid double-submit with the webhook).
+                </p>
               )}
+              <button
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className={`mt-3 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${
+                  ssAutoOrderFailed
+                    ? 'bg-amber-600 hover:bg-amber-700'
+                    : 'bg-slate-700 hover:bg-slate-800'
+                }`}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+                {isRetrying ? 'Working…' : retryButtonLabel}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* No orders yet but awaiting purchasing */}
-      {!hasOrders && orderStatus === 'awaiting_purchasing' && !ssAutoOrderFailed && (
+      {/* No orders yet but awaiting purchasing (fresh — webhook / auto-place may still run) */}
+      {!hasOrders &&
+        orderStatus === 'awaiting_purchasing' &&
+        !ssAutoOrderFailed &&
+        !canRetry && (
         <div className="text-center py-6">
           <Clock className="mx-auto h-8 w-8 text-stone-300" />
           <p className="mt-2 text-sm text-slate-500">Awaiting auto-order placement…</p>

@@ -239,19 +239,6 @@ export async function placeSSOrder(
 ): Promise<PlaceOrderResult> {
   const db = supabase || getServiceSupabase();
 
-  // Kill switch
-  if (process.env.SS_AUTO_ORDER_ENABLED === 'false') {
-    await logSSActivity({
-      orderId,
-      activityType: 'auto_order_skipped',
-      status: 'warning',
-      title: 'Auto-ordering disabled (kill switch)',
-      details: { reason: 'SS_AUTO_ORDER_ENABLED is false' },
-      supabase: db,
-    });
-    return { success: false, ssOrders: [], lineErrors: [], error: 'Auto-ordering disabled' };
-  }
-
   // Fetch order with shipments
   const { data: order, error: orderErr } = await db
     .from('orders')
@@ -279,6 +266,25 @@ export async function placeSSOrder(
       supabase: db,
     });
     return { success: true, ssOrders: [], lineErrors: [], error: 'Already placed' };
+  }
+
+  // Kill switch (after idempotency — do not mark failed when an SS order already exists)
+  if (process.env.SS_AUTO_ORDER_ENABLED === 'false') {
+    await logSSActivity({
+      orderId,
+      activityType: 'auto_order_skipped',
+      status: 'warning',
+      title: 'Auto-ordering disabled (kill switch)',
+      details: { reason: 'SS_AUTO_ORDER_ENABLED is false' },
+      supabase: db,
+    });
+    const killMsg =
+      'Automatic S&S ordering is disabled (SS_AUTO_ORDER_ENABLED=false). Turn it on in Vercel env and use Retry, or place the order on ssactivewear.com manually.';
+    await db.from('orders').update({
+      ss_auto_order_failed: true,
+      ss_auto_order_error: killMsg,
+    }).eq('id', orderId);
+    return { success: false, ssOrders: [], lineErrors: [], error: 'Auto-ordering disabled' };
   }
 
   // Build order lines — only include items supplied by SS Activewear
@@ -367,6 +373,18 @@ export async function placeSSOrder(
         : undefined,
       supabase: db,
     });
+    // Product lines exist but none map to S&S — admin must fix SKUs/supplier data or place manually; surface Retry in admin UI.
+    if (cartLines.length > 0) {
+      const msg =
+        skippedItems.length > 0
+          ? `Could not build S&S order lines: ${skippedItems.length} cart line(s) did not match an S&S SKU (check cart SKUs vs product_skus, color/size spelling, or supplier).`
+          : 'Cart has product lines but none map to S&S Activewear.';
+      await db.from('orders').update({
+        ss_auto_order_failed: true,
+        ss_auto_order_error: msg,
+      }).eq('id', orderId);
+      return { success: false, ssOrders: [], lineErrors: [], error: msg };
+    }
     return { success: true, ssOrders: [], lineErrors: [] };
   }
 
