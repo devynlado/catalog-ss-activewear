@@ -9,6 +9,9 @@ interface LPQuoteFormProps {
   service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing' | 'puff-screen-printing';
   source?: string;
   variant?: string;
+  resolvedLocation?: string | null;
+  copyVariant?: string;
+  resolutionSource?: string;
 }
 
 const quantityOptions = [
@@ -19,7 +22,7 @@ const quantityOptions = [
   { value: '1000+', label: '1,000+ pieces', estimatedValue: 2000 },
 ];
 
-export function LPQuoteForm({ service, source, variant }: LPQuoteFormProps) {
+export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVariant, resolutionSource }: LPQuoteFormProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -47,6 +50,9 @@ export function LPQuoteForm({ service, source, variant }: LPQuoteFormProps) {
           source: source || `lp_${service}`,
           variant: variant,
           visitor_source: getVisitorSource(),
+          resolved_location: resolvedLocation || undefined,
+          copy_variant: copyVariant || undefined,
+          resolution_source: resolutionSource || undefined,
         }),
       });
 
@@ -54,11 +60,13 @@ export function LPQuoteForm({ service, source, variant }: LPQuoteFormProps) {
         throw new Error('Failed to submit form');
       }
 
-      // Track conversion in GA4
       const selectedQuantity = quantityOptions.find(q => q.value === formData.quantity);
       trackGenerateLead({
         source: source || `lp_${service}`,
         value: selectedQuantity?.estimatedValue || 300,
+        resolved_location: resolvedLocation || undefined,
+        copy_variant: copyVariant || undefined,
+        resolution_source: resolutionSource || undefined,
       });
 
       setIsSubmitted(true);

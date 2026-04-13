@@ -2,9 +2,9 @@
 
 import { Thermometer, Shield, DollarSign, Sparkles, Palette, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { 
-  LPHero, 
-  LPTrustSignals, 
+import {
+  LPHero,
+  LPTrustSignals,
   LPServiceAreas,
   LPStickyMobileCTA,
   LPExitIntent,
@@ -16,6 +16,7 @@ import {
   LPFloatingCTA,
 } from '../_components';
 import { trackPhoneClick } from '@/lib/analytics';
+import { useLPLocation } from '@/hooks/useLPLocation';
 
 const whyChooseReasons = [
   {
@@ -58,6 +59,13 @@ const pricingPreview = [
 ];
 
 export default function ScreenPrintingNearMeLP() {
+  const {
+    content,
+    resolvedCity,
+    resolutionSource,
+    copyVariant,
+  } = useLPLocation('screen-printing');
+
   const scrollToForm = () => {
     const form = document.querySelector('form');
     if (form) {
@@ -69,13 +77,19 @@ export default function ScreenPrintingNearMeLP() {
     }
   };
 
+  const cityLabel = resolvedCity || null;
+
   return (
     <div className="min-h-screen pb-20 lg:pb-0">
-      {/* Hero with Form */}
+      {/* Hero with Form — dynamic copy pre-resolved */}
       <LPHero
         service="screen-printing"
-        headline="Local Screen Printing in Los Angeles & Southern California"
-        subheadline="Your nearby screen printing company — serving LA, Orange County, Hollywood, and all of California. Factory-direct pricing, same week turnaround, 50 piece minimum."
+        headline={content.headline}
+        subheadline={content.subhead}
+        skipDynamicResolution
+        resolvedLocation={resolvedCity}
+        resolutionSource={resolutionSource}
+        copyVariant={copyVariant}
       />
 
       {/* Trust Signals */}
@@ -111,8 +125,8 @@ export default function ScreenPrintingNearMeLP() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className={`rounded-xl p-6 text-center ${
-                  index === 3 
-                    ? 'bg-brand-500 text-white' 
+                  index === 3
+                    ? 'bg-brand-500 text-white'
                     : 'bg-white border border-stone-200'
                 }`}
               >
@@ -144,19 +158,19 @@ export default function ScreenPrintingNearMeLP() {
         </div>
       </section>
 
-      {/* Why Choose Section */}
+      {/* Why Choose Section — heading personalized */}
       <section className="relative py-12 lg:py-16 bg-gradient-to-b from-white to-stone-50/50 overflow-hidden">
-        <div 
+        <div
           className="pointer-events-none absolute inset-0 opacity-[0.015]"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
           }}
         />
-        
+
         <div className="pointer-events-none absolute -right-32 top-20 h-64 w-64 rounded-full bg-brand-500/5 blur-3xl" />
-        
+
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -164,13 +178,17 @@ export default function ScreenPrintingNearMeLP() {
             className="text-center mb-10"
           >
             <h2 className="text-2xl font-bold text-navy-800 sm:text-3xl">
-              Why Local Businesses Choose Garment Decor
+              {cityLabel
+                ? `Why ${cityLabel} Businesses Choose Garment Decor`
+                : 'Why Local Businesses Choose Garment Decor'}
             </h2>
             <p className="mt-2 text-slate-600">
-              California&apos;s trusted screen printing company
+              {cityLabel
+                ? `${cityLabel}'s trusted screen printing company`
+                : "California's trusted screen printing company"}
             </p>
           </motion.div>
-          
+
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {whyChooseReasons.map((reason, index) => {
               const Icon = reason.icon;
@@ -212,16 +230,20 @@ export default function ScreenPrintingNearMeLP() {
       <LPDedicatedRep service="screen-printing" />
 
       {/* Service Areas */}
-      <LPServiceAreas />
+      <LPServiceAreas location={cityLabel} />
 
-      {/* Final CTA */}
+      {/* Final CTA — personalized */}
       <section className="py-12 lg:py-16 bg-navy-800">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold text-white sm:text-3xl">
-            Looking for a Screen Printer Near You?
+            {cityLabel
+              ? `Looking for a Screen Printer in ${cityLabel}?`
+              : 'Looking for a Screen Printer Near You?'}
           </h2>
           <p className="mt-4 text-lg text-slate-300">
-            We serve Los Angeles, Orange County, Santa Barbara, Hollywood, and all of Southern California. Get a free quote within 2 hours.
+            {cityLabel
+              ? `We serve ${cityLabel}, Los Angeles, Orange County, and all of Southern California. Get a free quote within 2 hours.`
+              : 'We serve Los Angeles, Orange County, Santa Barbara, Hollywood, and all of Southern California. Get a free quote within 2 hours.'}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a

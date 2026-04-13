@@ -15,6 +15,8 @@ export interface AttributionData {
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
   gclid?: string;
   referrer?: string;
 }
@@ -43,6 +45,8 @@ export function captureAttribution(): void {
   const utm_source = params.get('utm_source');
   const utm_medium = params.get('utm_medium');
   const utm_campaign = params.get('utm_campaign');
+  const utm_term = params.get('utm_term');
+  const utm_content = params.get('utm_content');
   const gclid = params.get('gclid');
 
   const referrer = document.referrer || '';
@@ -53,6 +57,8 @@ export function captureAttribution(): void {
   if (utm_source) data.utm_source = utm_source;
   if (utm_medium) data.utm_medium = utm_medium;
   if (utm_campaign) data.utm_campaign = utm_campaign;
+  if (utm_term) data.utm_term = utm_term;
+  if (utm_content) data.utm_content = utm_content;
   if (gclid) data.gclid = gclid;
   if (referrer) data.referrer = referrer;
 

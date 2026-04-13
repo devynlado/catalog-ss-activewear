@@ -12,7 +12,11 @@ const serviceAreas = [
   { city: 'Nationwide', areas: 'Shipping available to all 50 states' },
 ];
 
-export function LPServiceAreas() {
+interface LPServiceAreasProps {
+  location?: string | null;
+}
+
+export function LPServiceAreas({ location }: LPServiceAreasProps = {}) {
   return (
     <section className="py-12 lg:py-16 bg-stone-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -28,7 +32,7 @@ export function LPServiceAreas() {
             Service Areas
           </div>
           <h2 className="text-2xl font-bold text-navy-800 sm:text-3xl">
-            Serving Southern California & Beyond
+            {location ? `Serving ${location} & Beyond` : 'Serving Southern California & Beyond'}
           </h2>
           <p className="mt-2 text-slate-600">
             Local pickup available • Free shipping on orders over $500

@@ -23,10 +23,13 @@ interface ContactFormData {
   company?: string;
   message: string;
   service?: string;
-  source?: string;         // Lead source (e.g., lp_screen_printing)
-  variant?: string;        // A/B test variant
-  quantity?: string;       // Estimated quantity from LP form
-  visitor_source?: string; // Traffic channel (e.g., Google Ads, Organic Search)
+  source?: string;            // Lead source (e.g., lp_screen_printing)
+  variant?: string;           // A/B test variant
+  quantity?: string;          // Estimated quantity from LP form
+  visitor_source?: string;    // Traffic channel (e.g., Google Ads, Organic Search)
+  resolved_location?: string; // Dynamic copy location (e.g., "Pasadena")
+  copy_variant?: string;      // keyword_location | geo_location | default
+  resolution_source?: string; // url_param | geo_ip | fallback
 }
 
 export async function POST(request: NextRequest) {
@@ -78,6 +81,9 @@ export async function POST(request: NextRequest) {
           variant: body.variant || null,
           quantity: body.quantity || null,
           visitor_source: body.visitor_source || null,
+          resolved_location: body.resolved_location || null,
+          copy_variant: body.copy_variant || null,
+          resolution_source: body.resolution_source || null,
           status: 'spam',
           is_spam: true,
           blocked_at: new Date().toISOString(),
@@ -159,6 +165,9 @@ export async function POST(request: NextRequest) {
         variant: body.variant || null,
         quantity: body.quantity || null,
         visitor_source: body.visitor_source || null,
+        resolved_location: body.resolved_location || null,
+        copy_variant: body.copy_variant || null,
+        resolution_source: body.resolution_source || null,
         status: 'new',
       });
       console.log(`Contact saved to Supabase for ${body.email}`);

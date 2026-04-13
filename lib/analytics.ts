@@ -438,10 +438,16 @@ export function trackRemoveDecoration(params: {
 export function trackGenerateLead(params?: {
   source?: string;
   value?: number;
+  resolved_location?: string | null;
+  copy_variant?: string;
+  resolution_source?: string;
 }) {
   trackEvent('generate_lead', {
     source: params?.source || 'large_order_form',
     ...(params?.value ? { value: params.value } : {}),
+    ...(params?.resolved_location ? { resolved_location: params.resolved_location } : {}),
+    ...(params?.copy_variant ? { copy_variant: params.copy_variant } : {}),
+    ...(params?.resolution_source ? { resolution_source: params.resolution_source } : {}),
   });
 }
 
