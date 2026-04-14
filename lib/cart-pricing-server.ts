@@ -15,6 +15,11 @@ export function listPriceFromSkuRow(retail: unknown, sale: unknown): number {
   return r;
 }
 
+export interface SkuStockInfo {
+  qty: number;
+  availability: string;
+}
+
 export async function fetchSkuListPricesBySku(skus: string[]): Promise<Map<string, number>> {
   const map = new Map<string, number>();
   const unique = [...new Set(skus.filter(Boolean))];
@@ -31,6 +36,27 @@ export async function fetchSkuListPricesBySku(skus: string[]): Promise<Map<strin
   for (const row of data as { sku: string; retail_price: unknown; sale_price: unknown }[]) {
     if (row.sku) {
       map.set(row.sku, listPriceFromSkuRow(row.retail_price, row.sale_price));
+    }
+  }
+  return map;
+}
+
+export async function fetchSkuStockBySku(skus: string[]): Promise<Map<string, SkuStockInfo>> {
+  const map = new Map<string, SkuStockInfo>();
+  const unique = [...new Set(skus.filter(Boolean))];
+  if (unique.length === 0) return map;
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from('product_skus')
+    .select('sku, qty, availability')
+    .in('sku', unique);
+
+  if (error || !data) return map;
+
+  for (const row of data as { sku: string; qty: number; availability: string }[]) {
+    if (row.sku) {
+      map.set(row.sku, { qty: row.qty ?? 0, availability: row.availability ?? 'out_of_stock' });
     }
   }
   return map;

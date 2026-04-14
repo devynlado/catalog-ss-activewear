@@ -12,10 +12,20 @@ export interface AppliedCoupon {
   freeShipping: boolean;
 }
 
+export interface StockWarning {
+  sku: string;
+  colorName: string;
+  sizeName: string;
+  styleName: string;
+  requestedQty: number;
+  availableQty: number;
+}
+
 interface CartStore {
   items: CartItem[];
   decoration: DecorationSelection | null;
   appliedCoupon: AppliedCoupon | null;
+  stockWarnings: StockWarning[];
   isDrawerOpen: boolean;
   isDecorationModalOpen: boolean;
   justAdded: boolean;
@@ -31,6 +41,10 @@ interface CartStore {
   toggleDrawer: () => void;
   clearJustAdded: () => void;
   setHasHydrated: (hydrated: boolean) => void;
+
+  // Stock
+  setStockWarnings: (warnings: StockWarning[]) => void;
+  getStockWarningForSku: (sku: string) => StockWarning | undefined;
 
   // Coupon
   setAppliedCoupon: (coupon: AppliedCoupon | null) => void;
@@ -66,10 +80,14 @@ export const useCartStore = create<CartStore>()(
       items: [],
       decoration: null,
       appliedCoupon: null,
+      stockWarnings: [],
       isDrawerOpen: false,
       isDecorationModalOpen: false,
       justAdded: false,
       hasHydrated: false,
+
+      setStockWarnings: (warnings) => set({ stockWarnings: warnings }),
+      getStockWarningForSku: (sku) => get().stockWarnings.find((w) => w.sku === sku),
 
       setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
       clearCoupon: () => set({ appliedCoupon: null }),
@@ -235,9 +253,12 @@ export const useCartStore = create<CartStore>()(
             body: JSON.stringify({ items: snapshot }),
           })
             .then((res) => (res.ok ? res.json() : null))
-            .then((data: { items?: CartItem[] } | null) => {
+            .then((data: { items?: CartItem[]; stockWarnings?: StockWarning[] } | null) => {
               if (data?.items && Array.isArray(data.items)) {
-                useCartStore.setState({ items: data.items });
+                useCartStore.setState({
+                  items: data.items,
+                  stockWarnings: data.stockWarnings ?? [],
+                });
               }
             })
             .catch(() => {});

@@ -1,21 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { CartItem } from '@/lib/database.types';
-import { prepareCartItemsForPricing } from '@/lib/cart-pricing-server';
+import { prepareCartItemsForPricing, fetchSkuStockBySku, type SkuStockInfo } from '@/lib/cart-pricing-server';
+
+export interface StockWarning {
+  sku: string;
+  colorName: string;
+  sizeName: string;
+  styleName: string;
+  requestedQty: number;
+  availableQty: number;
+}
 
 /**
  * POST /api/cart/refresh-prices
  * Re-aligns persisted cart lines with current DB list prices and tier rules
  * (and derived Google discount from stored snapshots).
+ * Also checks cached stock levels and returns warnings for OOS items.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const rawItems = body?.items;
     if (!Array.isArray(rawItems) || rawItems.length === 0) {
-      return NextResponse.json({ items: [] }, { status: 200 });
+      return NextResponse.json({ items: [], stockWarnings: [] }, { status: 200 });
     }
-    const items = await prepareCartItemsForPricing(rawItems as CartItem[]);
-    return NextResponse.json({ items });
+
+    const cartItems = rawItems as CartItem[];
+    const [items, stockMap] = await Promise.all([
+      prepareCartItemsForPricing(cartItems),
+      fetchSkuStockBySku(cartItems.map((i) => i.sku)),
+    ]);
+
+    const stockWarnings: StockWarning[] = [];
+    for (const item of cartItems) {
+      const stock = stockMap.get(item.sku);
+      if (!stock || stock.availability === 'out_of_stock' || stock.qty < item.quantity) {
+        stockWarnings.push({
+          sku: item.sku,
+          colorName: item.colorName,
+          sizeName: item.sizeName,
+          styleName: item.styleName,
+          requestedQty: item.quantity,
+          availableQty: stock?.qty ?? 0,
+        });
+      }
+    }
+
+    return NextResponse.json({ items, stockWarnings });
   } catch (e) {
     console.error('[cart/refresh-prices]', e);
     return NextResponse.json(

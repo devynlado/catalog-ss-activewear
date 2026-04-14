@@ -8,6 +8,7 @@ import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 import { prepareCartItemsForPricing, toOrderProductRow } from '@/lib/cart-pricing-server';
 import { groupCartByWarehouse, calculateShippingBreakdown } from '@/lib/shipping';
 import { placeSSOrder } from '@/lib/ss-activewear-orders';
+import { checkLiveStock, logStockCheckFailures } from '@/lib/stock-check';
 
 interface ShippingInfo {
   email: string;
@@ -86,6 +87,39 @@ export async function POST(request: NextRequest) {
     }
 
     const items = await prepareCartItemsForPricing(rawItems);
+
+    // Real-time stock check against SS Activewear API
+    const stockResult = await checkLiveStock(
+      items.map((item) => ({
+        sku: item.sku,
+        styleId: item.styleId,
+        colorName: item.colorName,
+        colorCode: item.colorCode,
+        sizeName: item.sizeName,
+        quantity: item.quantity,
+      }))
+    );
+
+    if (!stockResult.passed) {
+      await logStockCheckFailures(stockResult.failures, shippingInfo.email);
+
+      const failureDetails = stockResult.failures.map((f) => ({
+        sku: f.sku,
+        colorName: f.colorName,
+        sizeName: f.sizeName,
+        requestedQty: f.requestedQty,
+        availableQty: f.liveQty,
+      }));
+
+      return NextResponse.json(
+        {
+          error: 'Some items in your cart are no longer available. Please update your cart and try again.',
+          code: 'OUT_OF_STOCK',
+          outOfStockItems: failureDetails,
+        },
+        { status: 409 }
+      );
+    }
 
     // Apply tiered pricing on the server side (min of volume tier vs Google discount)
     const styleQtyMap = new Map<number, number>();

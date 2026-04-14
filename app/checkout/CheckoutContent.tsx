@@ -300,6 +300,12 @@ function InlinePaymentForm({
           const data = await response.json();
 
           if (!response.ok) {
+            if (data.code === 'OUT_OF_STOCK' && data.outOfStockItems) {
+              const itemList = (data.outOfStockItems as Array<{ colorName: string; sizeName: string; availableQty: number }>)
+                .map((i) => `${i.colorName} / ${i.sizeName}${i.availableQty > 0 ? ` (only ${i.availableQty} left)` : ''}`)
+                .join(', ');
+              throw new Error(`Some items just went out of stock: ${itemList}. Please update your cart and try again.`);
+            }
             throw new Error(data.error || 'Failed to create checkout');
           }
 
@@ -485,7 +491,14 @@ export default function CheckoutContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setFreeOrderError(data.error || 'Failed to complete order');
+        if (data.code === 'OUT_OF_STOCK' && data.outOfStockItems) {
+          const itemList = (data.outOfStockItems as Array<{ colorName: string; sizeName: string; availableQty: number }>)
+            .map((i) => `${i.colorName} / ${i.sizeName}${i.availableQty > 0 ? ` (only ${i.availableQty} left)` : ''}`)
+            .join(', ');
+          setFreeOrderError(`Some items just went out of stock: ${itemList}. Please update your cart and try again.`);
+        } else {
+          setFreeOrderError(data.error || 'Failed to complete order');
+        }
         return;
       }
       if (data.freeOrder && data.orderNumber) {

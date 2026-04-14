@@ -11,6 +11,10 @@
       {
         "path": "/api/cron/ss-retry-orders",
         "schedule": "0 */2 * * *"
+      },
+      {
+        "path": "/api/cron/ss-inventory-sync",
+        "schedule": "*/15 * * * *"
       }
     ]
   }

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { X, Trash2, ShoppingCart, ArrowRight, Tag, Truck, Package, Plus, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCartStore } from '@/lib/cart-store';
+import { useCartStore, type StockWarning } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { CartItem, AvailableSize } from '@/lib/database.types';
@@ -169,6 +169,7 @@ export function CartDrawer() {
     getSubtotal,
     getTierUpsell,
     getTotalUnits,
+    stockWarnings,
   } = useCartStore();
   const router = useRouter();
   const subtotal = getSubtotal();
@@ -340,6 +341,21 @@ export function CartDrawer() {
               <Package className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />
               Items ship from 2 locations — arrives in separate packages
             </p>
+          </div>
+        )}
+
+        {/* Stock Warnings */}
+        {stockWarnings.length > 0 && (
+          <div className="relative z-10 bg-amber-50/90 backdrop-blur-sm px-6 py-3 border-b border-amber-200/70">
+            <p className="text-sm font-semibold text-amber-800 mb-1">Some items are no longer available</p>
+            {stockWarnings.map((w) => (
+              <p key={w.sku} className="text-xs text-amber-700">
+                {w.styleName} — {w.colorName} / {w.sizeName}
+                {w.availableQty > 0
+                  ? `: only ${w.availableQty} left (you have ${w.requestedQty})`
+                  : ' is out of stock'}
+              </p>
+            ))}
           </div>
         )}
 
