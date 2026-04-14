@@ -1151,3 +1151,68 @@ export async function fetchPageEngagement(
 
   return PAGE_ENGAGEMENT_PATHS.map((path) => byPath.get(path)!);
 }
+
+// ---------------------------------------------------------------------------
+// Content views (blog + portfolio) – for Sanity Studio Content Analytics tool
+// ---------------------------------------------------------------------------
+
+export interface ContentViewRow {
+  pagePath: string;
+  pageTitle?: string;
+  views: number;
+}
+
+/**
+ * Fetch total screenPageViews for pages matching a given path prefix.
+ * Returns rows sorted by views descending.
+ */
+export async function fetchContentViews(
+  propertyId: string,
+  pathPrefix: string,
+  dateRangeDays = 30,
+  explicitStartDate?: string,
+  explicitEndDate?: string
+): Promise<ContentViewRow[]> {
+  const property = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`;
+  const { startStr, endStr } = resolveDateRange(dateRangeDays, explicitStartDate, explicitEndDate);
+  const client = getClient();
+
+  const response = await runReport(client, {
+    property,
+    dateRanges: [{ startDate: startStr, endDate: endStr }],
+    dimensions: [
+      { name: 'pagePath' },
+      { name: 'pageTitle' },
+    ],
+    dimensionFilter: {
+      filter: {
+        fieldName: 'pagePath',
+        stringFilter: { matchType: 'BEGINS_WITH', value: pathPrefix },
+      },
+    },
+    metrics: [{ name: 'screenPageViews' }],
+    limit: 500,
+  });
+
+  if (!response.rows?.length) return [];
+
+  const byPage = new Map<string, { pageTitle?: string; views: number }>();
+
+  for (const row of response.rows) {
+    const pagePath = row.dimensionValues?.[0]?.value ?? '';
+    const pageTitle = row.dimensionValues?.[1]?.value ?? undefined;
+    const views = Number(row.metricValues?.[0]?.value ?? 0);
+    if (!pagePath) continue;
+
+    const existing = byPage.get(pagePath);
+    if (existing) {
+      existing.views += views;
+    } else {
+      byPage.set(pagePath, { pageTitle, views });
+    }
+  }
+
+  return [...byPage.entries()]
+    .sort((a, b) => b[1].views - a[1].views)
+    .map(([pagePath, { pageTitle, views }]) => ({ pagePath, pageTitle, views }));
+}

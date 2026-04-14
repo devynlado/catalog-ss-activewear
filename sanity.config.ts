@@ -1,7 +1,9 @@
 import { defineConfig } from 'sanity';
 import { structureTool } from 'sanity/structure';
 import type { StructureBuilder } from 'sanity/structure';
+import { BarChartIcon } from '@sanity/icons';
 import { schemaTypes } from './sanity/schema';
+import { ContentAnalyticsTool } from './sanity/tools/ContentAnalyticsTool';
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!;
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET!;
@@ -43,6 +45,15 @@ export default defineConfig({
     loginMethod: 'token',
   },
   plugins: [structureTool({ structure })],
+  tools: (prev) => [
+    ...prev,
+    {
+      name: 'content-analytics',
+      title: 'Analytics',
+      icon: BarChartIcon,
+      component: ContentAnalyticsTool,
+    },
+  ],
   schema: {
     types: schemaTypes,
   },
