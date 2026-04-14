@@ -1332,3 +1332,106 @@ export async function getLatestSyncStatus(): Promise<{
     fullSync: fullSync || null,
   };
 }
+
+// ============================================================================
+// DISCONTINUED PRODUCT DETECTION
+// ============================================================================
+
+const DISCONTINUATION_GRACE_HOURS = 48;
+
+export interface DiscontinuedCheckResult {
+  newlyFlagged: number;
+  autoHidden: number;
+  restored: number;
+  errors: string[];
+}
+
+/**
+ * Detect discontinued products by comparing active DB products against
+ * the current SS Activewear catalog. Runs once per inventory sync cycle.
+ *
+ * - Products in DB but missing from SS: flagged with `discontinued_detected_at`
+ * - Products flagged for 48+ hours: auto-hidden (`is_active = false`)
+ * - Products re-appearing in SS after being flagged: restored (flag cleared)
+ * - Products with `manually_kept_active = true` are never auto-hidden
+ */
+export async function checkDiscontinuedProducts(): Promise<DiscontinuedCheckResult> {
+  const errors: string[] = [];
+  let newlyFlagged = 0;
+  let autoHidden = 0;
+  let restored = 0;
+
+  try {
+    const supabase = createServerSupabaseClient();
+
+    // Fetch all style IDs currently in the SS catalog
+    const allStyles = await fetchAllStyles();
+    const ssStyleIds = new Set(allStyles.map((s) => s.styleID));
+    console.log(`[Discontinued] SS catalog has ${ssStyleIds.size} active styles`);
+
+    // Fetch all products from our DB that are active or recently flagged
+    // Use `as any` because discontinued_detected_at / manually_kept_active
+    // are not yet in the generated Supabase types.
+    const { data: dbProducts, error: dbError } = await (supabase.from as any)('products')
+      .select('style_id, is_active, discontinued_detected_at, manually_kept_active')
+      .or('is_active.eq.true,discontinued_detected_at.not.is.null') as {
+        data: Array<{
+          style_id: number;
+          is_active: boolean;
+          discontinued_detected_at: string | null;
+          manually_kept_active: boolean;
+        }> | null;
+        error: { message: string } | null;
+      };
+
+    if (dbError) throw new Error(`Failed to fetch products: ${dbError.message}`);
+    if (!dbProducts) return { newlyFlagged: 0, autoHidden: 0, restored: 0, errors: [] };
+
+    const now = new Date();
+    const graceMs = DISCONTINUATION_GRACE_HOURS * 60 * 60 * 1000;
+
+    for (const product of dbProducts) {
+      const inSS = ssStyleIds.has(product.style_id);
+
+      if (!inSS && product.is_active) {
+        if (!product.discontinued_detected_at) {
+          await (supabase.from as any)('products')
+            .update({ discontinued_detected_at: now.toISOString() })
+            .eq('style_id', product.style_id);
+          newlyFlagged++;
+        } else {
+          const flaggedAt = new Date(product.discontinued_detected_at);
+          if (now.getTime() - flaggedAt.getTime() >= graceMs) {
+            if (!product.manually_kept_active) {
+              await (supabase.from as any)('products')
+                .update({ is_active: false })
+                .eq('style_id', product.style_id);
+              autoHidden++;
+            }
+          }
+        }
+      } else if (inSS && product.discontinued_detected_at) {
+        await (supabase.from as any)('products')
+          .update({ discontinued_detected_at: null })
+          .eq('style_id', product.style_id);
+
+        if (!product.is_active) {
+          await (supabase.from as any)('products')
+            .update({ is_active: true })
+            .eq('style_id', product.style_id);
+        }
+        restored++;
+      }
+    }
+
+    console.log(
+      `[Discontinued] Flagged: ${newlyFlagged}, Auto-hidden: ${autoHidden}, Restored: ${restored}`
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    errors.push(msg);
+    console.error('[Discontinued] Error:', msg);
+  }
+
+  return { newlyFlagged, autoHidden, restored, errors };
+}

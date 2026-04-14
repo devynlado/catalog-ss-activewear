@@ -168,6 +168,8 @@ export interface Product {
   // Review aggregates (denormalized from reviews table)
   avgRating?: number | null;
   reviewCount?: number;
+  // Discontinued / active status
+  isActive?: boolean;
 }
 
 // Review types

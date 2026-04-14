@@ -13,6 +13,7 @@ import { ProductFAQ } from './ProductFAQ';
 import { getProductFaqItems } from './productFaqData';
 import { validateDiscountToken, GoogleDiscount } from '@/lib/google-discount';
 import { ReviewSection } from '@/components/reviews/ReviewSection';
+import { DiscontinuedProductPage } from './DiscontinuedProductPage';
 
 // Initial variant resolved from URL params (color/size from GMC feed links)
 export interface InitialVariant {
@@ -295,6 +296,14 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
   if (!product) {
     notFound();
+  }
+
+  if (product.isActive === false) {
+    return (
+      <DiscontinuedProductPage
+        product={product}
+      />
+    );
   }
   
   // Check for Google automated discount token (pv2 parameter)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { syncInventoryOnly, getActiveProductCount } from '@/lib/product-sync';
+import { syncInventoryOnly, getActiveProductCount, checkDiscontinuedProducts } from '@/lib/product-sync';
 import { createServerSupabaseClient } from '@/lib/supabase';
 
 export const maxDuration = 300; // Vercel Pro: 5 minutes
@@ -69,6 +69,13 @@ export async function GET(request: NextRequest) {
       (cycleComplete ? ' — CYCLE COMPLETE, will restart next run' : ` — next offset: ${nextOffset}`)
     );
 
+    // Run discontinued product check once per full cycle
+    let discontinuedResult = null;
+    if (cycleComplete) {
+      console.log('[Inventory Cron] Cycle complete — running discontinued product check...');
+      discontinuedResult = await checkDiscontinuedProducts();
+    }
+
     return NextResponse.json({
       success: result.success,
       offset,
@@ -79,6 +86,7 @@ export async function GET(request: NextRequest) {
       skusProcessed: result.skusProcessed,
       duration: `${Math.round(result.duration / 1000)}s`,
       errors: result.errors.length > 0 ? result.errors : undefined,
+      discontinued: discontinuedResult ?? undefined,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

@@ -840,6 +840,7 @@ function transformProduct(row: any): Product {
     metaDescription: row.meta_description || undefined,
     avgRating: row.avg_rating ?? null,
     reviewCount: row.review_count ?? 0,
+    isActive: row.is_active ?? true,
   };
 }
 
@@ -964,6 +965,7 @@ function transformProductWithSkus(row: any): Product {
     metaDescription: row.meta_description || undefined,
     avgRating: row.avg_rating ?? null,
     reviewCount: row.review_count ?? 0,
+    isActive: row.is_active ?? true,
   };
 }
 
