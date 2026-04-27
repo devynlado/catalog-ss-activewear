@@ -3,12 +3,13 @@
 import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, ShoppingCart, Trash2, Tag, Truck, Shield, BadgeCheck, Package, Pencil, Phone, ChevronDown, Paintbrush, Scissors, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ShoppingCart, Trash2, Tag, Truck, Shield, BadgeCheck, Package, Pencil, Phone, ChevronDown, Paintbrush, Scissors, X, AlertCircle } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { CartItem, AvailableSize } from '@/lib/database.types';
+import { formatMinQuantityMessage, type MinQuantityViolation } from '@/lib/product-rules';
 import { DecorationPitch } from '@/components/cart/DecorationPitch';
 import { getDecoratedDeliveryEstimate, formatDateRange } from '@/app/checkout/ShippingOptions';
 import { trackViewCart, CartItem as GA4CartItem } from '@/lib/analytics';
@@ -46,6 +47,7 @@ interface SizeData {
   price: number;
   discountedPrice?: number;
   originalSize: string;
+  minOrderQuantity?: number | null;
 }
 
 interface GroupedItem {
@@ -119,6 +121,7 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
       price: item.unitPrice,
       discountedPrice: item.discountedPrice,
       originalSize: item.sizeName,
+      minOrderQuantity: item.minOrderQuantity ?? null,
     });
 
     if (item.overrideUnitPrice && item.overrideUnitPrice > 0) {
@@ -181,6 +184,29 @@ export default function CartPage() {
 
   // Group items
   const groupedItems = useMemo(() => groupItemsByStyleColor(items), [items]);
+
+  // Per-line minimum-order-quantity violations across the whole cart. Used to
+  // highlight individual size cells, render a checkout-blocking banner, and
+  // disable "Proceed to Checkout". Server re-validates against fresh DB
+  // values when the order is actually placed.
+  const cartMinViolations = useMemo<MinQuantityViolation[]>(() => {
+    return items.reduce<MinQuantityViolation[]>((acc, item) => {
+      const min = item.minOrderQuantity ?? null;
+      if (min != null && item.quantity > 0 && item.quantity < min) {
+        acc.push({
+          sku: item.sku,
+          styleName: item.styleName,
+          brandName: item.brandName,
+          colorName: item.colorName,
+          sizeName: item.sizeName,
+          quantity: item.quantity,
+          minimum: min,
+        });
+      }
+      return acc;
+    }, []);
+  }, [items]);
+  const hasCartMinViolations = cartMinViolations.length > 0;
 
   // Check if any items have discounts
   const hasDiscounts = items.some(item => item.discountedPrice && item.discountedPrice < item.unitPrice);
@@ -512,9 +538,16 @@ export default function CartPage() {
                                 const availableSize = group.availableSizes.find(s => normalizeSize(s.name) === size);
                                 const actualPrice = availableSize?.price || group.basePrice;
                                 const hasUpcharge = actualPrice > group.basePrice;
-                                
+                                const minQty = sizeData?.minOrderQuantity ?? null;
+                                const belowMin = !!(
+                                  minQty != null &&
+                                  sizeData &&
+                                  sizeData.quantity > 0 &&
+                                  sizeData.quantity < minQty
+                                );
+
                                 return (
-                                  <td key={size} className="px-1 py-2 text-center">
+                                  <td key={size} className="px-1 py-2 text-center align-top">
                                     <div className="flex flex-col items-center">
                                       <input
                                         type="number"
@@ -527,13 +560,23 @@ export default function CartPage() {
                                           size,
                                           parseInt(e.target.value) || 0
                                         )}
-                                        className={`w-14 h-9 text-center text-sm font-semibold rounded-md focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors ${
-                                          hasQuantity 
-                                            ? 'bg-white border-2 border-brand-400 text-slate-900' 
-                                            : 'bg-stone-50 border border-stone-300 text-slate-400'
+                                        aria-invalid={belowMin || undefined}
+                                        className={`w-14 h-9 text-center text-sm font-semibold rounded-md focus:ring-2 focus:outline-none transition-colors ${
+                                          belowMin
+                                            ? 'bg-white border-2 border-red-400 text-slate-900 focus:border-red-500 focus:ring-red-500/20'
+                                            : hasQuantity
+                                              ? 'bg-white border-2 border-brand-400 text-slate-900 focus:border-brand-500 focus:ring-brand-500/20'
+                                              : 'bg-stone-50 border border-stone-300 text-slate-400 focus:border-brand-500 focus:ring-brand-500/20'
                                         }`}
                                       />
-                                      {hasUpcharge ? (
+                                      {belowMin ? (
+                                        <span
+                                          className="text-[10px] mt-0.5 font-semibold text-red-600 leading-tight"
+                                          title={`Minimum ${minQty} pieces for ${group.colorName} / ${size}`}
+                                        >
+                                          Min {minQty}
+                                        </span>
+                                      ) : hasUpcharge ? (
                                         <span className="text-[10px] text-orange-600 font-medium mt-0.5">
                                           +{formatPrice(actualPrice - group.basePrice)}
                                         </span>
@@ -751,12 +794,40 @@ export default function CartPage() {
                 </span>
               </div>
 
-              <Link href="/checkout">
-                <Button className="w-full shadow-lg shadow-brand-500/25" size="lg">
+              {hasCartMinViolations && (
+                <div
+                  role="alert"
+                  className="mb-3 rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm"
+                >
+                  <div className="flex gap-2">
+                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+                    <div className="min-w-0">
+                      <ul className="space-y-0.5 text-red-700">
+                        {cartMinViolations.map((v) => (
+                          <li key={v.sku}>{formatMinQuantityMessage(v)}</li>
+                        ))}
+                      </ul>
+                      <p className="mt-1.5 text-xs text-red-700/80">
+                        Increase the quantity to at least the minimum.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {hasCartMinViolations ? (
+                <Button className="w-full" size="lg" disabled>
                   Proceed to Checkout
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-              </Link>
+              ) : (
+                <Link href="/checkout">
+                  <Button className="w-full shadow-lg shadow-brand-500/25" size="lg">
+                    Proceed to Checkout
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
 
               {/* Help Link */}
               <div className="mt-4 text-center">

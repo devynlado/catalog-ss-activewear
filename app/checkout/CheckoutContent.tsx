@@ -28,6 +28,7 @@ import { useCartStore } from '@/lib/cart-store';
 import { toStripeCents } from '@/lib/stripe-utils';
 import { calculateOrderTotalsWithCoupon } from '@/lib/coupon-utils';
 import { formatPrice } from '@/lib/utils';
+import { formatMinQuantityMessage, type MinQuantityViolation } from '@/lib/product-rules';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -218,6 +219,9 @@ interface InlinePaymentFormProps {
   appliedCoupon?: { code: string; discountAmount: number; freeShipping?: boolean } | null;
   decoration?: DecorationSelection | null;
   liveShippingCost?: number | null;
+  /** When true the cart contains a line below its minimum order quantity;
+   *  the Pay button is disabled and submit is short-circuited. */
+  hasMinViolations?: boolean;
 }
 
 function InlinePaymentForm({
@@ -232,6 +236,7 @@ function InlinePaymentForm({
   appliedCoupon,
   decoration,
   liveShippingCost,
+  hasMinViolations = false,
 }: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -255,6 +260,16 @@ function InlinePaymentForm({
     e.preventDefault();
 
     if (!stripe || !elements || !isFormValid) {
+      return;
+    }
+
+    // Bail before contacting Stripe — the page-level banner already explains
+    // the problem and we don't want to create a PaymentIntent for an order
+    // the server will reject.
+    if (hasMinViolations) {
+      setPaymentError(
+        'One or more items are below their minimum order quantity. Please update your cart before paying.',
+      );
       return;
     }
 
@@ -305,6 +320,11 @@ function InlinePaymentForm({
                 .map((i) => `${i.colorName} / ${i.sizeName}${i.availableQty > 0 ? ` (only ${i.availableQty} left)` : ''}`)
                 .join(', ');
               throw new Error(`Some items just went out of stock: ${itemList}. Please update your cart and try again.`);
+            }
+            if (data.code === 'MIN_ORDER_QUANTITY' && Array.isArray(data.messages)) {
+              throw new Error(
+                `${(data.messages as string[]).join(' ')} Please update your cart and try again.`,
+              );
             }
             throw new Error(data.error || 'Failed to create checkout');
           }
@@ -382,7 +402,7 @@ function InlinePaymentForm({
 
       <Button
         type="submit"
-        disabled={!stripe || !isFormValid || isProcessing}
+        disabled={!stripe || !isFormValid || isProcessing || hasMinViolations}
         isLoading={isProcessing}
         loadingText="Processing payment..."
         className="w-full"
@@ -403,6 +423,30 @@ function InlinePaymentForm({
 
 export default function CheckoutContent() {
   const { items, decoration, getDecorationTotal, clearDecoration, appliedCoupon, setAppliedCoupon, clearCoupon } = useCartStore();
+
+  // Snapshot-based minimum-order-quantity violations across the whole cart.
+  // The cart store re-snapshots `minOrderQuantity` on hydrate via
+  // `/api/cart/refresh-prices`, so this picks up admin changes made while
+  // the cart was sitting in localStorage. Server-side checkout endpoints
+  // also re-validate against fresh DB values.
+  const cartMinViolations = useMemo<MinQuantityViolation[]>(() => {
+    return items.reduce<MinQuantityViolation[]>((acc, item) => {
+      const min = item.minOrderQuantity ?? null;
+      if (min != null && item.quantity > 0 && item.quantity < min) {
+        acc.push({
+          sku: item.sku,
+          styleName: item.styleName,
+          brandName: item.brandName,
+          colorName: item.colorName,
+          sizeName: item.sizeName,
+          quantity: item.quantity,
+          minimum: min,
+        });
+      }
+      return acc;
+    }, []);
+  }, [items]);
+  const hasCartMinViolations = cartMinViolations.length > 0;
   
   // Form state
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(initialShippingInfo);
@@ -471,6 +515,12 @@ export default function CheckoutContent() {
 
   const handleCompleteFreeOrder = async () => {
     if (!isFormValid || orderTotal >= 0.01) return;
+    if (hasCartMinViolations) {
+      setFreeOrderError(
+        'One or more items are below their minimum order quantity. Please update your cart before placing the order.',
+      );
+      return;
+    }
     setFreeOrderError(null);
     setFreeOrderSubmitting(true);
     try {
@@ -496,6 +546,10 @@ export default function CheckoutContent() {
             .map((i) => `${i.colorName} / ${i.sizeName}${i.availableQty > 0 ? ` (only ${i.availableQty} left)` : ''}`)
             .join(', ');
           setFreeOrderError(`Some items just went out of stock: ${itemList}. Please update your cart and try again.`);
+        } else if (data.code === 'MIN_ORDER_QUANTITY' && Array.isArray(data.messages)) {
+          setFreeOrderError(
+            `${(data.messages as string[]).join(' ')} Please update your cart and try again.`,
+          );
         } else {
           setFreeOrderError(data.error || 'Failed to complete order');
         }
@@ -810,6 +864,37 @@ export default function CheckoutContent() {
             </div>
           </div>
         </div>
+
+        {hasCartMinViolations && (
+          <div
+            role="alert"
+            className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4"
+          >
+            <div className="flex gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-red-800">
+                  Some items are below their minimum order quantity
+                </p>
+                <ul className="mt-1.5 space-y-0.5 text-sm text-red-700">
+                  {cartMinViolations.map((v) => (
+                    <li key={v.sku}>{formatMinQuantityMessage(v)}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-red-700/80">
+                  Increase the quantity to at least the minimum.
+                </p>
+                <Link
+                  href="/cart"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-red-700 hover:text-red-800"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to cart
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
@@ -1292,7 +1377,7 @@ export default function CheckoutContent() {
                       size="lg"
                       className="w-full"
                       onClick={handleCompleteFreeOrder}
-                      disabled={!isFormValid || freeOrderSubmitting}
+                      disabled={!isFormValid || freeOrderSubmitting || hasCartMinViolations}
                     >
                       {freeOrderSubmitting ? 'Placing order…' : 'Complete order'}
                     </Button>
@@ -1319,6 +1404,7 @@ export default function CheckoutContent() {
                       appliedCoupon={appliedCoupon}
                       decoration={decoration}
                       liveShippingCost={liveShippingCost}
+                      hasMinViolations={hasCartMinViolations}
                     />
                   </Elements>
                 ) : null}

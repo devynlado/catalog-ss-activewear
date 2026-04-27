@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight, Lock, ShieldCheck, Star } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Check, Info, Truck, Package, Palette, ArrowRight, Lock, ShieldCheck, Star, AlertCircle } from 'lucide-react';
 import { Product, ProductColor, Category } from '@/lib/types';
 import { formatPrice, cn, formatNumber } from '@/lib/utils';
 import { useQuoteStore } from '@/lib/quote-store';
@@ -19,6 +19,8 @@ import { SpecsContent } from '@/components/builder/SpecsAccordion';
 import { DecorationMethodModal } from '@/components/builder/DecorationMethodModal';
 import { trackViewItem, trackAddToCart, CartItem as GA4CartItem } from '@/lib/analytics';
 import { ProductDescription } from './ProductDescription';
+import { AdminNoteBanner } from './AdminNoteBanner';
+import { resolveMinOrderQuantity } from '@/lib/product-rules';
 import { hasTieredPricing, getTierTable, getTieredPrice, getBaseTierPrice, getNextTierSavings, getTierProgress, getCurrentTierSavings } from '@/lib/tiered-pricing';
 import {
   isLa1801gdSamplePriceProduct,
@@ -476,6 +478,57 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
     return { colorSubtotals: subtotals, grandTotal: grand };
   }, [selectedColors, colorQuantities, googleDiscountPercent, totalPieces, isTieredProduct, product.styleId, isLa1801gdSamplePricePage]);
 
+  // Effective min-order-quantity per (color, size) for the currently-selected
+  // colors. Resolved once and reused for both the per-row inline error display
+  // and the summary banner above the Add to Cart button.
+  const minQtyByColor = useMemo(() => {
+    const out: Record<string, Record<string, number | null>> = {};
+    for (const color of selectedColors) {
+      const map: Record<string, number | null> = {};
+      for (const size of color.sizes) {
+        map[size.name] = resolveMinOrderQuantity(
+          product.minOrderQuantity,
+          size.minOrderQuantity,
+        );
+      }
+      out[color.colorCode] = map;
+    }
+    return out;
+  }, [selectedColors, product.minOrderQuantity]);
+
+  // Lines whose entered quantity is below the applicable minimum. Empty array
+  // means "Add to Cart" is allowed to proceed (subject to totalPieces > 0).
+  const minQuantityViolations = useMemo(() => {
+    const violations: Array<{
+      colorCode: string;
+      colorName: string;
+      sizeName: string;
+      qty: number;
+      min: number;
+    }> = [];
+    for (const color of selectedColors) {
+      const sizeQtys = colorQuantities[color.colorCode] || {};
+      for (const size of color.sizes) {
+        const qty = sizeQtys[size.name] || 0;
+        if (qty <= 0) continue;
+        const min = minQtyByColor[color.colorCode]?.[size.name] ?? null;
+        if (min == null) continue;
+        if (qty < min) {
+          violations.push({
+            colorCode: color.colorCode,
+            colorName: color.colorName,
+            sizeName: size.name,
+            qty,
+            min,
+          });
+        }
+      }
+    }
+    return violations;
+  }, [selectedColors, colorQuantities, minQtyByColor]);
+
+  const hasMinViolations = minQuantityViolations.length > 0;
+
   // Handle color swatch click - toggle selection
   const handleColorClick = (color: ProductColor | null) => {
     if (!color) return;
@@ -568,6 +621,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
   // Add all items to cart (for direct checkout)
   const handleAddToCart = () => {
     if (totalPieces === 0) return;
+    // Defensive guard: the button is disabled when this is true, but a
+    // misclick race or a future caller shouldn't push below-minimum lines.
+    if (hasMinViolations) return;
 
     // Build items for GA4 tracking
     const ga4Items: GA4CartItem[] = [];
@@ -622,6 +678,10 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
           discountSource: hasActiveDiscount ? 'google' : undefined,
           imageUrl: color.frontImage || product.imageUrl,
           availableSizes,
+          minOrderQuantity: resolveMinOrderQuantity(
+            product.minOrderQuantity,
+            sizeInfo?.minOrderQuantity,
+          ),
         });
 
         // Add to GA4 items array
@@ -659,8 +719,12 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
     }, 2000);
   };
 
+  // Quote is an inquiry, so a below-minimum quote is OK — the customer may
+  // be asking sales whether the minimum can be waived.
   const canAddToQuote = totalPieces > 0;
-  const canAddToCart = totalPieces > 0;
+  // Cart → checkout is the order path; the rule says we reject below-minimum
+  // orders, so block here. The summary banner explains why.
+  const canAddToCart = totalPieces > 0 && !hasMinViolations;
 
   return (
     <div className="grid gap-6 lg:gap-8 lg:grid-cols-[40fr_60fr]">
@@ -950,6 +1014,9 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
             )}
           </div>
 
+          {/* Admin note — customer-visible notice from /admin/products */}
+          <AdminNoteBanner note={product.adminNote} />
+
           {/* Tiered Pricing Table */}
           {tierTable && !isLa1801gdSamplePricePage && (
             <div className="mt-4 rounded-xl border border-brand-100 bg-gradient-to-br from-brand-50/40 to-white p-3 lg:p-4">
@@ -1236,6 +1303,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
                   sampleUnitPrice={
                     isLa1801gdSamplePricePage ? LA_1801GD_SAMPLE_PRICE_USD : undefined
                   }
+                  minOrderQuantities={minQtyByColor[color.colorCode]}
                 />
               ))}
             </div>
@@ -1307,6 +1375,35 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
               );
             })()}
 
+            {/* Minimum order quantity violation summary — explains why the
+                Add to Cart button is disabled and lists exactly which lines
+                need to be adjusted. */}
+            {hasMinViolations && (
+              <div
+                role="alert"
+                className="mt-4 rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm"
+              >
+                <div className="flex gap-2">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+                  <div className="min-w-0">
+                    <ul className="space-y-0.5 text-red-700">
+                      {minQuantityViolations.map((v) => (
+                        <li key={`${v.colorCode}-${v.sizeName}`}>
+                          <span className="font-medium">
+                            {v.colorName} / {v.sizeName}
+                          </span>
+                          : minimum {v.min} pieces (you entered {v.qty}).
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 text-xs text-red-700/80">
+                      Increase the quantity to at least the minimum.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Primary CTA - Add to Cart */}
             <div className="mt-5 space-y-4">
               <Button
@@ -1358,7 +1455,7 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
 
             </div>
 
-            {!canAddToCart && (
+            {!canAddToCart && !hasMinViolations && (
               <p className="mt-3 text-xs text-center text-slate-500">
                 Select colors and enter quantities to continue
               </p>

@@ -230,6 +230,8 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
       gender,
       avg_rating,
       review_count,
+      admin_note,
+      min_order_quantity,
       product_colors (
         id,
         color_name,
@@ -460,6 +462,8 @@ export async function searchProductsFromCache(
       gender,
       avg_rating,
       review_count,
+      admin_note,
+      min_order_quantity,
       product_colors (
         id,
         color_name,
@@ -615,6 +619,8 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
       gender,
       avg_rating,
       review_count,
+      admin_note,
+      min_order_quantity,
       product_colors (
         id,
         color_name,
@@ -638,7 +644,8 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
           sale_price,
           gtin,
           qty,
-          availability
+          availability,
+          min_order_quantity
         )
       )
     `)
@@ -684,6 +691,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       gender,
       avg_rating,
       review_count,
+      admin_note,
+      min_order_quantity,
       product_colors (
         id,
         color_name,
@@ -707,7 +716,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
           sale_price,
           gtin,
           qty,
-          availability
+          availability,
+          min_order_quantity
         )
       )
     `)
@@ -841,6 +851,8 @@ function transformProduct(row: any): Product {
     avgRating: row.avg_rating ?? null,
     reviewCount: row.review_count ?? 0,
     isActive: row.is_active ?? true,
+    adminNote: row.admin_note ?? null,
+    minOrderQuantity: row.min_order_quantity ?? null,
   };
 }
 
@@ -902,6 +914,7 @@ function transformProductWithSkus(row: any): Product {
         salePrice: s.sale_price || null,
         qty: s.qty || 0,
         gtin: s.gtin || '',
+        minOrderQuantity: s.min_order_quantity ?? null,
       }));
     
     return {
@@ -966,6 +979,8 @@ function transformProductWithSkus(row: any): Product {
     avgRating: row.avg_rating ?? null,
     reviewCount: row.review_count ?? 0,
     isActive: row.is_active ?? true,
+    adminNote: row.admin_note ?? null,
+    minOrderQuantity: row.min_order_quantity ?? null,
   };
 }
 

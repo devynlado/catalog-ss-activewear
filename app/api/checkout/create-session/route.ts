@@ -9,6 +9,7 @@ import { prepareCartItemsForPricing, toOrderProductRow } from '@/lib/cart-pricin
 import { groupCartByWarehouse, calculateShippingBreakdown } from '@/lib/shipping';
 import { placeSSOrder } from '@/lib/ss-activewear-orders';
 import { checkLiveStock, logStockCheckFailures } from '@/lib/stock-check';
+import { validateCartMinimumQuantities, formatMinQuantityMessage } from '@/lib/product-rules';
 
 interface ShippingInfo {
   email: string;
@@ -83,6 +84,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Shipping information required' },
         { status: 400 }
+      );
+    }
+
+    // Enforce per-variant minimum-order-quantity rules against fresh DB
+    // values. Runs before stock checks and pricing so we fail fast and don't
+    // burn an SS Activewear API call for an order that can't proceed.
+    const minViolations = await validateCartMinimumQuantities(rawItems);
+    if (minViolations.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Some items are below their minimum order quantity. Please adjust your cart and try again.',
+          code: 'MIN_ORDER_QUANTITY',
+          violations: minViolations,
+          messages: minViolations.map(formatMinQuantityMessage),
+        },
+        { status: 400 },
       );
     }
 

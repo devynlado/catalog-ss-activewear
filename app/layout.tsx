@@ -12,6 +12,7 @@ const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
 const GADS_ID = process.env.NEXT_PUBLIC_GADS_ID;
 // Google Tag Manager Container ID
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
+const SHOULD_LOAD_GTM = process.env.NODE_ENV === 'production' && Boolean(GTM_ID);
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -94,7 +95,7 @@ export default function RootLayout({
       <head>
         <OrganizationJsonLd />
         {/* Google Tag Manager */}
-        {GTM_ID && (
+        {SHOULD_LOAD_GTM && (
           <Script id="gtm-init" strategy="afterInteractive">
             {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
               new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -124,7 +125,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans text-text">
         {/* Google Tag Manager (noscript fallback) */}
-        {GTM_ID && (
+        {SHOULD_LOAD_GTM && (
           <noscript>
             <iframe
               src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}

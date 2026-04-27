@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { CartItem } from '@/lib/database.types';
 import { prepareCartItemsForPricing, fetchSkuStockBySku, type SkuStockInfo } from '@/lib/cart-pricing-server';
+import { fetchEffectiveMinimumsBySku } from '@/lib/product-rules';
 
 export interface StockWarning {
   sku: string;
@@ -26,10 +27,25 @@ export async function POST(request: NextRequest) {
     }
 
     const cartItems = rawItems as CartItem[];
-    const [items, stockMap] = await Promise.all([
+    const skus = cartItems.map((i) => i.sku);
+    const [pricedItems, stockMap, minBySku] = await Promise.all([
       prepareCartItemsForPricing(cartItems),
-      fetchSkuStockBySku(cartItems.map((i) => i.sku)),
+      fetchSkuStockBySku(skus),
+      fetchEffectiveMinimumsBySku(skus),
     ]);
+
+    // Re-snapshot the latest minOrderQuantity onto each cart item so the cart
+    // UI immediately reflects admin edits made since the cart was last saved.
+    // IMPORTANT: only overwrite when the lookup actually returned a row for
+    // this SKU. If it didn't (transient DB error, SKU not in our DB yet, etc.)
+    // we keep whatever snapshot the item already had so we never silently
+    // demote a known minimum back to null.
+    const items = pricedItems.map((item) => {
+      if (minBySku.has(item.sku)) {
+        return { ...item, minOrderQuantity: minBySku.get(item.sku) ?? null };
+      }
+      return item;
+    });
 
     const stockWarnings: StockWarning[] = [];
     for (const item of cartItems) {

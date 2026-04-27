@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Trash2, ShoppingCart, ArrowRight, Tag, Truck, Package, Plus, ChevronDown } from 'lucide-react';
+import { X, Trash2, ShoppingCart, ArrowRight, Tag, Truck, Package, Plus, ChevronDown, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCartStore, type StockWarning } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { CartItem, AvailableSize } from '@/lib/database.types';
 import { DecorationTeaser } from './DecorationTeaser';
 import { hasTieredPricing, getEffectiveItemPrice, isVolumePriced } from '@/lib/tiered-pricing';
 import { isMultiWarehouseCart, FREE_ECONOMY_THRESHOLD } from '@/lib/shipping';
+import { formatMinQuantityMessage, type MinQuantityViolation } from '@/lib/product-rules';
 
 // Quick category links for empty state
 const quickCategories = [
@@ -54,6 +55,7 @@ interface SizeData {
   price: number;
   discountedPrice?: number;
   originalSize: string;
+  minOrderQuantity?: number | null;
 }
 
 interface GroupedItem {
@@ -129,6 +131,7 @@ function groupItemsByStyleColor(items: CartItem[]): GroupedItem[] {
       price: item.unitPrice,
       discountedPrice: item.discountedPrice,
       originalSize: item.sizeName,
+      minOrderQuantity: item.minOrderQuantity ?? null,
     });
 
     if (item.overrideUnitPrice && item.overrideUnitPrice > 0) {
@@ -183,6 +186,27 @@ export function CartDrawer() {
   
   // Group items by style and color
   const groupedItems = useMemo(() => groupItemsByStyleColor(items), [items]);
+
+  // Per-line minimum-order-quantity violations across the whole cart. Keeps
+  // the drawer in sync with the cart page and the server-side checkout gate.
+  const cartMinViolations = useMemo<MinQuantityViolation[]>(() => {
+    return items.reduce<MinQuantityViolation[]>((acc, item) => {
+      const min = item.minOrderQuantity ?? null;
+      if (min != null && item.quantity > 0 && item.quantity < min) {
+        acc.push({
+          sku: item.sku,
+          styleName: item.styleName,
+          brandName: item.brandName,
+          colorName: item.colorName,
+          sizeName: item.sizeName,
+          quantity: item.quantity,
+          minimum: min,
+        });
+      }
+      return acc;
+    }, []);
+  }, [items]);
+  const hasCartMinViolations = cartMinViolations.length > 0;
   
   const toggleGroupExpanded = (groupKey: string) => {
     setExpandedGroups(prev => {
@@ -466,7 +490,9 @@ export function CartDrawer() {
                           
                           // Calculate upcharge from base price
                           const upcharge = getSizeUpcharge(size, sizeData.price, group.unitPrice);
-                          
+                          const minQty = sizeData.minOrderQuantity ?? null;
+                          const belowMin = minQty != null && sizeData.quantity > 0 && sizeData.quantity < minQty;
+
                           return (
                             <div key={size} className="flex flex-col items-center">
                               <span className="text-[10px] font-semibold text-slate-500 uppercase mb-1">
@@ -477,9 +503,21 @@ export function CartDrawer() {
                                 min="0"
                                 value={sizeData.quantity}
                                 onChange={(e) => handleQuantityChange(sizeData.id, parseInt(e.target.value) || 0)}
-                                className="w-full h-8 text-center text-sm font-semibold bg-white border border-stone-200 rounded-md focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors"
+                                aria-invalid={belowMin || undefined}
+                                className={`w-full h-8 text-center text-sm font-semibold bg-white rounded-md focus:ring-2 focus:outline-none transition-colors ${
+                                  belowMin
+                                    ? 'border-2 border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                                    : 'border border-stone-200 focus:border-brand-500 focus:ring-brand-500/20'
+                                }`}
                               />
-                              {upcharge > 0 ? (
+                              {belowMin ? (
+                                <span
+                                  className="text-[9px] mt-0.5 font-semibold text-red-600 leading-tight"
+                                  title={`Minimum ${minQty} pieces for ${group.colorName} / ${size}`}
+                                >
+                                  Min {minQty}
+                                </span>
+                              ) : upcharge > 0 ? (
                                 <span className="text-[9px] text-orange-600 font-medium mt-0.5">
                                   +{formatPrice(upcharge)}
                                 </span>
@@ -594,11 +632,40 @@ export function CartDrawer() {
               </div>
             </div>
 
+            {/* Minimum-order-quantity violation summary. Same wording as the
+                full cart page so the user gets a consistent story whether
+                they read the rule here or there. */}
+            {hasCartMinViolations && (
+              <div
+                role="alert"
+                className="mb-3 rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm"
+              >
+                <div className="flex gap-2">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+                  <div className="min-w-0">
+                    <ul className="space-y-0.5 text-red-700">
+                      {cartMinViolations.map((v) => (
+                        <li key={v.sku}>{formatMinQuantityMessage(v)}</li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 text-xs text-red-700/80">
+                      Increase the quantity to at least the minimum.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Two Button Layout */}
             <div className="space-y-2">
-              <Button 
+              <Button
                 onClick={handleCheckout}
-                className="w-full shadow-lg shadow-brand-500/25" 
+                disabled={hasCartMinViolations}
+                className={
+                  hasCartMinViolations
+                    ? 'w-full'
+                    : 'w-full shadow-lg shadow-brand-500/25'
+                }
                 size="lg"
               >
                 Checkout

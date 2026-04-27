@@ -170,6 +170,11 @@ export interface Product {
   reviewCount?: number;
   // Discontinued / active status
   isActive?: boolean;
+  // Admin overrides editable in /admin/products
+  adminNote?: string | null;
+  // Style-level default minimum order quantity. Variants without their own
+  // override inherit this value. NULL = no minimum.
+  minOrderQuantity?: number | null;
 }
 
 // Review types
@@ -224,6 +229,9 @@ export interface ProductSize {
   qty: number;
   gtin: string;
   sku?: string;
+  // Per-variant minimum order quantity override. NULL/undefined = inherit
+  // the style-level Product.minOrderQuantity, which itself may be null.
+  minOrderQuantity?: number | null;
 }
 
 export interface Category {

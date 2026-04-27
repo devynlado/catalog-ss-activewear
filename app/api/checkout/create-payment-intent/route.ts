@@ -3,6 +3,7 @@ import { stripe, generateOrderNumber, calculateOrderTotals, toStripeCents, Shipp
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { CartItem, ShippingAddress } from '@/lib/database.types';
 import { prepareCartItemsForPricing } from '@/lib/cart-pricing-server';
+import { validateCartMinimumQuantities, formatMinQuantityMessage } from '@/lib/product-rules';
 
 interface CreatePaymentIntentRequest {
   items: CartItem[];
@@ -50,6 +51,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Shipping address is required' },
         { status: 400 }
+      );
+    }
+
+    // Enforce per-variant minimum-order-quantity rules against fresh DB values
+    // before doing any pricing work or creating an order. The cart UI also
+    // blocks this case, but the server is the source of truth.
+    const minViolations = await validateCartMinimumQuantities(rawItems);
+    if (minViolations.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Some items are below their minimum order quantity. Please adjust your cart and try again.',
+          code: 'MIN_ORDER_QUANTITY',
+          violations: minViolations,
+          messages: minViolations.map(formatMinQuantityMessage),
+        },
+        { status: 400 },
       );
     }
 

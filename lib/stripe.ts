@@ -13,7 +13,11 @@ export const stripe = new Proxy({} as Stripe, {
         throw new Error('STRIPE_SECRET_KEY environment variable is not set');
       }
       _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2026-01-28.clover',
+        // Pinned to the version the installed SDK's typings expect. The
+        // SDK uses this string as the `Stripe-Version` request header,
+        // so it should always match the typings shipped with the
+        // current `stripe` package — bump together when upgrading.
+        apiVersion: '2026-02-25.clover',
         typescript: true,
       });
     }

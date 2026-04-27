@@ -1283,6 +1283,13 @@ export interface CartItem {
   imageUrl?: string;
   availableSizes?: AvailableSize[];  // All sizes available for this style/color
   warehouse?: 'ss_activewear' | 'los_angeles_apparel' | 'as_colour';
+  /**
+   * Effective minimum order quantity for this variant at the time it was
+   * added to the cart, with style→variant inheritance already applied.
+   * NULL/undefined means no minimum applies. Snapshot only — the server
+   * always re-validates against fresh DB values at checkout.
+   */
+  minOrderQuantity?: number | null;
 }
 
 // Order shipment tracking (matches order_shipments table)

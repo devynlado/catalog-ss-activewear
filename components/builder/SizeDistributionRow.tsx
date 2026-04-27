@@ -30,6 +30,11 @@ interface SizeDistributionRowProps {
   totalStylePieces?: number;
   /** Flat sample price: disables tiers, strikes, and tier labels for this row */
   sampleUnitPrice?: number;
+  /**
+   * Effective minimum order quantity per size name (style→variant inheritance
+   * already resolved). Missing entry or null = no minimum for that size.
+   */
+  minOrderQuantities?: Record<string, number | null>;
 }
 
 // Stock level thresholds
@@ -60,6 +65,7 @@ export function SizeDistributionRow({
   styleId,
   totalStylePieces = 0,
   sampleUnitPrice,
+  minOrderQuantities,
 }: SizeDistributionRowProps) {
   const handleQuantityChange = (sizeName: string, value: string) => {
     const numValue = parseInt(value, 10);
@@ -206,7 +212,11 @@ export function SizeDistributionRow({
               ? { color: 'text-slate-500', bgColor: 'bg-stone-50', label: '' }
               : getStockIndicator(stock);
             const isOutOfStock = hideInventory ? false : stock === 0;
-            const currentQty = quantities[size.name] || '';
+            const currentQtyNum = quantities[size.name] || 0;
+            const currentQty = currentQtyNum > 0 ? currentQtyNum : '';
+            const minQty = minOrderQuantities?.[size.name] ?? null;
+            const belowMin = minQty != null && currentQtyNum > 0 && currentQtyNum < minQty;
+            const errorId = `${color.colorCode}-${size.code}-min-error`;
 
             const currentPrice = getBasePrice(size);
             const tier1Price = isTiered && styleId != null
@@ -233,11 +243,15 @@ export function SizeDistributionRow({
                   disabled={isOutOfStock}
                   placeholder="—"
                   min="1"
+                  aria-invalid={belowMin || undefined}
+                  aria-describedby={belowMin ? errorId : undefined}
                   className={cn(
                     'w-14 h-10 text-center text-sm font-bold rounded-md border-2 transition-all',
                     isOutOfStock
                       ? 'bg-slate-100 border-stone-200 text-slate-400 cursor-not-allowed'
-                      : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
+                      : belowMin
+                        ? 'bg-white border-red-400 text-slate-900 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none'
+                        : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
                   )}
                 />
                 
@@ -264,8 +278,17 @@ export function SizeDistributionRow({
                     {formatPrice(currentPrice)}
                   </div>
                 )}
-                
-                {!hideInventory && (
+
+                {belowMin ? (
+                  <div
+                    id={errorId}
+                    role="alert"
+                    className="text-[10px] font-semibold text-red-600 leading-tight text-center"
+                    title={`Minimum order is ${minQty} pieces for ${color.colorName} / ${size.name}.`}
+                  >
+                    Min {minQty} pcs
+                  </div>
+                ) : !hideInventory ? (
                   <div className={cn('text-[10px] font-medium', indicator.color)}>
                     {stock === 0 ? (
                       <span>Out</span>
@@ -273,7 +296,7 @@ export function SizeDistributionRow({
                       <span>{formatNumber(stock)} avail</span>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
@@ -287,7 +310,11 @@ export function SizeDistributionRow({
               ? { color: 'text-slate-500', bgColor: 'bg-stone-50', label: '' }
               : getStockIndicator(stock);
             const isOutOfStock = hideInventory ? false : stock === 0;
-            const currentQty = quantities[size.name] || '';
+            const currentQtyNum = quantities[size.name] || 0;
+            const currentQty = currentQtyNum > 0 ? currentQtyNum : '';
+            const minQty = minOrderQuantities?.[size.name] ?? null;
+            const belowMin = minQty != null && currentQtyNum > 0 && currentQtyNum < minQty;
+            const errorId = `m-${color.colorCode}-${size.code}-min-error`;
 
             const currentPrice = getBasePrice(size);
             const tier1Price = isTiered && styleId != null
@@ -314,11 +341,15 @@ export function SizeDistributionRow({
                   disabled={isOutOfStock}
                   placeholder="—"
                   min="1"
+                  aria-invalid={belowMin || undefined}
+                  aria-describedby={belowMin ? errorId : undefined}
                   className={cn(
                     'w-full h-11 text-center text-base font-bold rounded-md border-2 transition-all',
                     isOutOfStock
                       ? 'bg-slate-100 border-stone-200 text-slate-400 cursor-not-allowed'
-                      : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
+                      : belowMin
+                        ? 'bg-white border-red-400 text-slate-900 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none'
+                        : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none'
                   )}
                 />
                 
@@ -345,8 +376,16 @@ export function SizeDistributionRow({
                     {formatPrice(currentPrice)}
                   </div>
                 )}
-                
-                {!hideInventory && (
+
+                {belowMin ? (
+                  <div
+                    id={errorId}
+                    role="alert"
+                    className="text-[10px] font-semibold text-red-600 leading-tight text-center"
+                  >
+                    Min {minQty} pcs
+                  </div>
+                ) : !hideInventory ? (
                   <div className={cn('text-[10px] font-medium', indicator.color)}>
                     {stock === 0 ? (
                       <span>Out of stock</span>
@@ -354,7 +393,7 @@ export function SizeDistributionRow({
                       <span>{formatNumber(stock)} avail</span>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
