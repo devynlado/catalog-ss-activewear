@@ -1,0 +1,20 @@
+{
+    "crons": [
+      {
+        "path": "/api/cron/review-invite",
+        "schedule": "0 10 * * *"
+      },
+      {
+        "path": "/api/cron/ss-tracking",
+        "schedule": "*/30 * * * *"
+      },
+      {
+        "path": "/api/cron/ss-retry-orders",
+        "schedule": "0 */2 * * *"
+      },
+      {
+        "path": "/api/cron/ss-inventory-sync",
+        "schedule": "*/15 * * * *"
+      }
+    ]
+  }

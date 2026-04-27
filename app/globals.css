@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Garment Decor Brand Colors */
+  --color-brand-primary: #EE8935;    /* Orange - CTAs */
+  --color-brand-secondary: #070131;  /* Navy - Titles */
+  
+  /* UI Colors */
+  --color-background: #FAF6F3;       /* Warm cream */
+  --color-foreground: #242424;       /* Body text */
+  --color-muted: #6B7280;
+  --color-border: #e2e8f0;
+  --color-card: #ffffff;
+  --color-card-hover: #f8fafc;
+  
+  /* Stock indicators */
+  --color-stock-high: #22c55e;
+  --color-stock-low: #eab308;
+  --color-stock-out: #9ca3af;
+  
+  /* Spacing */
+  --spacing-card: 1.5rem;
+  --spacing-section: 3rem;
+  
+  /* Border radius */
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text antialiased;
+  }
+  
+  /* Titles use navy */
+  h1, h2, h3, h4, h5, h6 {
+    color: #070131;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-stone-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2;
+  }
+  
+  .card {
+    @apply rounded-card bg-white shadow-card transition-shadow hover:shadow-card-hover;
+  }
+  
+  .input {
+    @apply w-full rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+  }
+
+  /* Inventory matrix styling */
+  .stock-high {
+    @apply bg-green-50 text-green-700;
+  }
+  
+  .stock-low {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+  
+  .stock-out {
+    @apply bg-stone-100 text-slate-400 line-through;
+  }
+}
+
+/* Custom scrollbar for inventory matrix */
+.inventory-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.inventory-scroll::-webkit-scrollbar-track {
+  @apply bg-stone-100 rounded-full;
+}
+
+.inventory-scroll::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400;
+}
+
+/* Hero animated gradient */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-slow {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

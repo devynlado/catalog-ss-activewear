@@ -1,0 +1,109 @@
+# Daily Inventory Sync
+# Runs every day at 6 AM UTC to update inventory quantities
+# Processes products in batches of 50 to stay within Vercel Hobby timeout (60s)
+
+name: Daily Inventory Sync
+
+on:
+  schedule:
+    # Run at 6 AM UTC (1 AM EST, 10 PM PST)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+
+jobs:
+  sync-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Sync Inventory in Batches
+        run: |
+          echo "Starting batched inventory sync..."
+
+          SITE_URL="${{ secrets.SITE_URL }}"
+          API_KEY="${{ secrets.SYNC_API_KEY }}"
+          BATCH_SIZE=30
+          OFFSET=0
+          TOTAL_SKUS=0
+          BATCH_NUM=0
+          FAILED=0
+
+          # Get total product count
+          count_response=$(curl -s -L \
+            -X POST \
+            "${SITE_URL}/api/sync?type=inventory&count=true" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${API_KEY}")
+
+          TOTAL=$(echo "$count_response" | grep -o '"totalProducts":[0-9]*' | grep -o '[0-9]*')
+
+          if [ -z "$TOTAL" ] || [ "$TOTAL" -eq 0 ]; then
+            echo "No active products found or failed to get count."
+            echo "Response: $count_response"
+            exit 0
+          fi
+
+          echo "Total active products: $TOTAL"
+          echo "Batch size: $BATCH_SIZE"
+          echo "Expected batches: $(( (TOTAL + BATCH_SIZE - 1) / BATCH_SIZE ))"
+          echo "---"
+
+          while [ "$OFFSET" -lt "$TOTAL" ]; do
+            BATCH_NUM=$((BATCH_NUM + 1))
+            echo "Batch $BATCH_NUM: offset=$OFFSET, limit=$BATCH_SIZE"
+
+            RETRIES=0
+            MAX_RETRIES=2
+            BATCH_OK=0
+
+            while [ "$RETRIES" -le "$MAX_RETRIES" ] && [ "$BATCH_OK" -eq 0 ]; do
+              if [ "$RETRIES" -gt 0 ]; then
+                echo "  Retry $RETRIES/$MAX_RETRIES (waiting 5s)..."
+                sleep 5
+              fi
+
+              response=$(curl -s -L -w "\n%{http_code}" \
+                -X POST \
+                "${SITE_URL}/api/sync?type=inventory&offset=${OFFSET}&limit=${BATCH_SIZE}" \
+                -H "Content-Type: application/json" \
+                -H "x-api-key: ${API_KEY}")
+
+              http_code=$(echo "$response" | tail -n1)
+              body=$(echo "$response" | sed '$d')
+
+              if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 207 ]; then
+                skus=$(echo "$body" | grep -o '"skusProcessed":[0-9]*' | grep -o '[0-9]*')
+                TOTAL_SKUS=$((TOTAL_SKUS + ${skus:-0}))
+                echo "  OK (${http_code}) — ${skus:-0} SKUs updated"
+                BATCH_OK=1
+              else
+                RETRIES=$((RETRIES + 1))
+              fi
+            done
+
+            if [ "$BATCH_OK" -eq 0 ]; then
+              echo "  FAILED after $MAX_RETRIES retries (${http_code}): $body"
+              FAILED=$((FAILED + 1))
+            fi
+
+            OFFSET=$((OFFSET + BATCH_SIZE))
+          done
+
+          echo "---"
+          echo "Inventory sync complete!"
+          echo "Batches: $BATCH_NUM | SKUs updated: $TOTAL_SKUS | Failed batches: $FAILED"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "Some batches failed — check logs above."
+            exit 1
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Inventory sync failed! Check the logs for details."
+
+# Required Secrets:
+# - SITE_URL: Your production URL (e.g., https://www.garmentdecor.com)
+# - SYNC_API_KEY: The API key for authentication (same as SYNC_API_KEY in .env)

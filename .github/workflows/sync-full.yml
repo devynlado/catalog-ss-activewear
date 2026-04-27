@@ -1,0 +1,72 @@
+# Weekly Full Catalog Sync
+# Runs every Sunday at 2 AM UTC to sync all product data
+# This is a comprehensive sync (~30-60 minutes) that updates all metadata
+
+name: Weekly Full Sync
+
+on:
+  schedule:
+    # Run at 2 AM UTC every Sunday
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      sync_type:
+        description: 'Sync type (popular or full)'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - popular
+          - full
+
+jobs:
+  sync-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # Allow up to 2 hours for full catalog
+    
+    steps:
+      - name: Determine Sync Type
+        id: sync-type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ inputs.sync_type }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=full" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Trigger Full Sync
+        run: |
+          sync_type="${{ steps.sync-type.outputs.type }}"
+          echo "Starting $sync_type sync..."
+          
+          # Use a longer timeout for full sync
+          response=$(curl -s -L -w "\n%{http_code}" \
+            -X POST \
+            --max-time 7200 \
+            "${{ secrets.SITE_URL }}/api/sync?type=$sync_type" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.SYNC_API_KEY }}")
+          
+          # Extract status code from last line
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+          
+          if [ "$http_code" -ne 200 ] && [ "$http_code" -ne 207 ]; then
+            echo "Sync failed with status $http_code"
+            exit 1
+          fi
+          
+          echo "$sync_type sync completed successfully!"
+      
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Full sync failed! Check the logs for details."
+          # Add notification (Slack, email, etc.) here if needed
+
+# Required Secrets:
+# - SITE_URL: Your production URL (e.g., https://garmentdecor.com)
+# - SYNC_API_KEY: The API key for authentication (same as SYNC_API_KEY in .env)

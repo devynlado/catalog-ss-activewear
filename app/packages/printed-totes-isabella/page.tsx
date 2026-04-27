@@ -1,0 +1,75 @@
+import { createPageMetadata } from '@/lib/metadata';
+import { getProductBySlug } from '@/lib/product-cache';
+import { PackageHero, WhatsIncluded, BenefitsRow, FAQSection, StickyMobileCTA } from '@/components/packages/shared';
+import { ToteBagPackageBuilder, printedTotesIsabellaPageConfig } from '@/components/packages/screenprinting';
+
+export const dynamic = 'force-dynamic';
+
+export const metadata = createPageMetadata({
+  title: 'Custom Printed Tote Bags - Isabella Canvas Tote | All-Inclusive Pricing | Garment Decor',
+  description: 'Get custom printed canvas tote bags with all-inclusive pricing. Up to 2 colors included, no setup fees, no art charges. Free shipping on orders $500+. 5-7 day production.',
+  path: '/packages/printed-totes-isabella',
+});
+
+const { hero, whatsIncluded, benefits, faq, stickyMobileCta, productSlug } = printedTotesIsabellaPageConfig;
+
+export default async function PrintedTotesIsabellaPage() {
+  const product = await getProductBySlug('liberty-bags-8503');
+  
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <PackageHero {...hero} />
+      
+      {/* Package Builder - Main conversion section */}
+      <section id="builder" className="py-12 lg:py-16 bg-gradient-to-b from-[#FAF6F3] to-stone-100">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <ToteBagPackageBuilder 
+            colors={product?.colors || []} 
+            productStyleId={product?.styleId || 8503}
+            productName={product?.title || 'Isabella Canvas Tote'}
+            productSlug={productSlug}
+          />
+        </div>
+      </section>
+      
+      {/* What's Included */}
+      <WhatsIncluded 
+        description={whatsIncluded.description}
+        items={whatsIncluded.items}
+        pricingTable={whatsIncluded.pricingTable}
+      />
+      
+      {/* Benefits Row */}
+      <BenefitsRow 
+        description={benefits.description}
+        benefits={benefits.benefits}
+      />
+      
+      {/* FAQ Section */}
+      <FAQSection 
+        description={faq.description}
+        faqs={faq.faqs}
+      />
+      
+      {/* Not Ready CTA */}
+      <section className="py-16 bg-gradient-to-b from-stone-100 to-[#FAF6F3]">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl font-bold text-navy-900 mb-4">Not Ready to Order?</h2>
+          <p className="text-stone-600 mb-6">
+            Get a free quote with mockup of your design on the tote bag. No obligation.
+          </p>
+          <a
+            href="/quote"
+            className="inline-flex items-center justify-center px-8 py-3 bg-navy-900 text-white font-semibold rounded-xl hover:bg-navy-800 transition-colors shadow-lg shadow-navy-900/25"
+          >
+            Get a Free Quote
+          </a>
+        </div>
+      </section>
+      
+      {/* Sticky Mobile CTA */}
+      <StickyMobileCTA priceText={stickyMobileCta.priceText} />
+    </div>
+  );
+}

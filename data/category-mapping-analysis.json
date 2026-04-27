@@ -1,0 +1,776 @@
+{
+  "summary": {
+    "totalCategories": 767,
+    "guides": 166,
+    "attributes": 83,
+    "other": 518
+  },
+  "menuMapping": {
+    "T-Shirts (21)": {
+      "By Style": [
+        {
+          "menuName": "Core T-Shirts",
+          "slug": "core-tshirts",
+          "categoryID": 863,
+          "ssName": "Core T-Shirts",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Fashion T-Shirts",
+          "slug": "fashion-tshirts",
+          "categoryID": 864,
+          "ssName": "Fashion T-Shirts",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Tank Tops",
+          "slug": "tank-tops",
+          "categoryID": 64,
+          "ssName": "Tank Tops",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Long Sleeve Tees",
+          "slug": "long-sleeve",
+          "categoryID": null,
+          "ssName": null,
+          "matchType": "none",
+          "status": "✗ NOT FOUND"
+        }
+      ],
+      "By Sleeve": [
+        {
+          "menuName": "Short Sleeve",
+          "slug": "short-sleeve",
+          "categoryID": 57,
+          "ssName": "Short Sleeves",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Long Sleeve",
+          "slug": "long-sleeve",
+          "categoryID": 56,
+          "ssName": "Long Sleeves",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Sleeveless",
+          "slug": "sleeveless",
+          "categoryID": 63,
+          "ssName": "Sleeveless",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "3/4 Sleeve",
+          "slug": "3-4-sleeve",
+          "categoryID": 81,
+          "ssName": "3/4 Sleeves",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Collar": [
+        {
+          "menuName": "Crewneck",
+          "slug": "crewneck",
+          "categoryID": 8,
+          "ssName": "Crewneck",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "V-Neck",
+          "slug": "v-neck",
+          "categoryID": 66,
+          "ssName": "V-Neck",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Material": [
+        {
+          "menuName": "100% Cotton",
+          "slug": "cotton",
+          "categoryID": 261,
+          "ssName": "100% Cotton Face",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Polyester",
+          "slug": "polyester",
+          "categoryID": 220,
+          "ssName": "Polyester",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Tri-Blend",
+          "slug": "tri-blend",
+          "categoryID": 952,
+          "ssName": "2025 T-Shirt Guide Tri-Blends",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Performance",
+          "slug": "performance",
+          "categoryID": 16,
+          "ssName": "Performance",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Sweatshirts (9)": {
+      "By Style": [
+        {
+          "menuName": "Hoodies",
+          "slug": "hoodies",
+          "categoryID": 1161,
+          "ssName": "Hoodies",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Crewnecks",
+          "slug": "crewneck-sweatshirts",
+          "categoryID": 1027,
+          "ssName": "2025 Fleece Guide Activewear - Crewnecks",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Full-Zip",
+          "slug": "full-zip",
+          "categoryID": 1045,
+          "ssName": "2025 Fleece Guide Promos & Events - Full-Zips",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Quarter-Zip",
+          "slug": "quarter-zip",
+          "categoryID": 1029,
+          "ssName": "2025 Fleece Guide Activewear - Quarter-Zips",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Pullover",
+          "slug": "pullover",
+          "categoryID": 1152,
+          "ssName": "2026 What's New - Quarter-Zips & Pullovers",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Weight": [
+        {
+          "menuName": "Lightweight",
+          "slug": "lightweight",
+          "categoryID": 1244,
+          "ssName": "Independent Trading Co Lightweight Fleece",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Midweight",
+          "slug": "midweight",
+          "categoryID": 1243,
+          "ssName": "Independent Trading Co Midweight Fleece",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Heavyweight",
+          "slug": "heavyweight",
+          "categoryID": 950,
+          "ssName": "2025 T-Shirt Guide Heavyweight",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Polos (52)": {
+      "By Sleeve": [
+        {
+          "menuName": "Short Sleeve",
+          "slug": "short-sleeve",
+          "categoryID": 57,
+          "ssName": "Short Sleeves",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Long Sleeve",
+          "slug": "long-sleeve",
+          "categoryID": 56,
+          "ssName": "Long Sleeves",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Material": [
+        {
+          "menuName": "Cotton",
+          "slug": "cotton",
+          "categoryID": 406,
+          "ssName": "Cotton",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Performance",
+          "slug": "performance",
+          "categoryID": 16,
+          "ssName": "Performance",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Pique",
+          "slug": "pique",
+          "categoryID": 219,
+          "ssName": "Pique",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Jackets (15)": {
+      "By Style": [
+        {
+          "menuName": "Lightweight Jackets",
+          "slug": "lightweight",
+          "categoryID": 47,
+          "ssName": "Jackets",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Vests",
+          "slug": "vests",
+          "categoryID": 62,
+          "ssName": "Vests",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Windbreakers",
+          "slug": "windbreakers",
+          "categoryID": 380,
+          "ssName": "Windbreakers",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Soft Shells",
+          "slug": "soft-shell",
+          "categoryID": 403,
+          "ssName": "Soft Shells",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Rain Coats",
+          "slug": "rain-coats",
+          "categoryID": 401,
+          "ssName": "Rainwear",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Puffer Jackets",
+          "slug": "puffer",
+          "categoryID": 47,
+          "ssName": "Jackets",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Fleece Jackets",
+          "slug": "fleece",
+          "categoryID": 9,
+          "ssName": "Fleece",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Feature": [
+        {
+          "menuName": "Full-Zip",
+          "slug": "full-zip",
+          "categoryID": 1045,
+          "ssName": "2025 Fleece Guide Promos & Events - Full-Zips",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Quarter-Zip",
+          "slug": "quarter-zip",
+          "categoryID": 1029,
+          "ssName": "2025 Fleece Guide Activewear - Quarter-Zips",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Hooded",
+          "slug": "hooded",
+          "categoryID": 36,
+          "ssName": "Hooded",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Headwear (11)": {
+      "By Style": [
+        {
+          "menuName": "Trucker Hats",
+          "slug": "trucker-hats",
+          "categoryID": 392,
+          "ssName": "Hats",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Dad Caps",
+          "slug": "dad-caps",
+          "categoryID": 796,
+          "ssName": "Dad Caps",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Snapbacks",
+          "slug": "snapbacks",
+          "categoryID": 363,
+          "ssName": "Snapback",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Fitted Caps",
+          "slug": "fitted-caps",
+          "categoryID": 150,
+          "ssName": "Fitted",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Bucket Hats",
+          "slug": "bucket-hats",
+          "categoryID": 242,
+          "ssName": "Bucket Hats",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Beanies",
+          "slug": "beanies",
+          "categoryID": 120,
+          "ssName": "Beanies",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Visors",
+          "slug": "visors",
+          "categoryID": 241,
+          "ssName": "Visors",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Flat Bills",
+          "slug": "flat-bills",
+          "categoryID": 130,
+          "ssName": "Flat Bills",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Structure": [
+        {
+          "menuName": "Structured",
+          "slug": "structured",
+          "categoryID": 658,
+          "ssName": "Soft-Structured",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Unstructured",
+          "slug": "unstructured",
+          "categoryID": 245,
+          "ssName": "Unstructured Hats",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Soft-Structured",
+          "slug": "soft-structured",
+          "categoryID": 658,
+          "ssName": "Soft-Structured",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "5-Panel",
+          "slug": "5-panel",
+          "categoryID": 1168,
+          "ssName": "Silo Headwear - 5-Panel Hats",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "6-Panel",
+          "slug": "6-panel",
+          "categoryID": 1172,
+          "ssName": "Silo Headwear - 6-Panel Hats",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Closure": [
+        {
+          "menuName": "Snapback",
+          "slug": "snapbacks",
+          "categoryID": 363,
+          "ssName": "Snapback",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Adjustable",
+          "slug": "adjustable",
+          "categoryID": 118,
+          "ssName": "Adjustable",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Hook and Loop",
+          "slug": "hook-and-loop",
+          "categoryID": 360,
+          "ssName": "Hook and Loop",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Bottoms (384)": {
+      "By Style": [
+        {
+          "menuName": "Shorts",
+          "slug": "shorts",
+          "categoryID": 43,
+          "ssName": "Shorts",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Sweatpants",
+          "slug": "sweatpants",
+          "categoryID": 106,
+          "ssName": "Sweatpants",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Leggings",
+          "slug": "leggings",
+          "categoryID": 133,
+          "ssName": "Leggings",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Pants",
+          "slug": "pants",
+          "categoryID": 37,
+          "ssName": "Pants",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Gender": [
+        {
+          "menuName": "Mens & Unisex",
+          "slug": "mens-unisex",
+          "categoryID": 87,
+          "ssName": "Mens & Unisex",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Womens",
+          "slug": "womens",
+          "categoryID": 13,
+          "ssName": "Womens",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Youth",
+          "slug": "youth",
+          "categoryID": 28,
+          "ssName": "Youth",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Bags (102)": {
+      "By Style": [
+        {
+          "menuName": "Backpacks",
+          "slug": "backpacks",
+          "categoryID": 111,
+          "ssName": "Backpacks",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Tote Bags",
+          "slug": "tote-bags",
+          "categoryID": 186,
+          "ssName": "Tote Bags",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Duffel Bags",
+          "slug": "duffel-bags",
+          "categoryID": 129,
+          "ssName": "Duffel Bags",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Cooler Bags",
+          "slug": "cooler-bags",
+          "categoryID": 102,
+          "ssName": "Bags",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Drawstring Bags",
+          "slug": "drawstring-bags",
+          "categoryID": 102,
+          "ssName": "Bags",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Messenger Bags",
+          "slug": "messenger-bags",
+          "categoryID": 134,
+          "ssName": "Messenger Bags",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Accessories (53)": {
+      "By Type": [
+        {
+          "menuName": "Scarves",
+          "slug": "scarves",
+          "categoryID": 394,
+          "ssName": "Scarves",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Blankets",
+          "slug": "blankets",
+          "categoryID": 3,
+          "ssName": "Blankets",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Towels",
+          "slug": "towels",
+          "categoryID": 24,
+          "ssName": "Towels",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Aprons",
+          "slug": "aprons",
+          "categoryID": 1,
+          "ssName": "Aprons",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Bandanas",
+          "slug": "bandanas",
+          "categoryID": 398,
+          "ssName": "Bandanas",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Gloves",
+          "slug": "gloves",
+          "categoryID": 91,
+          "ssName": "Gloves",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Socks",
+          "slug": "socks",
+          "categoryID": 82,
+          "ssName": "Socks",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Womens (13)": {
+      "By Category": [
+        {
+          "menuName": "T-Shirts",
+          "slug": "t-shirts",
+          "categoryID": 21,
+          "ssName": "T-Shirts",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Tank Tops",
+          "slug": "tank-tops",
+          "categoryID": 64,
+          "ssName": "Tank Tops",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Sweatshirts",
+          "slug": "sweatshirts",
+          "categoryID": 59,
+          "ssName": "Sweatshirts",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Polos",
+          "slug": "polos",
+          "categoryID": 52,
+          "ssName": "Polos",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Bottoms",
+          "slug": "bottoms",
+          "categoryID": 384,
+          "ssName": "Bottoms",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Fit": [
+        {
+          "menuName": "Fitted",
+          "slug": "fitted",
+          "categoryID": 150,
+          "ssName": "Fitted",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Relaxed",
+          "slug": "relaxed",
+          "categoryID": 157,
+          "ssName": "Relaxed",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Cropped",
+          "slug": "cropped",
+          "categoryID": 149,
+          "ssName": "Cropped",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Flowy",
+          "slug": "flowy",
+          "categoryID": 98,
+          "ssName": "Flowy",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    },
+    "Workwear (49)": {
+      "By Style": [
+        {
+          "menuName": "Safety Vests",
+          "slug": "safety-vests",
+          "categoryID": 40,
+          "ssName": "Safety",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Hi-Vis",
+          "slug": "hi-vis",
+          "categoryID": 107,
+          "ssName": "High Visibility",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Work Jackets",
+          "slug": "work-jackets",
+          "categoryID": 47,
+          "ssName": "Jackets",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "Work Pants",
+          "slug": "work-pants",
+          "categoryID": 37,
+          "ssName": "Pants",
+          "matchType": "partial",
+          "status": "✓ VALID"
+        }
+      ],
+      "By Feature": [
+        {
+          "menuName": "ANSI Class 2",
+          "slug": "ansi-class-2",
+          "categoryID": 255,
+          "ssName": "ANSI Class 2",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        },
+        {
+          "menuName": "ANSI Class 3",
+          "slug": "ansi-class-3",
+          "categoryID": 256,
+          "ssName": "ANSI Class 3",
+          "matchType": "exact",
+          "status": "✓ VALID"
+        }
+      ]
+    }
+  }
+}

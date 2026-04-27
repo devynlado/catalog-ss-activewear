@@ -1,0 +1,4 @@
+-- Leave existing contacts with NULL visitor_source as-is.
+-- The admin UI displays NULL as "Untracked" to distinguish pre-system
+-- entries from entries with real attribution data.
+-- No backfill needed.

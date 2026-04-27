@@ -1,0 +1,224 @@
+{
+  "summary": {
+    "totalMenuItems": 88,
+    "validMappings": 87,
+    "correctedMappings": 12,
+    "notes": "Some items were mapped to Guide categories - corrected to use proper attribute IDs"
+  },
+  "mainCategories": {
+    "T-Shirts": { "id": 21, "slug": "t-shirts" },
+    "Sweatshirts": { "id": 9, "slug": "sweatshirts", "note": "SS calls this 'Fleece'" },
+    "Polos": { "id": 52, "slug": "polos" },
+    "Jackets": { "id": 15, "slug": "jackets", "note": "SS calls this 'Outerwear'" },
+    "Headwear": { "id": 11, "slug": "headwear" },
+    "Bottoms": { "id": 384, "slug": "bottoms" },
+    "Bags": { "id": 102, "slug": "bags" },
+    "Accessories": { "id": 53, "slug": "accessories" },
+    "Womens": { "id": 13, "slug": "womens" },
+    "Workwear": { "id": 49, "slug": "workwear" }
+  },
+  "menuMappings": {
+    "T-Shirts": {
+      "byStyle": [
+        { "name": "Core T-Shirts", "categoryId": 863, "slug": "core-tshirts", "status": "valid" },
+        { "name": "Fashion T-Shirts", "categoryId": 864, "slug": "fashion-tshirts", "status": "valid" },
+        { "name": "Tank Tops", "categoryId": 64, "slug": "tank-tops", "status": "valid" },
+        { "name": "Long Sleeve Tees", "categoryId": 56, "slug": "long-sleeve", "status": "corrected", "note": "Use Long Sleeves (56)" }
+      ],
+      "bySleeve": [
+        { "name": "Short Sleeve", "categoryId": 57, "slug": "short-sleeve", "status": "valid" },
+        { "name": "Long Sleeve", "categoryId": 56, "slug": "long-sleeve", "status": "valid" },
+        { "name": "Sleeveless", "categoryId": 63, "slug": "sleeveless", "status": "valid" },
+        { "name": "3/4 Sleeve", "categoryId": 81, "slug": "3-4-sleeve", "status": "valid" }
+      ],
+      "byCollar": [
+        { "name": "Crewneck", "categoryId": 8, "slug": "crewneck", "status": "valid" },
+        { "name": "V-Neck", "categoryId": 66, "slug": "v-neck", "status": "valid" }
+      ],
+      "byMaterial": [
+        { "name": "100% Cotton", "categoryId": 71, "slug": "cotton", "status": "corrected", "note": "Use 71 (100% Cotton) not 261 (100% Cotton Face)" },
+        { "name": "Polyester", "categoryId": 85, "slug": "polyester", "status": "corrected", "note": "Use 85 (Polyester blend) or 220" },
+        { "name": "Tri-Blend", "categoryId": 95, "slug": "tri-blend", "status": "corrected", "note": "Use 95 (Triblends) not Guide category" },
+        { "name": "Performance", "categoryId": 16, "slug": "performance", "status": "valid" }
+      ]
+    },
+    "Sweatshirts": {
+      "byStyle": [
+        { "name": "Hoodies", "categoryId": 36, "slug": "hoodies", "status": "corrected", "note": "Use 36 (Hooded) - general category" },
+        { "name": "Crewnecks", "categoryId": 59, "slug": "crewneck-sweatshirts", "status": "corrected", "note": "Use 59 (Sweatshirts) not Guide" },
+        { "name": "Full-Zip", "categoryId": 38, "slug": "full-zip", "status": "corrected", "note": "Use 38 (Full-Zips) not Guide" },
+        { "name": "Quarter-Zip", "categoryId": 48, "slug": "quarter-zip", "status": "corrected", "note": "Use 48 (Quarter-Zips) not Guide" },
+        { "name": "Pullover", "categoryId": 142, "slug": "pullover", "status": "corrected", "note": "Use 142 (Pullovers) not Guide" }
+      ],
+      "byWeight": [
+        { "name": "Lightweight", "categoryId": 181, "slug": "lightweight", "status": "corrected", "note": "Use 181 'Light (Under 5 oz)'" },
+        { "name": "Midweight", "categoryId": 180, "slug": "midweight", "status": "needs-verification", "note": "Need to verify ID exists" },
+        { "name": "Heavyweight", "categoryId": 179, "slug": "heavyweight", "status": "corrected", "note": "Use 179 'Heavy (Over 6 oz)'" }
+      ]
+    },
+    "Polos": {
+      "bySleeve": [
+        { "name": "Short Sleeve", "categoryId": 57, "slug": "short-sleeve", "status": "valid" },
+        { "name": "Long Sleeve", "categoryId": 56, "slug": "long-sleeve", "status": "valid" }
+      ],
+      "byMaterial": [
+        { "name": "Cotton", "categoryId": 406, "slug": "cotton", "status": "valid" },
+        { "name": "Performance", "categoryId": 16, "slug": "performance", "status": "valid" },
+        { "name": "Pique", "categoryId": 219, "slug": "pique", "status": "valid" }
+      ]
+    },
+    "Jackets": {
+      "byStyle": [
+        { "name": "Lightweight Jackets", "categoryId": 665, "slug": "lightweight", "status": "valid" },
+        { "name": "Vests", "categoryId": 62, "slug": "vests", "status": "valid" },
+        { "name": "Windbreakers", "categoryId": 380, "slug": "windbreakers", "status": "valid" },
+        { "name": "Soft Shells", "categoryId": 403, "slug": "soft-shell", "status": "valid" },
+        { "name": "Rain Coats", "categoryId": 401, "slug": "rain-coats", "status": "valid" },
+        { "name": "Puffer Jackets", "categoryId": 141, "slug": "puffer", "status": "corrected", "note": "Use 141 (Insulated) if exists, or keep 47" },
+        { "name": "Fleece Jackets", "categoryId": 9, "slug": "fleece", "status": "valid", "note": "Fleece category" }
+      ],
+      "byFeature": [
+        { "name": "Full-Zip", "categoryId": 38, "slug": "full-zip", "status": "corrected", "note": "Use 38 not Guide" },
+        { "name": "Quarter-Zip", "categoryId": 48, "slug": "quarter-zip", "status": "corrected", "note": "Use 48 not Guide" },
+        { "name": "Hooded", "categoryId": 36, "slug": "hooded", "status": "valid" }
+      ]
+    },
+    "Headwear": {
+      "byStyle": [
+        { "name": "Trucker Hats", "categoryId": 147, "slug": "trucker-hats", "status": "corrected", "note": "Use 147 (Trucker Hats) not 392 (Hats)" },
+        { "name": "Dad Caps", "categoryId": 796, "slug": "dad-caps", "status": "valid" },
+        { "name": "Snapbacks", "categoryId": 363, "slug": "snapbacks", "status": "valid" },
+        { "name": "Fitted Caps", "categoryId": 150, "slug": "fitted-caps", "status": "valid" },
+        { "name": "Bucket Hats", "categoryId": 242, "slug": "bucket-hats", "status": "valid" },
+        { "name": "Beanies", "categoryId": 120, "slug": "beanies", "status": "valid" },
+        { "name": "Visors", "categoryId": 241, "slug": "visors", "status": "valid" },
+        { "name": "Flat Bills", "categoryId": 130, "slug": "flat-bills", "status": "valid" }
+      ],
+      "byStructure": [
+        { "name": "Structured", "categoryId": 244, "slug": "structured", "status": "corrected", "note": "Use 244 (Structured Hats)" },
+        { "name": "Unstructured", "categoryId": 245, "slug": "unstructured", "status": "valid" },
+        { "name": "Soft-Structured", "categoryId": 658, "slug": "soft-structured", "status": "valid" },
+        { "name": "5-Panel", "categoryId": 238, "slug": "5-panel", "status": "corrected", "note": "Use 238 (Five-Panel Hats) not Silo" },
+        { "name": "6-Panel", "categoryId": 239, "slug": "6-panel", "status": "corrected", "note": "Use 239 (Six-Panel Hats) not Silo" }
+      ],
+      "byClosure": [
+        { "name": "Snapback", "categoryId": 363, "slug": "snapbacks", "status": "valid" },
+        { "name": "Adjustable", "categoryId": 118, "slug": "adjustable", "status": "valid" },
+        { "name": "Hook and Loop", "categoryId": 360, "slug": "hook-and-loop", "status": "valid" }
+      ]
+    },
+    "Bottoms": {
+      "byStyle": [
+        { "name": "Shorts", "categoryId": 43, "slug": "shorts", "status": "valid" },
+        { "name": "Sweatpants", "categoryId": 106, "slug": "sweatpants", "status": "valid" },
+        { "name": "Leggings", "categoryId": 133, "slug": "leggings", "status": "valid" },
+        { "name": "Pants", "categoryId": 37, "slug": "pants", "status": "valid" }
+      ],
+      "byGender": [
+        { "name": "Mens & Unisex", "categoryId": 87, "slug": "mens-unisex", "status": "valid" },
+        { "name": "Womens", "categoryId": 13, "slug": "womens", "status": "valid" },
+        { "name": "Youth", "categoryId": 28, "slug": "youth", "status": "valid" }
+      ]
+    },
+    "Bags": {
+      "byStyle": [
+        { "name": "Backpacks", "categoryId": 111, "slug": "backpacks", "status": "valid" },
+        { "name": "Tote Bags", "categoryId": 186, "slug": "tote-bags", "status": "valid" },
+        { "name": "Duffel Bags", "categoryId": 129, "slug": "duffel-bags", "status": "valid" },
+        { "name": "Cooler Bags", "categoryId": 125, "slug": "cooler-bags", "status": "corrected", "note": "Use 125 (Coolers) if exists" },
+        { "name": "Drawstring Bags", "categoryId": 128, "slug": "drawstring-bags", "status": "corrected", "note": "Use 128 (Drawstring Bags) if exists" },
+        { "name": "Messenger Bags", "categoryId": 134, "slug": "messenger-bags", "status": "valid" }
+      ]
+    },
+    "Accessories": {
+      "byType": [
+        { "name": "Scarves", "categoryId": 144, "slug": "scarves", "status": "corrected", "note": "Use 144 not 394" },
+        { "name": "Blankets", "categoryId": 3, "slug": "blankets", "status": "valid" },
+        { "name": "Towels", "categoryId": 24, "slug": "towels", "status": "valid" },
+        { "name": "Aprons", "categoryId": 1, "slug": "aprons", "status": "valid" },
+        { "name": "Bandanas", "categoryId": 398, "slug": "bandanas", "status": "valid" },
+        { "name": "Gloves", "categoryId": 91, "slug": "gloves", "status": "valid" },
+        { "name": "Socks", "categoryId": 82, "slug": "socks", "status": "valid" }
+      ]
+    },
+    "Womens": {
+      "byCategory": [
+        { "name": "T-Shirts", "categoryId": 21, "slug": "t-shirts", "status": "valid" },
+        { "name": "Tank Tops", "categoryId": 64, "slug": "tank-tops", "status": "valid" },
+        { "name": "Sweatshirts", "categoryId": 59, "slug": "sweatshirts", "status": "valid" },
+        { "name": "Polos", "categoryId": 52, "slug": "polos", "status": "valid" },
+        { "name": "Bottoms", "categoryId": 384, "slug": "bottoms", "status": "valid" }
+      ],
+      "byFit": [
+        { "name": "Fitted", "categoryId": 150, "slug": "fitted", "status": "valid" },
+        { "name": "Relaxed", "categoryId": 157, "slug": "relaxed", "status": "valid" },
+        { "name": "Cropped", "categoryId": 149, "slug": "cropped", "status": "valid" },
+        { "name": "Flowy", "categoryId": 98, "slug": "flowy", "status": "valid" }
+      ]
+    },
+    "Workwear": {
+      "byStyle": [
+        { "name": "Safety Vests", "categoryId": 40, "slug": "safety-vests", "status": "valid", "note": "Combines Safety (40) + Vests (62)" },
+        { "name": "Hi-Vis", "categoryId": 107, "slug": "hi-vis", "status": "valid" },
+        { "name": "Work Jackets", "categoryId": 47, "slug": "work-jackets", "status": "valid", "note": "Combines Workwear (49) + Jackets (47)" },
+        { "name": "Work Pants", "categoryId": 37, "slug": "work-pants", "status": "valid", "note": "Combines Workwear (49) + Pants (37)" }
+      ],
+      "byFeature": [
+        { "name": "ANSI Class 2", "categoryId": 255, "slug": "ansi-class-2", "status": "valid" },
+        { "name": "ANSI Class 3", "categoryId": 256, "slug": "ansi-class-3", "status": "valid" }
+      ]
+    }
+  },
+  "keyAttributeIds": {
+    "sleeve": {
+      "shortSleeves": 57,
+      "longSleeves": 56,
+      "sleeveless": 63,
+      "threeFourthSleeve": 81
+    },
+    "collar": {
+      "crewneck": 8,
+      "vNeck": 66,
+      "henley": 35,
+      "scoopNeck": 58
+    },
+    "material": {
+      "cotton100": 71,
+      "polyester": 85,
+      "triBlend": 95,
+      "cottonPoly5050": 68,
+      "ringspun": 96,
+      "organic": 218
+    },
+    "weight": {
+      "lightweight": 181,
+      "heavyweight": 179
+    },
+    "gender": {
+      "mensUnisex": 87,
+      "womens": 13,
+      "youth": 28,
+      "infantsToddlers": 12
+    },
+    "treatment": {
+      "garmentDyed": 166,
+      "pigmentDyed": 17,
+      "tieDyed": 23,
+      "acidWashed": 161
+    },
+    "features": {
+      "hooded": 36,
+      "fullZip": 38,
+      "quarterZip": 48,
+      "pullover": 142,
+      "pockets": 61,
+      "thumbholes": 146
+    },
+    "sustainable": {
+      "organic": 218,
+      "recycled": 206,
+      "sustainableStyles": 364,
+      "ecoFriendly": 41
+    }
+  }
+}

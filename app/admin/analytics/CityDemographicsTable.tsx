@@ -1,0 +1,151 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+export interface CityDemographicsRow {
+  city: string;
+  newUsers: number;
+  returnUsers: number;
+  paidSearch: number;
+  organicSearch: number;
+  organicSocial: number;
+  crossNetwork: number;
+  averageEngagementTimeSeconds: number;
+  totalRevenue: number;
+}
+
+function formatEngagement(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+interface CityDemographicsTableProps {
+  startDate?: string;
+  endDate?: string;
+}
+
+export function CityDemographicsTable({ startDate, endDate }: CityDemographicsTableProps) {
+  const [cities, setCities] = useState<CityDemographicsRow[]>([]);
+  const [dataSource, setDataSource] = useState<'ga4' | 'mock' | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const qs = params.toString();
+    fetch(`/api/admin/analytics/city-demographics${qs ? `?${qs}` : ''}`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = data.error || (res.status === 403 ? 'Admin access required' : res.status === 401 ? 'Please log in.' : 'Failed to load');
+          const details = data.details && data.code !== 'GA4_ERROR' ? ` — ${data.details}` : '';
+          throw new Error(`${msg}${details}`);
+        }
+        return data;
+      })
+      .then((data) => {
+        setCities(data.cities ?? []);
+        setDataSource(data.source ?? null);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  }, [startDate, endDate]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center rounded-xl border border-stone-200 bg-white p-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+        <p className="font-medium">Could not load city demographics</p>
+        <p className="mt-1 whitespace-pre-wrap break-words">{error}</p>
+        <p className="mt-3 text-xs text-amber-700">
+          On production: log in as an admin. For real GA4 data, add GA4_PROPERTY_ID and GA4_SERVICE_ACCOUNT_JSON in Vercel → Environment Variables; otherwise sample data is used.
+        </p>
+      </div>
+    );
+  }
+
+  if (cities.length === 0) {
+    return (
+      <div className="rounded-xl border border-stone-200 bg-white p-8 text-center text-slate-500">
+        No city demographics data available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative rounded-xl border border-stone-200 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[800px] border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-stone-200 bg-stone-50">
+            <th className="sticky left-0 z-10 min-w-[140px] bg-stone-50 px-4 py-3 font-semibold text-navy-800">
+              City
+            </th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">New users</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">Return users</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">Paid search</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">Organic search</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">Organic social</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">Cross-network</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">Avg. engagement time</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-navy-800">Total revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cities.map((row, idx) => (
+            <tr
+              key={row.city}
+              className={idx % 2 === 0 ? 'bg-white' : 'bg-stone-50/50'}
+            >
+              <td className="sticky left-0 z-10 min-w-[140px] border-b border-stone-100 bg-inherit px-4 py-2.5 font-medium text-slate-800">
+                {row.city}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                {row.newUsers.toLocaleString()}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                {row.returnUsers.toLocaleString()}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                {row.paidSearch.toLocaleString()}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                {row.organicSearch.toLocaleString()}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                {row.organicSocial.toLocaleString()}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                {row.crossNetwork.toLocaleString()}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                {formatEngagement(row.averageEngagementTimeSeconds)}
+              </td>
+              <td className="whitespace-nowrap border-b border-stone-100 px-4 py-2.5 text-slate-700 tabular-nums">
+                ${row.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+      {dataSource && (
+        <p className="absolute bottom-2 right-3 text-right text-[10px] text-slate-400">
+          Data source: {dataSource === 'ga4' ? 'Live (GA4)' : 'Sample data'}
+        </p>
+      )}
+    </div>
+  );
+}
