@@ -3,11 +3,43 @@ import { ProductBreadcrumbs } from '@/components/catalog/ProductBreadcrumbs';
 import { RelatedProducts } from '@/components/builder/RelatedProducts';
 import Link from 'next/link';
 
+export type UnavailableReason = 'discontinued' | 'manually_hidden';
+
 interface DiscontinuedProductPageProps {
   product: Product;
+  /**
+   * Why the product is being shown as unavailable.
+   *   - 'discontinued'   : SS Activewear no longer carries the product (auto-detected, is_active=false)
+   *   - 'manually_hidden': admin toggled hide via /admin/products/[styleId]
+   * Defaults to 'discontinued' to preserve historical behavior.
+   */
+  reason?: UnavailableReason;
 }
 
-export function DiscontinuedProductPage({ product }: DiscontinuedProductPageProps) {
+const COPY: Record<
+  UnavailableReason,
+  { badge: string; heading: string; body: string }
+> = {
+  discontinued: {
+    badge: 'Product Discontinued',
+    heading: '',
+    body:
+      'This product has been discontinued by the manufacturer and is no longer available for purchase. Check out similar products below that you might like.',
+  },
+  manually_hidden: {
+    badge: 'No longer available',
+    heading: '',
+    body:
+      'This product is no longer available. Check out similar products below that you might like.',
+  },
+};
+
+export function DiscontinuedProductPage({
+  product,
+  reason = 'discontinued',
+}: DiscontinuedProductPageProps) {
+  const copy = COPY[reason];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50">
       {/* Breadcrumb */}
@@ -22,7 +54,7 @@ export function DiscontinuedProductPage({ product }: DiscontinuedProductPageProp
         </div>
       </div>
 
-      {/* Discontinued Notice */}
+      {/* Unavailable Notice */}
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8 text-center">
         {/* Product image (faded) */}
         {product.imageUrl && (
@@ -39,7 +71,7 @@ export function DiscontinuedProductPage({ product }: DiscontinuedProductPageProp
           <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
           </svg>
-          <span className="text-sm font-medium text-amber-800">Product Discontinued</span>
+          <span className="text-sm font-medium text-amber-800">{copy.badge}</span>
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 mb-3">
@@ -49,10 +81,7 @@ export function DiscontinuedProductPage({ product }: DiscontinuedProductPageProp
           {product.title || product.styleName}
         </p>
 
-        <p className="text-stone-500 max-w-lg mx-auto mb-8">
-          This product has been discontinued by the manufacturer and is no longer
-          available for purchase. Check out similar products below that you might like.
-        </p>
+        <p className="text-stone-500 max-w-lg mx-auto mb-8">{copy.body}</p>
 
         <div className="flex items-center justify-center gap-4">
           <Link

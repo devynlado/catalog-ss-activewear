@@ -7,6 +7,7 @@ import {
   Loader2,
   Package,
   EyeOff,
+  Ban,
   StickyNote,
   Hash,
   Layers,
@@ -218,9 +219,14 @@ function ResultsList({
                   {p.title}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {p.manually_hidden && (
+                    <Badge tone="slate" icon={EyeOff}>
+                      Hidden by admin
+                    </Badge>
+                  )}
                   {!p.is_active && (
-                    <Badge tone="red" icon={EyeOff}>
-                      Hidden
+                    <Badge tone="red" icon={Ban}>
+                      Discontinued
                     </Badge>
                   )}
                   {p.has_admin_note && (
@@ -275,6 +281,7 @@ const TONE_CLASSES = {
   amber: 'bg-amber-50 text-amber-700 ring-amber-200',
   blue: 'bg-blue-50 text-blue-700 ring-blue-200',
   violet: 'bg-violet-50 text-violet-700 ring-violet-200',
+  slate: 'bg-slate-100 text-slate-700 ring-slate-300',
 } as const;
 
 function Badge({

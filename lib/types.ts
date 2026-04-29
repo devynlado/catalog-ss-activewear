@@ -168,8 +168,12 @@ export interface Product {
   // Review aggregates (denormalized from reviews table)
   avgRating?: number | null;
   reviewCount?: number;
-  // Discontinued / active status
+  // Discontinued / active status (sync-owned: tracks SS Activewear catalog presence)
   isActive?: boolean;
+  // Admin-toggled manual visibility flag (independent of isActive). When true,
+  // the product is excluded from catalog/sitemap/feed and the product page
+  // renders an "unavailable" state with no Add-to-Cart.
+  manuallyHidden?: boolean;
   // Admin overrides editable in /admin/products
   adminNote?: string | null;
   // Style-level default minimum order quantity. Variants without their own

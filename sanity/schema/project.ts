@@ -1,5 +1,6 @@
 import { defineField, defineType } from 'sanity';
 import { DECORATION_OPTIONS } from './decorationOptions';
+import { AiMetaInput } from '../components/AiMetaInput';
 
 export const projectType = defineType({
   name: 'project',
@@ -166,7 +167,9 @@ export const projectType = defineType({
       title: 'Meta Title',
       type: 'string',
       group: 'seo',
-      description: 'Override for SEO; default is project title',
+      description:
+        'Override for SEO; default is project title. Click "Generate 3 suggestions" below for AI-written options (40–60 characters).',
+      components: { input: AiMetaInput },
     }),
     defineField({
       name: 'metaDescription',
@@ -174,7 +177,9 @@ export const projectType = defineType({
       type: 'text',
       group: 'seo',
       rows: 2,
-      description: 'Override for SEO; default is short description',
+      description:
+        'Override for SEO; default is short description. Click "Generate 3 suggestions" below for AI-written options (120–160 characters).',
+      components: { input: AiMetaInput },
     }),
     defineField({
       name: 'publishedAt',

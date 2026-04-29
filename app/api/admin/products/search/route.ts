@@ -23,6 +23,7 @@ export interface AdminProductSearchResult {
   primary_image_url: string | null;
   slug: string | null;
   is_active: boolean;
+  manually_hidden: boolean;
   has_admin_note: boolean;
   min_order_quantity: number | null;
   variant_overrides_count: number;
@@ -42,6 +43,7 @@ interface ProductRow {
   primary_image_url: string | null;
   slug: string | null;
   is_active: boolean;
+  manually_hidden: boolean;
   admin_note: string | null;
   min_order_quantity: number | null;
 }
@@ -118,6 +120,7 @@ export async function GET(request: NextRequest) {
       primary_image_url,
       slug,
       is_active,
+      manually_hidden,
       admin_note,
       min_order_quantity
     `,
@@ -177,6 +180,7 @@ export async function GET(request: NextRequest) {
     primary_image_url: r.primary_image_url,
     slug: r.slug,
     is_active: r.is_active,
+    manually_hidden: !!r.manually_hidden,
     has_admin_note: !!(r.admin_note && r.admin_note.trim().length > 0),
     min_order_quantity: r.min_order_quantity,
     variant_overrides_count: variantOverrides.get(r.style_id) || 0,

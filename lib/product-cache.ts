@@ -221,6 +221,7 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
       is_popular,
       popular_tier,
       is_active,
+      manually_hidden,
       color_count,
       base_price,
       min_retail_price,
@@ -248,7 +249,8 @@ export async function getProductsFromCache(options: ProductQueryOptions = {}): P
         availability
       )
     `, { count: 'exact' })
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('manually_hidden', false);
   
   // Apply category filter (must be first to limit results)
   if (categoryFilteredStyleIds && categoryFilteredStyleIds.length > 0) {
@@ -456,6 +458,7 @@ export async function searchProductsFromCache(
       is_popular,
       popular_tier,
       is_active,
+      manually_hidden,
       color_count,
       base_price,
       supplier,
@@ -479,7 +482,8 @@ export async function searchProductsFromCache(
         availability
       )
     `)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('manually_hidden', false);
   
   // Build OR conditions for each search term across all searchable fields
   const orConditions = searchTerms.map(term => 
@@ -613,6 +617,7 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
       is_popular,
       popular_tier,
       is_active,
+      manually_hidden,
       color_count,
       base_price,
       supplier,
@@ -685,6 +690,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       is_popular,
       popular_tier,
       is_active,
+      manually_hidden,
       color_count,
       base_price,
       supplier,
@@ -770,8 +776,8 @@ export async function getCacheStats(): Promise<{
   const supabase = createServerSupabaseClient();
   
   const [products, popular, colors, skus, syncLog] = await Promise.all([
-    supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('is_popular', true),
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('manually_hidden', false),
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('manually_hidden', false).eq('is_popular', true),
     supabase.from('product_colors').select('*', { count: 'exact', head: true }),
     supabase.from('product_skus').select('*', { count: 'exact', head: true }),
     supabase.from('sync_logs').select('completed_at').eq('status', 'completed').order('completed_at', { ascending: false }).limit(1).single(),
@@ -851,6 +857,7 @@ function transformProduct(row: any): Product {
     avgRating: row.avg_rating ?? null,
     reviewCount: row.review_count ?? 0,
     isActive: row.is_active ?? true,
+    manuallyHidden: !!row.manually_hidden,
     adminNote: row.admin_note ?? null,
     minOrderQuantity: row.min_order_quantity ?? null,
   };
@@ -979,6 +986,7 @@ function transformProductWithSkus(row: any): Product {
     avgRating: row.avg_rating ?? null,
     reviewCount: row.review_count ?? 0,
     isActive: row.is_active ?? true,
+    manuallyHidden: !!row.manually_hidden,
     adminNote: row.admin_note ?? null,
     minOrderQuantity: row.min_order_quantity ?? null,
   };

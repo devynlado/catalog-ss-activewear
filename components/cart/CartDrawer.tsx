@@ -162,17 +162,19 @@ function getAllAvailableSizes(availableSizes: AvailableSize[]): string[] {
 const glassCard = "bg-white/80 backdrop-blur-sm border border-stone-200/70 rounded-xl shadow-sm";
 
 export function CartDrawer() {
-  const { 
-    items, 
-    isDrawerOpen, 
-    closeDrawer, 
-    removeItem, 
+  const {
+    items,
+    isDrawerOpen,
+    closeDrawer,
+    removeItem,
     updateQuantity,
     addItem,
     getSubtotal,
     getTierUpsell,
     getTotalUnits,
     stockWarnings,
+    unavailableLines,
+    removeAllUnavailableLines,
   } = useCartStore();
   const router = useRouter();
   const subtotal = getSubtotal();
@@ -207,6 +209,11 @@ export function CartDrawer() {
     }, []);
   }, [items]);
   const hasCartMinViolations = cartMinViolations.length > 0;
+  // Block checkout entirely whenever any line's parent product has been hidden
+  // by an admin or auto-discontinued. The destructive banner above prompts the
+  // shopper to remove or auto-removes them via "Remove all".
+  const hasUnavailableLines = unavailableLines.length > 0;
+  const checkoutDisabled = hasCartMinViolations || hasUnavailableLines;
   
   const toggleGroupExpanded = (groupKey: string) => {
     setExpandedGroups(prev => {
@@ -368,10 +375,42 @@ export function CartDrawer() {
           </div>
         )}
 
+        {/* Unavailable Lines (parent product hidden / discontinued) */}
+        {unavailableLines.length > 0 && (
+          <div className="relative z-10 bg-red-50/90 backdrop-blur-sm px-6 py-3 border-b border-red-200/70">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-red-800 mb-1">
+                  {unavailableLines.length === 1
+                    ? '1 item in your cart is no longer available'
+                    : `${unavailableLines.length} items in your cart are no longer available`}
+                </p>
+                <ul className="space-y-0.5">
+                  {unavailableLines.map((l) => (
+                    <li key={l.sku} className="text-xs text-red-700">
+                      {l.styleName} — {l.colorName} / {l.sizeName}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-[11px] text-red-600/80">
+                  Remove them to continue to checkout.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={removeAllUnavailableLines}
+                className="flex-none rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-red-700"
+              >
+                Remove all
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Stock Warnings */}
         {stockWarnings.length > 0 && (
           <div className="relative z-10 bg-amber-50/90 backdrop-blur-sm px-6 py-3 border-b border-amber-200/70">
-            <p className="text-sm font-semibold text-amber-800 mb-1">Some items are no longer available</p>
+            <p className="text-sm font-semibold text-amber-800 mb-1">Some items are low on stock</p>
             {stockWarnings.map((w) => (
               <p key={w.sku} className="text-xs text-amber-700">
                 {w.styleName} — {w.colorName} / {w.sizeName}
@@ -660,9 +699,9 @@ export function CartDrawer() {
             <div className="space-y-2">
               <Button
                 onClick={handleCheckout}
-                disabled={hasCartMinViolations}
+                disabled={checkoutDisabled}
                 className={
-                  hasCartMinViolations
+                  checkoutDisabled
                     ? 'w-full'
                     : 'w-full shadow-lg shadow-brand-500/25'
                 }
