@@ -1,4 +1,5 @@
 import { defineField, defineType } from 'sanity';
+import { AiMetaInput } from '../components/AiMetaInput';
 
 export const blogArticleType = defineType({
   name: 'blogArticle',
@@ -155,8 +156,10 @@ export const blogArticleType = defineType({
       title: 'Meta Title',
       type: 'string',
       group: 'seo',
-      description: 'Override the page title for search engines. Leave blank to use the article title.',
+      description:
+        'Override the page title for search engines. Leave blank to use the article title. Click "Generate 3 suggestions" below for AI-written options (40–60 characters).',
       validation: (Rule) => Rule.max(70),
+      components: { input: AiMetaInput },
     }),
     defineField({
       name: 'metaDescription',
@@ -165,8 +168,9 @@ export const blogArticleType = defineType({
       group: 'seo',
       rows: 3,
       description:
-        'Leave blank to auto-generate from article content (first ~155 characters). Recommended: 120–160 characters.',
+        'If left blank, the page falls back to the first ~155 characters of the article body — but a hand-tuned (or AI-suggested) description performs much better in search. Click "Generate 3 suggestions" below for AI-written options (120–160 characters).',
       validation: (Rule) => Rule.max(160),
+      components: { input: AiMetaInput },
     }),
   ],
   orderings: [

@@ -36,6 +36,11 @@ interface ProductRow {
   is_active: boolean;
   admin_note: string | null;
   min_order_quantity: number | null;
+  manually_hidden: boolean;
+  manually_hidden_at: string | null;
+  manually_hidden_by: string | null;
+  manually_hidden_reason: string | null;
+  discontinued_detected_at: string | null;
 }
 
 interface SkuRow {
@@ -112,7 +117,9 @@ export default async function AdminProductEditPage({ params }: PageProps) {
       .from('products')
       .select(
         `style_id, style_name, brand_name, brand_id, title_raw, title_optimized,
-         primary_image_url, slug, is_active, admin_note, min_order_quantity`,
+         primary_image_url, slug, is_active, admin_note, min_order_quantity,
+         manually_hidden, manually_hidden_at, manually_hidden_by, manually_hidden_reason,
+         discontinued_detected_at`,
       )
       .eq('style_id', styleId)
       .maybeSingle(),
@@ -137,6 +144,19 @@ export default async function AdminProductEditPage({ params }: PageProps) {
     notFound();
   }
 
+  // Look up the admin email of whoever last hid this product, for the
+  // Visibility card UI. Profiles table is keyed by auth user id.
+  let manuallyHiddenByEmail: string | null = null;
+  if (product.manually_hidden && product.manually_hidden_by) {
+    const { data: hiddenByRow } = await service
+      .from('profiles')
+      .select('email')
+      .eq('id', product.manually_hidden_by)
+      .maybeSingle();
+    const row = hiddenByRow as { email: string | null } | null;
+    manuallyHiddenByEmail = row?.email ?? null;
+  }
+
   const skus = (skuResult.data || []) as SkuRow[];
   const variants = groupVariantsByColor(skus);
 
@@ -153,6 +173,11 @@ export default async function AdminProductEditPage({ params }: PageProps) {
       is_active: product.is_active,
       admin_note: product.admin_note,
       min_order_quantity: product.min_order_quantity,
+      manually_hidden: !!product.manually_hidden,
+      manually_hidden_at: product.manually_hidden_at,
+      manually_hidden_reason: product.manually_hidden_reason,
+      manually_hidden_by_email: manuallyHiddenByEmail,
+      discontinued_detected_at: product.discontinued_detected_at,
     },
     variants,
   };
@@ -186,9 +211,14 @@ export default async function AdminProductEditPage({ params }: PageProps) {
               <span className="font-medium text-slate-700">{product.brand_name}</span>
               <span className="text-slate-300">•</span>
               <span>{product.style_name}</span>
+              {product.manually_hidden && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 ring-1 ring-inset ring-slate-300">
+                  Hidden by admin
+                </span>
+              )}
               {!product.is_active && (
                 <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 ring-1 ring-inset ring-red-200">
-                  Hidden
+                  Discontinued
                 </span>
               )}
             </div>

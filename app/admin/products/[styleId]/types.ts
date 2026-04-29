@@ -24,6 +24,11 @@ export interface ProductEditProductInfo {
   is_active: boolean;
   admin_note: string | null;
   min_order_quantity: number | null;
+  manually_hidden: boolean;
+  manually_hidden_at: string | null;
+  manually_hidden_reason: string | null;
+  manually_hidden_by_email: string | null;
+  discontinued_detected_at: string | null;
 }
 
 export interface ProductEditInitialData {

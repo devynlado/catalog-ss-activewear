@@ -12,12 +12,15 @@ function getServiceSupabase() {
 }
 
 const ADMIN_NOTE_MAX_CHARS = 2000;
+const HIDE_REASON_MAX_CHARS = 500;
 const MIN_QTY_MAX = 1_000_000;
 
 const ALLOWED_TOP_LEVEL_KEYS = new Set([
   'admin_note',
   'min_order_quantity',
   'variants',
+  'manually_hidden',
+  'manually_hidden_reason',
 ]);
 const ALLOWED_VARIANT_KEYS = new Set(['sku', 'min_order_quantity']);
 
@@ -30,6 +33,8 @@ interface PatchBody {
   admin_note?: string | null;
   min_order_quantity?: number | null;
   variants?: VariantPatch[];
+  manually_hidden?: boolean;
+  manually_hidden_reason?: string | null;
 }
 
 interface ValidationError {
@@ -158,6 +163,36 @@ export async function PATCH(
     else nextStyleMinQty = r.value;
   }
 
+  // manually_hidden ----------------------------------------------------------
+  // Admin-controlled visibility flag. Independent of `is_active` (which the
+  // sync pipeline owns). When transitioning to true we also stamp metadata
+  // (timestamp, who, optional reason). When transitioning to false those
+  // metadata columns are cleared.
+  let nextManuallyHidden: boolean | undefined;
+  if ('manually_hidden' in body) {
+    if (typeof body.manually_hidden !== 'boolean') {
+      errors.push({
+        field: 'manually_hidden',
+        message: 'manually_hidden must be a boolean',
+      });
+    } else {
+      nextManuallyHidden = body.manually_hidden;
+    }
+  }
+
+  // manually_hidden_reason — optional free-text. Only meaningful when the
+  // product is being hidden; ignored on un-hide (we always clear it then).
+  let nextManuallyHiddenReason: string | null | undefined;
+  if ('manually_hidden_reason' in body) {
+    const r = normalizeNullableString(
+      body.manually_hidden_reason,
+      'manually_hidden_reason',
+      HIDE_REASON_MAX_CHARS,
+    );
+    if ('error' in r) errors.push(r.error);
+    else nextManuallyHiddenReason = r.value;
+  }
+
   // variants -----------------------------------------------------------------
   let nextVariants: VariantPatch[] | undefined;
   if ('variants' in body && body.variants !== undefined) {
@@ -218,7 +253,11 @@ export async function PATCH(
     );
   }
 
-  const noStyleEdits = nextAdminNote === undefined && nextStyleMinQty === undefined;
+  const noStyleEdits =
+    nextAdminNote === undefined &&
+    nextStyleMinQty === undefined &&
+    nextManuallyHidden === undefined &&
+    nextManuallyHiddenReason === undefined;
   const noVariantEdits = !nextVariants || nextVariants.length === 0;
   if (noStyleEdits && noVariantEdits) {
     return NextResponse.json(
@@ -232,7 +271,9 @@ export async function PATCH(
 
   const { data: existingProductRaw, error: fetchProductError } = await service
     .from('products')
-    .select('style_id, admin_note, min_order_quantity')
+    .select(
+      'style_id, admin_note, min_order_quantity, manually_hidden, manually_hidden_reason',
+    )
     .eq('style_id', styleId)
     .single();
 
@@ -244,6 +285,8 @@ export async function PATCH(
     style_id: number;
     admin_note: string | null;
     min_order_quantity: number | null;
+    manually_hidden: boolean;
+    manually_hidden_reason: string | null;
   };
 
   // ---- Validate variant SKUs belong to this style + capture old values ----
@@ -332,6 +375,73 @@ export async function PATCH(
       edited_by: user.id,
     });
     changedFields.push('min_order_quantity');
+  }
+
+  // manually_hidden transitions ---------------------------------------------
+  // Three valid shapes from the client:
+  //   (a) { manually_hidden: true,  manually_hidden_reason?: '...' } — hide
+  //   (b) { manually_hidden: false }                                  — un-hide
+  //   (c) { manually_hidden_reason: '...' }                           — edit reason on an
+  //                                                                    already-hidden product
+  // We compute target values, then only emit a patch if anything changed.
+  const targetHidden =
+    nextManuallyHidden !== undefined
+      ? nextManuallyHidden
+      : existingProduct.manually_hidden;
+
+  let targetReason: string | null;
+  if (targetHidden) {
+    // When hidden, accept the reason from the body if present, else keep what's there.
+    targetReason =
+      nextManuallyHiddenReason !== undefined
+        ? nextManuallyHiddenReason
+        : existingProduct.manually_hidden_reason;
+  } else {
+    // Un-hidden: always clear the reason regardless of what the client sent.
+    targetReason = null;
+  }
+
+  const hiddenChanged = existingProduct.manually_hidden !== targetHidden;
+  const reasonChanged = !isEqual(existingProduct.manually_hidden_reason, targetReason);
+
+  if (hiddenChanged) {
+    productPatch.manually_hidden = targetHidden;
+    if (targetHidden) {
+      // Stamp who/when on transition into hidden state.
+      productPatch.manually_hidden_at = new Date().toISOString();
+      productPatch.manually_hidden_by = user.id;
+    } else {
+      // Clear all metadata on un-hide so the row reads cleanly.
+      productPatch.manually_hidden_at = null;
+      productPatch.manually_hidden_by = null;
+    }
+    auditRows.push({
+      style_id: styleId,
+      sku: null,
+      field: 'manually_hidden',
+      old_value: stringifyForAudit(existingProduct.manually_hidden),
+      new_value: stringifyForAudit(targetHidden),
+      edited_by: user.id,
+    });
+    changedFields.push('manually_hidden');
+  }
+
+  if (reasonChanged) {
+    productPatch.manually_hidden_reason = targetReason;
+    // Only emit a separate audit row when the reason changed independently
+    // of the hidden flag. Otherwise the manually_hidden audit row already
+    // captures the operation.
+    if (!hiddenChanged) {
+      auditRows.push({
+        style_id: styleId,
+        sku: null,
+        field: 'manually_hidden_reason',
+        old_value: stringifyForAudit(existingProduct.manually_hidden_reason),
+        new_value: stringifyForAudit(targetReason),
+        edited_by: user.id,
+      });
+      changedFields.push('manually_hidden_reason');
+    }
   }
 
   const variantsToWrite: VariantPatch[] = [];
@@ -427,6 +537,14 @@ export async function PATCH(
         nextStyleMinQty !== undefined
           ? nextStyleMinQty
           : existingProduct.min_order_quantity,
+      manually_hidden: targetHidden,
+      manually_hidden_reason: targetReason,
+      manually_hidden_at:
+        hiddenChanged && targetHidden
+          ? (productPatch.manually_hidden_at as string)
+          : hiddenChanged && !targetHidden
+            ? null
+            : undefined,
     },
     variants: variantsToWrite,
   });

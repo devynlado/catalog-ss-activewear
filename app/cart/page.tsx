@@ -166,6 +166,8 @@ export default function CartPage() {
     appliedCoupon,
     setAppliedCoupon,
     clearCoupon,
+    unavailableLines,
+    removeAllUnavailableLines,
     getTierUpsell,
   } = useCartStore();
 
@@ -207,6 +209,10 @@ export default function CartPage() {
     }, []);
   }, [items]);
   const hasCartMinViolations = cartMinViolations.length > 0;
+  // See CartDrawer / CheckoutContent for the same gating pattern. We block
+  // checkout whenever any cart line's parent product has been hidden by an
+  // admin or auto-discontinued, and offer a one-click "Remove all".
+  const hasUnavailableLines = unavailableLines.length > 0;
 
   // Check if any items have discounts
   const hasDiscounts = items.some(item => item.discountedPrice && item.discountedPrice < item.unitPrice);
@@ -794,6 +800,38 @@ export default function CartPage() {
                 </span>
               </div>
 
+              {hasUnavailableLines && (
+                <div
+                  role="alert"
+                  className="mb-3 rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm"
+                >
+                  <div className="flex gap-2">
+                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-red-800">
+                        {unavailableLines.length === 1
+                          ? '1 item is no longer available'
+                          : `${unavailableLines.length} items are no longer available`}
+                      </p>
+                      <ul className="mt-1 space-y-0.5 text-red-700">
+                        {unavailableLines.map((l) => (
+                          <li key={l.sku}>
+                            {l.styleName} — {l.colorName} / {l.sizeName}
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={removeAllUnavailableLines}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+                      >
+                        Remove all
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {hasCartMinViolations && (
                 <div
                   role="alert"
@@ -815,7 +853,7 @@ export default function CartPage() {
                 </div>
               )}
 
-              {hasCartMinViolations ? (
+              {hasCartMinViolations || hasUnavailableLines ? (
                 <Button className="w-full" size="lg" disabled>
                   Proceed to Checkout
                   <ArrowRight className="ml-2 h-5 w-5" />

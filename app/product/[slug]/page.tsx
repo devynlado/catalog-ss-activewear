@@ -15,6 +15,23 @@ import { validateDiscountToken, GoogleDiscount } from '@/lib/google-discount';
 import { ReviewSection } from '@/components/reviews/ReviewSection';
 import { DiscontinuedProductPage } from './DiscontinuedProductPage';
 
+/**
+ * Decide whether the product should render the "no longer available" view
+ * instead of the buyable detail page. Both conditions force noindex in
+ * generateMetadata so de-listed URLs eventually fall out of Google.
+ */
+function isProductUnavailable(product: Product): boolean {
+  return product.isActive === false || product.manuallyHidden === true;
+}
+
+function getUnavailableReason(
+  product: Product,
+): 'discontinued' | 'manually_hidden' {
+  // manually_hidden takes priority over discontinued when both are set, since
+  // it represents an explicit admin decision.
+  return product.manuallyHidden ? 'manually_hidden' : 'discontinued';
+}
+
 // Initial variant resolved from URL params (color/size from GMC feed links)
 export interface InitialVariant {
   colorCode: string;
@@ -249,7 +266,12 @@ export async function generateMetadata({ params, searchParams }: ProductPageProp
   const { title, matchedColor, matchedSize } = buildVariantSeoTitle(product, colorParam, sizeParam);
   const description = product.metaDescription || product.description || `Shop ${product.styleName} by ${product.brandName}. View colors, sizes, inventory and get wholesale pricing.`;
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://garmentdecor.com';
-  
+
+  // Unavailable products (manually hidden or auto-discontinued) keep their
+  // URL alive but tell Google not to index them. We still allow link-following
+  // so crawlers can move on to the "browse similar" CTAs.
+  const unavailable = isProductUnavailable(product);
+
   // Self-referencing canonical: include variant params when they resolved to a valid variant
   let productUrl = `${baseUrl}/product/${product.slug}`;
   if (matchedColor) {
@@ -267,6 +289,9 @@ export async function generateMetadata({ params, searchParams }: ProductPageProp
     alternates: {
       canonical: productUrl,
     },
+    robots: unavailable
+      ? { index: false, follow: true }
+      : undefined,
     openGraph: {
       title,
       description,
@@ -298,10 +323,11 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     notFound();
   }
 
-  if (product.isActive === false) {
+  if (isProductUnavailable(product)) {
     return (
       <DiscontinuedProductPage
         product={product}
+        reason={getUnavailableReason(product)}
       />
     );
   }

@@ -222,6 +222,10 @@ interface InlinePaymentFormProps {
   /** When true the cart contains a line below its minimum order quantity;
    *  the Pay button is disabled and submit is short-circuited. */
   hasMinViolations?: boolean;
+  /** When true the cart contains a line whose parent product is hidden by
+   *  admin or auto-discontinued; submit is short-circuited with a different
+   *  message than min-violations so the shopper isn't misled. */
+  hasUnavailableLines?: boolean;
 }
 
 function InlinePaymentForm({
@@ -237,6 +241,7 @@ function InlinePaymentForm({
   decoration,
   liveShippingCost,
   hasMinViolations = false,
+  hasUnavailableLines = false,
 }: InlinePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -266,6 +271,12 @@ function InlinePaymentForm({
     // Bail before contacting Stripe — the page-level banner already explains
     // the problem and we don't want to create a PaymentIntent for an order
     // the server will reject.
+    if (hasUnavailableLines) {
+      setPaymentError(
+        'One or more items in your cart are no longer available. Remove them before paying.',
+      );
+      return;
+    }
     if (hasMinViolations) {
       setPaymentError(
         'One or more items are below their minimum order quantity. Please update your cart before paying.',
@@ -402,7 +413,13 @@ function InlinePaymentForm({
 
       <Button
         type="submit"
-        disabled={!stripe || !isFormValid || isProcessing || hasMinViolations}
+        disabled={
+          !stripe ||
+          !isFormValid ||
+          isProcessing ||
+          hasMinViolations ||
+          hasUnavailableLines
+        }
         isLoading={isProcessing}
         loadingText="Processing payment..."
         className="w-full"
@@ -422,7 +439,21 @@ function InlinePaymentForm({
 // ---------- Main Checkout Page ----------
 
 export default function CheckoutContent() {
-  const { items, decoration, getDecorationTotal, clearDecoration, appliedCoupon, setAppliedCoupon, clearCoupon } = useCartStore();
+  const {
+    items,
+    decoration,
+    getDecorationTotal,
+    clearDecoration,
+    appliedCoupon,
+    setAppliedCoupon,
+    clearCoupon,
+    unavailableLines,
+    removeAllUnavailableLines,
+  } = useCartStore();
+  // Block checkout when any cart line's parent product is no longer
+  // purchasable (admin hidden or auto-discontinued). The shopper can clear
+  // them with one click via "Remove all" — same model as the cart drawer.
+  const hasUnavailableLines = unavailableLines.length > 0;
 
   // Snapshot-based minimum-order-quantity violations across the whole cart.
   // The cart store re-snapshots `minOrderQuantity` on hydrate via
@@ -864,6 +895,41 @@ export default function CheckoutContent() {
             </div>
           </div>
         </div>
+
+        {hasUnavailableLines && (
+          <div
+            role="alert"
+            className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4"
+          >
+            <div className="flex gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-red-800">
+                  {unavailableLines.length === 1
+                    ? '1 item in your cart is no longer available'
+                    : `${unavailableLines.length} items in your cart are no longer available`}
+                </p>
+                <ul className="mt-1.5 space-y-0.5 text-sm text-red-700">
+                  {unavailableLines.map((l) => (
+                    <li key={l.sku}>
+                      {l.styleName} — {l.colorName} / {l.sizeName}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-red-700/80">
+                  Remove these to continue placing your order.
+                </p>
+                <button
+                  type="button"
+                  onClick={removeAllUnavailableLines}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+                >
+                  Remove all unavailable items
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {hasCartMinViolations && (
           <div
@@ -1377,7 +1443,12 @@ export default function CheckoutContent() {
                       size="lg"
                       className="w-full"
                       onClick={handleCompleteFreeOrder}
-                      disabled={!isFormValid || freeOrderSubmitting || hasCartMinViolations}
+                      disabled={
+                        !isFormValid ||
+                        freeOrderSubmitting ||
+                        hasCartMinViolations ||
+                        hasUnavailableLines
+                      }
                     >
                       {freeOrderSubmitting ? 'Placing order…' : 'Complete order'}
                     </Button>
@@ -1405,6 +1476,7 @@ export default function CheckoutContent() {
                       decoration={decoration}
                       liveShippingCost={liveShippingCost}
                       hasMinViolations={hasCartMinViolations}
+                      hasUnavailableLines={hasUnavailableLines}
                     />
                   </Elements>
                 ) : null}

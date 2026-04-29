@@ -453,7 +453,14 @@ export async function syncPopularProducts(): Promise<SyncResult> {
             const minCogs = Math.min(...skus.map(s => s.customerPrice || s.piecePrice || 0).filter(p => p > 0));
             const baseRetailPrice = Math.round(minCogs * RETAIL_MARKUP * 100) / 100;
             
-            // Collect product data
+            // Collect product data.
+            //
+            // ADMIN-OWNED COLUMNS — DO NOT ADD HERE:
+            //   admin_note, min_order_quantity, manually_hidden,
+            //   manually_hidden_at, manually_hidden_by, manually_hidden_reason
+            // These are written exclusively by the admin UI under
+            // /api/admin/products/[styleId]. Including them in this upsert
+            // would silently clobber admin edits on every sync.
             allProducts.push({
               style_id: style.styleID,
               style_name: style.styleName,
@@ -967,7 +974,14 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
             const minCogs = Math.min(...skus.map(s => s.customerPrice || s.piecePrice || 0).filter(p => p > 0));
             const baseRetailPrice = Math.round(minCogs * RETAIL_MARKUP * 100) / 100;
             
-            // Collect product data
+            // Collect product data.
+            //
+            // ADMIN-OWNED COLUMNS — DO NOT ADD HERE:
+            //   admin_note, min_order_quantity, manually_hidden,
+            //   manually_hidden_at, manually_hidden_by, manually_hidden_reason
+            // These are written exclusively by the admin UI under
+            // /api/admin/products/[styleId]. Including them in this upsert
+            // would silently clobber admin edits on every sync.
             allProducts.push({
               style_id: style.styleID,
               style_name: style.styleName,
@@ -1354,6 +1368,14 @@ export interface DiscontinuedCheckResult {
  * - Products flagged for 48+ hours: auto-hidden (`is_active = false`)
  * - Products re-appearing in SS after being flagged: restored (flag cleared)
  * - Products with `manually_kept_active = true` are never auto-hidden
+ *
+ * IMPORTANT — admin-owned `manually_hidden` is INTENTIONALLY ignored here.
+ * `is_active` is the sync's own concept ("does SS still carry this style?")
+ * and `manually_hidden` is the admin's concept ("should customers see this?").
+ * The two are independent. Even when SS re-adds a product and we restore
+ * `is_active = true`, we leave `manually_hidden` as-is so an admin's deliberate
+ * hide is never silently undone. Customer visibility is the AND of both flags
+ * (see lib/product-cache.ts and customer-side query sites).
  */
 export async function checkDiscontinuedProducts(): Promise<DiscontinuedCheckResult> {
   const errors: string[] = [];

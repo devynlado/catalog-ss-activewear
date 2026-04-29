@@ -140,6 +140,7 @@ async function fetchFromSupabase(): Promise<{
     .from('products')
     .select('*', { count: 'exact', head: true })
     .eq('is_active', true)
+    .eq('manually_hidden', false)
     .not('slug', 'is', null);
   
   if (!count || count === 0) {
@@ -191,6 +192,7 @@ async function fetchFromSupabase(): Promise<{
         )
       `)
       .eq('is_active', true)
+      .eq('manually_hidden', false)
       .not('slug', 'is', null)
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
     

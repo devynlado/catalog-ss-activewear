@@ -21,11 +21,27 @@ export interface StockWarning {
   availableQty: number;
 }
 
+/**
+ * A cart line whose parent product is no longer purchasable — either the
+ * admin manually hid it (`manually_hidden`) or the SS Activewear sync flagged
+ * it as discontinued (`is_active = false`). These lines must be removed
+ * before checkout can proceed.
+ */
+export interface UnavailableLine {
+  sku: string;
+  styleId: number;
+  colorName: string;
+  sizeName: string;
+  styleName: string;
+  reason: 'manually_hidden' | 'discontinued';
+}
+
 interface CartStore {
   items: CartItem[];
   decoration: DecorationSelection | null;
   appliedCoupon: AppliedCoupon | null;
   stockWarnings: StockWarning[];
+  unavailableLines: UnavailableLine[];
   isDrawerOpen: boolean;
   isDecorationModalOpen: boolean;
   justAdded: boolean;
@@ -45,6 +61,11 @@ interface CartStore {
   // Stock
   setStockWarnings: (warnings: StockWarning[]) => void;
   getStockWarningForSku: (sku: string) => StockWarning | undefined;
+
+  // Visibility (parent product hidden / discontinued)
+  setUnavailableLines: (lines: UnavailableLine[]) => void;
+  getUnavailableLineForSku: (sku: string) => UnavailableLine | undefined;
+  removeAllUnavailableLines: () => void;
 
   // Coupon
   setAppliedCoupon: (coupon: AppliedCoupon | null) => void;
@@ -81,6 +102,7 @@ export const useCartStore = create<CartStore>()(
       decoration: null,
       appliedCoupon: null,
       stockWarnings: [],
+      unavailableLines: [],
       isDrawerOpen: false,
       isDecorationModalOpen: false,
       justAdded: false,
@@ -88,6 +110,18 @@ export const useCartStore = create<CartStore>()(
 
       setStockWarnings: (warnings) => set({ stockWarnings: warnings }),
       getStockWarningForSku: (sku) => get().stockWarnings.find((w) => w.sku === sku),
+
+      setUnavailableLines: (lines) => set({ unavailableLines: lines }),
+      getUnavailableLineForSku: (sku) =>
+        get().unavailableLines.find((l) => l.sku === sku),
+      removeAllUnavailableLines: () => {
+        const unavailable = new Set(get().unavailableLines.map((l) => l.sku));
+        if (unavailable.size === 0) return;
+        set((state) => ({
+          items: state.items.filter((i) => !unavailable.has(i.sku)),
+          unavailableLines: [],
+        }));
+      },
 
       setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
       clearCoupon: () => set({ appliedCoupon: null }),
@@ -162,7 +196,13 @@ export const useCartStore = create<CartStore>()(
       },
       
       clearCart: () => {
-        set({ items: [], decoration: null, appliedCoupon: null });
+        set({
+          items: [],
+          decoration: null,
+          appliedCoupon: null,
+          stockWarnings: [],
+          unavailableLines: [],
+        });
       },
       
       setDecoration: (decoration) => {
@@ -253,14 +293,21 @@ export const useCartStore = create<CartStore>()(
             body: JSON.stringify({ items: snapshot }),
           })
             .then((res) => (res.ok ? res.json() : null))
-            .then((data: { items?: CartItem[]; stockWarnings?: StockWarning[] } | null) => {
-              if (data?.items && Array.isArray(data.items)) {
-                useCartStore.setState({
-                  items: data.items,
-                  stockWarnings: data.stockWarnings ?? [],
-                });
-              }
-            })
+            .then(
+              (data: {
+                items?: CartItem[];
+                stockWarnings?: StockWarning[];
+                unavailableLines?: UnavailableLine[];
+              } | null) => {
+                if (data?.items && Array.isArray(data.items)) {
+                  useCartStore.setState({
+                    items: data.items,
+                    stockWarnings: data.stockWarnings ?? [],
+                    unavailableLines: data.unavailableLines ?? [],
+                  });
+                }
+              },
+            )
             .catch(() => {});
         }
       },
