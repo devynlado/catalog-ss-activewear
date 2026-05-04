@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { POPULAR_PRODUCTS, ProductCategory, ProductTier } from '@/lib/popular-products';
 import { 
   generateFeedRow, 
@@ -6,8 +7,21 @@ import {
   GMCFeedRow,
   ProductVariant 
 } from '@/lib/gmc-feed';
-import { createServerSupabaseClient } from '@/lib/supabase';
+import { createServerSupabaseClient, type Database } from '@/lib/supabase';
 import { hasTieredPricing, getBaseTierPrice } from '@/lib/tiered-pricing';
+
+/**
+ * Thrown when the products query fails irrecoverably (e.g. Supabase statement
+ * timeout that survives chunk-splitting). Signals to the GET handler that the
+ * feed cannot be served truthfully and a 503 must be returned so GMC retries
+ * instead of accepting a silently-truncated CSV.
+ */
+class IncompleteFeedError extends Error {
+  constructor(message: string, public readonly offset: number) {
+    super(message);
+    this.name = 'IncompleteFeedError';
+  }
+}
 
 // Type for cached product from Supabase
 interface CachedProduct {
@@ -124,6 +138,85 @@ function resolveCategory(
 }
 
 // ============================================================================
+// PAGE FETCH WITH RECURSIVE SPLIT-ON-FAILURE
+// Mitigates Supabase statement-timeout (57014) on large nested-join queries.
+// Strategy: try a chunk; if it errors, halve and retry each half. Bottoms out
+// at MIN_CHUNK or MAX_DEPTH and throws IncompleteFeedError so the route can
+// return 503 (GMC then retries) rather than silently truncate the catalog.
+// ============================================================================
+async function fetchProductsPageWithRetry(
+  supabase: SupabaseClient<Database>,
+  offset: number,
+  limit: number,
+  depth: number = 0
+): Promise<CachedProduct[]> {
+  const MAX_DEPTH = 4;   // 1000 → 500 → 250 → 125 → 62
+  const MIN_CHUNK = 50;
+  
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      style_id,
+      style_name,
+      slug,
+      brand_name,
+      title_raw,
+      title_optimized,
+      description_raw,
+      description_optimized,
+      meta_description,
+      primary_image_url,
+      popular_tier,
+      base_category,
+      product_type,
+      google_category_id,
+      google_category_name,
+      material,
+      gender,
+      age_group,
+      product_skus (
+        sku,
+        color_name,
+        color_code,
+        size_name,
+        cogs,
+        retail_price,
+        sale_price,
+        auto_min_price,
+        gtin,
+        piece_weight,
+        qty,
+        availability
+      )
+    `)
+    .eq('is_active', true)
+    .eq('manually_hidden', false)
+    .not('slug', 'is', null)
+    .range(offset, offset + limit - 1);
+  
+  if (!error) {
+    return (data ?? []) as unknown as CachedProduct[];
+  }
+  
+  // Hard floor — give up and refuse to serve a partial feed.
+  if (depth >= MAX_DEPTH || limit <= MIN_CHUNK) {
+    throw new IncompleteFeedError(
+      `Failed to fetch products at offset=${offset} limit=${limit} depth=${depth}: ${error.message} (code=${error.code})`,
+      offset
+    );
+  }
+  
+  console.warn(
+    `[GMC Feed] Query failed at offset=${offset} limit=${limit} depth=${depth} (${error.code}: ${error.message}). Splitting and retrying…`
+  );
+  
+  const halfLimit = Math.floor(limit / 2);
+  const firstHalf = await fetchProductsPageWithRetry(supabase, offset, halfLimit, depth + 1);
+  const secondHalf = await fetchProductsPageWithRetry(supabase, offset + halfLimit, limit - halfLimit, depth + 1);
+  return [...firstHalf, ...secondHalf];
+}
+
+// ============================================================================
 // FETCH FROM SUPABASE CACHE (fast)
 // Now fetches ALL active products with slugs (not just popular)
 // ============================================================================
@@ -155,55 +248,20 @@ async function fetchFromSupabase(): Promise<{
   let hasMore = true;
   
   while (hasMore) {
-    const { data, error } = await supabase
-      .from('products')
-      .select(`
-        style_id,
-        style_name,
-        slug,
-        brand_name,
-        title_raw,
-        title_optimized,
-        description_raw,
-        description_optimized,
-        meta_description,
-        primary_image_url,
-        popular_tier,
-        base_category,
-        product_type,
-        google_category_id,
-        google_category_name,
-        material,
-        gender,
-        age_group,
-        product_skus (
-          sku,
-          color_name,
-          color_code,
-          size_name,
-          cogs,
-          retail_price,
-          sale_price,
-          auto_min_price,
-          gtin,
-          piece_weight,
-          qty,
-          availability
-        )
-      `)
-      .eq('is_active', true)
-      .eq('manually_hidden', false)
-      .not('slug', 'is', null)
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    // Each page is fetched via a recursive split-on-failure helper instead of
+    // a single shot. If Postgres cancels the query (statement timeout, error
+    // 57014), we recursively halve the chunk until it succeeds or we hit the
+    // floor. If the floor still fails, IncompleteFeedError is thrown and the
+    // GET handler returns 503 so GMC retries — we never serve a partial feed.
+    const pageData = await fetchProductsPageWithRetry(
+      supabase,
+      page * PAGE_SIZE,
+      PAGE_SIZE
+    );
     
-    if (error) {
-      console.error(`[GMC Feed] Supabase query error (page ${page}):`, error);
-      break;
-    }
-    
-    if (data && data.length > 0) {
-      allProducts.push(...(data as CachedProduct[]));
-      hasMore = data.length === PAGE_SIZE;
+    if (pageData.length > 0) {
+      allProducts.push(...pageData);
+      hasMore = pageData.length === PAGE_SIZE;
       page++;
     } else {
       hasMore = false;
@@ -574,8 +632,32 @@ export async function GET(request: NextRequest) {
           console.log(`[GMC Feed] Using Supabase cache (${feedRows.length} rows)`);
         }
       } catch (cacheError) {
-        console.warn('[GMC Feed] Cache fetch failed:', cacheError);
-        // Fall through to SS API
+        // Truncation guard: refuse to serve a partial feed. Returning 503 with
+        // Retry-After tells GMC's scheduled-fetch to retry, instead of
+        // accepting silently-incomplete data and aging-out missing products.
+        if (cacheError instanceof IncompleteFeedError) {
+          console.error(
+            '[GMC Feed] Refusing to serve incomplete feed:',
+            cacheError.message
+          );
+          return NextResponse.json(
+            {
+              error: 'Feed temporarily unavailable',
+              message: 'Upstream database query failed; refusing to serve a truncated feed. Retry shortly.',
+              detail: cacheError.message,
+            },
+            {
+              status: 503,
+              headers: {
+                'Retry-After': '300', // 5 minutes
+                'Cache-Control': 'no-store',
+                'X-Feed-Source': 'incomplete_guard',
+              },
+            }
+          );
+        }
+        console.warn('[GMC Feed] Cache fetch failed (non-truncation):', cacheError);
+        // Fall through to SS API only for unexpected (non-truncation) errors.
       }
     }
     
