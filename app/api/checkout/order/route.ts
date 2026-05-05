@@ -47,6 +47,17 @@ export async function GET(request: NextRequest) {
       quantity: item.quantity || 1,
     }));
 
+    // Normalize delivery country to ISO 3166-1 alpha-2 (required by Google Customer Reviews).
+    // Address autocomplete already stores the short_name (e.g. "US"); fall back to "US" since
+    // checkout is restricted to US addresses.
+    const rawCountry: string = order.shipping_address?.country || '';
+    const deliveryCountry =
+      rawCountry.length === 2
+        ? rawCountry.toUpperCase()
+        : /united states|usa/i.test(rawCountry)
+          ? 'US'
+          : rawCountry.toUpperCase() || 'US';
+
     return NextResponse.json({
       orderNumber: order.order_number,
       email: order.customer_email,
@@ -62,6 +73,7 @@ export async function GET(request: NextRequest) {
       // Shipping
       shippingMethod: order.shipping_method || 'economy',
       totalPieces: items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0),
+      deliveryCountry,
       // GA4 tracking data
       lineItems,
       shippingCost: order.shipping_cost || 0,
