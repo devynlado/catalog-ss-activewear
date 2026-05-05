@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { useCartStore } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { trackPurchase } from '@/lib/analytics';
+import { GoogleCustomerReviewsOptIn } from '@/components/checkout/GoogleCustomerReviewsOptIn';
 
 interface GA4LineItem {
   item_id: string;
@@ -49,6 +50,7 @@ interface OrderDetails {
   lineItems?: GA4LineItem[];
   shippingCost?: number;
   shipments?: OrderShipment[];
+  deliveryCountry?: string;
 }
 
 const WAREHOUSE_LABELS: Record<string, string> = {
@@ -197,8 +199,31 @@ function SuccessContent() {
     return `${minDate.toLocaleDateString('en-US', options)} - ${maxDate.toLocaleDateString('en-US', options)}`;
   };
 
+  // YYYY-MM-DD upper bound of the delivery window — used by Google Customer
+  // Reviews to schedule the post-purchase survey email.
+  const getEstimatedDeliveryISODate = () => {
+    const now = new Date();
+    const maxDays = orderDetails?.shippingMethod === 'same_day' ? 2 : 5;
+    const date = new Date(now);
+    date.setDate(date.getDate() + maxDays);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 to-white py-12 px-4">
+      {/* Google Customer Reviews — survey opt-in module (Merchant Center store rating) */}
+      {orderDetails?.orderNumber && orderDetails.email && (
+        <GoogleCustomerReviewsOptIn
+          orderId={orderDetails.orderNumber}
+          email={orderDetails.email}
+          deliveryCountry={orderDetails.deliveryCountry || 'US'}
+          estimatedDeliveryDate={getEstimatedDeliveryISODate()}
+        />
+      )}
+
       {/* Grain texture overlay */}
       <div 
         className="fixed inset-0 opacity-[0.015] pointer-events-none z-0"
