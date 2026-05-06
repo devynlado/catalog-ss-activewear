@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   return createClient(
@@ -53,6 +54,18 @@ export async function POST(request: NextRequest) {
     console.error('Failed to save ad spend:', error);
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
   }
+
+  await logAdminActivity(request, {
+    action: 'ad_spend.saved',
+    resourceType: 'ad_spend_entry',
+    resourceId: data?.id ?? null,
+    summary: `saved an ad spend entry for ${platform || 'google_pmax'}`,
+    actor: {
+      id: profile.id,
+      full_name: profile.full_name,
+      role: profile.role as 'admin' | 'sales_rep',
+    },
+  });
 
   return NextResponse.json({ entry: data });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { cancelSSOrder } from '@/lib/ss-activewear-orders';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
@@ -39,6 +40,18 @@ export async function DELETE(
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
+
+    await logAdminActivity(request, {
+      action: 'order.ss_cancelled',
+      resourceType: 'order',
+      resourceId: params.id,
+      summary: 'cancelled an SS Activewear supplier order',
+      actor: {
+        id: profile.id,
+        full_name: profile.full_name,
+        role: profile.role as 'admin' | 'sales_rep',
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

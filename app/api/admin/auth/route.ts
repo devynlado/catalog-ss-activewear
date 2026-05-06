@@ -1,17 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { timingSafeEqual } from 'crypto';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'garmentdecor2024';
 const AUTH_COOKIE_NAME = 'admin_auth';
 const AUTH_COOKIE_VALUE = 'authenticated';
+const MIN_PASSWORD_LENGTH = 12;
+
+/**
+ * Constant-time string comparison. Plain `===` leaks the matching prefix
+ * length via timing — relevant for password checks even at low traffic.
+ */
+function safeEqual(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, 'utf8');
+  const bBuf = Buffer.from(b, 'utf8');
+  // timingSafeEqual requires equal-length buffers. When lengths differ we
+  // still run a comparison against `aBuf` so the timing is similar.
+  if (aBuf.length !== bBuf.length) {
+    timingSafeEqual(aBuf, aBuf);
+    return false;
+  }
+  return timingSafeEqual(aBuf, bBuf);
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { password } = body;
+    const expected = process.env.ADMIN_PASSWORD;
 
-    if (password === ADMIN_PASSWORD) {
-      // Set auth cookie (expires in 24 hours)
+    // Hard refusal when the env var is missing or weak. Previously this
+    // route fell back to a hardcoded default ("garmentdecor2024") if
+    // ADMIN_PASSWORD was unset — which meant any preview/staging deploy
+    // without that env var was effectively wide open. We now fail closed.
+    if (!expected || expected.length < MIN_PASSWORD_LENGTH) {
+      console.error(
+        `[admin auth] ADMIN_PASSWORD is not configured or is shorter than ${MIN_PASSWORD_LENGTH} characters. Refusing login.`
+      );
+      return NextResponse.json(
+        { error: 'Admin authentication is not configured on this environment.' },
+        { status: 503 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const password = typeof body?.password === 'string' ? body.password : '';
+
+    if (!password) {
+      return NextResponse.json(
+        { error: 'Password is required' },
+        { status: 400 }
+      );
+    }
+
+    if (safeEqual(password, expected)) {
       const cookieStore = await cookies();
       cookieStore.set(AUTH_COOKIE_NAME, AUTH_COOKIE_VALUE, {
         httpOnly: true,

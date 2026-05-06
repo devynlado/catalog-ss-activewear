@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { Users, FileText, ShieldCheck, TrendingUp, Clock, CheckCircle, Eye, Package, PackageSearch, Tag, Filter, Zap, Star, Mail, MessageSquareText, MessageCircle } from 'lucide-react';
+import { Users, FileText, ShieldCheck, TrendingUp, Clock, Eye, Package, PackageSearch, Tag, Filter, Zap, Star, Mail, MessageSquareText, MessageCircle } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { RecentActivity } from '@/components/admin/RecentActivity';
 
 export const metadata = {
   title: 'Admin Dashboard',
@@ -237,17 +238,8 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Recent Activity Placeholder */}
-          <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-navy-800">Recent Activity</h2>
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="rounded-full bg-stone-100 p-3 mb-3">
-                <CheckCircle className="h-6 w-6 text-stone-400" />
-              </div>
-              <p className="text-sm text-slate-500">No recent activity</p>
-              <p className="text-xs text-slate-400 mt-1">Activity feed coming soon</p>
-            </div>
-          </div>
+          {/* Recent Activity */}
+          <RecentActivity limit={15} />
         </div>
 
         {/* Dev Tools - Preview Dashboards */}

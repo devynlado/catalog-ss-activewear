@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getServerProfile } from '@/lib/supabase-server';
 import { normalizeCouponCode } from '@/lib/coupon-utils';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 async function requireAdmin() {
   const { profile } = await getServerProfile();
@@ -88,12 +89,20 @@ export async function PATCH(
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logAdminActivity(request, {
+    action: 'coupon.updated',
+    resourceType: 'coupon',
+    resourceId: id,
+    summary: `updated coupon ${data?.code ?? ''}`.trim(),
+  });
+
   return NextResponse.json(data);
 }
 
 /** DELETE /api/admin/coupons/[id] */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const unauth = await requireAdmin();
@@ -101,10 +110,24 @@ export async function DELETE(
 
   const { id } = await params;
   const supabase = createServerSupabaseClient();
+  const { data: existing } = await supabase
+    .from('coupons')
+    .select('code')
+    .eq('id', id)
+    .single<{ code: string }>();
+
   const { error } = await supabase.from('coupons').delete().eq('id', id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logAdminActivity(request, {
+    action: 'coupon.deleted',
+    resourceType: 'coupon',
+    resourceId: id,
+    summary: existing?.code ? `deleted coupon ${existing.code}` : 'deleted a coupon',
+  });
+
   return NextResponse.json({ ok: true });
 }

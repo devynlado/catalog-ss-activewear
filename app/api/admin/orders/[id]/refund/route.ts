@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerProfile } from '@/lib/supabase-server';
 import { stripe } from '@/lib/stripe';
+import { logAdminActivity } from '@/lib/admin-audit';
 import { toStripeCents } from '@/lib/stripe-utils';
 import {
   generateRefundConfirmationHtml,
@@ -205,6 +206,20 @@ export async function POST(
       { status: 500 }
     );
   }
+
+  await logAdminActivity(request, {
+    action: 'order.refunded',
+    resourceType: 'order',
+    resourceId: order.order_number ?? orderId,
+    summary: fullOrder
+      ? 'issued a full refund on an order'
+      : 'issued a partial refund on an order',
+    actor: {
+      id: profile.id,
+      full_name: profile.full_name,
+      role: profile.role as 'admin' | 'sales_rep',
+    },
+  });
 
   return NextResponse.json({
     success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   return createClient(
@@ -28,13 +29,18 @@ export async function PATCH(
 
   const { data: profile } = await serviceSupabase
     .from('profiles')
-    .select('role')
+    .select('id, full_name, role')
     .eq('id', user.id)
     .single();
 
   if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
+  const auditActor = {
+    id: profile.id as string,
+    full_name: (profile.full_name as string | null) ?? null,
+    role: profile.role as 'admin' | 'sales_rep',
+  };
 
   const body = await request.json();
   const { status, adminResponse } = body as {
@@ -97,6 +103,24 @@ export async function PATCH(
           .eq('style_id', review.style_id);
       }
     }
+  }
+
+  if (status && status !== review.status) {
+    await logAdminActivity(request, {
+      action: status === 'approved' ? 'review.approved' : 'review.rejected',
+      resourceType: 'review',
+      resourceId: id,
+      summary: status === 'approved' ? 'approved a customer review' : 'rejected a customer review',
+      actor: auditActor,
+    });
+  } else if (adminResponse !== undefined) {
+    await logAdminActivity(request, {
+      action: 'review.responded',
+      resourceType: 'review',
+      resourceId: id,
+      summary: 'replied to a customer review',
+      actor: auditActor,
+    });
   }
 
   return NextResponse.json({ success: true, status: status || review.status });

@@ -7,6 +7,19 @@ import {
   generateOrderShippedText,
   getOrderShippedSubject,
 } from '@/lib/emails/order-shipped';
+import { logAdminActivity, type AdminAuditActor } from '@/lib/admin-audit';
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  awaiting_purchasing: 'Awaiting Purchasing',
+  ordered: 'Ordered',
+  in_production: 'In Production',
+  partially_shipped: 'Partially Shipped',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
 
 const VALID_STATUSES = ['pending', 'confirmed', 'awaiting_purchasing', 'ordered', 'in_production', 'partially_shipped', 'shipped', 'delivered', 'cancelled'] as const;
 type OrderStatus = typeof VALID_STATUSES[number];
@@ -184,6 +197,17 @@ export async function PATCH(
         user.id,
         serviceSupabase,
       );
+      await logAdminActivity(request, {
+        action: 'order.shipped_email_resent',
+        resourceType: 'order',
+        resourceId: order.order_number ?? params.id,
+        summary: 'resent the shipped notification email for an order',
+        actor: {
+          id: profile.id,
+          full_name: profile.full_name,
+          role: profile.role as 'admin' | 'sales_rep',
+        },
+      });
       return NextResponse.json({ order, emailStatus });
     } catch (resendError) {
       console.error('[resend-shipped-email] Unhandled error:', resendError);
@@ -320,6 +344,44 @@ export async function PATCH(
       user_id: user.id,
       activity_type: activity.activity_type,
       details: activity.details,
+    });
+  }
+
+  // Audit log: emit human-readable summaries for each high-level change
+  const actor: AdminAuditActor = {
+    id: profile.id,
+    full_name: profile.full_name,
+    role: profile.role as 'admin' | 'sales_rep',
+  };
+  for (const activity of activities) {
+    if (activity.activity_type === 'status_change') {
+      const fromLabel = ORDER_STATUS_LABELS[activity.details.from as string] ?? String(activity.details.from);
+      const toLabel = ORDER_STATUS_LABELS[activity.details.to as string] ?? String(activity.details.to);
+      await logAdminActivity(request, {
+        action: 'order.status_changed',
+        resourceType: 'order',
+        resourceId: order.order_number ?? params.id,
+        summary: `changed an order status from ${fromLabel} to ${toLabel}`,
+        actor,
+      });
+    }
+  }
+  if (updates.tracking_number || updates.carrier) {
+    await logAdminActivity(request, {
+      action: 'order.tracking_updated',
+      resourceType: 'order',
+      resourceId: order.order_number ?? params.id,
+      summary: 'updated tracking information on an order',
+      actor,
+    });
+  }
+  if (updates.actual_shipping_cost !== undefined) {
+    await logAdminActivity(request, {
+      action: 'order.shipping_cost_updated',
+      resourceType: 'order',
+      resourceId: order.order_number ?? params.id,
+      summary: 'updated the actual shipping cost on an order',
+      actor,
     });
   }
 

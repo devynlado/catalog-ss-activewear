@@ -539,6 +539,16 @@ export function Header() {
 
   // Handle sign out
   const handleSignOut = async () => {
+    // Best-effort audit log BEFORE the signOut call so the session is still
+    // valid when the server resolves the actor identity.
+    try {
+      await fetch('/api/admin/audit/sign-out', {
+        method: 'POST',
+        keepalive: true,
+      });
+    } catch {
+      // Non-blocking
+    }
     await signOut();
     setUserMenuOpen(false);
     window.location.href = '/';

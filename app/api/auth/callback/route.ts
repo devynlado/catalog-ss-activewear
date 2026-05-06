@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { Database } from '@/lib/database.types';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -37,9 +38,20 @@ export async function GET(request: NextRequest) {
       // Get the user's profile to determine where to redirect
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('id, full_name, role')
         .eq('id', data.user.id)
-        .single<{ role: 'customer' | 'sales_rep' | 'admin' }>();
+        .single<{ id: string; full_name: string | null; role: 'customer' | 'sales_rep' | 'admin' }>();
+
+      // Audit log: record OAuth sign-ins for staff accounts only
+      if (profile && (profile.role === 'admin' || profile.role === 'sales_rep')) {
+        await logAdminActivity(request, {
+          action: 'auth.signed_in',
+          resourceType: 'session',
+          resourceId: data.user.id,
+          summary: 'signed in via Google',
+          actor: { id: profile.id, full_name: profile.full_name, role: profile.role },
+        });
+      }
 
       // Redirect based on role
       let redirectTo = next;

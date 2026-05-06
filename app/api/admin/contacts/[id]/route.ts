@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   return createClient(
@@ -29,13 +30,18 @@ export async function PATCH(
 
   const { data: profile } = await serviceSupabase
     .from('profiles')
-    .select('role')
+    .select('id, full_name, role')
     .eq('id', user.id)
     .single();
 
   if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
+  const auditActor = {
+    id: profile.id as string,
+    full_name: (profile.full_name as string | null) ?? null,
+    role: profile.role as 'admin' | 'sales_rep',
+  };
 
   const body = await request.json();
   const { status, is_spam, block_email, block_reason } = body;
@@ -97,6 +103,32 @@ export async function PATCH(
       .from('blocked_emails')
       .delete()
       .eq('email', contact.email.trim().toLowerCase());
+  }
+
+  if (is_spam === true) {
+    await logAdminActivity(request, {
+      action: 'contact.marked_spam',
+      resourceType: 'contact',
+      resourceId: id,
+      summary: 'marked a contact lead as spam',
+      actor: auditActor,
+    });
+  } else if (is_spam === false) {
+    await logAdminActivity(request, {
+      action: 'contact.unmarked_spam',
+      resourceType: 'contact',
+      resourceId: id,
+      summary: 'restored a contact lead from spam',
+      actor: auditActor,
+    });
+  } else if (status !== undefined) {
+    await logAdminActivity(request, {
+      action: 'contact.status_changed',
+      resourceType: 'contact',
+      resourceId: id,
+      summary: `changed a contact lead status to ${status}`,
+      actor: auditActor,
+    });
   }
 
   return NextResponse.json({ success: true });
