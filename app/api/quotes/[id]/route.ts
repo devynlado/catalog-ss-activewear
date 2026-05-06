@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { sendQuoteStatusEmail, sendRepAssignmentEmail } from '@/lib/resend';
+import { logAdminActivity, type AdminAuditActor } from '@/lib/admin-audit';
+
+const QUOTE_STATUS_LABELS: Record<string, string> = {
+  new: 'New',
+  contacted: 'Contacted',
+  quoted: 'Quoted',
+  converted: 'Converted',
+  closed: 'Closed',
+};
 
 // GET: Fetch single quote with details
 export async function GET(
@@ -165,6 +174,44 @@ export async function PATCH(
     if (activities.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from('quote_activities').insert(activities);
+    }
+
+    // Audit log: emit human-readable summaries for staff actions
+    const auditActor: AdminAuditActor = {
+      id: profile.id,
+      full_name: profile.full_name,
+      role: profile.role as 'admin' | 'sales_rep',
+    };
+    if (status && status !== currentQuote.status) {
+      const fromLabel = QUOTE_STATUS_LABELS[currentQuote.status] ?? currentQuote.status;
+      const toLabel = QUOTE_STATUS_LABELS[status] ?? status;
+      await logAdminActivity(request, {
+        action: 'quote.status_changed',
+        resourceType: 'quote',
+        resourceId: currentQuote.quote_id ?? params.id,
+        summary: `changed a quote status from ${fromLabel} to ${toLabel}`,
+        actor: auditActor,
+      });
+    }
+    if (admin_notes !== undefined && admin_notes !== currentQuote.admin_notes) {
+      await logAdminActivity(request, {
+        action: 'quote.note_updated',
+        resourceType: 'quote',
+        resourceId: currentQuote.quote_id ?? params.id,
+        summary: 'updated the internal note on a quote',
+        actor: auditActor,
+      });
+    }
+    if (assigned_sales_rep_id !== undefined && assigned_sales_rep_id !== currentQuote.assigned_sales_rep_id) {
+      await logAdminActivity(request, {
+        action: assigned_sales_rep_id ? 'quote.assigned' : 'quote.unassigned',
+        resourceType: 'quote',
+        resourceId: currentQuote.quote_id ?? params.id,
+        summary: assigned_sales_rep_id
+          ? 'assigned a sales rep to a quote'
+          : 'removed the sales rep assignment from a quote',
+        actor: auditActor,
+      });
     }
 
     // Send email notifications (non-blocking)

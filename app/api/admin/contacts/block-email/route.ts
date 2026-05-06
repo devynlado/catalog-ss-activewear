@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   return createClient(
@@ -63,6 +64,13 @@ export async function POST(request: NextRequest) {
     .eq('email', email.trim())
     .eq('is_spam', false);
 
+  await logAdminActivity(request, {
+    action: 'contact.email_blocked',
+    resourceType: 'blocked_email',
+    resourceId: null,
+    summary: 'blocked an email address from contact submissions',
+  });
+
   return NextResponse.json({ success: true, message: `${normalizedEmail} blocked` });
 }
 
@@ -95,6 +103,13 @@ export async function DELETE(request: NextRequest) {
     .from('contacts')
     .update({ is_spam: false, status: 'new', blocked_at: null } as Record<string, unknown>)
     .ilike('email', normalizedEmail);
+
+  await logAdminActivity(request, {
+    action: 'contact.email_unblocked',
+    resourceType: 'blocked_email',
+    resourceId: null,
+    summary: 'unblocked a previously blocked email address',
+  });
 
   return NextResponse.json({ success: true, message: `${normalizedEmail} unblocked` });
 }

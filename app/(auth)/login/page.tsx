@@ -38,6 +38,18 @@ function LoginForm() {
       }
 
       if (data.user) {
+        // Best-effort audit log for staff sign-ins. Server checks the role
+        // before writing, so non-staff sign-ins are silently ignored.
+        try {
+          await fetch('/api/admin/audit/sign-in', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ method: 'password' }),
+            keepalive: true,
+          });
+        } catch {
+          // Non-blocking: never fail the login flow because of an audit hiccup.
+        }
         // Redirect will happen via the auth callback
         router.push('/dashboard');
         router.refresh();

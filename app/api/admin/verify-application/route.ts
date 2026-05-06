@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 export async function POST(request: Request) {
   try {
@@ -83,6 +84,21 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    await logAdminActivity(request, {
+      action: action === 'approve' ? 'verification.approved' : 'verification.denied',
+      resourceType: 'verification',
+      resourceId: applicationId,
+      summary:
+        action === 'approve'
+          ? 'approved a distributor verification application'
+          : 'denied a distributor verification application',
+      actor: {
+        id: profile.id,
+        full_name: profile.full_name,
+        role: profile.role as 'admin' | 'sales_rep',
+      },
+    });
 
     return NextResponse.json({ 
       success: true, 

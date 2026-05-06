@@ -7,6 +7,7 @@ import {
   generateOrderTrackingNotificationText,
   getOrderTrackingNotificationSubject,
 } from '@/lib/emails/order-tracking-notification';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   return createClient(
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await serviceSupabase
     .from('profiles')
-    .select('role')
+    .select('id, full_name, role')
     .eq('id', user.id)
     .single();
   if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
@@ -153,6 +154,20 @@ export async function POST(request: NextRequest) {
     if (i + BATCH_SIZE < eligible.length) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
+  }
+
+  if (sent > 0) {
+    await logAdminActivity(request, {
+      action: 'order.tracking_notification_sent',
+      resourceType: 'order_batch',
+      resourceId: null,
+      summary: `sent tracking-portal notification emails to ${sent} customer${sent !== 1 ? 's' : ''}`,
+      actor: {
+        id: profile.id,
+        full_name: profile.full_name,
+        role: profile.role as 'admin' | 'sales_rep',
+      },
+    });
   }
 
   return NextResponse.json({

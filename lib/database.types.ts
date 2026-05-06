@@ -1190,6 +1190,54 @@ export interface Database {
           cached_at?: string;
         };
       };
+      // Admin Audit Log
+      admin_activity_log: {
+        Row: {
+          id: string;
+          actor_id: string | null;
+          actor_name: string | null;
+          actor_role: 'admin' | 'sales_rep' | null;
+          action: string;
+          resource_type: string | null;
+          resource_id: string | null;
+          summary: string;
+          ip_address: string | null;
+          user_agent: string | null;
+          is_alert: boolean;
+          alert_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id?: string | null;
+          actor_name?: string | null;
+          actor_role?: 'admin' | 'sales_rep' | null;
+          action: string;
+          resource_type?: string | null;
+          resource_id?: string | null;
+          summary: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          is_alert?: boolean;
+          alert_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          actor_id?: string | null;
+          actor_name?: string | null;
+          actor_role?: 'admin' | 'sales_rep' | null;
+          action?: string;
+          resource_type?: string | null;
+          resource_id?: string | null;
+          summary?: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          is_alert?: boolean;
+          alert_reason?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -1233,6 +1281,10 @@ export type Payment = Database['public']['Tables']['payments']['Row'];
 export type PaymentInsert = Database['public']['Tables']['payments']['Insert'];
 export type OrderActivity = Database['public']['Tables']['order_activities']['Row'];
 export type OrderActivityInsert = Database['public']['Tables']['order_activities']['Insert'];
+
+// Admin Audit Log type aliases
+export type AdminActivityLog = Database['public']['Tables']['admin_activity_log']['Row'];
+export type AdminActivityLogInsert = Database['public']['Tables']['admin_activity_log']['Insert'];
 
 // Review System type aliases
 export type ReviewRow = Database['public']['Tables']['reviews']['Row'];

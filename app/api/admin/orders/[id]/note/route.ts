@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   const key =
@@ -77,6 +78,20 @@ export async function PATCH(
     if (activityError) {
       console.error('Failed to insert note activity:', activityError);
     }
+
+    await logAdminActivity(request, {
+      action: adminNote ? 'order.note_updated' : 'order.note_cleared',
+      resourceType: 'order',
+      resourceId: params.id,
+      summary: adminNote
+        ? 'added or updated an internal note on an order'
+        : 'cleared the internal note on an order',
+      actor: {
+        id: profile.id,
+        full_name: profile.full_name,
+        role: profile.role as 'admin' | 'sales_rep',
+      },
+    });
 
     return NextResponse.json({
       success: true,

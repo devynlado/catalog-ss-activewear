@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getServerProfile, getServerUser } from '@/lib/supabase-server';
 import { normalizeCouponCode } from '@/lib/coupon-utils';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 /** Ensure request is from an admin; returns 401 if not */
 async function requireAdmin() {
@@ -96,5 +97,14 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logAdminActivity(request, {
+    action: 'coupon.created',
+    resourceType: 'coupon',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resourceId: (data as any)?.id ?? null,
+    summary: `created coupon ${normalizeCouponCode(code)}`,
+  });
+
   return NextResponse.json(data);
 }

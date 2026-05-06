@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { logAdminActivity } from '@/lib/admin-audit';
 
 function getServiceSupabase() {
   const key =
@@ -523,6 +524,32 @@ export async function PATCH(
         '[admin/products PATCH] audit insert failed (save succeeded):',
         auditError,
       );
+    }
+  }
+
+  // Admin activity log: emit one summary row describing the high-level edit
+  if (changedFields.length > 0) {
+    const auditActor = {
+      id: profile.id,
+      full_name: profile.full_name,
+      role: profile.role as 'admin' | 'sales_rep',
+    };
+    if (changedFields.includes('manually_hidden')) {
+      await logAdminActivity(request, {
+        action: targetHidden ? 'product.hidden' : 'product.unhidden',
+        resourceType: 'product',
+        resourceId: String(styleId),
+        summary: targetHidden ? 'hid a product from the catalog' : 'restored a product to the catalog',
+        actor: auditActor,
+      });
+    } else {
+      await logAdminActivity(request, {
+        action: 'product.updated',
+        resourceType: 'product',
+        resourceId: String(styleId),
+        summary: 'updated product admin overrides',
+        actor: auditActor,
+      });
     }
   }
 

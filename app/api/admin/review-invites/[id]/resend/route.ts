@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { logAdminActivity } from '@/lib/admin-audit';
 import {
   generateReviewInviteHtml,
   generateReviewInviteText,
@@ -36,13 +37,18 @@ export async function POST(
 
   const { data: profile } = await serviceSupabase
     .from('profiles')
-    .select('role')
+    .select('id, full_name, role')
     .eq('id', user.id)
     .single();
 
   if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
+  const auditActor = {
+    id: profile.id as string,
+    full_name: (profile.full_name as string | null) ?? null,
+    role: profile.role as 'admin' | 'sales_rep',
+  };
 
   // Fetch the invite
   const { data: invite, error: inviteErr } = await serviceSupabase
@@ -120,6 +126,14 @@ export async function POST(
       last_resent_at: new Date().toISOString(),
     } as Record<string, unknown>)
     .eq('id', id);
+
+  await logAdminActivity(request, {
+    action: 'review_invite.resent',
+    resourceType: 'review_invite',
+    resourceId: id,
+    summary: 'resent a review invitation email',
+    actor: auditActor,
+  });
 
   return NextResponse.json({
     success: true,
