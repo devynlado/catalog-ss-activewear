@@ -5,6 +5,9 @@ import { createPortal } from 'react-dom';
 import { X, Send, Loader2, CheckCircle2, Phone } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 const DECORATION_OPTIONS = [
   { value: 'screen-printing', label: 'Screen Printing' },
@@ -60,6 +63,7 @@ export function PortfolioQuoteModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,6 +111,10 @@ export function PortfolioQuoteModal({
     setError(null);
 
     try {
+      const formEl = e.currentTarget as HTMLFormElement;
+      const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+      const honeypotValue = honeypotInput?.value ?? '';
+
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,6 +128,8 @@ export function PortfolioQuoteModal({
           source: 'portfolio_quote_modal',
           quantity: formData.quantity || undefined,
           visitor_source: getVisitorSource(),
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
       });
 
@@ -190,6 +200,7 @@ export function PortfolioQuoteModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6">
+            <HoneypotField />
             {/* Header */}
             <div className="mb-5 pr-8">
               <h3 className="text-lg font-bold text-slate-900">Request a Quote</h3>
@@ -282,10 +293,12 @@ export function PortfolioQuoteModal({
                 </div>
               )}
 
+              <TurnstileWidget onTokenChange={setTurnstileToken} action="portfolio-quote" />
+
               {/* Submit */}
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || turnstileToken === null}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (

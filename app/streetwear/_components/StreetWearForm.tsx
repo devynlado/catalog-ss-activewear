@@ -7,6 +7,9 @@ import { useStreetWearInquiry } from '@/lib/streetwear-inquiry-store';
 import { VOLUME_TIERS, type TierQty } from '@/lib/streetwear-config';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 export function StreetWearForm() {
   const { selectedProducts, removeProduct, updateQty, clearAll } =
@@ -21,11 +24,16 @@ export function StreetWearForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+
+    const formEl = e.currentTarget as HTMLFormElement;
+    const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+    const honeypotValue = honeypotInput?.value ?? '';
 
     const productSummary = selectedProducts
       .map((p) => `${p.title} (${p.preferredQty} pcs)`)
@@ -56,6 +64,8 @@ export function StreetWearForm() {
             selectedProducts.length > 0
               ? `${selectedProducts.length} products`
               : undefined,
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
       });
 
@@ -124,6 +134,7 @@ export function StreetWearForm() {
           onSubmit={handleSubmit}
           className="mt-10 space-y-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8"
         >
+          <HoneypotField />
           {/* Selected Products Summary */}
           {selectedProducts.length > 0 && (
             <div>
@@ -286,9 +297,11 @@ export function StreetWearForm() {
             <p className="text-sm text-red-600">{error}</p>
           )}
 
+          <TurnstileWidget onTokenChange={setTurnstileToken} action="streetwear" />
+
           <button
             type="submit"
-            disabled={isSubmitting || (!formData.name || !formData.email)}
+            disabled={isSubmitting || (!formData.name || !formData.email) || turnstileToken === null}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (

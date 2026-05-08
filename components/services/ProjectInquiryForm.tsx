@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { Send, Loader2, CheckCircle, MessageSquare, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getVisitorSource } from '@/lib/attribution';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 interface FormData {
   name: string;
@@ -44,6 +47,7 @@ export function ProjectInquiryForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -68,6 +72,10 @@ TIMELINE: ${timelineOptions.find(t => t.value === formData.timeline)?.label || '
 BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not specified'}
       `.trim();
 
+      const formEl = e.currentTarget as HTMLFormElement;
+      const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+      const honeypotValue = honeypotInput?.value ?? '';
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,6 +88,8 @@ BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not sp
           source: 'services_page_inquiry_form',
           quantity: formData.budget,
           visitor_source: getVisitorSource(),
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
       });
 
@@ -213,6 +223,7 @@ BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not sp
               onSubmit={handleSubmit}
               className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 sm:p-8"
             >
+              <HoneypotField />
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                   {error}
@@ -336,13 +347,15 @@ BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not sp
                   </div>
                 </div>
 
+                <TurnstileWidget onTokenChange={setTurnstileToken} action="project-inquiry" />
+
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || turnstileToken === null}
                   className={cn(
                     "w-full flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold text-white transition-all",
-                    isSubmitting
+                    isSubmitting || turnstileToken === null
                       ? "bg-slate-400 cursor-not-allowed"
                       : "bg-brand-500 hover:bg-brand-600 shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5"
                   )}

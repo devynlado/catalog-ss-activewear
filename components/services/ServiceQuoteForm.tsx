@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Send, Loader2, CheckCircle2, Phone, MessageCircle, User } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 interface ServiceQuoteFormProps {
   service: string;
@@ -27,6 +30,7 @@ export function ServiceQuoteForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +38,10 @@ export function ServiceQuoteForm({
     setError(null);
 
     try {
+      const formEl = e.currentTarget as HTMLFormElement;
+      const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+      const honeypotValue = honeypotInput?.value ?? '';
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,11 +50,14 @@ export function ServiceQuoteForm({
           service: serviceName,
           source: `service_${service}`,
           visitor_source: getVisitorSource(),
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit form');
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Failed to submit form');
       }
 
       // Track conversion in GA4
@@ -151,6 +162,7 @@ export function ServiceQuoteForm({
                 onSubmit={handleSubmit}
                 className="rounded-2xl bg-white p-6 sm:p-8 shadow-lg border border-stone-200"
               >
+                <HoneypotField />
                 <div className="space-y-4">
                   {/* Name */}
                   <div>
@@ -222,10 +234,12 @@ export function ServiceQuoteForm({
                     </div>
                   )}
 
+                  <TurnstileWidget onTokenChange={setTurnstileToken} action={`service-${service}`} />
+
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || turnstileToken === null}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                   >
                     {isSubmitting ? (

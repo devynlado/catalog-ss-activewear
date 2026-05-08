@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 interface LPQuoteFormProps {
   service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing' | 'puff-screen-printing';
@@ -33,6 +36,7 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +44,10 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
     setError(null);
 
     try {
+      const formEl = e.currentTarget as HTMLFormElement;
+      const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+      const honeypotValue = honeypotInput?.value ?? '';
+
       // Submit to API
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -53,11 +61,14 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
           resolved_location: resolvedLocation || undefined,
           copy_variant: copyVariant || undefined,
           resolution_source: resolutionSource || undefined,
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit form');
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Failed to submit form');
       }
 
       const selectedQuantity = quantityOptions.find(q => q.value === formData.quantity);
@@ -103,6 +114,7 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
 
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 sm:p-8 shadow-xl border border-stone-200">
+      <HoneypotField />
       <h3 className="text-xl font-bold text-navy-800 mb-1">Get Your Price in 2 Hours</h3>
       <p className="text-sm text-slate-500 mb-6">Free quote • No obligation</p>
 
@@ -198,10 +210,12 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
           </div>
         )}
 
+        <TurnstileWidget onTokenChange={setTurnstileToken} action="lp-quote" />
+
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || turnstileToken === null}
           className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
           {isSubmitting ? (

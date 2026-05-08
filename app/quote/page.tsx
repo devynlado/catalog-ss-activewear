@@ -37,6 +37,9 @@ import { trackQuoteFormSubmit } from '@/lib/analytics';
 import { formatPrice, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 import {
   DecorationType,
   StitchCount,
@@ -145,7 +148,10 @@ export default function QuotePage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
   const [quoteId, setQuoteId] = useState<string | null>(null);
+  // Turnstile token: null = waiting, '' = disabled, string = verified
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -212,8 +218,13 @@ export default function QuotePage() {
     
     setIsSubmitting(true);
     setSubmitStatus('idle');
-    
+    setSubmitErrorMessage(null);
+
     try {
+      const formEl = e.currentTarget as HTMLFormElement;
+      const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+      const honeypotValue = honeypotInput?.value ?? '';
+
       const response = await fetch('/api/quote/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -230,6 +241,8 @@ export default function QuotePage() {
           },
           finishing: finishingServices,
           decorationEstimate,
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
           finishingEstimate,
           submittedAt: new Date(),
         }),
@@ -254,6 +267,11 @@ export default function QuotePage() {
     } catch (error) {
       console.error('Error submitting quote:', error);
       setSubmitStatus('error');
+      setSubmitErrorMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Failed to submit quote. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -1085,6 +1103,7 @@ export default function QuotePage() {
 
                 {/* Contact Form */}
                 <form onSubmit={handleSubmit} className="rounded-xl bg-white p-6 shadow-sm">
+                  <HoneypotField />
                   <h2 className="text-lg font-semibold text-slate-900">Contact Information</h2>
                   <p className="mt-1 text-sm text-slate-500">
                     We'll use this to send you the quote
@@ -1158,15 +1177,23 @@ export default function QuotePage() {
                   {submitStatus === 'error' && (
                     <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
                       <AlertCircle className="h-4 w-4" />
-                      Failed to submit quote. Please try again.
+                      {submitErrorMessage || 'Failed to submit quote. Please try again.'}
                     </div>
                   )}
 
+                  <div className="mt-6">
+                    <TurnstileWidget
+                      onTokenChange={setTurnstileToken}
+                      action="quote"
+                    />
+                  </div>
+
                   <Button
                     type="submit"
-                    className="mt-6 w-full"
+                    className="mt-4 w-full"
                     size="lg"
                     isLoading={isSubmitting}
+                    disabled={turnstileToken === null}
                   >
                     <Send className="mr-2 h-4 w-4" />
                     Submit Quote Request
