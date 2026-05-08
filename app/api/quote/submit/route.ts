@@ -10,6 +10,15 @@ import {
   generateQuoteConfirmationText 
 } from '@/lib/emails/quote-confirmation';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import {
+  RATE_LIMITS,
+  buildRateLimitHeaders,
+  checkRateLimit,
+  formatRetryAfter,
+  getClientIp,
+} from '@/lib/rate-limit';
+import { isHoneypotTriggered } from '@/lib/spam-honeypot';
+import { readTurnstileToken, verifyTurnstileToken } from '@/lib/turnstile';
 
 // Initialize Resend lazily to avoid module-level errors
 function getResend() {
@@ -18,7 +27,74 @@ function getResend() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: QuoteSubmission = await request.json();
+    // Same two-layer pattern as the contact form: short burst window plus
+    // a daily cap. A real quote takes minutes to assemble, so anyone
+    // pushing through 5 in 10 minutes is almost certainly abusive.
+    const ip = getClientIp(request);
+    const burst = await checkRateLimit(ip, RATE_LIMITS.quoteBurst);
+    if (!burst.success) {
+      console.warn(
+        `[quote/submit] burst limit hit ip=${ip} retry=${burst.retryAfterSeconds}s`
+      );
+      return NextResponse.json(
+        {
+          error: `You've submitted too many quotes recently. Please try again in ${formatRetryAfter(burst.retryAfterSeconds)}, or call us at (855) 942-7636.`,
+          rateLimited: true,
+          retryAfterSeconds: burst.retryAfterSeconds,
+        },
+        { status: 429, headers: buildRateLimitHeaders(burst) }
+      );
+    }
+    const daily = await checkRateLimit(ip, RATE_LIMITS.quoteDaily);
+    if (!daily.success) {
+      console.warn(
+        `[quote/submit] daily limit hit ip=${ip} retry=${daily.retryAfterSeconds}s`
+      );
+      return NextResponse.json(
+        {
+          error: `You've reached today's quote submission limit. Please try again tomorrow, or call us at (855) 942-7636.`,
+          rateLimited: true,
+          retryAfterSeconds: daily.retryAfterSeconds,
+        },
+        { status: 429, headers: buildRateLimitHeaders(daily) }
+      );
+    }
+
+    const rawBody = await request.json();
+    const body: QuoteSubmission = rawBody;
+
+    // Honeypot — silent success for bots (mirrors /api/contact behaviour).
+    // We don't have a quotes-spam table to mirror the contacts pattern, so
+    // we just drop the request and pretend it succeeded.
+    if (isHoneypotTriggered(rawBody)) {
+      console.log(
+        `[Quote] Honeypot triggered ip=${ip} email=${body.contact?.email ?? 'unknown'}`
+      );
+      return NextResponse.json({
+        success: true,
+        message: 'Quote submitted successfully',
+        quoteId: `QT-${Date.now().toString(36).toUpperCase()}`,
+        summary: { totalItems: 0, subtotal: 0 },
+      });
+    }
+
+    // Cloudflare Turnstile — fail-open on CF outage (see lib/turnstile.ts).
+    const turnstileToken = readTurnstileToken(rawBody);
+    const turnstileResult = await verifyTurnstileToken(turnstileToken, ip);
+    if (!turnstileResult.success) {
+      console.warn(
+        `[Quote] Turnstile rejected ip=${ip} reason=${turnstileResult.reason} codes=${turnstileResult.errorCodes?.join(',') ?? 'none'}`
+      );
+      return NextResponse.json(
+        {
+          error:
+            turnstileResult.reason === 'missing'
+              ? 'Please complete the security check before submitting.'
+              : 'Security check failed. Please refresh the page and try again.',
+        },
+        { status: 400 }
+      );
+    }
 
     // Validate required fields
     if (!body.items || body.items.length === 0) {

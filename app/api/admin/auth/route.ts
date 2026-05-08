@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { timingSafeEqual } from 'crypto';
+import {
+  RATE_LIMITS,
+  buildRateLimitHeaders,
+  checkRateLimit,
+  formatRetryAfter,
+  getClientIp,
+} from '@/lib/rate-limit';
 
 const AUTH_COOKIE_NAME = 'admin_auth';
 const AUTH_COOKIE_VALUE = 'authenticated';
@@ -37,6 +44,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Admin authentication is not configured on this environment.' },
         { status: 503 }
+      );
+    }
+
+    // Rate limit by IP only (no email is sent on this legacy endpoint).
+    // The limit is generous: 10 attempts per 15 min from a single IP. With
+    // a 12+ char password the brute-force math is hopeless anyway, so the
+    // ceiling is mostly there to make automated probing visible in logs.
+    const ip = getClientIp(request);
+    const rl = await checkRateLimit(ip, RATE_LIMITS.adminAuth);
+    if (!rl.success) {
+      console.warn(
+        `[admin auth] rate-limit hit ip=${ip} retry_after=${rl.retryAfterSeconds}s`
+      );
+      return NextResponse.json(
+        {
+          error: `Too many login attempts. Please try again in ${formatRetryAfter(rl.retryAfterSeconds)}.`,
+          rateLimited: true,
+          retryAfterSeconds: rl.retryAfterSeconds,
+        },
+        { status: 429, headers: buildRateLimitHeaders(rl) }
       );
     }
 

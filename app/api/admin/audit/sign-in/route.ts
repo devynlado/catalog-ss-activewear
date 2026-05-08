@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { logAdminActivity } from '@/lib/admin-audit';
+import { RATE_LIMITS, checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * Logs a sign-in event for the currently authenticated admin/sales_rep.
@@ -10,6 +11,19 @@ import { logAdminActivity } from '@/lib/admin-audit';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Audit beacon: a single sign-in fires this once. Anything significantly
+    // higher than that is abusive (a script trying to flood the activity
+    // log). We silently no-op on rate-limit hits — the caller fires this
+    // beacon with `keepalive: true` and ignores the response, so returning
+    // 204 vs 429 doesn't matter to the user. Logging it lets us see the
+    // attack pattern in our server logs.
+    const ip = getClientIp(request);
+    const rl = await checkRateLimit(ip, RATE_LIMITS.auditBeacon);
+    if (!rl.success) {
+      console.warn(`[audit/sign-in] beacon rate-limited ip=${ip}`);
+      return NextResponse.json(null, { status: 204 });
+    }
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },

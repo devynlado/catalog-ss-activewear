@@ -5,6 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 import { trackContactFormSubmit, trackPhoneClick, trackContactEmailClick, trackContactLocationClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 // Service name mapping for pre-filling the message
 const serviceNames: Record<string, string> = {
@@ -64,6 +67,9 @@ function ContactForm() {
   }, [serviceParam]);
 
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Turnstile token: null while waiting for Cloudflare to mint one, '' when
+  // Turnstile is disabled (no env key), non-empty string when verified.
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +77,13 @@ function ContactForm() {
     setSubmitError(null);
     
     try {
+      // Pull the honeypot value from the form's named input so it stays
+      // outside React state. Real users leave it empty; the server treats
+      // any non-empty value as spam and silently drops it.
+      const formEl = e.currentTarget as HTMLFormElement;
+      const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+      const honeypotValue = honeypotInput?.value ?? '';
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,6 +92,8 @@ function ContactForm() {
           service: serviceParam ? serviceNames[serviceParam] : undefined,
           source: 'contact_page',
           visitor_source: getVisitorSource(),
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
       });
 
@@ -164,6 +179,7 @@ function ContactForm() {
                   </p>
                   
                   <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                    <HoneypotField />
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div>
                         <label htmlFor="name" className="block text-sm font-medium text-slate-700">
@@ -250,9 +266,14 @@ function ContactForm() {
                       </div>
                     )}
 
+                    <TurnstileWidget
+                      onTokenChange={setTurnstileToken}
+                      action="contact"
+                    />
+
                     <button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || turnstileToken === null}
                       className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSubmitting ? (

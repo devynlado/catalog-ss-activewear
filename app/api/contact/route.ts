@@ -10,6 +10,15 @@ import {
   getContactConfirmationSubject,
 } from '@/lib/emails/contact-confirmation';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import {
+  RATE_LIMITS,
+  buildRateLimitHeaders,
+  checkRateLimit,
+  formatRetryAfter,
+  getClientIp,
+} from '@/lib/rate-limit';
+import { isHoneypotTriggered } from '@/lib/spam-honeypot';
+import { readTurnstileToken, verifyTurnstileToken } from '@/lib/turnstile';
 
 // Initialize Resend lazily to avoid module-level errors
 function getResend() {
@@ -34,7 +43,87 @@ interface ContactFormData {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ContactFormData = await request.json();
+    // Rate limit two ways: a tight burst window (5 / 10 min) to stop a
+    // single bot hammering us, and a broader daily cap (20 / day) to catch
+    // slow-drip spammers who pace themselves under the burst limit.
+    const ip = getClientIp(request);
+    const burst = await checkRateLimit(ip, RATE_LIMITS.contactBurst);
+    if (!burst.success) {
+      console.warn(
+        `[contact] burst limit hit ip=${ip} retry=${burst.retryAfterSeconds}s`
+      );
+      return NextResponse.json(
+        {
+          error: `You've sent too many messages recently. Please try again in ${formatRetryAfter(burst.retryAfterSeconds)}, or call us at (855) 942-7636.`,
+          rateLimited: true,
+          retryAfterSeconds: burst.retryAfterSeconds,
+        },
+        { status: 429, headers: buildRateLimitHeaders(burst) }
+      );
+    }
+    const daily = await checkRateLimit(ip, RATE_LIMITS.contactDaily);
+    if (!daily.success) {
+      console.warn(
+        `[contact] daily limit hit ip=${ip} retry=${daily.retryAfterSeconds}s`
+      );
+      return NextResponse.json(
+        {
+          error: `You've reached today's submission limit. Please try again tomorrow, or call us at (855) 942-7636.`,
+          rateLimited: true,
+          retryAfterSeconds: daily.retryAfterSeconds,
+        },
+        { status: 429, headers: buildRateLimitHeaders(daily) }
+      );
+    }
+
+    const rawBody = await request.json();
+    const body: ContactFormData = rawBody;
+
+    // Honeypot — silent success for bots that filled the hidden field.
+    // Mirrors the existing blocked_emails pattern below: pretend it worked
+    // so the bot operator gets no signal and doesn't adapt their script.
+    if (isHoneypotTriggered(rawBody)) {
+      console.log(`[Contact] Honeypot triggered ip=${ip} email=${body.email ?? 'unknown'}`);
+      try {
+        const supabase = createServerSupabaseClient() as any;
+        await supabase.from('contacts').insert({
+          name: body.name ?? '(honeypot)',
+          email: body.email ?? '(honeypot)',
+          phone: body.phone || null,
+          company: body.company || null,
+          service: body.service || null,
+          message: body.message ?? '',
+          source: body.source || null,
+          status: 'spam',
+          is_spam: true,
+          blocked_at: new Date().toISOString(),
+        });
+      } catch (honeypotInsertErr) {
+        console.error('[Contact] Honeypot DB insert failed:', honeypotInsertErr);
+      }
+      return NextResponse.json({ success: true, message: 'Message sent successfully' });
+    }
+
+    // Cloudflare Turnstile — separate from honeypot because it catches
+    // smarter bots (real browsers, automated UI tests) that wouldn't fall
+    // for the hidden field. Fail-open if Cloudflare itself is down (see
+    // lib/turnstile.ts) so a CF outage can't take the contact form offline.
+    const turnstileToken = readTurnstileToken(rawBody);
+    const turnstileResult = await verifyTurnstileToken(turnstileToken, ip);
+    if (!turnstileResult.success) {
+      console.warn(
+        `[Contact] Turnstile rejected ip=${ip} reason=${turnstileResult.reason} codes=${turnstileResult.errorCodes?.join(',') ?? 'none'}`
+      );
+      return NextResponse.json(
+        {
+          error:
+            turnstileResult.reason === 'missing'
+              ? 'Please complete the security check before submitting.'
+              : 'Security check failed. Please refresh the page and try again.',
+        },
+        { status: 400 }
+      );
+    }
 
     // Validate required fields
     if (!body.name?.trim()) {

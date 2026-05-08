@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Phone, Clock, MessageSquare, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 interface LPExitIntentProps {
   service: 'screen-printing' | 'embroidery' | 't-shirt-printing' | 'jumbo-screen-printing' | 'digital-screen-printing' | 'puff-screen-printing';
@@ -41,6 +44,7 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [businessStatus] = useState(() => isBusinessOpen());
+  const [turnstileToken, setTurnstileToken] = useState<string | null | ''>(null);
 
   const handleMouseLeave = useCallback((e: MouseEvent) => {
     // Only trigger when mouse leaves through the top of the viewport
@@ -82,6 +86,10 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
     setIsSubmitting(true);
     
     try {
+      const formEl = e.currentTarget as HTMLFormElement;
+      const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
+      const honeypotValue = honeypotInput?.value ?? '';
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,6 +101,8 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
           source: `lp_${service}_exit_intent`,
           message: 'Exit intent capture - requested callback',
           visitor_source: getVisitorSource(),
+          website: honeypotValue,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
       });
       
@@ -203,6 +213,7 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
                 <div className="p-4 rounded-xl border-2 border-stone-200">
                   <p className="font-semibold text-slate-900 mb-3">Get a Quick Callback</p>
                   <form onSubmit={handleSubmit} className="space-y-3">
+                    <HoneypotField />
                     <input
                       type="email"
                       value={email}
@@ -219,9 +230,10 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
                       className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
                       required
                     />
+                    <TurnstileWidget onTokenChange={setTurnstileToken} action="lp-exit-intent" />
                     <button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || turnstileToken === null}
                       className={`w-full px-4 py-3 text-white font-semibold rounded-lg transition-colors ${
                         service === 'embroidery'
                           ? 'bg-indigo-500 hover:bg-indigo-600'

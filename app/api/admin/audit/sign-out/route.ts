@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { logAdminActivity } from '@/lib/admin-audit';
+import { RATE_LIMITS, checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * Logs a sign-out event for the currently authenticated admin/sales_rep.
@@ -9,6 +10,14 @@ import { logAdminActivity } from '@/lib/admin-audit';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Same beacon-style rate limit as sign-in: silently no-op when over.
+    const ip = getClientIp(request);
+    const rl = await checkRateLimit(ip, RATE_LIMITS.auditBeacon);
+    if (!rl.success) {
+      console.warn(`[audit/sign-out] beacon rate-limited ip=${ip}`);
+      return NextResponse.json(null, { status: 204 });
+    }
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },
