@@ -359,8 +359,11 @@ export async function getPopularProducts(options: {
  * Calculate search relevance score for a product
  * Scoring priority: SKU/Style (100) > Brand (70) > Title (30) > Description (10)
  * No fuzzy matching - exact substring matching only
+ *
+ * Exported so admin tooling (slug-redirect suggestions) can reuse the
+ * same scoring as the customer-facing catalog search.
  */
-function calculateSearchScore(
+export function calculateSearchScore(
   product: { style_name: string; brand_name: string; title_raw: string; description_raw: string },
   searchTerms: string[]
 ): number {
@@ -589,6 +592,111 @@ export async function searchProductsFromCache(
     pageSize,
     totalPages,
   };
+}
+
+/**
+ * Lean, scored product search for admin tooling.
+ *
+ * Why this exists separately from `searchProductsFromCache`:
+ *   - Skips the heavy `product_colors` join — the slug-redirect suggestion
+ *     UI only needs brand/style/title/slug/image.
+ *   - Returns raw scores per row instead of paginated `Product` objects,
+ *     so the caller can build a "confidence" badge from the score.
+ *   - Optionally includes inactive / hidden rows (admin may still want to
+ *     see them, even if we won't recommend redirecting to them).
+ *
+ * Uses the same tokenization + ILIKE + scoring as the customer search,
+ * so admins see relevance consistent with what shoppers experience.
+ */
+export interface ScoredProductRow {
+  style_id: number;
+  style_name: string;
+  brand_name: string;
+  title_raw: string;
+  title_optimized: string | null;
+  description_raw: string | null;
+  slug: string | null;
+  primary_image_url: string | null;
+  is_active: boolean;
+  manually_hidden: boolean;
+  /** Raw `calculateSearchScore` value (NOT clamped to 0-100). */
+  score: number;
+}
+
+export async function searchProductsScored(
+  searchTerm: string,
+  options: { limit?: number; includeInactive?: boolean } = {},
+): Promise<ScoredProductRow[]> {
+  const supabase = createServerSupabaseClient();
+  const { limit = 20, includeInactive = false } = options;
+
+  const normalizedQuery = searchTerm.trim().toUpperCase();
+  const searchTerms = normalizedQuery.split(/\s+/).filter((term) => term.length >= 2);
+  if (searchTerms.length === 0) return [];
+
+  let query = supabase
+    .from('products')
+    .select(
+      'style_id, style_name, brand_name, title_raw, title_optimized, description_raw, slug, primary_image_url, is_active, manually_hidden',
+    );
+
+  if (!includeInactive) {
+    query = query.eq('is_active', true).eq('manually_hidden', false);
+  }
+
+  // Mirror the OR-filter used by searchProductsFromCache so the candidate
+  // set is identical to the customer-facing search.
+  const orConditions = searchTerms
+    .map(
+      (term) =>
+        `style_name.ilike.%${term}%,brand_name.ilike.%${term}%,title_raw.ilike.%${term}%,description_raw.ilike.%${term}%`,
+    )
+    .join(',');
+  query = query.or(orConditions);
+
+  // Over-fetch so scoring can prune to the truly relevant rows.
+  query = query.limit(500);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('[searchProductsScored] error:', error);
+    return [];
+  }
+
+  const rows = (data ?? []) as Array<{
+    style_id: number;
+    style_name: string;
+    brand_name: string;
+    title_raw: string;
+    title_optimized: string | null;
+    description_raw: string | null;
+    slug: string | null;
+    primary_image_url: string | null;
+    is_active: boolean;
+    manually_hidden: boolean;
+  }>;
+
+  const scored: ScoredProductRow[] = [];
+  for (const row of rows) {
+    const score = calculateSearchScore(
+      {
+        style_name: row.style_name || '',
+        brand_name: row.brand_name || '',
+        title_raw: row.title_raw || '',
+        description_raw: row.description_raw || '',
+      },
+      searchTerms,
+    );
+    if (score <= 0) continue;
+    scored.push({ ...row, score });
+  }
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return (a.style_name || '').localeCompare(b.style_name || '');
+  });
+
+  return scored.slice(0, limit);
 }
 
 /**
