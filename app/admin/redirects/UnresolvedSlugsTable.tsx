@@ -102,15 +102,15 @@ export function UnresolvedSlugsTable({
       ) : (
         <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-stone-200">
+            <table className="w-full divide-y divide-stone-200 table-fixed">
               <thead className="bg-stone-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                 <tr>
-                  <th className="px-4 py-3">Slug</th>
-                  <th className="px-4 py-3 text-right">Hits</th>
-                  <th className="px-4 py-3">First seen</th>
-                  <th className="px-4 py-3">Last seen</th>
-                  <th className="px-4 py-3">Last referrer</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="w-auto px-4 py-3">Slug</th>
+                  <th className="w-16 px-4 py-3 text-right">Hits</th>
+                  <th className="w-24 px-4 py-3 hidden md:table-cell">First seen</th>
+                  <th className="w-24 px-4 py-3">Last seen</th>
+                  <th className="w-40 px-4 py-3 hidden lg:table-cell">Last referrer</th>
+                  <th className="w-[170px] px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-200 bg-white">
@@ -168,25 +168,25 @@ function FragmentRow({
       <tr className={`hover:bg-stone-50 ${row.resolved ? 'opacity-60' : ''}`}>
         <td className="px-4 py-3 align-top">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs text-slate-800">
+            <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs text-slate-800 break-all">
               /product/{row.slug}
             </code>
             <a
               href={`/product/${row.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center text-brand-600 hover:underline"
+              className="inline-flex shrink-0 items-center text-brand-600 hover:underline"
               title="Open live URL"
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
             {row.is_bot && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
                 <Bot className="h-3 w-3" /> bot
               </span>
             )}
             {row.resolved && (
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700">
+              <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700">
                 {row.resolution_type === 'redirect' ? 'redirected' : 'ignored'}
               </span>
             )}
@@ -200,16 +200,16 @@ function FragmentRow({
         <td className="whitespace-nowrap px-4 py-3 text-right align-top text-sm font-medium tabular-nums text-slate-800">
           {row.hits.toLocaleString()}
         </td>
-        <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-slate-500">
+        <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-slate-500 hidden md:table-cell">
           {formatRelative(row.first_seen)}
         </td>
         <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-slate-500">
           {formatRelative(row.last_seen)}
         </td>
-        <td className="max-w-[200px] truncate px-4 py-3 align-top text-xs text-slate-500" title={row.last_referrer ?? ''}>
+        <td className="truncate px-4 py-3 align-top text-xs text-slate-500 hidden lg:table-cell" title={row.last_referrer ?? ''}>
           {row.last_referrer || <span className="italic text-slate-300">—</span>}
         </td>
-        <td className="whitespace-nowrap px-4 py-3 text-right align-top">
+        <td className="px-4 py-3 text-right align-top">
           {!row.resolved ? (
             <div className="inline-flex items-center gap-1">
               <Button

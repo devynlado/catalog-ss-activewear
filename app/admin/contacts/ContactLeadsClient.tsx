@@ -24,6 +24,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LeadsTrendChart } from './LeadsTrendChart';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -92,16 +93,23 @@ function getSourceLabel(source: string | null): string {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
+// Display all timestamps in business time (Los Angeles) so admins everywhere
+// see the same day boundaries as the trend chart.
+const BUSINESS_TZ = 'America/Los_Angeles';
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', {
+    timeZone: BUSINESS_TZ,
     month: 'short', day: 'numeric', year: 'numeric',
   });
 }
 
 function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  return new Date(dateStr).toLocaleString('en-US', {
+    timeZone: BUSINESS_TZ,
     month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
+    timeZoneName: 'short',
   });
 }
 
@@ -373,6 +381,9 @@ export function ContactLeadsClient() {
           <StatCard icon={<MailX className="h-4 w-4 text-slate-600" />} bg="bg-slate-100" value={stats.blocked} label="Blocked Emails" clickable />
         </button>
       </div>
+
+      {/* ── Leads Trend (by visitor source) ─────────────────────────────── */}
+      <LeadsTrendChart />
 
       {/* ── Source Performance ──────────────────────────────────────────── */}
       <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
