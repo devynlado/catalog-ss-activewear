@@ -1,10 +1,8 @@
 import { Suspense } from 'react';
-import { headers } from 'next/headers';
-import { notFound, redirect, permanentRedirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getProductById } from '@/lib/ss-activewear';
 import { getProductByStyleId, getProductBySlug, getCacheStats } from '@/lib/product-cache';
 import type { Product } from '@/lib/types';
-import { lookupRedirect, logNotFoundSlug } from '@/lib/slug-redirects';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductBreadcrumbs } from '@/components/catalog/ProductBreadcrumbs';
 import { CompanionProducts } from '@/components/builder/CompanionProducts';
@@ -17,40 +15,12 @@ import { validateDiscountToken, GoogleDiscount } from '@/lib/google-discount';
 import { ReviewSection } from '@/components/reviews/ReviewSection';
 import { DiscontinuedProductPage } from './DiscontinuedProductPage';
 
-/**
- * Merge incoming search params onto a redirect target URL.
- *
- * Used when a slug-redirect fires so we preserve tracking parameters
- * (utm_*, gclid, etc.) and variant parameters (color/size from Meta /
- * Google Shopping ads) across the redirect. The target's own query
- * string wins for any conflicting key so admin-configured category
- * filters can't be overridden by ad-side noise.
- */
-function buildRedirectUrl(
-  targetUrl: string,
-  searchParams: Record<string, string | string[] | undefined>,
-): string {
-  const incoming = new URLSearchParams();
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (typeof value === 'string' && value.length > 0) {
-      incoming.set(key, value);
-    } else if (Array.isArray(value) && value.length > 0) {
-      const first = value[0];
-      if (typeof first === 'string' && first.length > 0) incoming.set(key, first);
-    }
-  }
-  if (incoming.toString().length === 0) return targetUrl;
-
-  const [path, existingQuery] = targetUrl.split('?');
-  const merged = new URLSearchParams(incoming);
-  if (existingQuery) {
-    // Existing target params overwrite incoming ones — admin config wins.
-    for (const [k, v] of new URLSearchParams(existingQuery)) {
-      merged.set(k, v);
-    }
-  }
-  return `${path}?${merged.toString()}`;
-}
+// NOTE: The legacy slug-redirect intercept that used to live in this
+// file was moved to `app/not-found.tsx` so it now covers every URL on
+// the site (services, blog posts, project pages, marketing URLs, etc.),
+// not just /product/<slug>. The "Last-chance recovery before 404" you
+// might be looking for is in lib/slug-redirects.ts → lookupRedirect,
+// invoked from the global not-found component.
 
 /**
  * Decide whether the product should render the "no longer available" view
@@ -357,30 +327,11 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   const product = await getProduct(params.slug, searchParams);
 
   if (!product) {
-    // Last-chance recovery: check the slug_redirects table before 404'ing.
-    // Handles legacy WooCommerce / Meta-Catalog slugs that were never
-    // carried into the new catalog.
-    const resolved = await lookupRedirect(params.slug);
-    if (resolved) {
-      const target = buildRedirectUrl(resolved.url, searchParams);
-      // 301 → Next's permanentRedirect (HTTP 308; SEO-equivalent to 301).
-      // 302/307 → standard redirect (HTTP 307; SEO-equivalent to 302).
-      if (resolved.statusCode === 301) {
-        permanentRedirect(target);
-      } else {
-        redirect(target);
-      }
-    }
-    // No redirect → log the miss so an admin can act on it, then 404.
-    try {
-      const hdrs = await headers();
-      void logNotFoundSlug(params.slug, {
-        userAgent: hdrs.get('user-agent'),
-        referrer: hdrs.get('referer'),
-      });
-    } catch {
-      // headers() may not be available in some test contexts; ignore.
-    }
+    // Product not found → fall through to the global 404 handler.
+    // `app/not-found.tsx` checks the slug_redirects table for any
+    // matching legacy URL and either redirects or logs the miss to the
+    // unresolved-slugs queue. We don't need a product-specific intercept
+    // here anymore.
     notFound();
   }
 

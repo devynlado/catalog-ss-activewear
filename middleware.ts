@@ -14,9 +14,19 @@ const roleRoutes: Record<string, string[]> = {
 };
 
 export async function middleware(request: NextRequest) {
+  // Forward the original pathname + search string to downstream server
+  // components via request headers. `app/not-found.tsx` reads these so
+  // it can look up a redirect for the URL the visitor actually requested
+  // (Next.js doesn't expose that to the not-found component otherwise).
+  //
+  // No DB hits and no awaitable work here — keeping middleware fast.
+  const forwardedHeaders = new Headers(request.headers);
+  forwardedHeaders.set('x-invoke-path', request.nextUrl.pathname);
+  forwardedHeaders.set('x-invoke-search', request.nextUrl.search);
+
   let response = NextResponse.next({
     request: {
-      headers: request.headers,
+      headers: forwardedHeaders,
     },
   });
 

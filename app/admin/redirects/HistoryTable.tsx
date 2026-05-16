@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { Pagination } from '@/components/ui/Pagination';
 import type { HistoryRow, HistoryAction } from './types';
 
 interface HistoryTableProps {
@@ -7,12 +9,22 @@ interface HistoryTableProps {
   loading: boolean;
 }
 
+const PAGE_SIZE = 25;
+
 /**
  * "History" tab. Renders the global change log across all redirects.
  * Read-only; the underlying table is append-only and enforced at the DB
- * trigger level.
+ * trigger level. Client-side paginated so long histories stay scannable.
  */
 export function HistoryTable({ rows, loading }: HistoryTableProps) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+
+  // Clamp if the dataset shrinks underneath us (refresh, etc.).
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   if (loading) {
     return (
       <div className="rounded-xl border border-stone-200 bg-white p-12 text-center text-sm text-slate-500">
@@ -27,6 +39,12 @@ export function HistoryTable({ rows, loading }: HistoryTableProps) {
       </div>
     );
   }
+
+  const startIndex = (page - 1) * PAGE_SIZE;
+  const pagedRows = rows.slice(startIndex, startIndex + PAGE_SIZE);
+  const showingFrom = startIndex + 1;
+  const showingTo = Math.min(startIndex + PAGE_SIZE, rows.length);
+
   return (
     <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -36,12 +54,12 @@ export function HistoryTable({ rows, loading }: HistoryTableProps) {
               <th className="px-4 py-3">When</th>
               <th className="px-4 py-3">Who</th>
               <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">From slug</th>
+              <th className="px-4 py-3">From path</th>
               <th className="px-4 py-3">Detail</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-200 bg-white text-sm">
-            {rows.map((row) => (
+            {pagedRows.map((row) => (
               <tr key={row.id} className="hover:bg-stone-50">
                 <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-slate-500">
                   <div>{new Date(row.changed_at).toLocaleString()}</div>
@@ -54,10 +72,14 @@ export function HistoryTable({ rows, loading }: HistoryTableProps) {
                 <td className="whitespace-nowrap px-4 py-3 align-top">
                   <ActionBadge action={row.action} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 align-top">
-                  <code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs text-slate-800">
-                    /{row.from_slug}
-                  </code>
+                <td className="px-4 py-3 align-top">
+                  {row.from_path ? (
+                    <code className="break-all rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs text-slate-800">
+                      {row.from_path}
+                    </code>
+                  ) : (
+                    <span className="italic text-slate-400">—</span>
+                  )}
                 </td>
                 <td className="max-w-md px-4 py-3 align-top text-xs text-slate-600">
                   <SnapshotSummary action={row.action} snapshot={row.snapshot} />
@@ -67,6 +89,16 @@ export function HistoryTable({ rows, loading }: HistoryTableProps) {
           </tbody>
         </table>
       </div>
+      {rows.length > PAGE_SIZE && (
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-stone-200 bg-stone-50/50 px-4 py-3 sm:flex-row">
+          <p className="text-xs text-slate-500">
+            Showing <span className="font-medium text-slate-700">{showingFrom}</span>–
+            <span className="font-medium text-slate-700">{showingTo}</span> of{' '}
+            <span className="font-medium text-slate-700">{rows.length}</span>
+          </p>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+        </div>
+      )}
     </div>
   );
 }

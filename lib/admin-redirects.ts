@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from './supabase';
 import { getServerProfile, getServerUser } from './supabase-server';
 import {
-  normalizeSlug,
+  normalizePath,
   computePromoteAt,
   DEFAULT_PROMOTE_DAYS,
   type SlugRedirectTargetType,
@@ -28,7 +28,7 @@ export type RedirectHistoryAction =
   | 'imported';
 
 export interface RedirectInputBody {
-  from_slug?: string;
+  from_path?: string;
   target_type?: SlugRedirectTargetType;
   to_product_id?: number | null;
   to_url?: string | null;
@@ -36,11 +36,16 @@ export interface RedirectInputBody {
   auto_promote_days?: number | null;
   is_active?: boolean;
   notes?: string | null;
-  resolved_slug_key?: string | null;
+  /**
+   * When the redirect was created in response to an entry in the
+   * not_found_slugs queue, this is the full path of that entry so we
+   * can mark it resolved in the same request.
+   */
+  resolved_path_key?: string | null;
 }
 
 export interface ValidatedRedirectInput {
-  normalizedSlug?: string;
+  normalizedPath?: string;
   target_type?: SlugRedirectTargetType;
   to_product_id: number | null;
   to_url: string | null;
@@ -76,11 +81,14 @@ export function validateRedirectInput(
     notes: null,
   };
 
-  if (body.from_slug !== undefined || !opts.isUpdate) {
-    const fromSlug = normalizeSlug(body.from_slug ?? '');
-    if (!fromSlug) return { error: 'from_slug is required' };
-    if (fromSlug.length > 200) return { error: 'from_slug is too long' };
-    out.normalizedSlug = fromSlug;
+  if (body.from_path !== undefined || !opts.isUpdate) {
+    const fromPath = normalizePath(body.from_path ?? '');
+    if (!fromPath) {
+      return { error: 'from_path is required and must be a non-empty site-relative path' };
+    }
+    if (fromPath.length > 500) return { error: 'from_path is too long (max 500 chars)' };
+    if (fromPath === '/') return { error: 'Cannot redirect from the site root' };
+    out.normalizedPath = fromPath;
   }
 
   if (body.target_type !== undefined || !opts.isUpdate) {
@@ -139,7 +147,7 @@ export function validateRedirectInput(
 
 export async function writeHistory(
   redirectId: string,
-  fromSlug: string,
+  fromPath: string,
   action: RedirectHistoryAction,
   snapshot: unknown,
 ): Promise<void> {
@@ -161,7 +169,7 @@ export async function writeHistory(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('slug_redirect_history').insert({
       redirect_id: redirectId,
-      from_slug: fromSlug,
+      from_path: fromPath,
       action,
       snapshot,
       changed_by: user?.id ?? null,
@@ -173,7 +181,7 @@ export async function writeHistory(
 }
 
 export async function markNotFoundResolved(
-  slug: string,
+  path: string,
   resolutionType: 'redirect' | 'ignored',
   redirectId: string | null,
   userId: string | null,
@@ -190,7 +198,7 @@ export async function markNotFoundResolved(
         resolution_type: resolutionType,
         resolution_redirect_id: redirectId,
       })
-      .eq('slug', normalizeSlug(slug));
+      .eq('path', normalizePath(path));
   } catch (err) {
     console.warn('[admin/redirects] mark not-found resolved failed:', err);
   }

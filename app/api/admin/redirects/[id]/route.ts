@@ -75,7 +75,7 @@ export async function PATCH(
   }
 
   const updates: Record<string, unknown> = {};
-  if (validation.normalizedSlug !== undefined) updates.from_slug = validation.normalizedSlug;
+  if (validation.normalizedPath !== undefined) updates.from_path = validation.normalizedPath;
   if (validation.target_type !== undefined) updates.target_type = validation.target_type;
   if (validation.target_type === 'product') updates.to_product_id = validation.to_product_id;
   if (validation.target_type === 'category') updates.to_url = validation.to_url;
@@ -102,7 +102,7 @@ export async function PATCH(
   if (updErr) {
     if (updErr.code === '23505') {
       return NextResponse.json(
-        { error: 'Another redirect already uses this from_slug.' },
+        { error: 'Another redirect already uses this from_path.' },
         { status: 409 },
       );
     }
@@ -121,15 +121,15 @@ export async function PATCH(
     action = 'promoted';
   }
 
-  const fromSlug =
-    (updated?.from_slug as string | undefined) ?? (previous.from_slug as string);
-  await writeHistory(id, fromSlug, action, updated);
+  const fromPath =
+    (updated?.from_path as string | undefined) ?? (previous.from_path as string);
+  await writeHistory(id, fromPath, action, updated);
 
   await logAdminActivity(request, {
     action: `slug_redirect.${action}`,
     resourceType: 'slug_redirect',
     resourceId: id,
-    summary: `${action} redirect for /${fromSlug}`,
+    summary: `${action} redirect for ${fromPath}`,
   });
 
   return NextResponse.json(updated);
@@ -162,8 +162,8 @@ export async function DELETE(
     return NextResponse.json({ error: 'Redirect not found' }, { status: 404 });
   }
 
-  const fromSlug = existing.from_slug as string;
-  await writeHistory(id, fromSlug, 'deleted', existing);
+  const fromPath = existing.from_path as string;
+  await writeHistory(id, fromPath, 'deleted', existing);
 
   const { error } = await supabase.from('slug_redirects').delete().eq('id', id);
   if (error) {
@@ -174,7 +174,7 @@ export async function DELETE(
     action: 'slug_redirect.deleted',
     resourceType: 'slug_redirect',
     resourceId: id,
-    summary: `deleted redirect for /${fromSlug}`,
+    summary: `deleted redirect for ${fromPath}`,
   });
 
   return NextResponse.json({ ok: true });

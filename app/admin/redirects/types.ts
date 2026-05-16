@@ -19,7 +19,7 @@ export interface RedirectTargetProduct {
 
 export interface RedirectRow {
   id: string;
-  from_slug: string;
+  from_path: string;
   target_type: TargetType;
   to_product_id: number | null;
   to_url: string | null;
@@ -35,8 +35,8 @@ export interface RedirectRow {
   target_product: RedirectTargetProduct | null;
 }
 
-export interface NotFoundSlugRow {
-  slug: string;
+export interface NotFoundPathRow {
+  path: string;
   hits: number;
   is_bot: boolean;
   first_seen: string;
@@ -61,11 +61,26 @@ export type HistoryAction =
 export interface HistoryRow {
   id: string;
   redirect_id: string;
-  from_slug: string;
+  from_path: string;
   action: HistoryAction;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   snapshot: any;
   changed_at: string;
   changed_by: string | null;
   changed_by_name: string | null;
+}
+
+/**
+ * Derive a coarse "section" label from a site-relative path. Used by
+ * the filter chips on the Active Redirects and Unresolved Paths tabs so
+ * admins can scan e.g. "all the /services/* misses" at a glance.
+ *
+ * Returns the first non-empty path segment, or `'root'` for `/` and
+ * `'other'` for anything that doesn't normalize cleanly.
+ */
+export function derivePathSection(path: string): string {
+  if (!path) return 'other';
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length === 0) return 'root';
+  return parts[0].toLowerCase();
 }

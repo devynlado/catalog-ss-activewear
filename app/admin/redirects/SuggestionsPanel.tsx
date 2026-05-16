@@ -64,12 +64,16 @@ export function SuggestionsPanel({
 
   const runSuggest = useCallback(async () => {
     if (!slug.trim()) {
-      setError('Enter a slug first.');
+      setError('Enter a product slug first.');
       return;
     }
     setLoading(true);
     setError(null);
     try {
+      // The /suggest endpoint accepts either `path=/product/<slug>` or
+      // `slug=<slug>` (legacy form). We pass the bare slug since the
+      // panel is product-specific and the parent extracts the slug
+      // from the full path before mounting us.
       const res = await fetch(
         `/api/admin/redirects/suggest?slug=${encodeURIComponent(slug.trim())}&topN=5`,
       );
