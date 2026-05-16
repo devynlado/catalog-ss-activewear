@@ -36,7 +36,26 @@
 
 import { searchProductsScored, type ScoredProductRow } from './product-cache';
 import { BRAND_DICTIONARY } from './slug-redirect-brand-dict';
-import { normalizeSlug } from './slug-redirects';
+
+/**
+ * Lower-case, hyphen-only slug normalization for the suggestion engine.
+ *
+ * The runtime redirect engine now uses `normalizePath` against full
+ * site-relative paths (e.g. `/product/heavyweight-tee`). Suggestions, by
+ * contrast, are product-specific and operate on the *bare* slug part
+ * (`heavyweight-tee`). The API route extracts the bare slug via
+ * `extractProductSlug` before calling this engine, so we just need a
+ * conservative cleanup of any remaining cruft (case, trailing slashes,
+ * stray product/ prefix from an old-format input).
+ */
+function normalizeBareSlug(input: string): string {
+  return String(input ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+/, '')
+    .replace(/^product\//, '')
+    .replace(/\/+$/, '');
+}
 
 export interface SuggestedProduct {
   style_id: number;
@@ -229,7 +248,7 @@ export async function suggestRedirectTargets(
 
   // --- Normalize the slug into both a token set (for diagnostics + dict
   //     lookup) and a search query (for the primary search engine).
-  const normalized = normalizeSlug(slug);
+  const normalized = normalizeBareSlug(slug);
   const stripped = stripDuplicateSuffix(normalized);
   const rawTokens = stripped
     .split(/[-_/]+/)

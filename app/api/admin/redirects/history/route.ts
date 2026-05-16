@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient() as any;
   const { data, error } = await supabase
     .from('slug_redirect_history')
-    .select('id, redirect_id, from_slug, action, snapshot, changed_at, changed_by, changed_by_name')
+    .select('id, redirect_id, from_path, action, snapshot, changed_at, changed_by, changed_by_name')
     .order('changed_at', { ascending: false })
     .limit(limit);
 

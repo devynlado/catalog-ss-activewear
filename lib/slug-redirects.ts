@@ -1,17 +1,24 @@
 /**
- * Slug redirect engine.
+ * URL redirect engine (formerly: slug redirect engine).
  *
- * Used by `app/product/[slug]/page.tsx` after the normal product lookups
- * (cache + brand+style fallback) have failed. Responsibilities:
+ * Centralized in `app/not-found.tsx` so it fires whenever Next.js is
+ * about to render a 404 — regardless of which segment the request was
+ * routed to. That gives us one runtime hook for product pages, services,
+ * blog posts, project pages, marketing URLs, and anything we add later.
  *
- *   1. Look up an active redirect row keyed by `from_slug`.
+ * Responsibilities:
+ *
+ *   1. Look up an active redirect row keyed by `from_path` (full
+ *      site-relative path, e.g. `/product/heavyweight-tee` or
+ *      `/services/screen-printing-near-me`).
  *   2. Lazily promote 302 → 301 when `promote_to_301_at` has passed.
- *   3. Resolve the redirect's target into a `{ url, statusCode }` pair, or
- *      `null` for `gone` / unhealthy targets (so the page falls through to
- *      `notFound()`).
+ *   3. Resolve the redirect's target into a `{ url, statusCode }` pair,
+ *      or `null` for `gone` / unhealthy targets (so the page falls
+ *      through to the standard 404 UI).
  *   4. Fire-and-forget bump `hits` and `last_hit_at`.
  *   5. When no redirect exists, fire-and-forget log to `not_found_slugs`,
- *      filtering bots by user-agent so the admin queue stays actionable.
+ *      filtering bots by user-agent AND filtering obvious attack/junk
+ *      patterns by path so the admin queue stays actionable.
  *
  * Every database call uses the service-role client so this works for
  * anonymous visitors without needing an RLS policy on the public side.
@@ -43,7 +50,7 @@ export interface ResolvedRedirect {
 
 interface RawRedirectRow {
   id: string;
-  from_slug: string;
+  from_path: string;
   target_type: SlugRedirectTargetType;
   to_product_id: number | null;
   to_url: string | null;
@@ -52,13 +59,54 @@ interface RawRedirectRow {
   is_active: boolean;
 }
 
-/** Normalize an incoming slug to the form we store in the DB. */
-export function normalizeSlug(slug: string): string {
-  return slug
-    .trim()
-    .toLowerCase()
-    .replace(/^\/+|\/+$/g, '')
-    .replace(/^product\//, '');
+/**
+ * Normalize an incoming path to the form we store in the DB.
+ *
+ *   - leading slash required (added if missing)
+ *   - lowercased
+ *   - trailing slash stripped (except the root, which is never stored)
+ *   - query string / hash stripped
+ *   - URL-encoded sequences decoded (so `/services/screen%20printing`
+ *     and `/services/screen printing` match the same row)
+ *
+ * Returns `''` for inputs that don't represent a meaningful path
+ * (empty, just `/`, decode failure). Callers should treat empty as "no
+ * lookup possible" and short-circuit.
+ */
+export function normalizePath(input: string | null | undefined): string {
+  if (!input) return '';
+  let raw = String(input).trim();
+  if (!raw) return '';
+
+  // Strip query string and hash before normalizing.
+  const hashIdx = raw.indexOf('#');
+  if (hashIdx >= 0) raw = raw.slice(0, hashIdx);
+  const queryIdx = raw.indexOf('?');
+  if (queryIdx >= 0) raw = raw.slice(0, queryIdx);
+
+  // Best-effort percent-decoding. Bad escapes leave the path as-is.
+  try {
+    raw = decodeURIComponent(raw);
+  } catch {
+    // ignore — keep raw
+  }
+
+  raw = raw.toLowerCase();
+
+  // Force exactly one leading slash. We accept inputs both with and
+  // without it so admins can paste either form.
+  if (!raw.startsWith('/')) raw = '/' + raw;
+  raw = raw.replace(/^\/+/, '/');
+
+  // Strip trailing slash for everything except the root, then refuse
+  // the root entirely (can't redirect from `/` via this mechanism).
+  if (raw.length > 1) raw = raw.replace(/\/+$/, '');
+  if (raw === '/' || raw === '') return '';
+
+  // Collapse internal duplicate slashes (`/foo//bar` → `/foo/bar`).
+  raw = raw.replace(/\/{2,}/g, '/');
+
+  return raw;
 }
 
 /**
@@ -85,7 +133,100 @@ export function isBotUserAgent(userAgent: string | null | undefined): boolean {
 }
 
 /**
- * Look up an active redirect for the given slug.
+ * Path-based junk filter. Drops obvious attack/scan patterns BEFORE
+ * they reach the unresolved-slugs queue.
+ *
+ * Now that we log 404s for any URL (not just /product/...), the queue
+ * sees scans for WordPress paths, env files, git internals, ASP/PHP
+ * probes, etc. Without this filter the queue becomes unusable within a
+ * day.
+ *
+ * Returns `true` if the path should be ignored entirely (do not log,
+ * do not surface). False otherwise.
+ */
+export function isBlocklistedPath(path: string): boolean {
+  if (!path) return true;
+  const p = path.toLowerCase();
+
+  // Filename-extension probes for stacks we don't run.
+  if (/\.(php|aspx?|jsp|cgi|pl|cfm|exe|sql|bak|env|ini|conf|yml|yaml|log|swp)(\/|$|\?)/.test(p)) {
+    return true;
+  }
+
+  // Sensitive dotfile / dotdir paths.
+  if (/(^|\/)\.(git|env|aws|ssh|htaccess|htpasswd|svn|hg|DS_Store)/.test(p)) {
+    return true;
+  }
+
+  // CMS / admin-panel scans for software we don't run.
+  const junkSubstrings = [
+    'wp-admin', 'wp-content', 'wp-includes', 'wp-login',
+    'wp-config', 'xmlrpc', 'phpmyadmin', 'pma/',
+    'administrator/', 'wp-json', 'mysql', 'cpanel',
+    'webmail', 'roundcube', 'phpinfo',
+  ];
+  if (junkSubstrings.some((s) => p.includes(s))) return true;
+
+  // Next/Vercel internals and well-known files we shouldn't track.
+  if (
+    p.startsWith('/_next/') ||
+    p.startsWith('/_vercel/') ||
+    p.startsWith('/.well-known/') ||
+    p === '/favicon.ico' ||
+    p === '/robots.txt' ||
+    p === '/sitemap.xml'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Extract the product slug from a path like `/product/heavyweight-tee`.
+ * Returns the bare slug (no leading slash, no `product/` prefix) or
+ * empty string if the path is not a product path. Used only by the
+ * suggestion engine (which is product-specific) — keep general
+ * `normalizePath` for everything else.
+ */
+export function extractProductSlug(path: string): string {
+  const norm = normalizePath(path);
+  if (!norm.startsWith('/product/')) return '';
+  return norm.slice('/product/'.length);
+}
+
+/**
+ * Merge an incoming query string onto a redirect target URL so the
+ * caller's UTM/etc. parameters survive the redirect.
+ *
+ * `incoming` may be a raw search string (with or without leading `?`)
+ * or a `URLSearchParams`. Behavior:
+ *   - if the target already has a query, incoming keys NEVER overwrite
+ *     it (admin-defined params win)
+ *   - if neither has params, the target URL is returned as-is
+ */
+export function buildRedirectUrl(
+  targetUrl: string,
+  incoming: string | URLSearchParams | null | undefined,
+): string {
+  const incomingParams =
+    incoming instanceof URLSearchParams
+      ? incoming
+      : new URLSearchParams(typeof incoming === 'string' ? incoming.replace(/^\?/, '') : '');
+
+  if ([...incomingParams.keys()].length === 0) return targetUrl;
+
+  const [path, existingQuery] = targetUrl.split('?');
+  const merged = new URLSearchParams(existingQuery ?? '');
+  for (const [key, value] of incomingParams) {
+    if (!merged.has(key)) merged.set(key, value);
+  }
+  const out = merged.toString();
+  return out ? `${path}?${out}` : path;
+}
+
+/**
+ * Look up an active redirect for the given pathname.
  *
  * Returns `null` when:
  *   - No row matches.
@@ -98,8 +239,8 @@ export function isBotUserAgent(userAgent: string | null | undefined): boolean {
  *   - Promote `status_code` 302 → 301 if the window has passed.
  *   - Increment `hits` and bump `last_hit_at`.
  */
-export async function lookupRedirect(slug: string): Promise<ResolvedRedirect | null> {
-  const normalized = normalizeSlug(slug);
+export async function lookupRedirect(pathname: string): Promise<ResolvedRedirect | null> {
+  const normalized = normalizePath(pathname);
   if (!normalized) return null;
 
   let row: RawRedirectRow | null = null;
@@ -109,9 +250,9 @@ export async function lookupRedirect(slug: string): Promise<ResolvedRedirect | n
     const { data, error } = await supabase
       .from('slug_redirects')
       .select(
-        'id, from_slug, target_type, to_product_id, to_url, status_code, promote_to_301_at, is_active'
+        'id, from_path, target_type, to_product_id, to_url, status_code, promote_to_301_at, is_active'
       )
-      .eq('from_slug', normalized)
+      .eq('from_path', normalized)
       .eq('is_active', true)
       .maybeSingle();
 
@@ -139,7 +280,7 @@ export async function lookupRedirect(slug: string): Promise<ResolvedRedirect | n
       const product = await getProductByStyleId(row.to_product_id);
       if (!product || !isProductDisplayable(product)) {
         // Target became hidden/discontinued. Don't redirect to a dead page;
-        // let the source slug 404 until an admin reconfigures.
+        // let the source path 404 until an admin reconfigures.
         return null;
       }
       url = `/product/${product.slug}`;
@@ -179,9 +320,6 @@ export async function lookupRedirect(slug: string): Promise<ResolvedRedirect | n
 
 async function bumpHit(redirectId: string): Promise<void> {
   try {
-    // New tables aren't in the generated Database types yet — cast the
-    // client to `any` for unknown-table writes, matching the pattern used
-    // by other admin tables in this codebase (see app/api/admin/coupons/...).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServerSupabaseClient() as any;
     // Optimistic SELECT-then-UPDATE. Can lose a count under high
@@ -216,7 +354,7 @@ async function promoteRedirect(redirectId: string): Promise<void> {
       .from('slug_redirect_history')
       .insert({
         redirect_id: redirectId,
-        from_slug: '',
+        from_path: '',
         action: 'promoted',
         snapshot: { status_code: 301, reason: 'auto_promote_window_passed' },
         changed_by_name: 'system (auto-promote)',
@@ -227,23 +365,26 @@ async function promoteRedirect(redirectId: string): Promise<void> {
 }
 
 /**
- * Log a /product/<slug> miss to the `not_found_slugs` queue.
+ * Log a 404 path to the `not_found_slugs` queue.
  *
- * Idempotent: bumps `hits` and `last_seen` on existing rows. Filters bots
- * by user-agent so the admin queue surfaces real human traffic.
+ * Idempotent: bumps `hits` and `last_seen` on existing rows. Filters
+ * obvious attack/scan paths via `isBlocklistedPath` BEFORE the DB hit so
+ * the queue stays actionable, and tags by user-agent so bot scans don't
+ * clutter the queue surface.
  *
  * Truly fire-and-forget: never throws, never blocks the caller.
  */
 export async function logNotFoundSlug(
-  slug: string,
+  path: string,
   options: {
     userAgent?: string | null;
     referrer?: string | null;
   } = {}
 ): Promise<void> {
   try {
-    const normalized = normalizeSlug(slug);
-    if (!normalized || normalized.length > 200) return;
+    const normalized = normalizePath(path);
+    if (!normalized || normalized.length > 500) return;
+    if (isBlocklistedPath(normalized)) return;
 
     const isBot = isBotUserAgent(options.userAgent);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -252,8 +393,8 @@ export async function logNotFoundSlug(
     // Upsert pattern: try update first; if no row, insert.
     const { data: existing } = await supabase
       .from('not_found_slugs')
-      .select('slug, hits, resolved')
-      .eq('slug', normalized)
+      .select('path, hits, resolved')
+      .eq('path', normalized)
       .maybeSingle();
 
     if (existing) {
@@ -268,10 +409,10 @@ export async function logNotFoundSlug(
           // is_bot is sticky: once any human hit lands it stays human.
           ...(isBot ? {} : { is_bot: false }),
         })
-        .eq('slug', normalized);
+        .eq('path', normalized);
     } else {
       await supabase.from('not_found_slugs').insert({
-        slug: normalized,
+        path: normalized,
         hits: 1,
         is_bot: isBot,
         last_referrer: options.referrer ?? null,

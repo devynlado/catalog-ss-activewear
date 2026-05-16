@@ -18,37 +18,56 @@ interface RedirectFormModalProps {
   onSaved: () => void;
   /** When set, edit this row. When null, create a new one. */
   editing: RedirectRow | null;
-  /** Optional: pre-fill `from_slug` (used from the unresolved-queue flow). */
-  presetFromSlug?: string | null;
+  /** Optional: pre-fill `from_path` (used from the unresolved-queue flow). */
+  presetFromPath?: string | null;
   /**
    * Optional: pre-fill the target product. Used when the admin clicks
    * "Use this" on an inline suggestion — the modal opens with both the
-   * from-slug AND the chosen product already populated so the only
+   * from-path AND the chosen product already populated so the only
    * remaining step is review-and-confirm.
    */
   presetProduct?: PickedProduct | null;
   /**
-   * Optional: when the form was opened from an unresolved-slug row, this
+   * Optional: when the form was opened from an unresolved-path row, this
    * key is passed back to the create endpoint so it can mark that row
    * resolved in the same request.
    */
-  resolvedSlugKey?: string | null;
+  resolvedPathKey?: string | null;
 }
 
 const DEFAULT_PROMOTE_DAYS = 14;
+
+/**
+ * Light client-side path cleanup so admins can paste anything and we
+ * normalize it before showing the preview. Server-side `normalizePath`
+ * is still the source of truth — this is just for UX hints.
+ */
+function normalizePathForUi(input: string): string {
+  let p = String(input ?? '').trim();
+  if (!p) return '';
+  const hashIdx = p.indexOf('#');
+  if (hashIdx >= 0) p = p.slice(0, hashIdx);
+  const queryIdx = p.indexOf('?');
+  if (queryIdx >= 0) p = p.slice(0, queryIdx);
+  p = p.toLowerCase();
+  if (!p.startsWith('/')) p = '/' + p;
+  p = p.replace(/^\/+/, '/');
+  if (p.length > 1) p = p.replace(/\/+$/, '');
+  return p.replace(/\/{2,}/g, '/');
+}
 
 export function RedirectFormModal({
   isOpen,
   onClose,
   onSaved,
   editing,
-  presetFromSlug,
+  presetFromPath,
   presetProduct,
-  resolvedSlugKey,
+  resolvedPathKey,
 }: RedirectFormModalProps) {
   const isEdit = !!editing;
 
-  const [fromSlug, setFromSlug] = useState('');
+  const [fromPath, setFromPath] = useState('');
   const [targetType, setTargetType] = useState<TargetType>('product');
   const [product, setProduct] = useState<PickedProduct | null>(null);
   const [toUrl, setToUrl] = useState('');
@@ -62,13 +81,13 @@ export function RedirectFormModal({
   const [saving, setSaving] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Reset form when modal opens, edit target changes, or preset slug changes.
+  // Reset form when modal opens, edit target changes, or preset path changes.
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
     setShowConfirm(false);
     if (editing) {
-      setFromSlug(editing.from_slug);
+      setFromPath(editing.from_path);
       setTargetType(editing.target_type);
       setProduct(
         editing.target_product
@@ -94,7 +113,7 @@ export function RedirectFormModal({
       setIsActive(editing.is_active);
       setNotes(editing.notes ?? '');
     } else {
-      setFromSlug(presetFromSlug ?? '');
+      setFromPath(presetFromPath ?? '');
       setTargetType('product');
       setProduct(presetProduct ?? null);
       setToUrl('');
@@ -104,7 +123,19 @@ export function RedirectFormModal({
       setIsActive(true);
       setNotes('');
     }
-  }, [isOpen, editing, presetFromSlug, presetProduct]);
+  }, [isOpen, editing, presetFromPath, presetProduct]);
+
+  const normalizedFromPath = useMemo(() => normalizePathForUi(fromPath), [fromPath]);
+
+  /**
+   * Suggestions are product-specific (they rank against the product
+   * catalog). For non-product paths the engine has nothing useful to
+   * say, so we hide the panel entirely.
+   */
+  const isProductPath = normalizedFromPath.startsWith('/product/');
+  const productSlugFromPath = isProductPath
+    ? normalizedFromPath.slice('/product/'.length)
+    : '';
 
   /** Final URL the visitor will land on (used in the confirm screen). */
   const previewUrl = useMemo(() => {
@@ -114,7 +145,8 @@ export function RedirectFormModal({
   }, [targetType, product, toUrl]);
 
   function validate(): string | null {
-    if (!fromSlug.trim()) return 'From slug is required.';
+    if (!normalizedFromPath) return 'From path is required.';
+    if (normalizedFromPath === '/') return 'Cannot redirect from the site root.';
     if (targetType === 'product' && !product) return 'Please pick a target product.';
     if (targetType === 'category') {
       const url = toUrl.trim();
@@ -140,7 +172,7 @@ export function RedirectFormModal({
     setError(null);
     try {
       const payload: Record<string, unknown> = {
-        from_slug: fromSlug.trim(),
+        from_path: normalizedFromPath,
         target_type: targetType,
         status_code: statusCode,
         is_active: isActive,
@@ -150,7 +182,7 @@ export function RedirectFormModal({
       };
       if (targetType === 'product') payload.to_product_id = product?.style_id ?? null;
       if (targetType === 'category') payload.to_url = toUrl.trim();
-      if (!isEdit && resolvedSlugKey) payload.resolved_slug_key = resolvedSlugKey;
+      if (!isEdit && resolvedPathKey) payload.resolved_path_key = resolvedPathKey;
 
       const url = isEdit ? `/api/admin/redirects/${editing!.id}` : '/api/admin/redirects';
       const method = isEdit ? 'PATCH' : 'POST';
@@ -184,7 +216,7 @@ export function RedirectFormModal({
     >
       {showConfirm ? (
         <ConfirmStep
-          fromSlug={fromSlug}
+          fromPath={normalizedFromPath}
           targetType={targetType}
           product={product}
           toUrl={toUrl}
@@ -208,16 +240,24 @@ export function RedirectFormModal({
             </div>
           )}
 
-          {/* FROM SLUG */}
+          {/* FROM PATH */}
           <div>
             <Input
-              label="From slug"
+              label="From path"
               required
-              value={fromSlug}
-              onChange={(e) => setFromSlug(e.target.value)}
-              placeholder="e.g. heavyweight-t-shirt"
-              hint="The path under /product/ that you want to redirect FROM. Lowercase, hyphens; we strip a leading /product/ if you paste it."
+              value={fromPath}
+              onChange={(e) => setFromPath(e.target.value)}
+              placeholder="/product/heavyweight-t-shirt  or  /services/screen-printing-near-me"
+              hint="The full site-relative path you want to redirect FROM. Works for product, services, blog, project, marketing — anything. Leading /, lowercase, no query string."
             />
+            {fromPath && normalizedFromPath !== fromPath.trim() && (
+              <p className="mt-1.5 text-xs text-slate-500">
+                Will be saved as{' '}
+                <code className="rounded bg-stone-100 px-1 py-0.5 font-mono text-[11px]">
+                  {normalizedFromPath || '(empty)'}
+                </code>
+              </p>
+            )}
           </div>
 
           {/* TARGET TYPE */}
@@ -257,9 +297,9 @@ export function RedirectFormModal({
                 <label className="block text-sm font-medium text-slate-700">
                   Target product<span className="ml-0.5 text-red-500">*</span>
                 </label>
-                {fromSlug.trim() && !product && (
+                {isProductPath && productSlugFromPath && !product && (
                   <SuggestionsPanel
-                    slug={fromSlug.trim()}
+                    slug={productSlugFromPath}
                     onPick={(p) => setProduct(p)}
                     onNoStrongMatch={() => {
                       // Subtle hint: when the engine sees no strong match,
@@ -267,15 +307,27 @@ export function RedirectFormModal({
                       // consider a Category redirect instead. We don't
                       // auto-switch — the admin is still in control.
                     }}
-                    autoRun={!isEdit && presetFromSlug === fromSlug}
+                    // Intentionally NOT auto-expanded. The admin opens the
+                    // suggestions on demand by clicking "Suggest match",
+                    // even when the modal was opened with a preset path
+                    // (e.g. from the unresolved-queue "+ Redirect" flow).
                   />
                 )}
               </div>
               <ProductPicker value={product} onChange={setProduct} disabled={saving} />
-              {!product && fromSlug.trim() && (
+              {!product && normalizedFromPath && (
                 <p className="mt-1.5 text-xs text-slate-500">
-                  Pick manually above, or use <em>Suggest match</em> to score candidates against the
-                  from-slug.
+                  {isProductPath ? (
+                    <>
+                      Pick manually above, or use <em>Suggest match</em> to score candidates against
+                      the from-path.
+                    </>
+                  ) : (
+                    <>
+                      Suggestions only run for <code className="rounded bg-stone-100 px-1 py-0.5 font-mono text-[10px]">/product/*</code>{' '}
+                      paths. For other URL types, pick the target product manually.
+                    </>
+                  )}
                 </p>
               )}
               {product && (product.manually_hidden || !product.is_active) && (
@@ -388,7 +440,7 @@ export function RedirectFormModal({
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder='e.g. "Legacy WordPress slug discovered via Meta Catalog audit."'
+            placeholder='e.g. "Legacy WordPress URL discovered via Meta Catalog audit."'
           />
 
           {/* ACTIONS */}
@@ -468,7 +520,7 @@ function StatusCodeOption({
 }
 
 interface ConfirmStepProps {
-  fromSlug: string;
+  fromPath: string;
   targetType: TargetType;
   product: PickedProduct | null;
   toUrl: string;
@@ -485,7 +537,7 @@ interface ConfirmStepProps {
 }
 
 function ConfirmStep({
-  fromSlug,
+  fromPath,
   targetType,
   product,
   toUrl,
@@ -519,11 +571,11 @@ function ConfirmStep({
           Preview
         </div>
         <div className="space-y-3 p-4 text-sm">
-          <div className="flex items-center gap-3">
-            <code className="rounded bg-stone-100 px-2 py-1 font-mono text-xs text-slate-800">
-              /product/{fromSlug}
+          <div className="flex flex-wrap items-center gap-3">
+            <code className="break-all rounded bg-stone-100 px-2 py-1 font-mono text-xs text-slate-800">
+              {fromPath}
             </code>
-            <ArrowRight className="h-4 w-4 text-slate-400" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
             {targetType === 'gone' ? (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold uppercase text-red-700">
                 404 / noindex

@@ -428,6 +428,19 @@ export async function GET(request: NextRequest) {
     // For backwards compatibility, build legacy category string
     const category = categoryIds.length > 0 ? categoryIds.join(',') : null;
     
+    // Resolve `brand` once - can be a numeric ID (from breadcrumbs) or a name
+    // (e.g. "GILDAN"). Both branches below need this same split.
+    let brandIdFilter: number | undefined;
+    let brandNameFilter: string | undefined;
+    if (brand) {
+      const parsed = parseInt(brand, 10);
+      if (!isNaN(parsed) && brand === parsed.toString()) {
+        brandIdFilter = parsed;
+      } else {
+        brandNameFilter = brand;
+      }
+    }
+    
     // ========================================================================
     // TRY SUPABASE CACHE FIRST (fast path: ~100-200ms)
     // ========================================================================
@@ -449,13 +462,19 @@ export async function GET(request: NextRequest) {
         const cacheQueryStart = Date.now();
         // #endregion
         
-        // Search query
+        // Search query - compose with every other filter so the sidebar
+        // (category/brand/color) actually narrows the search results.
         if (search) {
           const result = await searchProductsFromCache(search, {
             page,
             pageSize,
             featured: hasPopularFilters,
             sustainable,
+            streetwear,
+            brand: brandNameFilter,
+            brandId: brandIdFilter,
+            categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
+            colorFamily: colorFamily || undefined,
           });
           // #region agent log
           debugLog('route.ts:GET', 'Cache search completed', { durationMs: Date.now() - cacheQueryStart, totalRequestMs: Date.now() - requestStartTime, resultCount: result.total }, 'D');
@@ -476,22 +495,6 @@ export async function GET(request: NextRequest) {
           debugLog('route.ts:GET', 'Popular products fetched from cache', { durationMs: Date.now() - cacheQueryStart, totalRequestMs: Date.now() - requestStartTime, resultCount: result.total }, 'D');
           // #endregion
           return NextResponse.json(result);
-        }
-        
-        // With filters - use categoryIds for multi-category filtering
-        // Detect if brand is numeric ID or string name
-        let brandIdFilter: number | undefined;
-        let brandNameFilter: string | undefined;
-        
-        if (brand) {
-          const parsed = parseInt(brand, 10);
-          if (!isNaN(parsed) && brand === parsed.toString()) {
-            // Numeric ID (e.g., "35" from breadcrumb)
-            brandIdFilter = parsed;
-          } else {
-            // Brand name string (e.g., "GILDAN")
-            brandNameFilter = brand;
-          }
         }
         
         const result = await getProductsFromCache({
@@ -529,6 +532,34 @@ export async function GET(request: NextRequest) {
     if (search) {
       // Search by keyword or style number - limit to reasonable amount
       allProducts = await searchProducts(search);
+      
+      // Compose with sidebar filters (category / brand / colorFamily) so the
+      // search results actually honor the user's other selections. The cache
+      // path already does this in Supabase; here we filter in JS because the
+      // SS API search returns a flat Product[] without a query builder.
+      if (categoryIds.length > 0) {
+        // AND semantics: a product must belong to every selected category
+        allProducts = allProducts.filter(p => {
+          const productCatIds = new Set((p.categories || []).map(c => c.id));
+          return categoryIds.every(catId => productCatIds.has(catId));
+        });
+      }
+      
+      if (brandIdFilter !== undefined) {
+        allProducts = allProducts.filter(p => p.brandId === brandIdFilter);
+      } else if (brandNameFilter) {
+        const target = brandNameFilter.toLowerCase();
+        allProducts = allProducts.filter(p => (p.brandName || '').toLowerCase() === target);
+      }
+      
+      if (colorFamily) {
+        const families = colorFamily.split(',').map(f => f.trim().toLowerCase()).filter(Boolean);
+        if (families.length > 0) {
+          allProducts = allProducts.filter(p =>
+            (p.colors || []).some(c => families.includes((c.colorFamily || '').toLowerCase()))
+          );
+        }
+      }
       
       // Add popular flags
       allProducts = addPopularFlags(allProducts);

@@ -422,6 +422,12 @@ export async function searchProductsFromCache(
     pageSize = 20,
     featured,
     sustainable,
+    streetwear,
+    brand,
+    brandId,
+    category,
+    categoryIds,
+    colorFamily,
   } = options;
   
   // Normalize and parse search terms
@@ -439,6 +445,37 @@ export async function searchProductsFromCache(
   }
   
   console.log(`[ProductCache] Searching for: "${normalizedQuery}" (terms: ${searchTerms.join(', ')})`);
+  
+  // Merge legacy `category` (comma-separated IDs) with the new `categoryIds` array,
+  // mirroring getProductsFromCache so search composes with every other filter.
+  let allCategoryIds: number[] = categoryIds ? [...categoryIds] : [];
+  if (category) {
+    const parsedIds = category.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+    allCategoryIds = [...new Set([...allCategoryIds, ...parsedIds])];
+  }
+  
+  // Resolve category filter to a list of matching style_ids (AND across categories).
+  // Short-circuit to empty result if the category yields no products - otherwise
+  // the search would silently ignore the category and return unfiltered matches.
+  let categoryFilteredStyleIds: number[] | null = null;
+  if (allCategoryIds.length > 0) {
+    categoryFilteredStyleIds = await getStyleIdsByCategoryIds(allCategoryIds);
+    console.log(`[ProductCache] Search + category [${allCategoryIds.join(',')}] matched ${categoryFilteredStyleIds.length} style_ids`);
+    if (categoryFilteredStyleIds.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      };
+    }
+  }
+  
+  // Parse color families once (OR logic - match any)
+  const colorFamilies: string[] = colorFamily
+    ? colorFamily.split(',').map(cf => cf.trim().toLowerCase()).filter(Boolean)
+    : [];
   
   // Fetch broader results from Supabase - we'll score and sort in Node.js
   // Fetch up to 500 potential matches to ensure we find the best ones
@@ -495,8 +532,28 @@ export async function searchProductsFromCache(
   
   query = query.or(orConditions);
   
+  // Compose with sidebar filters so search + category/brand/color narrow the
+  // candidate pool BEFORE relevance scoring (rather than scoring 500 random
+  // hits and silently dropping the user's category choice).
+  if (categoryFilteredStyleIds && categoryFilteredStyleIds.length > 0) {
+    query = query.in('style_id', categoryFilteredStyleIds);
+  }
+  
+  if (brand) {
+    query = query.ilike('brand_name', brand);
+  }
+  
+  if (brandId) {
+    query = query.eq('brand_id', brandId);
+  }
+  
   if (featured) {
     query = query.eq('is_popular', true);
+  }
+  
+  if (streetwear) {
+    // streetwear implies a popular product in the streetwear tier
+    query = query.eq('is_popular', true).eq('popular_tier', 'streetwear');
   }
   
   if (sustainable) {
@@ -561,10 +618,21 @@ export async function searchProductsFromCache(
   }
   
   // Score each product based on relevance
-  const scoredResults = rows.map(row => ({
+  let scoredResults = rows.map(row => ({
     row,
     score: calculateSearchScore(row, searchTerms),
   })).filter(item => item.score > 0); // Only keep items with actual matches
+  
+  // Color family is a per-color attribute, not a column on `products`, so we
+  // filter on the embedded product_colors rows. Done before pagination so
+  // page sizes stay correct.
+  if (colorFamilies.length > 0) {
+    scoredResults = scoredResults.filter(item =>
+      (item.row.product_colors || []).some(c =>
+        colorFamilies.includes((c.color_family || '').toLowerCase())
+      )
+    );
+  }
   
   console.log(`[ProductCache] Scored ${scoredResults.length} products with relevance`);
   

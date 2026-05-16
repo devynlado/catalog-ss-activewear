@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { getServerProfile, getServerUser } from '@/lib/supabase-server';
+import { getServerUser } from '@/lib/supabase-server';
 import { logAdminActivity } from '@/lib/admin-audit';
-import { normalizeSlug, type SlugRedirectTargetType } from '@/lib/slug-redirects';
+import { type SlugRedirectTargetType } from '@/lib/slug-redirects';
 import {
   requireAdmin,
   validateRedirectInput,
@@ -12,7 +12,7 @@ import {
 
 interface RedirectListRow {
   id: string;
-  from_slug: string;
+  from_path: string;
   target_type: SlugRedirectTargetType;
   to_product_id: number | null;
   to_url: string | null;
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('slug_redirects')
     .select(
-      'id, from_slug, target_type, to_product_id, to_url, status_code, promote_to_301_at, is_active, notes, hits, last_hit_at, created_at, updated_at, created_by'
+      'id, from_path, target_type, to_product_id, to_url, status_code, promote_to_301_at, is_active, notes, hits, last_hit_at, created_at, updated_at, created_by'
     )
     .order('updated_at', { ascending: false })
     .limit(500);
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
   if (search) {
     // Escape ilike metacharacters before interpolation.
     const safe = search.replace(/[\\%_]/g, (m) => `\\${m}`);
-    query = query.or(`from_slug.ilike.%${safe}%,to_url.ilike.%${safe}%,notes.ilike.%${safe}%`);
+    query = query.or(`from_path.ilike.%${safe}%,to_url.ilike.%${safe}%,notes.ilike.%${safe}%`);
   }
 
   const { data, error } = await query;
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 }
 
 interface CreateRedirectBody {
-  from_slug?: string;
+  from_path?: string;
   target_type?: SlugRedirectTargetType;
   to_product_id?: number | null;
   to_url?: string | null;
@@ -112,7 +112,7 @@ interface CreateRedirectBody {
   auto_promote_days?: number | null;
   is_active?: boolean;
   notes?: string | null;
-  resolved_slug_key?: string | null;
+  resolved_path_key?: string | null;
 }
 
 /**
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
   const { user } = await getServerUser();
 
   const insertPayload = {
-    from_slug: validation.normalizedSlug!,
+    from_path: validation.normalizedPath!,
     target_type: validation.target_type!,
     to_product_id: validation.to_product_id,
     to_url: validation.to_url,
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
   if (error) {
     if (error.code === '23505') {
       return NextResponse.json(
-        { error: `A redirect for '${validation.normalizedSlug}' already exists.` },
+        { error: `A redirect for '${validation.normalizedPath}' already exists.` },
         { status: 409 },
       );
     }
@@ -165,19 +165,19 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const inserted = data as any;
 
-  await writeHistory(inserted.id, validation.normalizedSlug!, 'created', inserted);
+  await writeHistory(inserted.id, validation.normalizedPath!, 'created', inserted);
 
   // If this redirect was created in response to an unresolved-slug entry,
   // mark that entry as resolved so it falls off the queue.
-  if (body.resolved_slug_key) {
-    await markNotFoundResolved(body.resolved_slug_key, 'redirect', inserted.id, user?.id ?? null);
+  if (body.resolved_path_key) {
+    await markNotFoundResolved(body.resolved_path_key, 'redirect', inserted.id, user?.id ?? null);
   }
 
   await logAdminActivity(request, {
     action: 'slug_redirect.created',
     resourceType: 'slug_redirect',
     resourceId: inserted.id,
-    summary: `created redirect for /${validation.normalizedSlug}`,
+    summary: `created redirect for ${validation.normalizedPath}`,
   });
 
   return NextResponse.json(inserted);

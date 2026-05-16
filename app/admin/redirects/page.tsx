@@ -5,8 +5,8 @@ import { getServerProfile } from '@/lib/supabase-server';
 import { RedirectsClient } from './RedirectsClient';
 
 export const metadata = {
-  title: 'Slug Redirects | Admin',
-  description: 'Manage product-page redirects and triage unresolved slugs.',
+  title: 'URL Redirects | Admin',
+  description: 'Manage site-wide URL redirects and triage unresolved paths.',
 };
 
 export default async function RedirectsPage() {
@@ -29,11 +29,12 @@ export default async function RedirectsPage() {
         <div className="mb-8">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-navy-800 sm:text-3xl">
             <Route className="h-8 w-8 text-brand-600" />
-            Slug Redirects
+            URL Redirects
           </h1>
           <p className="mt-1 text-slate-600">
-            Recover traffic to legacy product URLs (old WordPress slugs,
-            Meta Catalog links, etc.) and triage unresolved slugs.
+            Recover traffic to any legacy URL — product pages, services,
+            blog posts, projects, marketing landing pages — and triage
+            unresolved 404 paths.
           </p>
         </div>
 

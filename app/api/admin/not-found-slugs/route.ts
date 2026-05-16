@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/admin-redirects';
+import { logAdminActivity } from '@/lib/admin-audit';
+import { getServerUser } from '@/lib/supabase-server';
+import { normalizePath } from '@/lib/slug-redirects';
+import { requireAdmin, markNotFoundResolved } from '@/lib/admin-redirects';
 
 /**
  * GET /api/admin/not-found-slugs
  *
- * Lists slug misses logged from app/product/[slug]/page.tsx. By default
- * returns only unresolved, human-driven hits (the actionable queue).
+ * Lists 404 misses logged by app/not-found.tsx. By default returns only
+ * unresolved, human-driven hits (the actionable queue).
  *
  * Query params:
  *   includeResolved=true  – include rows already converted to a redirect
@@ -29,7 +32,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('not_found_slugs')
     .select(
-      'slug, hits, is_bot, first_seen, last_seen, last_referrer, last_user_agent, resolved, resolved_at, resolution_type, resolution_redirect_id',
+      'path, hits, is_bot, first_seen, last_seen, last_referrer, last_user_agent, resolved, resolved_at, resolution_type, resolution_redirect_id',
     )
     .order('last_seen', { ascending: false })
     .limit(limit);
@@ -42,5 +45,54 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ slugs: data ?? [] });
+  return NextResponse.json({ paths: data ?? [] });
+}
+
+/**
+ * PATCH /api/admin/not-found-slugs
+ * Admin actions on a single unresolved path. Currently supported:
+ *
+ *   { path: '/services/old-name', action: 'ignore' }
+ *     → mark as junk/spam so it leaves the queue without creating a
+ *       redirect.
+ *
+ * (The 'redirect' resolution path is handled by POST /api/admin/redirects
+ *  with `resolved_path_key` set — that flow creates the redirect row AND
+ *  marks the not_found_slug as resolved in a single request.)
+ *
+ * The path lives in the JSON body rather than as a URL segment because
+ * full paths contain '/' which Next.js / Vercel routing rejects in
+ * dynamic segments even when URL-encoded.
+ */
+export async function PATCH(request: NextRequest) {
+  const unauth = await requireAdmin();
+  if (unauth) return unauth;
+
+  const body = (await request.json().catch(() => ({}))) as {
+    path?: string;
+    action?: string;
+  };
+
+  const path = normalizePath(body.path ?? '');
+  if (!path) {
+    return NextResponse.json({ error: 'path is required' }, { status: 400 });
+  }
+  if (body.action !== 'ignore') {
+    return NextResponse.json(
+      { error: "Supported actions: 'ignore'" },
+      { status: 400 },
+    );
+  }
+
+  const { user } = await getServerUser();
+  await markNotFoundResolved(path, 'ignored', null, user?.id ?? null);
+
+  await logAdminActivity(request, {
+    action: 'slug_redirect.miss_ignored',
+    resourceType: 'not_found_slug',
+    resourceId: path,
+    summary: `ignored unresolved path ${path}`,
+  });
+
+  return NextResponse.json({ ok: true });
 }

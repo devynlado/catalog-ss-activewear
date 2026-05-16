@@ -8,15 +8,15 @@ import { UnresolvedSlugsTable } from './UnresolvedSlugsTable';
 import { HistoryTable } from './HistoryTable';
 import { RedirectFormModal } from './RedirectFormModal';
 import type { PickedProduct } from './ProductPicker';
-import type { RedirectRow, NotFoundSlugRow, HistoryRow } from './types';
+import type { RedirectRow, NotFoundPathRow, HistoryRow } from './types';
 
 type Tab = 'redirects' | 'unresolved' | 'history';
 
 /**
- * Top-level admin UI for the slug-redirect system.
+ * Top-level admin UI for the URL-redirect system.
  *
  * Owns all three tabs' data, the create/edit modal state, and the
- * coordination between resolving an unresolved-slug row → opening the
+ * coordination between resolving an unresolved-path row → opening the
  * modal pre-filled → marking the queue entry resolved on save.
  */
 export function RedirectsClient() {
@@ -25,7 +25,7 @@ export function RedirectsClient() {
   const [redirects, setRedirects] = useState<RedirectRow[]>([]);
   const [redirectsLoading, setRedirectsLoading] = useState(true);
 
-  const [unresolved, setUnresolved] = useState<NotFoundSlugRow[]>([]);
+  const [unresolved, setUnresolved] = useState<NotFoundPathRow[]>([]);
   const [unresolvedLoading, setUnresolvedLoading] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
   const [showBots, setShowBots] = useState(false);
@@ -35,9 +35,9 @@ export function RedirectsClient() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<RedirectRow | null>(null);
-  const [presetSlug, setPresetSlug] = useState<string | null>(null);
+  const [presetPath, setPresetPath] = useState<string | null>(null);
   const [presetProduct, setPresetProduct] = useState<PickedProduct | null>(null);
-  const [resolvedSlugKey, setResolvedSlugKey] = useState<string | null>(null);
+  const [resolvedPathKey, setResolvedPathKey] = useState<string | null>(null);
 
   const fetchRedirects = useCallback(async () => {
     setRedirectsLoading(true);
@@ -61,7 +61,7 @@ export function RedirectsClient() {
       const qs = params.toString();
       const res = await fetch(`/api/admin/not-found-slugs${qs ? `?${qs}` : ''}`);
       const data = await res.json().catch(() => ({}));
-      setUnresolved((data.slugs ?? []) as NotFoundSlugRow[]);
+      setUnresolved((data.paths ?? []) as NotFoundPathRow[]);
     } catch {
       setUnresolved([]);
     } finally {
@@ -103,25 +103,25 @@ export function RedirectsClient() {
 
   function openCreate() {
     setEditing(null);
-    setPresetSlug(null);
+    setPresetPath(null);
     setPresetProduct(null);
-    setResolvedSlugKey(null);
+    setResolvedPathKey(null);
     setModalOpen(true);
   }
 
   function openEdit(row: RedirectRow) {
     setEditing(row);
-    setPresetSlug(null);
+    setPresetPath(null);
     setPresetProduct(null);
-    setResolvedSlugKey(null);
+    setResolvedPathKey(null);
     setModalOpen(true);
   }
 
-  function openCreateForSlug(slug: string, product?: PickedProduct | null) {
+  function openCreateForPath(path: string, product?: PickedProduct | null) {
     setEditing(null);
-    setPresetSlug(slug);
+    setPresetPath(path);
     setPresetProduct(product ?? null);
-    setResolvedSlugKey(slug);
+    setResolvedPathKey(path);
     setModalOpen(true);
   }
 
@@ -142,7 +142,7 @@ export function RedirectsClient() {
             active={tab === 'unresolved'}
             onClick={() => setTab('unresolved')}
             icon={<Inbox className="h-4 w-4" />}
-            label="Unresolved Slugs"
+            label="Unresolved Paths"
             count={unresolvedCount}
             highlight={unresolvedCount > 0}
           />
@@ -175,7 +175,7 @@ export function RedirectsClient() {
           showBots={showBots}
           onToggleShowResolved={setShowResolved}
           onToggleShowBots={setShowBots}
-          onCreateFor={openCreateForSlug}
+          onCreateFor={openCreateForPath}
           onChanged={handleSaved}
         />
       )}
@@ -186,9 +186,9 @@ export function RedirectsClient() {
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
         editing={editing}
-        presetFromSlug={presetSlug}
+        presetFromPath={presetPath}
         presetProduct={presetProduct}
-        resolvedSlugKey={resolvedSlugKey}
+        resolvedPathKey={resolvedPathKey}
       />
     </div>
   );
