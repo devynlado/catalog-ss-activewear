@@ -69,18 +69,3 @@ export interface HistoryRow {
   changed_by: string | null;
   changed_by_name: string | null;
 }
-
-/**
- * Derive a coarse "section" label from a site-relative path. Used by
- * the filter chips on the Active Redirects and Unresolved Paths tabs so
- * admins can scan e.g. "all the /services/* misses" at a glance.
- *
- * Returns the first non-empty path segment, or `'root'` for `/` and
- * `'other'` for anything that doesn't normalize cleanly.
- */
-export function derivePathSection(path: string): string {
-  if (!path) return 'other';
-  const parts = path.split('/').filter(Boolean);
-  if (parts.length === 0) return 'root';
-  return parts[0].toLowerCase();
-}
