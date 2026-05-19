@@ -2,8 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { logAdminActivity } from '@/lib/admin-audit';
 import { getServerUser } from '@/lib/supabase-server';
-import { normalizePath } from '@/lib/slug-redirects';
+import { isBlocklistedPath, normalizePath } from '@/lib/slug-redirects';
 import { requireAdmin, markNotFoundResolved } from '@/lib/admin-redirects';
+
+interface NotFoundPathDbRow {
+  path: string;
+  hits: number;
+  is_bot: boolean;
+  first_seen: string;
+  last_seen: string;
+  last_referrer: string | null;
+  last_user_agent: string | null;
+  resolved: boolean;
+  resolved_at: string | null;
+  resolution_type: string | null;
+  resolution_redirect_id: string | null;
+}
 
 /**
  * GET /api/admin/not-found-slugs
@@ -45,7 +59,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ paths: data ?? [] });
+  // Filter at read time so historical rows for paths that are now
+  // blocklisted (admin/dashboard/auth/etc.) disappear from the queue
+  // without needing a destructive DB cleanup. New writes are already
+  // blocked by the same predicate in lib/slug-redirects.ts::logNotFoundSlug,
+  // so this filter only matters until the existing pollution ages out.
+  const rows = ((data ?? []) as NotFoundPathDbRow[]).filter(
+    (r) => !isBlocklistedPath(r.path),
+  );
+
+  return NextResponse.json({ paths: rows });
 }
 
 /**
