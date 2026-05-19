@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
-import { derivePathSection, type RedirectRow } from './types';
+import type { RedirectRow } from './types';
 
 interface RedirectsTableProps {
   rows: RedirectRow[];
@@ -21,37 +21,20 @@ interface RedirectsTableProps {
 }
 
 const PAGE_SIZE = 25;
-const ALL_SECTIONS = '__all__';
 
 /**
  * "Active Redirects" tab content. Displays every redirect (active and
- * inactive), with section-based filter chips, inline search, and
- * per-row actions: toggle active, edit, delete. Paginated client-side
- * (PAGE_SIZE per page) so the list stays scannable as it grows.
+ * inactive), with inline search and per-row actions: toggle active,
+ * edit, delete. Paginated client-side (PAGE_SIZE per page) so the list
+ * stays scannable as it grows.
  */
 export function RedirectsTable({ rows, loading, onEdit, onChanged }: RedirectsTableProps) {
   const [search, setSearch] = useState('');
-  const [section, setSection] = useState<string>(ALL_SECTIONS);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  // Build the chip list from the actual data so the UI grows with the
-  // catalog (a "/services/*" chip only appears once a services redirect
-  // exists). Counts are computed off the full row set.
-  const sectionCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of rows) {
-      const k = derivePathSection(r.from_path);
-      counts.set(k, (counts.get(k) ?? 0) + 1);
-    }
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-  }, [rows]);
-
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (section !== ALL_SECTIONS && derivePathSection(r.from_path) !== section) {
-        return false;
-      }
       if (!search.trim()) return true;
       const q = search.trim().toLowerCase();
       return (
@@ -62,16 +45,15 @@ export function RedirectsTable({ rows, loading, onEdit, onChanged }: RedirectsTa
         (r.notes ?? '').toLowerCase().includes(q)
       );
     });
-  }, [rows, search, section]);
+  }, [rows, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
-  // Reset to first page when the user types in the search box or
-  // switches sections — otherwise typing/clicking while on page 5
-  // produces a confusing empty view.
+  // Reset to first page when the user types in the search box —
+  // otherwise typing while on page 5 produces a confusing empty view.
   useEffect(() => {
     setPage(1);
-  }, [search, section]);
+  }, [search]);
 
   // Clamp page if the underlying data shrinks (e.g. row deleted, filter
   // narrowed) and we'd otherwise be stranded past the last page.
@@ -139,14 +121,6 @@ export function RedirectsTable({ rows, loading, onEdit, onChanged }: RedirectsTa
           />
         </div>
       </div>
-      {sectionCounts.length > 1 && (
-        <SectionChips
-          counts={sectionCounts}
-          totalCount={rows.length}
-          current={section}
-          onChange={setSection}
-        />
-      )}
 
       {loading ? (
         <div className="rounded-xl border border-stone-200 bg-white p-12 text-center text-sm text-slate-500">
@@ -268,79 +242,6 @@ export function RedirectsTable({ rows, loading, onEdit, onChanged }: RedirectsTa
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Filter chips driven by the first path segment of `from_path`.
- *
- * The chip set is fully data-driven: a `/services/*` chip appears only
- * once a services redirect exists, an `/lp/*` chip appears only once a
- * landing-page redirect exists, etc. Avoids hard-coding a fixed taxonomy
- * the catalog will outgrow.
- */
-function SectionChips({
-  counts,
-  totalCount,
-  current,
-  onChange,
-}: {
-  counts: [string, number][];
-  totalCount: number;
-  current: string;
-  onChange: (next: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Chip
-        active={current === ALL_SECTIONS}
-        onClick={() => onChange(ALL_SECTIONS)}
-        label="All"
-        count={totalCount}
-      />
-      {counts.map(([sec, n]) => (
-        <Chip
-          key={sec}
-          active={current === sec}
-          onClick={() => onChange(sec)}
-          label={`/${sec}/`}
-          count={n}
-        />
-      ))}
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  label,
-  count,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count: number;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-        active
-          ? 'border-brand-500 bg-brand-50 text-brand-700'
-          : 'border-stone-200 bg-white text-slate-600 hover:border-stone-300 hover:bg-stone-50'
-      }`}
-    >
-      <span className={active ? '' : 'font-mono'}>{label}</span>
-      <span
-        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-          active ? 'bg-brand-100 text-brand-700' : 'bg-stone-100 text-slate-500'
-        }`}
-      >
-        {count}
-      </span>
-    </button>
   );
 }
 

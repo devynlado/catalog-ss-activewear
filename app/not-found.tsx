@@ -39,6 +39,7 @@ export default async function NotFound() {
 
   if (pathname) {
     // 1) Try the redirect table first. A hit short-circuits the 404 UI.
+    //    Runs even for prefetch / verify probes so redirects work for both.
     const resolved = await lookupRedirect(pathname);
     if (resolved) {
       const target = buildRedirectUrl(resolved.url, search);
@@ -51,12 +52,32 @@ export default async function NotFound() {
       }
     }
 
-    // 2) No redirect. Log the miss to the unresolved-slugs queue
-    // (fire-and-forget — never blocks the response and never throws).
-    void logNotFoundSlug(pathname, {
-      userAgent: hdrs.get('user-agent'),
-      referrer: hdrs.get('referer'),
-    });
+    // 2) Decide whether this 404 represents a real human-driven miss.
+    //
+    //    - Next.js prefetches every <Link> on the page server-side. If the
+    //      product cache is cold or the SS Activewear API stutters during
+    //      that prefetch, `getProduct` momentarily returns null and we end
+    //      up here. The real user navigation a second later succeeds, but
+    //      a row gets logged for a URL that resolves fine. The
+    //      `Next-Router-Prefetch: 1` header is set ONLY for those
+    //      background prefetches (not for real client navigations), so it
+    //      is the cleanest signal to skip.
+    //
+    //    - The admin `Unresolved Paths` API verifies each queued row by
+    //      probing the path with `x-internal-verify: 1`. We must not log
+    //      those probes (would cause `hits` to climb every time an admin
+    //      opens the queue) and must not show them as 200 either if the
+    //      route really is missing.
+    const isPrefetch = hdrs.get('next-router-prefetch') === '1';
+    const isInternalVerify = hdrs.get('x-internal-verify') === '1';
+
+    if (!isPrefetch && !isInternalVerify) {
+      // Fire-and-forget; never blocks the response and never throws.
+      void logNotFoundSlug(pathname, {
+        userAgent: hdrs.get('user-agent'),
+        referrer: hdrs.get('referer'),
+      });
+    }
   }
 
   // 3) Standard 404 UI.

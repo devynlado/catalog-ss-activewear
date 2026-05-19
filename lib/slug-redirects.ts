@@ -158,26 +158,78 @@ export function isBlocklistedPath(path: string): boolean {
   if (!path) return true;
   const p = path.toLowerCase();
 
-  // Filename-extension probes for stacks we don't run.
-  if (/\.(php|aspx?|jsp|cgi|pl|cfm|exe|sql|bak|env|ini|conf|yml|yaml|log|swp)(\/|$|\?)/.test(p)) {
+  // 1) Script-engine extensions for stacks we don't run.
+  //
+  //    The boundary class `([.\-~/?]|$)` is what catches both clean and
+  //    compound forms in a single pass:
+  //
+  //      /foo.php              ← legacy probe
+  //      /foo.php.txt          ← "saved-as-text" backup probe
+  //      /foo.php.old          ← rotated backup
+  //      /foo.php-dist         ← distribution template probe
+  //      /foo.php~             ← editor backup
+  //      /foo.php/bar          ← path-confusion probe
+  //      /foo.php?x=y          ← query-bearing probe
+  //
+  //    It does NOT match `/php-developer` or `/awesome.phps` because in
+  //    both of those the character right after `.php` is a letter, which
+  //    is excluded from the boundary class. Same logic for the others.
+  if (/\.(php\d?|aspx?|jsp|cgi|cfm|sh)([.\-~/?]|$)/.test(p)) return true;
+
+  // 2) Backup / editor-temp suffixes at the end of a segment or path.
+  //    Matches `/foo.bak`, `/foo.old`, `/database.sql.bak`, etc. We deliberately
+  //    require the leading dot so `/cookbook` or `/blog/old-news` don't match.
+  if (/\.(bak|old|orig|save|backup|swp|swo)([/?]|$)/.test(p)) return true;
+  // Emacs/vim-style trailing-tilde backups (`/index~`).
+  if (/~(\/|$|\?)/.test(p)) return true;
+
+  // 3) DB dumps and credential-bearing exfil targets.
+  if (/\.(sql|sqlite|db|dump)([./?]|$)/.test(p)) return true;
+
+  // 4) Sensitive dotfile / dotdir paths. The optional trailing `[./?]` lets
+  //    `.env.local`, `.env.production`, `.git/config`, etc. all match.
+  if (/(^|\/)\.(env|git|aws|ssh|htaccess|htpasswd|svn|hg|ds_store)([./?]|$)/.test(p)) {
     return true;
   }
 
-  // Sensitive dotfile / dotdir paths.
-  if (/(^|\/)\.(git|env|aws|ssh|htaccess|htpasswd|svn|hg|DS_Store)/.test(p)) {
-    return true;
-  }
-
-  // CMS / admin-panel scans for software we don't run.
+  // 5) CMS / panel scans + known-vulnerable bundled libraries.
+  //
+  //    Every entry below targets software we don't ship. If a scanner is
+  //    asking for one of these paths, it's fingerprinting for a CVE, not a
+  //    customer following a broken link. Pure substring match is sufficient
+  //    because these tokens never appear in clean Next.js URLs.
   const junkSubstrings = [
+    // WordPress
     'wp-admin', 'wp-content', 'wp-includes', 'wp-login',
-    'wp-config', 'xmlrpc', 'phpmyadmin', 'pma/',
-    'administrator/', 'wp-json', 'mysql', 'cpanel',
-    'webmail', 'roundcube', 'phpinfo',
+    'wp-config', 'xmlrpc', 'wp-json',
+    // Joomla / generic CMS
+    'administrator/', 'configuration.php',
+    // DB / hosting panels
+    'phpmyadmin', 'pma/', 'mysql', 'cpanel', 'webmail', 'roundcube',
+    'phpinfo',
+    // Vulnerability fingerprints for libraries scanners look for.
+    // jquery.filer = CVE-2014-3526 (and similar) upload exploit.
+    // fileman / roxyfileman / elfinder / kcfinder = the classic web-based
+    //   file-manager families that ship with countless PHP CMSes and have
+    //   well-known RCE/upload CVEs (CVE-2018-20525, CVE-2019-11447, etc.).
+    //   Bare `fileman` catches `/fileman/`, `roxyfileman`, `responsivefilemanager`.
+    'jquery.filer', 'fckeditor', 'ckfinder', 'tinymce/plugins',
+    'fileman', 'elfinder', 'kcfinder', 'tinyfilemanager',
+    // PHP-stack directory conventions that don't exist on Next.js.
+    //   `/vendor/`     = composer dependency dir (Laravel, Symfony, …)
+    //   `/backend/`    = Joomla / CodeIgniter convention
+    //   `/public/`     = framework root that scanners misprobe — files in
+    //                    Next.js `/public` are flattened at the URL root,
+    //                    so `/public/anything` is never a real URL here.
+    '/vendor/', '/backend/', '/public/',
+    // RCE / shell-upload probe patterns.
+    'eval-stdin', '/cgi-bin/', '/shell.php',
+    // Specific config-file probes admins often leak.
+    '/config/database', '/config/config.',
   ];
   if (junkSubstrings.some((s) => p.includes(s))) return true;
 
-  // Next/Vercel internals and well-known files we shouldn't track.
+  // 6) Next/Vercel internals and well-known files we shouldn't track.
   if (
     p.startsWith('/_next/') ||
     p.startsWith('/_vercel/') ||
@@ -190,7 +242,7 @@ export function isBlocklistedPath(path: string): boolean {
     return true;
   }
 
-  // Authenticated-only or internal-only app surfaces. 404s inside
+  // 7) Authenticated-only or internal-only app surfaces. 404s inside
   // these are never customer-facing and never redirect candidates.
   //
   // Each entry is matched as either an exact path OR a path-prefix.

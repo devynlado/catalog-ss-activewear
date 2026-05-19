@@ -1,15 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, X, Plus, Bot, Sparkles, Search } from 'lucide-react';
+import { ExternalLink, X, Plus, Bot, Sparkles, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SuggestionsPanel } from './SuggestionsPanel';
 import type { PickedProduct } from './ProductPicker';
-import { derivePathSection, type NotFoundPathRow } from './types';
+import type { NotFoundPathRow } from './types';
 
 const PAGE_SIZE = 25;
-const ALL_SECTIONS = '__all__';
 
 interface UnresolvedSlugsTableProps {
   rows: NotFoundPathRow[];
@@ -47,23 +46,17 @@ export function UnresolvedSlugsTable({
   onChanged,
 }: UnresolvedSlugsTableProps) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [section, setSection] = useState<string>(ALL_SECTIONS);
   const [search, setSearch] = useState('');
-
-  const sectionCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of rows) {
-      const k = derivePathSection(r.path);
-      counts.set(k, (counts.get(k) ?? 0) + 1);
-    }
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-  }, [rows]);
+  // Selection lives in a Set so check/uncheck is O(1) regardless of how
+  // many rows are in the queue. Keys are the row `path` (which is the
+  // table's primary key and the API contract for ignore).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
-      if (section !== ALL_SECTIONS && derivePathSection(r.path) !== section) return false;
       if (!search.trim()) return true;
       const q = search.trim().toLowerCase();
       return (
@@ -72,7 +65,7 @@ export function UnresolvedSlugsTable({
         (r.last_user_agent ?? '').toLowerCase().includes(q)
       );
     });
-  }, [rows, section, search]);
+  }, [rows, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
@@ -80,16 +73,72 @@ export function UnresolvedSlugsTable({
   // on an empty page after a filter narrows the data.
   useEffect(() => {
     setPage(1);
-  }, [showResolved, showBots, section, search]);
+  }, [showResolved, showBots, search]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
+  // Drop selected rows that no longer exist (after a refresh / mutation)
+  // or that the current filter has hidden. Acting on hidden rows would be
+  // a UI footgun: the admin doesn't see them and would not know what they
+  // confirmed away.
+  useEffect(() => {
+    const visiblePaths = new Set(filteredRows.map((r) => r.path));
+    let changed = false;
+    const next = new Set<string>();
+    for (const p of selected) {
+      if (visiblePaths.has(p)) next.add(p);
+      else changed = true;
+    }
+    if (changed) setSelected(next);
+  }, [filteredRows, selected]);
+
   const startIndex = (page - 1) * PAGE_SIZE;
   const pagedRows = filteredRows.slice(startIndex, startIndex + PAGE_SIZE);
   const showingFrom = filteredRows.length === 0 ? 0 : startIndex + 1;
   const showingTo = Math.min(startIndex + PAGE_SIZE, filteredRows.length);
+
+  // Only count UNRESOLVED rows toward the master-checkbox state; rows that
+  // are already resolved get rendered with no checkbox at all (their
+  // action cell shows "handled"), so they can't be part of a bulk-ignore.
+  const selectablePagedRows = pagedRows.filter((r) => !r.resolved);
+  const pageSelectedCount = selectablePagedRows.filter((r) =>
+    selected.has(r.path),
+  ).length;
+  const allOnPageSelected =
+    selectablePagedRows.length > 0 &&
+    pageSelectedCount === selectablePagedRows.length;
+  const someOnPageSelected =
+    pageSelectedCount > 0 && pageSelectedCount < selectablePagedRows.length;
+
+  function toggleRow(path: string, next: boolean) {
+    setSelected((prev) => {
+      const copy = new Set(prev);
+      if (next) copy.add(path);
+      else copy.delete(path);
+      return copy;
+    });
+  }
+
+  function toggleAllOnPage(next: boolean) {
+    setSelected((prev) => {
+      const copy = new Set(prev);
+      for (const r of selectablePagedRows) {
+        if (next) copy.add(r.path);
+        else copy.delete(r.path);
+      }
+      return copy;
+    });
+  }
+
+  function selectAllFiltered() {
+    setSelected(new Set(filteredRows.filter((r) => !r.resolved).map((r) => r.path)));
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
 
   async function handleIgnore(path: string) {
     if (!confirm(`Mark "${path}" as junk and remove it from the queue?`)) return;
@@ -108,6 +157,33 @@ export function UnresolvedSlugsTable({
       }
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function handleBulkIgnore() {
+    const paths = Array.from(selected);
+    if (paths.length === 0) return;
+    const message =
+      paths.length === 1
+        ? `Mark 1 path as junk and remove it from the queue?`
+        : `Mark ${paths.length} paths as junk and remove them from the queue?`;
+    if (!confirm(message)) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch('/api/admin/not-found-slugs', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ paths, action: 'ignore' }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to ignore');
+      } else {
+        setSelected(new Set());
+        onChanged();
+      }
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -148,12 +224,14 @@ export function UnresolvedSlugsTable({
         />
       </div>
 
-      {sectionCounts.length > 1 && (
-        <SectionChips
-          counts={sectionCounts}
-          totalCount={rows.length}
-          current={section}
-          onChange={setSection}
+      {selected.size > 0 && (
+        <BulkActionBar
+          selectedCount={selected.size}
+          filteredCount={filteredRows.filter((r) => !r.resolved).length}
+          busy={bulkBusy}
+          onClear={clearSelection}
+          onSelectAllFiltered={selectAllFiltered}
+          onBulkIgnore={handleBulkIgnore}
         />
       )}
 
@@ -173,6 +251,20 @@ export function UnresolvedSlugsTable({
             <table className="w-full divide-y divide-stone-200 table-fixed">
               <thead className="bg-stone-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                 <tr>
+                  <th className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all on this page"
+                      className="h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+                      checked={allOnPageSelected}
+                      // `indeterminate` isn't a React prop; set imperatively via ref.
+                      ref={(el) => {
+                        if (el) el.indeterminate = someOnPageSelected;
+                      }}
+                      onChange={(e) => toggleAllOnPage(e.target.checked)}
+                      disabled={selectablePagedRows.length === 0}
+                    />
+                  </th>
                   <th className="w-auto px-4 py-3">Path</th>
                   <th className="w-16 px-4 py-3 text-right">Hits</th>
                   <th className="w-24 px-4 py-3 hidden md:table-cell">First seen</th>
@@ -189,7 +281,9 @@ export function UnresolvedSlugsTable({
                       key={row.path}
                       row={row}
                       isExpanded={isExpanded}
-                      busy={busy === row.path}
+                      busy={busy === row.path || bulkBusy}
+                      isSelected={selected.has(row.path)}
+                      onToggleSelected={(next) => toggleRow(row.path, next)}
                       onToggleSuggest={() =>
                         setExpandedPath(isExpanded ? null : row.path)
                       }
@@ -233,6 +327,8 @@ function FragmentRow({
   row,
   isExpanded,
   busy,
+  isSelected,
+  onToggleSelected,
   onToggleSuggest,
   onCreateFor,
   onIgnore,
@@ -240,6 +336,8 @@ function FragmentRow({
   row: NotFoundPathRow;
   isExpanded: boolean;
   busy: boolean;
+  isSelected: boolean;
+  onToggleSelected: (next: boolean) => void;
   onToggleSuggest: () => void;
   onCreateFor: (path: string, presetProduct?: PickedProduct | null) => void;
   onIgnore: () => void;
@@ -249,7 +347,23 @@ function FragmentRow({
 
   return (
     <>
-      <tr className={`hover:bg-stone-50 ${row.resolved ? 'opacity-60' : ''}`}>
+      <tr
+        className={`hover:bg-stone-50 ${row.resolved ? 'opacity-60' : ''} ${
+          isSelected ? 'bg-brand-50/40' : ''
+        }`}
+      >
+        <td className="px-3 py-3 align-top">
+          {!row.resolved ? (
+            <input
+              type="checkbox"
+              aria-label={`Select ${row.path}`}
+              className="h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500"
+              checked={isSelected}
+              onChange={(e) => onToggleSelected(e.target.checked)}
+              disabled={busy}
+            />
+          ) : null}
+        </td>
         <td className="px-4 py-3 align-top">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <code className="break-all rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs text-slate-800">
@@ -334,7 +448,7 @@ function FragmentRow({
       </tr>
       {isExpanded && !row.resolved && isProductPath && (
         <tr className="bg-stone-50/40">
-          <td colSpan={6} className="px-4 py-3">
+          <td colSpan={7} className="px-4 py-3">
             <SuggestionsPanel
               slug={productSlug}
               autoRun
@@ -347,68 +461,64 @@ function FragmentRow({
   );
 }
 
-function SectionChips({
-  counts,
-  totalCount,
-  current,
-  onChange,
+/**
+ * Sticky bar that appears whenever there's at least one selected path.
+ * Mirrors the GitHub / Gmail pattern: a single contextual surface that
+ * shows the count, lets the admin escape selection with one click, and
+ * exposes the bulk destructive action (Ignore selected). The "Select all
+ * N matching this filter" link only appears when the admin has filled the
+ * current page — that's the moment it stops being noise and starts being
+ * useful.
+ */
+function BulkActionBar({
+  selectedCount,
+  filteredCount,
+  busy,
+  onClear,
+  onSelectAllFiltered,
+  onBulkIgnore,
 }: {
-  counts: [string, number][];
-  totalCount: number;
-  current: string;
-  onChange: (next: string) => void;
+  selectedCount: number;
+  filteredCount: number;
+  busy: boolean;
+  onClear: () => void;
+  onSelectAllFiltered: () => void;
+  onBulkIgnore: () => void;
 }) {
+  const showSelectAll = selectedCount < filteredCount;
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Chip
-        active={current === ALL_SECTIONS}
-        onClick={() => onChange(ALL_SECTIONS)}
-        label="All"
-        count={totalCount}
-      />
-      {counts.map(([sec, n]) => (
-        <Chip
-          key={sec}
-          active={current === sec}
-          onClick={() => onChange(sec)}
-          label={`/${sec}/`}
-          count={n}
-        />
-      ))}
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  label,
-  count,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count: number;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-        active
-          ? 'border-brand-500 bg-brand-50 text-brand-700'
-          : 'border-stone-200 bg-white text-slate-600 hover:border-stone-300 hover:bg-stone-50'
-      }`}
-    >
-      <span className={active ? '' : 'font-mono'}>{label}</span>
-      <span
-        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-          active ? 'bg-brand-100 text-brand-700' : 'bg-stone-100 text-slate-500'
-        }`}
-      >
-        {count}
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm">
+      <span className="font-medium text-brand-800">
+        {selectedCount} {selectedCount === 1 ? 'path' : 'paths'} selected
       </span>
-    </button>
+      {showSelectAll && (
+        <button
+          type="button"
+          onClick={onSelectAllFiltered}
+          disabled={busy}
+          className="text-xs font-medium text-brand-700 underline-offset-2 hover:underline disabled:opacity-50"
+        >
+          Select all {filteredCount} matching this filter
+        </button>
+      )}
+      <div className="ml-auto flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={onClear} disabled={busy}>
+          Clear
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onBulkIgnore}
+          disabled={busy}
+          className="bg-red-600 text-white hover:bg-red-700"
+        >
+          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+          {busy
+            ? 'Ignoring…'
+            : `Ignore ${selectedCount === 1 ? 'selected' : `${selectedCount} selected`}`}
+        </Button>
+      </div>
+    </div>
   );
 }
 
