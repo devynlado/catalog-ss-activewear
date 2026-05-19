@@ -133,16 +133,26 @@ export function isBotUserAgent(userAgent: string | null | undefined): boolean {
 }
 
 /**
- * Path-based junk filter. Drops obvious attack/scan patterns BEFORE
- * they reach the unresolved-slugs queue.
+ * Path-based filter. Drops paths from the unresolved-queue that are
+ * never useful redirect candidates:
  *
- * Now that we log 404s for any URL (not just /product/...), the queue
- * sees scans for WordPress paths, env files, git internals, ASP/PHP
- * probes, etc. Without this filter the queue becomes unusable within a
- * day.
+ *   1. Attack/scan probes (PHP, ASP, WordPress paths, env files, etc.).
+ *   2. Next/Vercel internals and well-known files.
+ *   3. Authenticated-only / internal app surfaces. A 404 inside
+ *      /admin/*, /dashboard/*, /sales/*, /studio/* almost always means
+ *      "admin typed a bad URL" or "stale link to a deleted row" —
+ *      never a legacy URL we'd redirect from. Same applies to checkout
+ *      / account / auth-flow pages.
  *
- * Returns `true` if the path should be ignored entirely (do not log,
- * do not surface). False otherwise.
+ * What remains is the actionable bucket: 404s a real customer can hit
+ * on the public site (the "Product not found" and "Page not found"
+ * experiences). That's what the queue is designed to triage.
+ *
+ * This filter is applied at BOTH write time (don't log new blocklisted
+ * paths) AND read time (existing rows for now-blocklisted paths
+ * disappear from the admin UI without needing a destructive DB cleanup).
+ *
+ * Returns `true` if the path should be ignored entirely.
  */
 export function isBlocklistedPath(path: string): boolean {
   if (!path) return true;
@@ -174,9 +184,36 @@ export function isBlocklistedPath(path: string): boolean {
     p.startsWith('/.well-known/') ||
     p === '/favicon.ico' ||
     p === '/robots.txt' ||
-    p === '/sitemap.xml'
+    p === '/sitemap.xml' ||
+    p === '/manifest.json'
   ) {
     return true;
+  }
+
+  // Authenticated-only or internal-only app surfaces. 404s inside
+  // these are never customer-facing and never redirect candidates.
+  //
+  // Each entry is matched as either an exact path OR a path-prefix.
+  // We use `=== prefix` for the root entry (e.g. `/dashboard`) and
+  // `startsWith(prefix + '/')` for any nested route, which keeps the
+  // matcher from accidentally swallowing public paths that just happen
+  // to share a common prefix (e.g. a hypothetical `/login-help`).
+  const internalRoots = [
+    '/admin',         // admin tooling (auth-walled)
+    '/dashboard',     // customer dashboard (auth-walled)
+    '/sales',         // sales rep area (auth-walled)
+    '/studio',        // Sanity CMS (internal)
+    '/checkout',      // checkout flow (internal session state)
+    '/account',       // customer self-service (auth-walled)
+    '/cart',          // cart state
+    '/login',
+    '/signup',
+    '/logout',
+    '/forgot-password',
+    '/reset-password',
+  ];
+  for (const root of internalRoots) {
+    if (p === root || p.startsWith(root + '/')) return true;
   }
 
   return false;
