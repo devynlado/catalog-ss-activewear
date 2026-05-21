@@ -8,6 +8,7 @@ import { QuoteDrawer } from '@/components/quote/QuoteDrawer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { DecorationModal } from '@/components/cart/DecorationModal';
 import { ExitIntentPopup } from '@/components/quote/ExitIntentPopup';
+import { WishlistAuthBridge } from '@/components/wishlist/WishlistAuthBridge';
 import { useCartStore } from '@/lib/cart-store';
 
 // Routes that should not show the main header/footer
@@ -45,6 +46,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
         onClose={closeDecorationModal} 
       />
       <ExitIntentPopup />
+      <WishlistAuthBridge />
     </>
   );
 }

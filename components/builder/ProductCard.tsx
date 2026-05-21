@@ -11,6 +11,7 @@ import {
 } from '@/lib/la-1801gd-sample-price';
 import { formatPrice, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
+import { WishlistHeartButton } from '@/components/wishlist/WishlistHeartButton';
 
 /**
  * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
@@ -180,20 +181,25 @@ export function ProductCard({
           return null;
         })()}
 
-        {/* Quick Add Button - Subtle "+" in corner */}
-        {onQuickView && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onQuickView(product);
-            }}
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-md backdrop-blur-sm transition-all hover:bg-brand-500 hover:text-white hover:scale-110"
-            title="Quick add to quote"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        )}
+        {/* Corner actions: Quick Add (+) then Wishlist (heart), stacked
+            vertically so the corner stays compact whether one or both are
+            shown. */}
+        <div className="absolute right-3 top-3 flex flex-col gap-2">
+          {onQuickView && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onQuickView(product);
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-md backdrop-blur-sm transition-all hover:bg-brand-500 hover:text-white hover:scale-110"
+              title="Quick add to quote"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          )}
+          <WishlistHeartButton styleId={product.styleId} variant="card" />
+        </div>
       </div>
 
       {/* Content */}

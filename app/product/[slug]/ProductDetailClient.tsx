@@ -27,6 +27,7 @@ import {
   LA_1801GD_SAMPLE_PRICE_USD,
 } from '@/lib/la-1801gd-sample-price';
 import { ValuePropsStrip, SocialProofBanner, UseCaseCallouts, CuratedDescription, WhyThe1801GD, DecorationUpsell, BottomCTA } from '@/components/product/LA1801GDSections';
+import { WishlistHeartButton } from '@/components/wishlist/WishlistHeartButton';
 
 /**
  * Proxy Google Drive URLs through our image proxy to bypass CORS restrictions.
@@ -921,47 +922,55 @@ export function ProductDetailClient({ product, googleDiscount: initialDiscount, 
         {/* Product Info Card - Enhanced depth */}
         <div className="rounded-2xl border border-stone-200 bg-white p-4 lg:p-6 shadow-xl shadow-stone-300/40">
           {/* Header */}
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs lg:text-sm font-semibold uppercase tracking-wide text-brand-600">
-                {product.brandName}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-xs lg:text-sm font-semibold uppercase tracking-wide text-brand-600">
+                  {product.brandName}
+                </p>
+                {isLAApparelProduct && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-semibold text-green-700 uppercase tracking-wide">
+                    <ShieldCheck className="h-3 w-3" />
+                    Authorized Reseller
+                  </span>
+                )}
+              </div>
+              <h1 className="mt-1 lg:mt-2 text-xl lg:text-3xl font-bold text-slate-900">
+                {product.title || `${product.brandName} ${product.styleName}`}
+              </h1>
+              <p className="text-xs lg:text-sm text-slate-500 font-medium">
+                Style #{product.styleName}
               </p>
-              {isLAApparelProduct && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-semibold text-green-700 uppercase tracking-wide">
-                  <ShieldCheck className="h-3 w-3" />
-                  Authorized Reseller
-                </span>
+              {/* Review summary (clickable, scrolls to reviews) */}
+              {product.reviewCount != null && product.reviewCount > 0 && product.avgRating != null && (
+                <button
+                  onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-600 hover:text-brand-600 transition-colors"
+                >
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          'h-3.5 w-3.5',
+                          i < Math.round(product.avgRating!)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'fill-stone-200 text-stone-300'
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <span className="font-medium">{product.avgRating.toFixed(1)}</span>
+                  <span className="text-slate-400">({product.reviewCount} review{product.reviewCount !== 1 ? 's' : ''})</span>
+                </button>
               )}
             </div>
-            <h1 className="mt-1 lg:mt-2 text-xl lg:text-3xl font-bold text-slate-900">
-              {product.title || `${product.brandName} ${product.styleName}`}
-            </h1>
-            <p className="text-xs lg:text-sm text-slate-500 font-medium">
-              Style #{product.styleName}
-            </p>
-            {/* Review summary (clickable, scrolls to reviews) */}
-            {product.reviewCount != null && product.reviewCount > 0 && product.avgRating != null && (
-              <button
-                onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-600 hover:text-brand-600 transition-colors"
-              >
-                <div className="flex items-center gap-0.5">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star
-                      key={i}
-                      className={cn(
-                        'h-3.5 w-3.5',
-                        i < Math.round(product.avgRating!)
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'fill-stone-200 text-stone-300'
-                      )}
-                    />
-                  ))}
-                </div>
-                <span className="font-medium">{product.avgRating.toFixed(1)}</span>
-                <span className="text-slate-400">({product.reviewCount} review{product.reviewCount !== 1 ? 's' : ''})</span>
-              </button>
-            )}
+            <WishlistHeartButton
+              styleId={product.styleId}
+              variant="pdp"
+              showLabel
+              className="shrink-0 mt-1"
+            />
           </div>
 
           {/* Price Display - Clean and minimal */}

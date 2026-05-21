@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Package, LogOut, Mail, Phone, Building2, MessageCircle, Star, FileText, MessagesSquare, BookOpen } from 'lucide-react';
+import { Package, LogOut, Mail, Phone, Building2, MessageCircle, Star, FileText, MessagesSquare, BookOpen, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CustomerInfo } from '@/lib/order-session';
 
@@ -13,6 +13,7 @@ interface OrderSidebarProps {
 
 const NAV_ITEMS = [
   { href: '/orders', label: 'My Orders', icon: Package },
+  { href: '/wishlist', label: 'My Wishlist', icon: Heart },
   { href: '/orders/request-quote', label: 'Request Quote', icon: FileText },
   { href: '/orders/inquiries', label: 'My Inquiries', icon: MessagesSquare },
   { href: '/orders/reviews', label: 'Reviews', icon: Star },
