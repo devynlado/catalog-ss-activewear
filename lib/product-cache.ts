@@ -841,6 +841,98 @@ export async function getProductByStyleId(styleId: number): Promise<Product | nu
 }
 
 /**
+ * Bulk-fetch products by style_id. Used by the wishlist page to render N
+ * cards in a single round-trip instead of N×getProductByStyleId calls.
+ *
+ * Returns ONLY products that still exist in the cache. Style IDs that no
+ * longer resolve (deleted/orphaned) are silently dropped — callers compute
+ * "orphaned" status by diffing the requested IDs against the returned set.
+ *
+ * Note: this returns ALL products regardless of is_active / manually_hidden.
+ * The /wishlist page wants to show those rows greyed out with a "no longer
+ * available" tag, so we leave the filtering to the UI layer.
+ */
+export async function getProductsByStyleIds(
+  styleIds: number[]
+): Promise<Product[]> {
+  if (!styleIds || styleIds.length === 0) return [];
+
+  // Dedupe + drop non-finite values defensively.
+  const uniqueIds = Array.from(
+    new Set(styleIds.filter((id) => Number.isFinite(id)))
+  );
+  if (uniqueIds.length === 0) return [];
+
+  const supabase = createServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      style_id,
+      style_name,
+      slug,
+      brand_id,
+      brand_name,
+      title_raw,
+      title_optimized,
+      description_raw,
+      meta_description,
+      base_category,
+      product_type,
+      primary_image_url,
+      is_sustainable,
+      is_new,
+      is_popular,
+      popular_tier,
+      is_active,
+      manually_hidden,
+      color_count,
+      base_price,
+      supplier,
+      gender,
+      avg_rating,
+      review_count,
+      admin_note,
+      min_order_quantity,
+      product_colors (
+        id,
+        color_name,
+        color_code,
+        color_family,
+        swatch_image,
+        front_image,
+        back_image,
+        side_image,
+        on_model_front,
+        on_model_back,
+        on_model_side,
+        additional_images,
+        availability,
+        product_skus (
+          sku,
+          size_name,
+          size_code,
+          size_order,
+          retail_price,
+          sale_price,
+          gtin,
+          qty,
+          availability,
+          min_order_quantity
+        )
+      )
+    `)
+    .in('style_id', uniqueIds);
+
+  if (error || !data) {
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any[]).map((row) => transformProductWithSkus(row));
+}
+
+/**
  * Get a single product by slug (SEO-friendly URL)
  */
 export async function getProductBySlug(slug: string): Promise<Product | null> {

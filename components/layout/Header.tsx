@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingCart, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard, FileText } from 'lucide-react';
+import { Menu, X, ShoppingCart, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard, FileText, Heart } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useCartStore } from '@/lib/cart-store';
+import { useWishlistStore } from '@/lib/wishlist-store';
 import { cn } from '@/lib/utils';
 import { Brand } from '@/lib/types';
 import { getMainCategories } from '@/lib/category-taxonomy';
@@ -366,6 +367,7 @@ export function Header() {
   const pathname = usePathname();
   const { items, openDrawer, justAdded } = useCartStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const wishlistCount = useWishlistStore((s) => s.items.length);
 
   // Auto-focus mobile search input when opened
   useEffect(() => {
@@ -1242,6 +1244,22 @@ export function Header() {
               )}
               */}
 
+              <Link
+                href="/wishlist"
+                className="relative flex items-center justify-center rounded-2xl border border-stone-200 bg-white/70 p-2.5 text-slate-600 shadow-sm shadow-brand-500/5 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-stone-300 hover:text-red-500 hover:shadow-xl hover:shadow-red-500/10"
+                aria-label="Wishlist"
+              >
+                <Heart className={cn("h-5 w-5", wishlistCount > 0 && "fill-red-500 text-red-500")} />
+                {wishlistCount > 0 && (
+                  <span className={cn(
+                    "absolute -right-1.5 -top-1.5 flex items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 font-semibold text-white shadow-lg shadow-brand-500/30 ring-2 ring-white",
+                    wishlistCount > 99 ? "h-5 min-w-[1.25rem] px-1 text-[10px]" : "h-5 w-5 text-[11px]"
+                  )}>
+                    {wishlistCount > 99 ? '99+' : wishlistCount}
+                  </span>
+                )}
+              </Link>
+
               <button
                 onClick={openDrawer}
                 className={cn(
@@ -1284,6 +1302,23 @@ export function Header() {
                   <Search className="h-6 w-6" />
                 )}
               </button>
+
+              {/* Mobile Wishlist Icon */}
+              <Link
+                href="/wishlist"
+                className="relative rounded-2xl border border-stone-200 bg-white/70 p-2 text-slate-600 shadow-sm shadow-brand-500/5 backdrop-blur-sm transition-all duration-200 hover:text-red-500 hover:shadow-md"
+                aria-label="Wishlist"
+              >
+                <Heart className={cn("h-5 w-5", wishlistCount > 0 && "fill-red-500 text-red-500")} />
+                {wishlistCount > 0 && (
+                  <span className={cn(
+                    "absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 font-semibold text-white shadow-lg shadow-brand-500/30 ring-2 ring-white",
+                    wishlistCount > 99 ? "h-4 min-w-[1rem] px-1 text-[9px]" : "h-4 w-4 text-[10px]"
+                  )}>
+                    {wishlistCount > 99 ? '99+' : wishlistCount}
+                  </span>
+                )}
+              </Link>
 
               {/* Mobile Cart Icon */}
               <button
