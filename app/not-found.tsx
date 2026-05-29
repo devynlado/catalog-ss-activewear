@@ -52,26 +52,29 @@ export default async function NotFound() {
       }
     }
 
-    // 2) Decide whether this 404 represents a real human-driven miss.
+    // 2) Log this 404 to the unresolved-paths queue.
     //
-    //    - Next.js prefetches every <Link> on the page server-side. If the
-    //      product cache is cold or the SS Activewear API stutters during
-    //      that prefetch, `getProduct` momentarily returns null and we end
-    //      up here. The real user navigation a second later succeeds, but
-    //      a row gets logged for a URL that resolves fine. The
-    //      `Next-Router-Prefetch: 1` header is set ONLY for those
-    //      background prefetches (not for real client navigations), so it
-    //      is the cleanest signal to skip.
+    //    We DO log prefetches (`Next-Router-Prefetch: 1`). Skipping them
+    //    used to seem prudent — a cold product cache could briefly make a
+    //    valid URL look like a 404 during a background prefetch — but in
+    //    practice it silently drops most real signal: Next.js prefetches
+    //    every visible <Link> and then caches the response client-side
+    //    via the Router Cache, so when the customer actually clicks the
+    //    server never sees that click. The earlier "skip prefetches"
+    //    behaviour meant dead URLs linked from /catalog, related-products
+    //    grids, sitemaps, etc. were never logged at all. False positives
+    //    from transient cache misses are now handled at READ time by
+    //    `verifyStill404` in /api/admin/not-found-slugs, which probes
+    //    each row before showing it to the admin and hides any that now
+    //    return 200/3xx. That's the right layer for that check.
     //
-    //    - The admin `Unresolved Paths` API verifies each queued row by
-    //      probing the path with `x-internal-verify: 1`. We must not log
-    //      those probes (would cause `hits` to climb every time an admin
-    //      opens the queue) and must not show them as 200 either if the
-    //      route really is missing.
-    const isPrefetch = hdrs.get('next-router-prefetch') === '1';
+    //    We STILL skip `x-internal-verify` requests — that header is
+    //    only set by `verifyStill404` itself. Logging those would create
+    //    a feedback loop where every admin page-load bumped every row's
+    //    `hits` counter.
     const isInternalVerify = hdrs.get('x-internal-verify') === '1';
 
-    if (!isPrefetch && !isInternalVerify) {
+    if (!isInternalVerify) {
       // Fire-and-forget; never blocks the response and never throws.
       void logNotFoundSlug(pathname, {
         userAgent: hdrs.get('user-agent'),

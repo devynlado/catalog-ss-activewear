@@ -86,7 +86,7 @@ export default async function SalesFunnelPage({ searchParams }: Props) {
 
         <section className="mb-12">
           <h2 className="mb-4 text-lg font-semibold text-navy-800">
-            Top 30 Product Pages by Visitor Source
+            Top 50 Product Pages by Visitor Source
           </h2>
           <p className="mb-4 text-sm text-slate-600">
             Most visited product pages with traffic broken down by source: Google Ads, Organic Search, Organic Social, Organic Shopping, Referral, Cross-network, and Other.
