@@ -7,7 +7,7 @@ import {
 
 export type { ProductVisitorRow };
 
-/** GET: Top 30 most visited product pages with visitor origins by channel. Admin-only. */
+/** GET: Top 50 most visited product pages with visitor origins by channel. Admin-only. */
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   if (propertyId && hasCredentials) {
     try {
-      const pages = await fetchProductPageVisitorsByChannel(propertyId, 30, 30, startDate, endDate);
+      const pages = await fetchProductPageVisitorsByChannel(propertyId, 50, 30, startDate, endDate);
       return NextResponse.json({ pages, source: 'ga4' });
     } catch (err) {
       console.error('[Analytics] GA4 product visitors fetch failed:', err);
