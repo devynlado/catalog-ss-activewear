@@ -23,6 +23,10 @@ export function RedirectsClient() {
   const [tab, setTab] = useState<Tab>('redirects');
 
   const [redirects, setRedirects] = useState<RedirectRow[]>([]);
+  // True total from the server (count of matching rows in slug_redirects).
+  // Tracked separately from `redirects.length` so the tab counter stays
+  // accurate even if the row payload is capped by the API's row limit.
+  const [redirectsTotal, setRedirectsTotal] = useState(0);
   const [redirectsLoading, setRedirectsLoading] = useState(true);
 
   const [unresolved, setUnresolved] = useState<NotFoundPathRow[]>([]);
@@ -44,9 +48,16 @@ export function RedirectsClient() {
     try {
       const res = await fetch('/api/admin/redirects?includeInactive=true');
       const data = await res.json().catch(() => ({}));
-      setRedirects((data.redirects ?? []) as RedirectRow[]);
+      const rows = (data.redirects ?? []) as RedirectRow[];
+      setRedirects(rows);
+      // Fall back to the row count only if the server didn't send a total
+      // (older deploys, network truncation). Both prevent a stuck counter.
+      setRedirectsTotal(
+        typeof data.total === 'number' ? data.total : rows.length,
+      );
     } catch {
       setRedirects([]);
+      setRedirectsTotal(0);
     } finally {
       setRedirectsLoading(false);
     }
@@ -136,7 +147,7 @@ export function RedirectsClient() {
             onClick={() => setTab('redirects')}
             icon={<Route className="h-4 w-4" />}
             label="Active Redirects"
-            count={redirects.length}
+            count={redirectsTotal}
           />
           <TabButton
             active={tab === 'unresolved'}

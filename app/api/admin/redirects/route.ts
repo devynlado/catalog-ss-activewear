@@ -59,10 +59,21 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('slug_redirects')
     .select(
-      'id, from_path, target_type, to_product_id, to_url, status_code, promote_to_301_at, is_active, notes, hits, last_hit_at, created_at, updated_at, created_by'
+      'id, from_path, target_type, to_product_id, to_url, status_code, promote_to_301_at, is_active, notes, hits, last_hit_at, created_at, updated_at, created_by',
+      // `count: 'exact'` makes Postgres return the TRUE total of rows
+      // matching the WHERE clauses (independent of the row limit below).
+      // That's what powers the tab-badge counter on the client — using
+      // `rows.length` instead would cap at whatever .limit() we set.
+      { count: 'exact' },
     )
     .order('updated_at', { ascending: false })
-    .limit(500);
+    // Hard ceiling on rows actually returned. The table paginates these
+    // client-side, so this is just "how much can we load in one go"
+    // before we'd need real server-side pagination. 5000 covers any
+    // realistic redirect table (we're around ~500 today). The badge
+    // counter uses `count` above, so the displayed total stays correct
+    // even if the row data is capped here.
+    .limit(5000);
 
   if (!includeInactive) {
     query = query.eq('is_active', true);
@@ -73,7 +84,7 @@ export async function GET(request: NextRequest) {
     query = query.or(`from_path.ilike.%${safe}%,to_url.ilike.%${safe}%,notes.ilike.%${safe}%`);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -100,7 +111,13 @@ export async function GET(request: NextRequest) {
     target_product: r.to_product_id != null ? productMap.get(r.to_product_id) ?? null : null,
   }));
 
-  return NextResponse.json({ redirects: enriched });
+  // `total` is the count BEFORE the row limit, so the client tab counter
+  // reflects the true number of matching redirects in the DB. We fall back
+  // to `enriched.length` only if Supabase couldn't compute the count (rare).
+  return NextResponse.json({
+    redirects: enriched,
+    total: typeof count === 'number' ? count : enriched.length,
+  });
 }
 
 interface CreateRedirectBody {
