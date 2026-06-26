@@ -712,36 +712,94 @@ export async function syncInventoryOnly(offset?: number, limit?: number): Promis
     
     const styleIds = products.map(p => p.style_id);
     console.log(`[Sync] Syncing inventory for ${styleIds.length} products`);
-    
+
     // Fetch all SKU data from SS API
     const batches: number[][] = [];
     for (let i = 0; i < styleIds.length; i += BATCH_SIZE) {
       batches.push(styleIds.slice(i, i + BATCH_SIZE));
     }
-    
-    const allSkuUpdates: { sku: string; qty: number; availability: string }[] = [];
-    const colorAvailability = new Map<string, boolean>();
+
+    // Stamp a single timestamp for the whole run so all rows touched by this
+    // invocation share an identical `last_inventory_sync`. Makes it easy to
+    // tell which cron run last touched any given row.
+    const now = new Date().toISOString();
+
+    // Build FULL upsert payloads from the SS API response (not sparse
+    // partial-update payloads like the old per-row `.update()` loop).
+    //
+    // Why full payloads instead of sparse ones:
+    // - PostgREST's upsert => `INSERT ... ON CONFLICT (sku) DO UPDATE SET ...`.
+    //   With a sparse payload, a SKU that hasn't been imported yet by the
+    //   weekly `syncFullCatalog` would attempt to INSERT and fail NOT NULL on
+    //   style_id / color_id / color_name / etc., rolling back the entire 1000-
+    //   row batch. With a full payload sourced from the SS API response we
+    //   already have those fields in hand, so the insert path succeeds and
+    //   the cron now also covers the "new SKU appeared mid-week" case.
+    // - On the UPDATE branch (the common case) the extra columns just
+    //   overwrite themselves with identical values — Supabase / Postgres do
+    //   not skip the SET, but the row content is unchanged. None of these
+    //   columns are admin-editable (confirmed against /admin/products UI),
+    //   so there's no clobber risk.
+    type SkuUpsertRow = {
+      sku: string;
+      style_id: number;
+      color_id: string;
+      color_name: string;
+      color_code: string;
+      size_name: string;
+      size_code: string;
+      size_order: string;
+      qty: number;
+      availability: 'in_stock' | 'out_of_stock';
+      last_inventory_sync: string;
+    };
+    const allSkuUpdates: SkuUpsertRow[] = [];
+
+    type ColorAggregate = {
+      id: string;
+      style_id: number;
+      color_name: string;
+      color_code: string;
+      hasStock: boolean;
+    };
+    const colorAggregates = new Map<string, ColorAggregate>();
 
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex += MAX_PARALLEL_BATCHES) {
       const batchGroup = batches.slice(batchIndex, batchIndex + MAX_PARALLEL_BATCHES);
-      
+
       await Promise.all(batchGroup.map(async (batch) => {
         try {
           const skuData = await fetchSkuData(batch);
-          
+
           for (const sku of skuData) {
+            const colorId = `${sku.styleID}-${sku.colorCode}`;
+            const inStock = (sku.qty || 0) > 0;
+
             allSkuUpdates.push({
               sku: sku.sku,
+              style_id: sku.styleID,
+              color_id: colorId,
+              color_name: sku.colorName,
+              color_code: sku.colorCode,
+              size_name: sku.sizeName,
+              size_code: sku.sizeCode,
+              size_order: sku.sizeOrder,
               qty: sku.qty || 0,
-              availability: (sku.qty || 0) > 0 ? 'in_stock' : 'out_of_stock',
+              availability: inStock ? 'in_stock' : 'out_of_stock',
+              last_inventory_sync: now,
             });
-            
-            const colorId = `${sku.styleID}-${sku.colorCode}`;
-            if (!colorAvailability.has(colorId)) {
-              colorAvailability.set(colorId, false);
-            }
-            if ((sku.qty || 0) > 0) {
-              colorAvailability.set(colorId, true);
+
+            const existing = colorAggregates.get(colorId);
+            if (!existing) {
+              colorAggregates.set(colorId, {
+                id: colorId,
+                style_id: sku.styleID,
+                color_name: sku.colorName,
+                color_code: sku.colorCode,
+                hasStock: inStock,
+              });
+            } else if (inStock) {
+              existing.hasStock = true;
             }
           }
         } catch (error) {
@@ -752,37 +810,59 @@ export async function syncInventoryOnly(offset?: number, limit?: number): Promis
       }));
     }
 
-    // Batch update Supabase in parallel chunks
-    console.log(`[Sync] Updating ${allSkuUpdates.length} SKUs and ${colorAvailability.size} colors...`);
-    const now = new Date().toISOString();
-    const PARALLEL_CHUNK = 100;
+    // Bulk-upsert all SKUs and colors in chunks of 1000.
+    //
+    // Previous shape: one `.update().eq('sku', x)` per SKU, 100 in flight at a
+    // time. That meant ~875 Supabase round-trips per cron run, dominating
+    // both CPU (HTTP framing on every request) and wall time. On Vercel
+    // Fluid that occasionally saturated CPU on the shared instance and
+    // caused public routes co-located with the cron to timeout — see the
+    // 2026-06-26 incident postmortem.
+    //
+    // New shape mirrors the proven pattern already in syncFullCatalog
+    // (1000-row upserts with `onConflict` on the primary key). Drops the
+    // per-run Supabase call count by ~99%.
+    console.log(`[Sync] Bulk-upserting ${allSkuUpdates.length} SKUs and ${colorAggregates.size} colors...`);
+    const UPSERT_BATCH_SIZE = 1000;
 
-    for (let i = 0; i < allSkuUpdates.length; i += PARALLEL_CHUNK) {
-      const chunk = allSkuUpdates.slice(i, i + PARALLEL_CHUNK);
-      await Promise.all(chunk.map(update =>
-        (supabase as any)
-          .from('product_skus')
-          .update({
-            qty: update.qty,
-            availability: update.availability,
-            last_inventory_sync: now,
-          })
-          .eq('sku', update.sku)
-      ));
-      skusProcessed += chunk.length;
+    for (let i = 0; i < allSkuUpdates.length; i += UPSERT_BATCH_SIZE) {
+      const chunk = allSkuUpdates.slice(i, i + UPSERT_BATCH_SIZE);
+      const { error } = await (supabase as any)
+        .from('product_skus')
+        .upsert(chunk, { onConflict: 'sku' });
+
+      if (error) {
+        const errMsg = error.message || 'Unknown error';
+        errors.push(
+          `SKU upsert error (rows ${i}–${i + chunk.length - 1}): ${errMsg}`,
+        );
+        console.error('[Sync] SKU upsert error:', error);
+      } else {
+        skusProcessed += chunk.length;
+      }
     }
 
-    const colorEntries = Array.from(colorAvailability.entries());
-    for (let i = 0; i < colorEntries.length; i += PARALLEL_CHUNK) {
-      const chunk = colorEntries.slice(i, i + PARALLEL_CHUNK);
-      await Promise.all(chunk.map(([colorId, hasStock]) =>
-        (supabase as any)
-          .from('product_colors')
-          .update({
-            availability: hasStock ? 'in_stock' : 'out_of_stock',
-          })
-          .eq('id', colorId)
-      ));
+    const colorRows = Array.from(colorAggregates.values()).map((c) => ({
+      id: c.id,
+      style_id: c.style_id,
+      color_name: c.color_name,
+      color_code: c.color_code,
+      availability: c.hasStock ? 'in_stock' : 'out_of_stock',
+    }));
+
+    for (let i = 0; i < colorRows.length; i += UPSERT_BATCH_SIZE) {
+      const chunk = colorRows.slice(i, i + UPSERT_BATCH_SIZE);
+      const { error } = await (supabase as any)
+        .from('product_colors')
+        .upsert(chunk, { onConflict: 'id' });
+
+      if (error) {
+        const errMsg = error.message || 'Unknown error';
+        errors.push(
+          `Color upsert error (rows ${i}–${i + chunk.length - 1}): ${errMsg}`,
+        );
+        console.error('[Sync] Color upsert error:', error);
+      }
     }
     
     if (!isChunked) {
@@ -796,7 +876,7 @@ export async function syncInventoryOnly(offset?: number, limit?: number): Promis
       success: errors.length === 0,
       syncType: 'inventory',
       productsProcessed: styleIds.length,
-      colorsProcessed: colorEntries.length,
+      colorsProcessed: colorRows.length,
       skusProcessed,
       categoriesLinked: 0,
       errors,
