@@ -102,6 +102,23 @@ export function TurnstileWidget({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteKey]);
 
+  // Detect the case where Turnstile's script has already been loaded by a
+  // previous page in the same SPA session — e.g. the visitor filled out a
+  // /services/* quote form, then clicked "Let's Talk" and soft-navigated to
+  // /contact. In that flow `next/script` dedupes by `src` and does NOT
+  // re-fire `onLoad` on the new instance, so `scriptLoaded` would otherwise
+  // stay false forever and the widget would never render. But
+  // `window.turnstile` is already sitting there ready to be called — so if
+  // we can see it on mount, flip our state immediately and let the render
+  // effect below proceed. On direct/full page loads this branch is a no-op
+  // (window.turnstile is undefined at mount) and the normal <Script onLoad>
+  // path handles things.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.turnstile) {
+      setScriptLoaded(true);
+    }
+  }, []);
+
   const handleSuccess = useCallback(
     (token: string) => {
       onTokenChange(token);
