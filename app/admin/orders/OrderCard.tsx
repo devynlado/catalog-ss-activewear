@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check, Loader2, MessageSquare, Send } from 'lucide-react';
+import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check, Loader2, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 interface OrderItem {
@@ -15,7 +15,10 @@ interface OrderItem {
   brandName?: string;
   colorName?: string;
   sizeName?: string;
-  quantity: number;
+  // `quantity` is only present on regular cart items (per size/color line).
+  // Package items use `totalQuantity` instead. Making this optional so we can
+  // branch on `type === 'package'` without TS friction.
+  quantity?: number;
   unitPrice?: number;
   discountedPrice?: number;
   imageUrl?: string;
@@ -25,6 +28,14 @@ interface OrderItem {
   packageName?: string;
   setupFee?: number;
   totalPrice?: number;
+  // Package-order fields (see /api/packages/checkout). Present only when
+  // type === 'package'.
+  totalQuantity?: number;
+  pricePerHat?: number;
+  subtotal?: number;
+  embroideryLocations?: string[];
+  has3DPuff?: boolean;
+  colors?: Array<{ colorCode?: string; colorName?: string; quantity?: number }>;
 }
 
 interface Order {
@@ -124,6 +135,29 @@ function formatDecoLabel(item: OrderItem): string {
   const name = item.packageName || '';
   if (type && name) return `${type} - ${name}`;
   return type || name || 'Decoration Service';
+}
+
+// Labels for the packageType union in /api/packages/checkout. Same map lives in
+// OrderRefundUI + the admin order-detail page — small enough that duplication
+// is fine; if it grows we'll consolidate into a shared helper.
+const PACKAGE_TYPE_LABELS: Record<string, string> = {
+  'embroidered-caps': 'Embroidered Caps',
+  'trucker-caps': 'Trucker Caps',
+  'snapback-caps': 'Snapback Caps',
+  'dad-caps': 'Dad Caps',
+  beanies: 'Beanies',
+};
+
+function formatPackageTypeLabel(pkg: string | undefined | null): string {
+  if (!pkg) return 'Custom Package';
+  return (
+    PACKAGE_TYPE_LABELS[pkg] ||
+    pkg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+function formatEmbroideryLocation(loc: string): string {
+  return loc.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const carriers = [
@@ -274,7 +308,17 @@ export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unread
   const productItems = allItems.filter(item => item.type !== 'decoration');
   const decorationItems = allItems.filter(item => item.type === 'decoration');
   const itemCount = productItems.length;
-  const totalQuantity = productItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  // Package items store their piece count in `totalQuantity`; regular cart
+  // items use `quantity`. Old code just read `quantity`, so the header on
+  // package orders always said "0 pcs" while the total was correct.
+  const totalQuantity = productItems.reduce(
+    (sum, item) =>
+      sum +
+      (item.type === 'package'
+        ? Number(item.totalQuantity) || 0
+        : Number(item.quantity) || 0),
+    0,
+  );
 
   const hasSSItems = productItems.some(i => i.brandName && !i.brandName.toLowerCase().includes('los angeles apparel'));
   const hasLAAItems = productItems.some(i => i.brandName?.toLowerCase().includes('los angeles apparel'));
@@ -486,6 +530,65 @@ export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unread
             <h4 className="mb-3 text-sm font-semibold text-navy-800">Products ({itemCount})</h4>
             <div className="space-y-2">
               {(showAllItems ? productItems : productItems.slice(0, 5)).map((item, index) => {
+                // Package items have a completely different shape than regular cart items.
+                // Rendering them through the generic branch produced "Item / Qty: undefined /
+                // $0.00" in the expanded card, which is what the /admin/orders list bug was.
+                if (item.type === 'package') {
+                  const packageQty = Number(item.totalQuantity) || 0;
+                  const pph = Number(item.pricePerHat) || 0;
+                  const lineTotal =
+                    typeof item.subtotal === 'number' ? item.subtotal : pph * packageQty;
+                  const locs = Array.isArray(item.embroideryLocations)
+                    ? item.embroideryLocations
+                    : [];
+                  const colors = Array.isArray(item.colors) ? item.colors : [];
+                  const decoParts: string[] = [];
+                  for (const loc of locs) {
+                    decoParts.push(`Embroidery · ${formatEmbroideryLocation(loc)}`);
+                  }
+                  if (item.has3DPuff) decoParts.push('3D Puff');
+                  const colorSummary =
+                    colors.length === 0
+                      ? ''
+                      : colors.length <= 2
+                        ? colors
+                            .map((c) => c.colorName || c.colorCode || 'Color')
+                            .join(' / ')
+                        : `${colors.length} colors`;
+
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 rounded-lg border border-brand-200 bg-brand-50/40 p-3"
+                    >
+                      <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-500" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="truncate text-sm font-semibold text-navy-800">
+                            {item.productName || 'Custom Package'}
+                          </p>
+                          <span className="inline-flex items-center rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">
+                            {formatPackageTypeLabel(item.packageType)}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Qty: {packageQty}
+                          {colorSummary && <> &middot; {colorSummary}</>}
+                          {decoParts.length > 0 && (
+                            <> &middot; {decoParts.join(' · ')}</>
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-slate-700">
+                          ${lineTotal.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-slate-500">${pph.toFixed(2)}/ea</p>
+                      </div>
+                    </div>
+                  );
+                }
+
                 const name = item.packageDisplayName
                   || `${item.brandName || ''} ${item.styleName || item.productTitle || ''}`.trim()
                   || 'Item';
