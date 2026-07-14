@@ -27,6 +27,13 @@ interface SSActivityEntry {
 
 interface SSActivityLogProps {
   orderId: string;
+  /**
+   * True for cap-package orders (see /api/packages/checkout). These orders skip
+   * SS Activewear entirely, so the log is always empty. We use this flag to swap
+   * the empty-state message from the generic "No activity yet" (which reads like
+   * a bug) to a clear "Not applicable" explanation.
+   */
+  isPackageOrder?: boolean;
 }
 
 const STATUS_ICONS: Record<string, { icon: React.ReactNode; bg: string }> = {
@@ -59,7 +66,7 @@ function formatTime(dateString: string): string {
   });
 }
 
-export function SSActivityLog({ orderId }: SSActivityLogProps) {
+export function SSActivityLog({ orderId, isPackageOrder = false }: SSActivityLogProps) {
   const [activities, setActivities] = useState<SSActivityEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -105,8 +112,25 @@ export function SSActivityLog({ orderId }: SSActivityLogProps) {
             </div>
           ) : activities.length === 0 ? (
             <div className="py-6 text-center">
-              <Clock className="mx-auto h-7 w-7 text-stone-300" />
-              <p className="mt-2 text-sm text-slate-500">No SS Activewear activity yet</p>
+              {isPackageOrder ? (
+                <>
+                  <Info className="mx-auto h-7 w-7 text-slate-300" />
+                  <p className="mt-2 text-sm font-medium text-slate-600">
+                    Not applicable for package orders
+                  </p>
+                  <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+                    Package orders are decorated in-house at the Montclair
+                    warehouse, so no SS Activewear activity is generated.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Clock className="mx-auto h-7 w-7 text-stone-300" />
+                  <p className="mt-2 text-sm text-slate-500">
+                    No SS Activewear activity yet
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-3 max-h-[500px] overflow-y-auto">

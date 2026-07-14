@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Package, PenTool, User, Building2, Mail, Phone, MapPin, CreditCard, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, Package, PenTool, User, Building2, Mail, Phone, MapPin, CreditCard, ExternalLink, Download, Sparkles } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { Badge } from '@/components/ui/Badge';
 import { OrderStatusActions } from './OrderStatusActions';
@@ -36,6 +36,28 @@ const WAREHOUSE_LABELS: Record<string, string> = {
   los_angeles_apparel: 'LA Apparel',
   as_colour: 'AS Colour',
 };
+
+// Human-readable labels for the packageType values written by /api/packages/checkout.
+// Kept in sync with the union type in that route's PackageCheckoutRequest.
+const PACKAGE_TYPE_LABELS: Record<string, string> = {
+  'embroidered-caps': 'Embroidered Caps',
+  'trucker-caps': 'Trucker Caps',
+  'snapback-caps': 'Snapback Caps',
+  'dad-caps': 'Dad Caps',
+  beanies: 'Beanies',
+};
+
+function formatPackageTypeLabel(pkg: string | undefined | null): string {
+  if (!pkg) return 'Custom Package';
+  return (
+    PACKAGE_TYPE_LABELS[pkg] ||
+    pkg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+function formatEmbroideryLocation(loc: string): string {
+  return loc.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 function formatDecoLabel(item: { decorationType?: string; packageName?: string }): string {
   const type = item.decorationType
@@ -102,7 +124,21 @@ export default async function OrderDetailPage({
   const refunds = (refundPayments ?? []) as { amount: number; created_at?: string }[];
   const totalRefunded = refunds.reduce((sum, p) => sum + Number(p.amount), 0);
   const lastRefundedAt = refunds[0]?.created_at ?? null;
-  const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  // Package items use `totalQuantity` (single row = whole order's piece count);
+  // regular cart items use `quantity` (per size/color line). Falling through to 0
+  // was the old bug — package orders showed "Subtotal (0 pcs)" while the total was correct.
+  const totalQuantity = items.reduce((sum, item) => {
+    if (item.type === 'package') return sum + (item.totalQuantity || 0);
+    return sum + (item.quantity || 0);
+  }, 0);
+
+  // Package orders (created via /api/packages/checkout) skip SS Activewear entirely —
+  // caps are decorated in-house at the Montclair warehouse. Detect via BOTH the
+  // stripe-webhook-authoritative `order.metadata.order_type` AND the presence of a
+  // package-shape item, so legacy orders without metadata still render correctly.
+  const isPackageOrder =
+    (order.metadata as { order_type?: string } | null)?.order_type === 'package' ||
+    allItems.some((item: any) => item.type === 'package'); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const shippingAddr = order.shipping_address as any;
@@ -210,6 +246,109 @@ export default async function OrderDetailPage({
               </h2>
               <div className="space-y-3">
                 {items.map((item: any, index: number) => {
+                  // Package orders (from /api/packages/checkout) use a totally different
+                  // item shape — no brandName / styleName / quantity / unitPrice, but
+                  // productName / totalQuantity / pricePerHat / colors[] / embroideryLocations.
+                  // Rendering them with the regular cart renderer produced "Item / $0.00 /
+                  // Qty: undefined × $0.00", which is the bug this branch fixes.
+                  if (item.type === 'package') {
+                    const packageQty: number = item.totalQuantity || 0;
+                    const pricePerUnit: number = Number(item.pricePerHat) || 0;
+                    const lineTotal: number =
+                      typeof item.subtotal === 'number'
+                        ? item.subtotal
+                        : pricePerUnit * packageQty;
+                    const colors: Array<{
+                      colorCode?: string;
+                      colorName?: string;
+                      quantity?: number;
+                    }> = Array.isArray(item.colors) ? item.colors : [];
+                    const locations: string[] = Array.isArray(item.embroideryLocations)
+                      ? item.embroideryLocations
+                      : [];
+
+                    return (
+                      <div
+                        key={index}
+                        className="rounded-lg border border-brand-200 bg-brand-50/40 p-4"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-brand-100">
+                            <Sparkles className="h-6 w-6 text-brand-500" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold text-navy-800">
+                                {item.productName || 'Custom Package'}
+                              </p>
+                              <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                                {formatPackageTypeLabel(item.packageType)}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-sm text-slate-600">
+                              Qty: {packageQty} &times; ${pricePerUnit.toFixed(2)}/ea
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-semibold text-navy-800">
+                              ${lineTotal.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {(colors.length > 0 || locations.length > 0 || item.has3DPuff) && (
+                          <div className="mt-3 grid gap-3 border-t border-brand-100 pt-3 md:grid-cols-2">
+                            {colors.length > 0 && (
+                              <div>
+                                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                  Colors
+                                </p>
+                                <div className="space-y-1">
+                                  {colors.map((c, ci: number) => (
+                                    <div
+                                      key={ci}
+                                      className="flex items-center justify-between text-sm text-slate-700"
+                                    >
+                                      <span>
+                                        {c.colorName || c.colorCode || 'Color'}
+                                      </span>
+                                      <span className="font-medium text-slate-800">
+                                        {c.quantity ?? 0} pcs
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {(locations.length > 0 || item.has3DPuff) && (
+                              <div>
+                                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                  Decoration
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {locations.map((loc, li: number) => (
+                                    <span
+                                      key={li}
+                                      className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-brand-100"
+                                    >
+                                      Embroidery &middot; {formatEmbroideryLocation(loc)}
+                                    </span>
+                                  ))}
+                                  {item.has3DPuff && (
+                                    <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800">
+                                      3D Puff
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
                   const name = item.packageDisplayName
                     || `${item.brandName || ''} ${item.styleName || item.productTitle || ''}`.trim()
                     || 'Item';
@@ -575,10 +714,11 @@ export default async function OrderDetailPage({
               ssAutoOrderFailed={order.ss_auto_order_failed ?? false}
               ssAutoOrderError={order.ss_auto_order_error ?? null}
               ssOrders={(ssOrders || []) as any[]}
+              isPackageOrder={isPackageOrder}
             />
 
             {/* SS Activewear Activity Log */}
-            <SSActivityLog orderId={order.id} />
+            <SSActivityLog orderId={order.id} isPackageOrder={isPackageOrder} />
 
             {/* Activity Log */}
             <OrderActivityLog

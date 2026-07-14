@@ -12,6 +12,7 @@ import {
   ExternalLink,
   FileText,
   Timer,
+  Info,
 } from 'lucide-react';
 
 interface SSOrder {
@@ -47,6 +48,15 @@ interface SSActivewearSectionProps {
   ssAutoOrderFailed: boolean;
   ssAutoOrderError: string | null;
   ssOrders: SSOrder[];
+  /**
+   * True for orders created via /api/packages/checkout (cap packages / embroidery
+   * packages). These orders never touch SS Activewear — blanks are procured and
+   * embroidered in-house at the Garment Decor warehouse — so we short-circuit
+   * the whole "awaiting placement / retry / place SS order" UI to avoid
+   * misleading admins into clicking a retry button that would fail anyway
+   * (package items don't map to any S&S SKU).
+   */
+  isPackageOrder?: boolean;
 }
 
 const SS_STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode }> = {
@@ -77,6 +87,7 @@ export function SSActivewearSection({
   ssAutoOrderFailed,
   ssAutoOrderError,
   ssOrders: initialSSOrders,
+  isPackageOrder = false,
 }: SSActivewearSectionProps) {
   const [ssOrders, setSSOrders] = useState<SSOrder[]>(initialSSOrders);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -195,6 +206,37 @@ export function SSActivewearSection({
     const interval = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(interval);
   }, [ssOrders]);
+
+  // Package orders bypass SS Activewear entirely (webhook at app/api/webhooks/stripe/route.ts
+  // guards on `metadata.order_type === 'package'` and never calls placeSSOrder). Render one
+  // clear "not applicable" card so admins understand the empty state, and so the retry button
+  // is never offered — a manual retry on a package order would fail because package items
+  // have no S&S SKU mapping (see resolveSsMasterSku in lib/ss-activewear-orders.ts).
+  if (isPackageOrder) {
+    return (
+      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-navy-800 flex items-center gap-2">
+            <Package className="h-5 w-5 text-brand-500" />
+            SS Activewear
+          </h2>
+        </div>
+        <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <Info className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-slate-800">
+              Not applicable for package orders
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+              Cap packages are decorated in-house at the Garment Decor warehouse
+              (Montclair, CA). Blanks are procured and embroidered internally, so
+              no SS Activewear supplier order is placed for this order.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasOrders && !ssAutoOrderFailed && orderStatus !== 'awaiting_purchasing') {
     return null;

@@ -13,6 +13,15 @@ type OrderItem = {
   quantity?: number;
   unitPrice?: number;
   discountedPrice?: number;
+  // Package-order fields (written by /api/packages/checkout). Present only when
+  // type === 'package'. Kept optional so we don't have to widen the type at
+  // every call site — the branch on `type === 'package'` in the render/helpers
+  // is what actually gates access.
+  productName?: string;
+  packageType?: string;
+  totalQuantity?: number;
+  pricePerHat?: number;
+  subtotal?: number;
 };
 
 type Props = {
@@ -26,7 +35,37 @@ type Props = {
   stripeChargeId: string | null;
 };
 
+// Human-readable labels for the packageType union in /api/packages/checkout.
+// Duplicated (intentionally) with the map in app/admin/orders/[id]/page.tsx —
+// keeping this component self-contained; if we grow more package types we'll
+// pull this into a shared helper.
+const PACKAGE_TYPE_LABELS: Record<string, string> = {
+  'embroidered-caps': 'Embroidered Caps',
+  'trucker-caps': 'Trucker Caps',
+  'snapback-caps': 'Snapback Caps',
+  'dad-caps': 'Dad Caps',
+  beanies: 'Beanies',
+};
+
+function formatPackageTypeLabel(pkg: string | undefined | null): string {
+  if (!pkg) return 'Custom Package';
+  return (
+    PACKAGE_TYPE_LABELS[pkg] ||
+    pkg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
 function lineTotal(item: OrderItem): number {
+  // Package items don't carry `unitPrice`/`quantity` — they store the whole-order
+  // number as `subtotal` (or you can compute it as pricePerHat * totalQuantity).
+  // Falling through to the old regex would return $0 for these lines, which is
+  // the exact bug that made partial refunds unusable for package orders.
+  if (item.type === 'package') {
+    if (typeof item.subtotal === 'number') return item.subtotal;
+    const pph = Number(item.pricePerHat) || 0;
+    const tq = Number(item.totalQuantity) || 0;
+    return pph * tq;
+  }
   const price = item.discountedPrice ?? item.unitPrice ?? 0;
   const qty = item.quantity ?? 1;
   return price * qty;
@@ -249,6 +288,14 @@ export function OrderRefundUI({
             <tbody className="divide-y divide-stone-200 bg-white">
               {items.map((item, index) => {
                 const totalLine = lineTotal(item);
+                const isPackage = item.type === 'package';
+                const displayQty = isPackage
+                  ? Number(item.totalQuantity) || 0
+                  : item.quantity ?? 1;
+                const displayUnitPrice = isPackage
+                  ? Number(item.pricePerHat) || 0
+                  : item.discountedPrice ?? item.unitPrice ?? 0;
+
                 return (
                   <tr key={index} className="hover:bg-stone-50/50">
                     <td className="px-4 py-3">
@@ -260,22 +307,32 @@ export function OrderRefundUI({
                       />
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-800">
-                      {item.brandName} {item.styleName}
-                      {(item.colorName || item.sizeName) && (
-                        <span className="text-stone-500">
-                          {' '}
-                          · {[item.colorName, item.sizeName].filter(Boolean).join(' / ')}
+                      {isPackage ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">
+                            {item.productName || 'Custom Package'}
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-medium text-brand-700">
+                            {formatPackageTypeLabel(item.packageType)}
+                          </span>
                         </span>
+                      ) : (
+                        <>
+                          {item.brandName} {item.styleName}
+                          {(item.colorName || item.sizeName) && (
+                            <span className="text-stone-500">
+                              {' '}
+                              · {[item.colorName, item.sizeName].filter(Boolean).join(' / ')}
+                            </span>
+                          )}
+                        </>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-slate-700">
-                      {item.quantity ?? 1}
+                      {displayQty}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-slate-700">
-                      $
-                      {(
-                        (item.discountedPrice ?? item.unitPrice ?? 0)
-                      ).toFixed(2)}
+                      ${displayUnitPrice.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-right text-slate-800">
                       ${totalLine.toFixed(2)}
