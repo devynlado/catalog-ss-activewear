@@ -59,7 +59,7 @@ export function FinalCTA() {
             transition={{ duration: 0.5, delay: 0.3 }}
           >
             <Link
-              href="/catalog"
+              href="/quote"
               className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-8 py-4 text-lg font-semibold text-white shadow-xl shadow-brand-500/30 transition-all hover:shadow-2xl hover:shadow-brand-500/40 hover:-translate-y-1"
             >
               Start Building Your Quote

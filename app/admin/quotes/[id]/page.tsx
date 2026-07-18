@@ -1,13 +1,23 @@
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Package, Palette, MapPin, User, Building2, Mail, Phone, Calendar, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, Package, Palette, MapPin, User, Building2, Mail, Phone, BadgeCheck, Layers, Shirt, Sparkles } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { Badge } from '@/components/ui/Badge';
 import { SalesRepCard } from '@/components/admin/SalesRepCard';
 import { QuoteStatusActions } from './QuoteStatusActions';
 import { QuoteActivityLog } from './QuoteActivityLog';
 import { QuoteMessenger } from './QuoteMessenger';
+import {
+  blankSummary,
+  isProjectItem,
+  isProjectQuote,
+  projectFacts,
+  totalEstimatedPieces,
+  type AnyQuoteItem,
+  type LegacyQuoteLineItem,
+  type QuoteProjectItem,
+} from '../project-item-helpers';
 
 export const metadata = {
   title: 'Quote Details',
@@ -29,17 +39,6 @@ const decorationLabels: Record<string, string> = {
   embroidery: 'Embroidery',
   digital: 'Digital Print',
 };
-
-interface QuoteItem {
-  id: string;
-  styleName: string;
-  brandName: string;
-  colorName: string;
-  sizeName: string;
-  quantity: number;
-  unitPrice: number;
-  imageUrl?: string;
-}
 
 export default async function QuoteDetailPage({
   params,
@@ -102,9 +101,10 @@ export default async function QuoteDetailPage({
     .select('id, full_name, email, avatar_url, calendly_url')
     .eq('role', 'sales_rep');
 
-  const items: QuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
-  const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  
+  const items: AnyQuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
+  const isProject = isProjectQuote(items);
+  const totalQuantity = totalEstimatedPieces(items);
+
   const createdDate = new Date(quote.created_at).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -114,6 +114,9 @@ export default async function QuoteDetailPage({
     minute: '2-digit',
   });
 
+  // Legacy quotes carry a single `decoration` object at the row level.
+  // Project quotes carry per-project decoration inside each items[] entry —
+  // this block only fires for legacy shape.
   const decoration = quote.decoration;
   const decorationType = decoration?.type ? decorationLabels[decoration.type] || decoration.type : null;
 
@@ -219,65 +222,180 @@ export default async function QuoteDetailPage({
               </div>
             </div>
 
-            {/* Items */}
+            {/* Items / Projects */}
             <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-lg font-semibold text-navy-800">
-                Items ({items.length})
-              </h2>
-              
-              <div className="space-y-3">
-                {items.map((item, index) => (
-                  <div 
-                    key={item.id || index}
-                    className="flex items-center gap-4 rounded-lg border border-stone-100 bg-stone-50 p-4"
-                  >
-                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-white">
-                      {item.imageUrl ? (
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.styleName || 'Product'}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Package className="h-6 w-6 text-stone-400" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-800">
-                        {item.brandName} {item.styleName}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {item.colorName} • {item.sizeName}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        Qty: {item.quantity} × ${item.unitPrice?.toFixed(2) || '0.00'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-semibold text-navy-800">
-                        ${((item.unitPrice || 0) * (item.quantity || 0)).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-navy-800">
+                  {isProject
+                    ? `Projects (${items.length})`
+                    : `Items (${items.length})`}
+                </h2>
+                {isProject && (
+                  <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+                    Project Quote
+                  </span>
+                )}
               </div>
 
-              {/* Subtotal */}
-              <div className="mt-4 flex items-center justify-between border-t border-stone-200 pt-4">
-                <span className="text-slate-600">
-                  Subtotal ({totalQuantity} pcs)
-                </span>
-                <span className="text-xl font-bold text-navy-800">
-                  ${quote.subtotal?.toLocaleString() || '0'}
-                </span>
+              <div className="space-y-3">
+                {items.map((item, index) => {
+                  if (isProjectItem(item)) {
+                    const facts = projectFacts(item);
+                    return (
+                      <div
+                        key={index}
+                        className="rounded-lg border border-brand-200 bg-brand-50/40 p-5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">
+                              Project {index + 1} — {item.decorationLabel}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              ≈ {item.estimatedQuantity} pieces (low estimate)
+                            </p>
+                          </div>
+                          <Sparkles className="ml-auto h-5 w-5 text-brand-400" />
+                        </div>
+
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                          <div className="rounded-md bg-white p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                              Blank
+                            </p>
+                            <div className="mt-1.5 flex items-start gap-2 text-sm text-slate-700">
+                              <Shirt className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+                              <div className="min-w-0 break-words">
+                                <p>{blankSummary(item)}</p>
+                                {item.blankSource === 'catalog' &&
+                                  item.catalogProduct && (
+                                    <Link
+                                      href={`/product/${item.catalogProduct.slug}`}
+                                      className="mt-1 inline-block truncate text-xs text-brand-600 hover:underline"
+                                      target="_blank"
+                                    >
+                                      View product →
+                                    </Link>
+                                  )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-md bg-white p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                              Decoration
+                            </p>
+                            <div className="mt-1.5 flex items-start gap-2 text-sm text-slate-700">
+                              <Layers className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+                              <span>{item.decorationLabel}</span>
+                            </div>
+                            <dl className="mt-2 grid gap-x-4 gap-y-1">
+                              {facts.map(([label, value]) => (
+                                <div
+                                  key={label}
+                                  className="flex justify-between gap-2 text-xs"
+                                >
+                                  <dt className="text-slate-500">{label}</dt>
+                                  <dd className="text-right font-medium text-slate-700">
+                                    {value}
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </div>
+                        </div>
+
+                        {item.designNotes && (
+                          <div className="mt-3 rounded-md bg-white p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                              Design notes
+                            </p>
+                            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
+                              {item.designNotes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  const legacy = item as LegacyQuoteLineItem;
+                  return (
+                    <div
+                      key={legacy.id || index}
+                      className="flex items-center gap-4 rounded-lg border border-stone-100 bg-stone-50 p-4"
+                    >
+                      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-white">
+                        {legacy.imageUrl ? (
+                          <Image
+                            src={legacy.imageUrl}
+                            alt={legacy.styleName || 'Product'}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Package className="h-6 w-6 text-stone-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-800">
+                          {legacy.brandName} {legacy.styleName}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {legacy.colorName} • {legacy.sizeName}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          Qty: {legacy.quantity} × $
+                          {legacy.unitPrice?.toFixed(2) || '0.00'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-navy-800">
+                          $
+                          {(
+                            (legacy.unitPrice || 0) *
+                            (legacy.quantity || 0)
+                          ).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* Subtotal — hidden for project quotes because their sub-
+                  total is a placeholder $0 until the sales team fills in
+                  pricing manually. */}
+              {!isProject && (
+                <div className="mt-4 flex items-center justify-between border-t border-stone-200 pt-4">
+                  <span className="text-slate-600">
+                    Subtotal ({totalQuantity} pcs)
+                  </span>
+                  <span className="text-xl font-bold text-navy-800">
+                    ${quote.subtotal?.toLocaleString() || '0'}
+                  </span>
+                </div>
+              )}
+              {isProject && (
+                <div className="mt-4 flex items-center justify-between border-t border-stone-200 pt-4">
+                  <span className="text-slate-600">
+                    Estimated pieces (low bound)
+                  </span>
+                  <span className="text-xl font-bold text-navy-800">
+                    ≈ {totalQuantity}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Decoration */}
-            {decoration && decoration.type !== 'none' && (
+            {/* Decoration panel — only rendered for legacy shape. Project
+                quotes carry decoration inline in the Projects section. */}
+            {!isProject && decoration && decoration.type !== 'none' && (
               <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-lg font-semibold text-navy-800">Decoration</h2>
                 

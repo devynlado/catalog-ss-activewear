@@ -140,8 +140,8 @@ export function Hero() {
               </div>
               <p className="mt-4 text-sm text-slate-500">
                 50 piece minimum • Mix sizes, colors & styles •{' '}
-                <Link href="/catalog" className="text-brand-600 hover:text-brand-700 underline underline-offset-2">
-                  or browse our product catalog
+                <Link href="/portfolio" className="text-brand-600 hover:text-brand-700 underline underline-offset-2">
+                  Check Our Portfolios
                 </Link>
               </p>
             </motion.div>
