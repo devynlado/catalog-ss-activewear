@@ -100,7 +100,7 @@ export function HowItWorksLegacy() {
               </p>
             </div>
             <Link
-              href="/catalog"
+              href="/quote"
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl sm:mt-0"
             >
               Start Building Your Quote

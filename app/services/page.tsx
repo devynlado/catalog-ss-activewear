@@ -194,7 +194,7 @@ export default function ServicesPage() {
               
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
-                  href="/contact"
+                  href="/quote"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-xl hover:-translate-y-0.5"
                 >
                   Request a Quote

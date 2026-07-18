@@ -18,7 +18,7 @@ export function FinalCTALegacy() {
           
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              href="/catalog"
+              href="/quote"
               className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-400 hover:shadow-xl"
             >
               Start Building Your Quote
