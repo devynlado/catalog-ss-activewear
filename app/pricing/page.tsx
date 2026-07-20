@@ -195,7 +195,7 @@ function PricingContent() {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                href="/contact"
+                href="/quote"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-brand-600"
               >
                 Request Detailed Quote

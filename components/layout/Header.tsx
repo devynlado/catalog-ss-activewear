@@ -1139,6 +1139,19 @@ export function Header() {
                 Pricing
               </Link>
 
+              {/* Portfolio - Direct Link */}
+              <Link
+                href="/portfolio"
+                className={cn(
+                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                  pathname === '/portfolio' || pathname?.startsWith('/portfolio/')
+                    ? 'bg-stone-100 text-slate-900'
+                    : 'text-slate-700 hover:bg-stone-50 hover:text-slate-900'
+                )}
+              >
+                Portfolio
+              </Link>
+
               {/* Contact - Direct Link */}
               <Link
                 href="/contact"
@@ -1519,6 +1532,13 @@ export function Header() {
                   className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
                 >
                   Pricing Calculator
+                </Link>
+                <Link
+                  href="/portfolio"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
+                >
+                  Portfolio
                 </Link>
                 <Link
                   href="/contact"
