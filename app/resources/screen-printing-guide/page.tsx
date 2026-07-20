@@ -450,10 +450,10 @@ export default function ScreenPrintingGuidePage() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
-              href="/catalog?category=21"
+              href="/quote?service=screen-printing"
               className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-white/20 transition-colors"
             >
-              Shop T-Shirts
+              Request a Quote
             </Link>
           </div>
         </div>

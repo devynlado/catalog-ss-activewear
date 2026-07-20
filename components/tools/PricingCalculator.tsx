@@ -637,10 +637,10 @@ export function PricingCalculator({ defaultService = 'screen-printing' }: Pricin
 
             <div className="mt-6 space-y-3">
               <Link
-                href={`/contact?service=${activeTab}`}
+                href={`/quote?service=${activeTab}`}
                 className="flex items-center justify-center gap-2 w-full bg-brand-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-600 transition-colors"
               >
-                Get Exact Quote
+                Request Custom Quote
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a

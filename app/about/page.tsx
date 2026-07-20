@@ -240,10 +240,10 @@ export default function AboutPage() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
-                href="/catalog"
+                href="/quote"
                 className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
               >
-                Browse Catalog
+                Request a Quote
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link

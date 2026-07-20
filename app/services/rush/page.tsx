@@ -325,7 +325,7 @@ export default function RushPage() {
                 Call (855) 942-7636
               </a>
               <Link
-                href="/contact"
+                href="/quote?service=rush"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-white/30 px-6 py-3.5 text-base font-semibold text-white transition-all hover:border-white hover:bg-white/10"
               >
                 Request a Quote
