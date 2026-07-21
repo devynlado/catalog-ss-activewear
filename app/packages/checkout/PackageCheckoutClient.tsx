@@ -43,21 +43,83 @@ function proxyImageUrl(url: string): string {
   return url;
 }
 
-interface PackageCheckoutData {
-  packageType: 'embroidered-caps';
+interface PackageColorSelection {
+  colorCode: string;
+  colorName: string;
+  quantity: number;
+  frontImage?: string;
+  sizeBreakdown?: Record<string, number>;
+}
+
+type EmbroideryPackageType = 'embroidered-caps' | 'trucker-caps' | 'snapback-caps' | 'dad-caps' | 'beanies';
+type PrintPackageType = 'printed-tees-gildan' | 'printed-tees-comfort-colors' | 'printed-totes-isabella';
+
+interface EmbroideryPackageData {
+  packageType: EmbroideryPackageType;
   productStyleId: number;
   productName: string;
-  selectedColors: {
-    colorCode: string;
-    colorName: string;
-    quantity: number;
-    frontImage?: string;
-  }[];
+  productSlug?: string;
+  selectedColors: PackageColorSelection[];
   embroideryLocations: string[];
   has3DPuff: boolean;
   totalQuantity: number;
   pricePerHat: number;
   subtotal: number;
+}
+
+interface PrintPackageData {
+  packageType: PrintPackageType;
+  productStyleId: number;
+  productName: string;
+  productSlug?: string;
+  selectedColors: PackageColorSelection[];
+  printColors: number;
+  printLocations: string[];
+  pricePerShirt?: number;
+  pricePerItem?: number;
+  totalQuantity: number;
+  subtotal: number;
+  sizeBreakdown?: {
+    preset?: string;
+    usePerColor?: boolean;
+    sizes?: Record<string, number>;
+    perColorSizes?: Record<string, Record<string, number>>;
+  };
+}
+
+type PackageCheckoutData = EmbroideryPackageData | PrintPackageData;
+
+const PRINT_PACKAGE_TYPES: readonly string[] = [
+  'printed-tees-gildan',
+  'printed-tees-comfort-colors',
+  'printed-totes-isabella',
+];
+
+function isPrintPackage(data: PackageCheckoutData): data is PrintPackageData {
+  return PRINT_PACKAGE_TYPES.includes(data.packageType);
+}
+
+// Unit noun per package family, for labels in the summary.
+function getUnitNoun(data: PackageCheckoutData): { singular: string; plural: string } {
+  switch (data.packageType) {
+    case 'printed-totes-isabella':
+      return { singular: 'bag', plural: 'bags' };
+    case 'printed-tees-gildan':
+    case 'printed-tees-comfort-colors':
+      return { singular: 'shirt', plural: 'shirts' };
+    case 'beanies':
+      return { singular: 'beanie', plural: 'beanies' };
+    default:
+      return { singular: 'hat', plural: 'hats' };
+  }
+}
+
+// Per-unit price regardless of package flavor.
+function getPricePerUnit(data: PackageCheckoutData): number {
+  if (isPrintPackage(data)) {
+    return data.pricePerShirt ?? data.pricePerItem ?? 0;
+  }
+  return data.pricePerHat;
 }
 
 interface CustomerInfo {
@@ -181,6 +243,18 @@ export function PackageCheckoutClient() {
     setError(null);
     
     try {
+      // Method-specific decoration payload (embroidery caps vs screen-print tees/totes)
+      const decorationPayload = isPrintPackage(packageData)
+        ? {
+            printColors: packageData.printColors,
+            printLocations: packageData.printLocations,
+            sizeBreakdown: packageData.sizeBreakdown,
+          }
+        : {
+            embroideryLocations: packageData.embroideryLocations,
+            has3DPuff: packageData.has3DPuff,
+          };
+
       const response = await fetch('/api/packages/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,9 +281,9 @@ export function PackageCheckoutClient() {
             colorCode: c.colorCode,
             colorName: c.colorName,
             quantity: c.quantity,
+            sizeBreakdown: c.sizeBreakdown,
           })),
-          embroideryLocations: packageData.embroideryLocations,
-          has3DPuff: packageData.has3DPuff,
+          ...decorationPayload,
           totalQuantity: packageData.totalQuantity,
           logoFileUrl: logoUrl,
           orderNotes,
@@ -248,7 +322,7 @@ export function PackageCheckoutClient() {
       <header className="bg-white/80 backdrop-blur-sm border-b border-stone-200/60 sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/packages/embroidered-caps" className="flex items-center gap-2 text-stone-600 hover:text-navy-900 transition-colors">
+            <Link href={`/packages/${packageData.productSlug || packageData.packageType}`} className="flex items-center gap-2 text-stone-600 hover:text-navy-900 transition-colors">
               <ArrowLeft className="h-5 w-5" />
               <span className="text-sm font-medium">Back to Package</span>
             </Link>
@@ -649,7 +723,7 @@ export function PackageCheckoutClient() {
                 {/* Package info */}
                 <div className="pb-4 border-b border-stone-200/60">
                   <p className="font-medium text-navy-900">{packageData.productName}</p>
-                  <p className="text-sm text-stone-500">{packageData.totalQuantity} hats total</p>
+                  <p className="text-sm text-stone-500">{packageData.totalQuantity} {getUnitNoun(packageData).plural} total</p>
                 </div>
                 
                 {/* Color breakdown */}
@@ -678,43 +752,65 @@ export function PackageCheckoutClient() {
                   </div>
                 </div>
                 
-                {/* Embroidery */}
-                <div className="py-4 border-b border-stone-200/60">
-                  <p className="text-sm font-medium text-stone-500 mb-2">Embroidery</p>
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>Front (included)</span>
+                {/* Decoration — embroidery (caps) vs screen printing (tees/totes) */}
+                {isPrintPackage(packageData) ? (
+                  <div className="py-4 border-b border-stone-200/60">
+                    <p className="text-sm font-medium text-stone-500 mb-2">Screen Printing</p>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>{packageData.printColors} {packageData.printColors === 1 ? 'color' : 'colors'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Front print (included)</span>
+                      </div>
+                      {packageData.printLocations.includes('back') && (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>Back print</span>
+                        </div>
+                      )}
                     </div>
-                    {packageData.embroideryLocations.includes('side') && (
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>Side (+$5.00/hat)</span>
-                      </div>
-                    )}
-                    {packageData.embroideryLocations.includes('back') && (
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>Back (+$5.00/hat)</span>
-                      </div>
-                    )}
-                    {packageData.has3DPuff && (
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>3D Puff (+$3.00/hat)</span>
-                      </div>
-                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="py-4 border-b border-stone-200/60">
+                    <p className="text-sm font-medium text-stone-500 mb-2">Embroidery</p>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Front (included)</span>
+                      </div>
+                      {packageData.embroideryLocations.includes('side') && (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>Side (+$5.00/hat)</span>
+                        </div>
+                      )}
+                      {packageData.embroideryLocations.includes('back') && (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>Back (+$5.00/hat)</span>
+                        </div>
+                      )}
+                      {packageData.has3DPuff && (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>3D Puff (+$3.00/hat)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Pricing */}
                 <div className="py-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-stone-600">Price per hat</span>
-                    <span>{formatPrice(packageData.pricePerHat)}</span>
+                    <span className="text-stone-600">Price per {getUnitNoun(packageData).singular}</span>
+                    <span>{formatPrice(getPricePerUnit(packageData))}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-stone-600">Subtotal ({packageData.totalQuantity} hats)</span>
+                    <span className="text-stone-600">Subtotal ({packageData.totalQuantity} {getUnitNoun(packageData).plural})</span>
                     <span>{formatPrice(serverPricing?.subtotal || packageData.subtotal)}</span>
                   </div>
                   {serverPricing && (

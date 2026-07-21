@@ -45,6 +45,9 @@ const PACKAGE_TYPE_LABELS: Record<string, string> = {
   'snapback-caps': 'Snapback Caps',
   'dad-caps': 'Dad Caps',
   beanies: 'Beanies',
+  'printed-tees-gildan': 'Printed Tees (Gildan)',
+  'printed-tees-comfort-colors': 'Printed Tees (Comfort Colors)',
+  'printed-totes-isabella': 'Printed Tote Bags',
 };
 
 function formatPackageTypeLabel(pkg: string | undefined | null): string {

@@ -35,6 +35,10 @@ interface OrderItem {
   subtotal?: number;
   embroideryLocations?: string[];
   has3DPuff?: boolean;
+  // Screen-print package fields (tees / totes)
+  decorationMethod?: string;
+  printColors?: number;
+  printLocations?: string[];
   colors?: Array<{ colorCode?: string; colorName?: string; quantity?: number }>;
 }
 
@@ -146,6 +150,9 @@ const PACKAGE_TYPE_LABELS: Record<string, string> = {
   'snapback-caps': 'Snapback Caps',
   'dad-caps': 'Dad Caps',
   beanies: 'Beanies',
+  'printed-tees-gildan': 'Printed Tees (Gildan)',
+  'printed-tees-comfort-colors': 'Printed Tees (Comfort Colors)',
+  'printed-totes-isabella': 'Printed Tote Bags',
 };
 
 function formatPackageTypeLabel(pkg: string | undefined | null): string {
@@ -538,13 +545,20 @@ export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unread
                   const pph = Number(item.pricePerHat) || 0;
                   const lineTotal =
                     typeof item.subtotal === 'number' ? item.subtotal : pph * packageQty;
-                  const locs = Array.isArray(item.embroideryLocations)
-                    ? item.embroideryLocations
-                    : [];
+                  const isPrintPkg =
+                    item.decorationMethod === 'screen-print' ||
+                    Array.isArray(item.printLocations);
+                  const locs = isPrintPkg
+                    ? (Array.isArray(item.printLocations) ? item.printLocations : [])
+                    : (Array.isArray(item.embroideryLocations) ? item.embroideryLocations : []);
                   const colors = Array.isArray(item.colors) ? item.colors : [];
                   const decoParts: string[] = [];
+                  if (isPrintPkg && item.printColors) {
+                    decoParts.push(`${item.printColors} ${item.printColors === 1 ? 'color' : 'colors'}`);
+                  }
+                  const decoLabel = isPrintPkg ? 'Screen Print' : 'Embroidery';
                   for (const loc of locs) {
-                    decoParts.push(`Embroidery · ${formatEmbroideryLocation(loc)}`);
+                    decoParts.push(`${decoLabel} · ${formatEmbroideryLocation(loc)}`);
                   }
                   if (item.has3DPuff) decoParts.push('3D Puff');
                   const colorSummary =

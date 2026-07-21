@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, generateOrderNumber, toStripeCents } from '@/lib/stripe';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { calculatePackagePrice, validatePackageOrder } from '@/lib/package-pricing';
+import {
+  calculatePackagePrice,
+  validatePackageOrder,
+  calculatePrintPackagePrice,
+  validatePrintPackageOrder,
+  isPrintPackageType,
+} from '@/lib/package-pricing';
 import { validateCoupon } from '@/lib/coupon-utils';
 
 export interface PackageCheckoutRequest {
@@ -26,16 +32,35 @@ export interface PackageCheckoutRequest {
   };
   
   // Package details
-  packageType: 'embroidered-caps' | 'trucker-caps' | 'snapback-caps' | 'dad-caps' | 'beanies';
+  packageType:
+    | 'embroidered-caps'
+    | 'trucker-caps'
+    | 'snapback-caps'
+    | 'dad-caps'
+    | 'beanies'
+    | 'printed-tees-gildan'
+    | 'printed-tees-comfort-colors'
+    | 'printed-totes-isabella';
   productStyleId: number;
   productName: string;
   selectedColors: {
     colorCode: string;
     colorName: string;
     quantity: number;
+    sizeBreakdown?: Record<string, number>;
   }[];
-  embroideryLocations: string[];
-  has3DPuff: boolean;
+  // Embroidery packages (caps / beanies)
+  embroideryLocations?: string[];
+  has3DPuff?: boolean;
+  // Screen-print packages (tees / totes)
+  printColors?: number;
+  printLocations?: string[];
+  sizeBreakdown?: {
+    preset?: string;
+    usePerColor?: boolean;
+    sizes?: Record<string, number>;
+    perColorSizes?: Record<string, Record<string, number>>;
+  };
   
   // Totals from frontend (verified server-side)
   totalQuantity: number;
@@ -66,6 +91,9 @@ export async function POST(request: NextRequest) {
       selectedColors,
       embroideryLocations,
       has3DPuff,
+      printColors,
+      printLocations,
+      sizeBreakdown,
       totalQuantity,
       logoFileUrl,
       orderNotes,
@@ -107,28 +135,74 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate package order
-    const validation = validatePackageOrder({
-      packageType,
-      totalQuantity,
-      embroideryLocations,
-      has3DPuff,
-    });
-    
-    if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.error },
-        { status: 400 }
-      );
+    // Package flavor determines validation, pricing and how we store the item.
+    const isPrintPackage = isPrintPackageType(packageType);
+    const decorationMethod = isPrintPackage ? 'screen-print' : 'embroidery';
+    const normalizedPrintLocations = printLocations && printLocations.length > 0 ? printLocations : ['front'];
+    const normalizedEmbLocations = embroideryLocations && embroideryLocations.length > 0 ? embroideryLocations : ['front'];
+
+    // Validate + price server-side (authoritative — never trust client totals)
+    let pricing: {
+      subtotal: number;
+      tax: number;
+      shipping: number;
+      total: number;
+      pricePerUnit: number;
+      tierLabel: string;
+      basePrice: number;
+      addonPrice: number;
+    };
+
+    if (isPrintPackage) {
+      const validation = validatePrintPackageOrder({
+        packageType,
+        totalQuantity,
+        printColors: printColors || 1,
+        printLocations: normalizedPrintLocations,
+      });
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+      const p = calculatePrintPackagePrice({
+        packageType,
+        totalQuantity,
+        printColors: printColors || 1,
+        printLocations: normalizedPrintLocations,
+      });
+      pricing = {
+        subtotal: p.subtotal,
+        tax: p.tax,
+        shipping: p.shipping,
+        total: p.total,
+        pricePerUnit: p.pricePerUnit,
+        tierLabel: p.tierLabel,
+        basePrice: p.blankCost,
+        addonPrice: p.printCost,
+      };
+    } else {
+      // Embroidery packages (caps / beanies)
+      const embInput = {
+        packageType: packageType as 'embroidered-caps' | 'trucker-caps' | 'snapback-caps' | 'dad-caps' | 'beanies',
+        totalQuantity,
+        embroideryLocations: normalizedEmbLocations,
+        has3DPuff: !!has3DPuff,
+      };
+      const validation = validatePackageOrder(embInput);
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+      const p = calculatePackagePrice(embInput);
+      pricing = {
+        subtotal: p.subtotal,
+        tax: p.tax,
+        shipping: p.shipping,
+        total: p.total,
+        pricePerUnit: p.pricePerHat,
+        tierLabel: p.tierLabel,
+        basePrice: p.basePrice,
+        addonPrice: p.addonPrice,
+      };
     }
-    
-    // Calculate pricing server-side
-    const pricing = calculatePackagePrice({
-      packageType,
-      totalQuantity,
-      embroideryLocations,
-      has3DPuff,
-    });
 
     let discountAmount = 0;
     let couponId: string | null = null;
@@ -182,20 +256,44 @@ export async function POST(request: NextRequest) {
     // Generate order number
     const orderNumber = generateOrderNumber();
 
-    // Create package order metadata
+    // Unit noun used in labels / emails
+    const productUnit = isPrintPackage
+      ? (packageType === 'printed-totes-isabella' ? 'bags' : 'shirts')
+      : (packageType === 'beanies' ? 'beanies' : 'caps');
+
+    // Attach per-color size breakdown (screen-print tees) so order emails and the
+    // admin can show per-size counts. Caps/totes have no size split.
+    const perColorSizes = sizeBreakdown?.perColorSizes;
+    const colorsForStorage = selectedColors.map((c) => ({
+      ...c,
+      sizeBreakdown: c.sizeBreakdown ?? perColorSizes?.[c.colorCode],
+    }));
+
+    // Create package order metadata (method-aware)
     const packageMetadata = {
       order_type: 'package',
       package_type: packageType,
+      decoration_method: decorationMethod,
       product_style_id: productStyleId,
       product_name: productName,
-      colors: selectedColors,
-      embroidery_locations: embroideryLocations,
-      has_3d_puff: has3DPuff,
+      product_unit: productUnit,
+      colors: colorsForStorage,
+      ...(isPrintPackage
+        ? {
+            print_colors: printColors || null,
+            print_locations: normalizedPrintLocations,
+            size_breakdown: sizeBreakdown || null,
+          }
+        : {
+            embroidery_locations: normalizedEmbLocations,
+            has_3d_puff: !!has3DPuff,
+          }),
       logo_file_url: logoFileUrl || null,
       pricing: {
         base_price: pricing.basePrice,
         addon_price: pricing.addonPrice,
-        price_per_hat: pricing.pricePerHat,
+        price_per_hat: pricing.pricePerUnit,
+        price_per_unit: pricing.pricePerUnit,
         tier_label: pricing.tierLabel,
       },
     };
@@ -211,17 +309,30 @@ export async function POST(request: NextRequest) {
         customer_name: customerName,
         customer_phone: customerPhone || shippingAddress.phone,
         company: company || shippingAddress.company,
-        // Store package details as items array for consistency
+        // Store package details as items array for consistency.
+        // pricePerHat kept for backward-compat with admin renderers that read it;
+        // pricePerUnit mirrors it for the webhook/email layer.
         items: [{
           type: 'package',
           packageType,
+          decorationMethod,
           productStyleId,
           productName,
-          colors: selectedColors,
+          productUnit,
+          colors: colorsForStorage,
           totalQuantity,
-          embroideryLocations,
-          has3DPuff,
-          pricePerHat: pricing.pricePerHat,
+          ...(isPrintPackage
+            ? {
+                printColors: printColors || null,
+                printLocations: normalizedPrintLocations,
+                sizeBreakdown: sizeBreakdown || null,
+              }
+            : {
+                embroideryLocations: normalizedEmbLocations,
+                has3DPuff: !!has3DPuff,
+              }),
+          pricePerHat: pricing.pricePerUnit,
+          pricePerUnit: pricing.pricePerUnit,
           subtotal: pricing.subtotal,
           blankCogs: avgBlankCogs,
         }],
@@ -272,11 +383,16 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    // Build add-ons list for metadata
+    // Build add-ons list for metadata (method-aware)
     const addonsList: string[] = [];
-    if (embroideryLocations.includes('side')) addonsList.push('Side Embroidery');
-    if (embroideryLocations.includes('back')) addonsList.push('Back Embroidery');
-    if (has3DPuff) addonsList.push('3D Puff');
+    if (isPrintPackage) {
+      addonsList.push(`${printColors || 1}-color print`);
+      if (normalizedPrintLocations.includes('back')) addonsList.push('Back Print');
+    } else {
+      if (normalizedEmbLocations.includes('side')) addonsList.push('Side Embroidery');
+      if (normalizedEmbLocations.includes('back')) addonsList.push('Back Embroidery');
+      if (has3DPuff) addonsList.push('3D Puff');
+    }
     
     // Create Stripe PaymentIntent with comprehensive metadata for webhook
     const paymentIntent = await stripe.paymentIntents.create({
@@ -288,6 +404,8 @@ export async function POST(request: NextRequest) {
         order_number: orderNumber,
         order_type: 'package',
         package_type: packageType,
+        decoration_method: decorationMethod,
+        product_unit: productUnit,
         customer_email: customerEmail,
         customer_name: customerName,
         customer_phone: customerPhone || '',
@@ -299,7 +417,7 @@ export async function POST(request: NextRequest) {
         logo_url: logoFileUrl || '',
         notes: orderNotes || '',
       },
-      description: `Package Order ${orderNumber} - ${totalQuantity} Custom Embroidered Caps`,
+      description: `Package Order ${orderNumber} - ${totalQuantity} ${productName}`,
     });
     
     // Update order with payment intent ID
@@ -335,7 +453,8 @@ export async function POST(request: NextRequest) {
         shipping: finalShipping,
         total: finalTotal,
         discount: discountAmount,
-        pricePerHat: pricing.pricePerHat,
+        pricePerHat: pricing.pricePerUnit,
+        pricePerUnit: pricing.pricePerUnit,
         tierLabel: pricing.tierLabel,
       },
     });
