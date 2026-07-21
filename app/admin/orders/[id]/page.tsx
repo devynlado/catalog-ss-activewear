@@ -45,6 +45,9 @@ const PACKAGE_TYPE_LABELS: Record<string, string> = {
   'snapback-caps': 'Snapback Caps',
   'dad-caps': 'Dad Caps',
   beanies: 'Beanies',
+  'printed-tees-gildan': 'Printed Tees (Gildan)',
+  'printed-tees-comfort-colors': 'Printed Tees (Comfort Colors)',
+  'printed-totes-isabella': 'Printed Tote Bags',
 };
 
 function formatPackageTypeLabel(pkg: string | undefined | null): string {
@@ -263,9 +266,17 @@ export default async function OrderDetailPage({
                       colorName?: string;
                       quantity?: number;
                     }> = Array.isArray(item.colors) ? item.colors : [];
-                    const locations: string[] = Array.isArray(item.embroideryLocations)
-                      ? item.embroideryLocations
-                      : [];
+                    // Screen-print packages store printLocations/printColors; embroidery
+                    // packages store embroideryLocations/has3DPuff.
+                    const isPrintPkg: boolean =
+                      item.decorationMethod === 'screen-print' ||
+                      Array.isArray(item.printLocations);
+                    const locations: string[] = isPrintPkg
+                      ? (Array.isArray(item.printLocations) ? item.printLocations : [])
+                      : (Array.isArray(item.embroideryLocations) ? item.embroideryLocations : []);
+                    const decoLabel = isPrintPkg ? 'Screen Print' : 'Embroidery';
+                    const printColors: number | null =
+                      isPrintPkg && item.printColors ? Number(item.printColors) : null;
 
                     return (
                       <div
@@ -296,7 +307,7 @@ export default async function OrderDetailPage({
                           </div>
                         </div>
 
-                        {(colors.length > 0 || locations.length > 0 || item.has3DPuff) && (
+                        {(colors.length > 0 || locations.length > 0 || item.has3DPuff || printColors) && (
                           <div className="mt-3 grid gap-3 border-t border-brand-100 pt-3 md:grid-cols-2">
                             {colors.length > 0 && (
                               <div>
@@ -321,18 +332,23 @@ export default async function OrderDetailPage({
                               </div>
                             )}
 
-                            {(locations.length > 0 || item.has3DPuff) && (
+                            {(locations.length > 0 || item.has3DPuff || printColors) && (
                               <div>
                                 <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                                   Decoration
                                 </p>
                                 <div className="flex flex-wrap gap-1.5">
+                                  {printColors && (
+                                    <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800">
+                                      {printColors} {printColors === 1 ? 'print color' : 'print colors'}
+                                    </span>
+                                  )}
                                   {locations.map((loc, li: number) => (
                                     <span
                                       key={li}
                                       className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-brand-100"
                                     >
-                                      Embroidery &middot; {formatEmbroideryLocation(loc)}
+                                      {decoLabel} &middot; {formatEmbroideryLocation(loc)}
                                     </span>
                                   ))}
                                   {item.has3DPuff && (

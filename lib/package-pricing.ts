@@ -156,3 +156,131 @@ export function validatePackageOrder(input: PackagePricingInput): { valid: boole
   
   return { valid: true };
 }
+
+// ---------------------------------------------------------------------------
+// Screen-printing packages (t-shirts + tote bags)
+// ---------------------------------------------------------------------------
+// These mirror the client-side constants in ScreenPrintPackageBuilder.tsx and
+// ToteBagPackageBuilder.tsx so server-side verification produces the exact same
+// price the customer saw. Keep them in sync if the builder pricing changes.
+
+export type PrintPackageType =
+  | 'printed-tees-gildan'
+  | 'printed-tees-comfort-colors'
+  | 'printed-totes-isabella';
+
+export const PRINT_PACKAGE_TYPES: readonly PrintPackageType[] = [
+  'printed-tees-gildan',
+  'printed-tees-comfort-colors',
+  'printed-totes-isabella',
+];
+
+export function isPrintPackageType(pkg: string): pkg is PrintPackageType {
+  return (PRINT_PACKAGE_TYPES as readonly string[]).includes(pkg);
+}
+
+type PrintTier = 50 | 75 | 100 | 250 | 500;
+
+// Print cost per unit (base includes 2 colors, +perExtraColor for 3rd/4th)
+const TEES_PRINT_PRICING: Record<PrintTier, { base: number; perExtraColor: number }> = {
+  50: { base: 4.75, perExtraColor: 0.75 },
+  75: { base: 3.70, perExtraColor: 0.75 },
+  100: { base: 3.00, perExtraColor: 0.75 },
+  250: { base: 2.10, perExtraColor: 0.75 },
+  500: { base: 1.80, perExtraColor: 0.75 },
+};
+const TEES_BLANK_COST: Record<PrintTier, number> = {
+  50: 3.25, 75: 3.10, 100: 2.95, 250: 2.75, 500: 2.60,
+};
+
+const TOTES_PRINT_PRICING: Record<PrintTier, { base: number; perExtraColor: number }> = {
+  50: { base: 3.50, perExtraColor: 0.75 },
+  75: { base: 2.80, perExtraColor: 0.75 },
+  100: { base: 2.25, perExtraColor: 0.75 },
+  250: { base: 1.75, perExtraColor: 0.75 },
+  500: { base: 1.45, perExtraColor: 0.75 },
+};
+const TOTES_BLANK_COST: Record<PrintTier, number> = {
+  50: 5.25, 75: 4.95, 100: 4.75, 250: 4.50, 500: 4.50,
+};
+
+const PRINT_TIER_LABELS: Record<PrintTier, string> = {
+  50: '50-74',
+  75: '75-99',
+  100: '100-249',
+  250: '250-499',
+  500: '500+',
+};
+
+function getPrintTier(qty: number): PrintTier {
+  if (qty >= 500) return 500;
+  if (qty >= 250) return 250;
+  if (qty >= 100) return 100;
+  if (qty >= 75) return 75;
+  return 50;
+}
+
+export interface PrintPackagePricingInput {
+  packageType: PrintPackageType;
+  totalQuantity: number;
+  printColors: number; // 1-4
+  printLocations: string[]; // ['front'] or ['front', 'back']
+}
+
+export interface PrintPackagePricingResult {
+  blankCost: number;
+  printCost: number;
+  pricePerUnit: number;
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  tierLabel: string;
+}
+
+export function calculatePrintPackagePrice(input: PrintPackagePricingInput): PrintPackagePricingResult {
+  const { packageType, totalQuantity, printColors, printLocations } = input;
+  const isTote = packageType === 'printed-totes-isabella';
+  const printPricing = isTote ? TOTES_PRINT_PRICING : TEES_PRINT_PRICING;
+  const blankPricing = isTote ? TOTES_BLANK_COST : TEES_BLANK_COST;
+
+  const tier = getPrintTier(totalQuantity);
+  const safeColors = Math.min(4, Math.max(1, Math.round(printColors) || 1));
+  const extraColors = Math.max(0, safeColors - 2);
+  const perLocationPrintCost = printPricing[tier].base + extraColors * printPricing[tier].perExtraColor;
+
+  const hasSecondLocation = printLocations.some((l) => l !== 'front');
+  const printCost = perLocationPrintCost + (hasSecondLocation ? perLocationPrintCost : 0);
+  const blankCost = blankPricing[tier];
+  const pricePerUnit = Math.round((blankCost + printCost) * 100) / 100;
+
+  const subtotal = Math.round(totalQuantity * pricePerUnit * 100) / 100;
+  const tax = Math.round(subtotal * TAX_RATE * 100) / 100;
+  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+  const total = Math.round((subtotal + tax + shipping) * 100) / 100;
+
+  return {
+    blankCost,
+    printCost,
+    pricePerUnit,
+    subtotal,
+    tax,
+    shipping,
+    total,
+    tierLabel: PRINT_TIER_LABELS[tier],
+  };
+}
+
+export function validatePrintPackageOrder(input: PrintPackagePricingInput): { valid: boolean; error?: string } {
+  const unit = input.packageType === 'printed-totes-isabella' ? 'bags' : 'shirts';
+  if (input.totalQuantity < 50) {
+    return { valid: false, error: `Minimum order quantity is 50 ${unit}` };
+  }
+  if (!input.printLocations || !input.printLocations.includes('front')) {
+    return { valid: false, error: 'Front print is required' };
+  }
+  if (!input.printColors || input.printColors < 1 || input.printColors > 4) {
+    return { valid: false, error: 'Select between 1 and 4 print colors' };
+  }
+  return { valid: true };
+}
