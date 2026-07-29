@@ -31,13 +31,6 @@ export default async function AdminDashboardPage() {
   // Total leads = quotes + contact form entries
   const totalLeads = (quotesCount ?? 0) + (contactsCount ?? 0);
 
-  // Count unique customers by email from orders (matches /admin/customers logic)
-  const { data: customerEmails } = await supabase
-    .from('orders')
-    .select('customer_email')
-    .neq('payment_status', 'pending') as { data: { customer_email: string }[] | null };
-  const totalCustomers = new Set((customerEmails || []).map(r => r.customer_email?.toLowerCase()).filter(Boolean)).size;
-
   return (
     <div className="min-h-screen bg-stone-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -84,16 +77,16 @@ export default async function AdminDashboardPage() {
           </Link>
 
           <Link
-            href="/admin/customers"
+            href="/admin/quotes"
             className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
           >
             <div className="flex items-center gap-4">
               <div className="rounded-full bg-blue-100 p-3">
-                <Users className="h-5 w-5 text-blue-600" />
+                <FileText className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-navy-800">{totalCustomers || 0}</p>
-                <p className="text-sm text-slate-600">Total Customers</p>
+                <p className="text-2xl font-bold text-navy-800">{quotesCount ?? 0}</p>
+                <p className="text-sm text-slate-600">Quote Requests</p>
               </div>
             </div>
           </Link>

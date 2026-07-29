@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Brand } from '@/lib/types';
 import { getMainCategories } from '@/lib/category-taxonomy';
 import { PhoneButton } from '@/components/ui/PhoneButton';
+import { HeaderSearch } from './HeaderSearch';
 import { createSupabaseBrowserClient, signOut } from '@/lib/supabase-browser';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -359,7 +360,6 @@ export function Header() {
   const servicesRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
   const megaMenuRef = useRef<HTMLDivElement>(null);
-  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const megaMenuCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const servicesCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const shopCloseTimer = useRef<NodeJS.Timeout | null>(null);
@@ -368,13 +368,6 @@ export function Header() {
   const { items, openDrawer, justAdded } = useCartStore();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const wishlistCount = useWishlistStore((s) => s.items.length);
-
-  // Auto-focus mobile search input when opened
-  useEffect(() => {
-    if (mobileSearchOpen && mobileSearchInputRef.current) {
-      mobileSearchInputRef.current.focus();
-    }
-  }, [mobileSearchOpen]);
 
   // Close mobile search when menu opens
   useEffect(() => {
@@ -1168,20 +1161,7 @@ export function Header() {
 
             {/* Search Bar (desktop) */}
             <div className="hidden flex-1 max-w-md mx-6 lg:block">
-              <form action="/catalog" method="GET" className="relative">
-                <input
-                  type="text"
-                  name="search"
-                  placeholder="Search by style # or keyword..."
-                  className="w-full rounded-full border border-stone-200 bg-stone-50 py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-brand-500 p-1.5 text-white hover:bg-brand-600"
-                >
-                  <Search className="h-4 w-4" />
-                </button>
-              </form>
+              <HeaderSearch variant="desktop" />
             </div>
 
             {/* Right side - Auth + Quote CTA */}
@@ -1375,21 +1355,11 @@ export function Header() {
         {/* Mobile Search Overlay */}
         {mobileSearchOpen && (
           <div className="border-t border-stone-100 bg-white px-4 py-3 lg:hidden">
-            <form action="/catalog" method="GET" className="relative">
-              <input
-                ref={mobileSearchInputRef}
-                type="text"
-                name="search"
-                placeholder="Search by style # or keyword..."
-                className="w-full rounded-full border border-stone-200 bg-stone-50 py-3 pl-4 pr-12 text-base focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-brand-500 p-2 text-white hover:bg-brand-600 transition-colors"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-            </form>
+            <HeaderSearch
+              variant="mobile"
+              autoFocus
+              onNavigate={() => setMobileSearchOpen(false)}
+            />
           </div>
         )}
 

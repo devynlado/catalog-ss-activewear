@@ -71,6 +71,7 @@ interface QuoteProjectSubmission {
   };
   eventDate?: string | null;
   submittedAt?: string;
+  visitor_source?: string | null;
 }
 
 // -----------------------------------------------------------------------------
@@ -359,6 +360,7 @@ export async function POST(request: NextRequest) {
           notes: body.contact.message || null,
           subtotal: 0,
           status: 'new',
+          visitor_source: body.visitor_source || null,
         });
         console.log(`Quote ${quoteId} saved to Supabase (project form)`);
       } catch (dbError) {
@@ -495,6 +497,7 @@ export async function POST(request: NextRequest) {
         notes: body.contact.message || null,
         subtotal,
         status: 'new',
+        visitor_source: (body as { visitor_source?: string | null }).visitor_source || null,
       });
       console.log(`Quote ${quoteId} saved to Supabase`);
     } catch (dbError) {
