@@ -42,6 +42,7 @@ import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 import { trackQuoteFormSubmit } from '@/lib/analytics';
+import { getVisitorSource } from '@/lib/attribution';
 import {
   MAX_PROJECTS_PER_QUOTE,
   SERVICE_QUERY_MAPPING,
@@ -270,6 +271,7 @@ function QuotePageContent() {
             message: contact.message || undefined,
           },
           eventDate: contact.eventDate || null,
+          visitor_source: getVisitorSource(),
           website: honeypotInput?.value ?? '',
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
           submittedAt: new Date().toISOString(),

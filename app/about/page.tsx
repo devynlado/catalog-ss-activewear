@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Users, Users2, Star, TrendingUp, Building2, Heart, ArrowRight } from 'lucide-react';
+import { warehouseImages } from '@/lib/service-images';
 
 export default function AboutPage() {
   return (
@@ -202,16 +204,25 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Image placeholder */}
+            {/* Facility image */}
             <div className="relative">
-              <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 ring-1 ring-stone-200">
-                <div className="flex h-full items-center justify-center p-8 text-center">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl ring-1 ring-stone-200">
+                <Image
+                  src={warehouseImages.productionFloor.src}
+                  alt={warehouseImages.productionFloor.alt}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                />
+                {/* Scrim keeps the overlaid text legible on top of the photo */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/25" />
+                <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
                   <div>
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-500 text-white">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg">
                       <Building2 className="h-8 w-8" />
                     </div>
-                    <p className="text-lg font-semibold text-brand-900">Montclair, California</p>
-                    <p className="mt-1 text-sm text-brand-700">
+                    <p className="text-lg font-semibold text-white drop-shadow-sm">Montclair, California</p>
+                    <p className="mt-1 text-sm text-white/85 drop-shadow-sm">
                       Our 25,000 sq ft production facility
                     </p>
                   </div>

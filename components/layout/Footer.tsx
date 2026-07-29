@@ -143,6 +143,11 @@ export function Footer() {
                   Pricing Calculator
                 </Link>
               </li>
+              <li>
+                <Link href="/services/live-screen-printing" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Live Printing
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -152,6 +157,11 @@ export function Footer() {
               Resources
             </h3>
             <ul className="space-y-2">
+              <li>
+                <Link href="/portfolio" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
+                  Our Portfolio
+                </Link>
+              </li>
               <li>
                 <Link href="/resources/screen-printing-guide" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
                   Screen Printing Guide

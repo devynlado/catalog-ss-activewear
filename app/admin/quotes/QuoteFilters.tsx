@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, X } from 'lucide-react';
+import { Calendar, Search, X } from 'lucide-react';
 
 interface QuoteFiltersProps {
   currentStatus: string;
   currentSearch: string;
+  currentDateFrom: string;
+  currentDateTo: string;
   statusCounts: {
     all: number;
     new: number;
@@ -22,7 +24,7 @@ const statusTabs = [
   { id: 'quoted', label: 'Quoted' },
 ];
 
-export function QuoteFilters({ currentStatus, currentSearch, statusCounts }: QuoteFiltersProps) {
+export function QuoteFilters({ currentStatus, currentSearch, currentDateFrom, currentDateTo, statusCounts }: QuoteFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(currentSearch);
@@ -51,6 +53,10 @@ export function QuoteFilters({ currentStatus, currentSearch, statusCounts }: Quo
     updateParams({ search: undefined });
   };
 
+  const clearDates = () => {
+    updateParams({ date_from: undefined, date_to: undefined });
+  };
+
   return (
     <div className="space-y-4">
       {/* Search Bar */}
@@ -75,6 +81,38 @@ export function QuoteFilters({ currentStatus, currentSearch, statusCounts }: Quo
           )}
         </div>
       </form>
+
+      {/* Date range filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 text-sm text-slate-500">
+          <Calendar className="h-4 w-4" />
+          Date
+        </div>
+        <input
+          type="date"
+          value={currentDateFrom}
+          max={currentDateTo || undefined}
+          onChange={(e) => updateParams({ date_from: e.target.value || undefined })}
+          className="h-9 rounded-lg border border-stone-200 bg-white px-3 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        />
+        <span className="text-xs text-slate-400">to</span>
+        <input
+          type="date"
+          value={currentDateTo}
+          min={currentDateFrom || undefined}
+          onChange={(e) => updateParams({ date_to: e.target.value || undefined })}
+          className="h-9 rounded-lg border border-stone-200 bg-white px-3 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        />
+        {(currentDateFrom || currentDateTo) && (
+          <button
+            type="button"
+            onClick={clearDates}
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-600"
+          >
+            <X className="h-3 w-3" /> Clear dates
+          </button>
+        )}
+      </div>
 
       {/* Status Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">

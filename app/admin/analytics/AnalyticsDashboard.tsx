@@ -17,6 +17,7 @@ import {
   Minus,
   ExternalLink,
   Download,
+  Calendar,
 } from 'lucide-react';
 import { ProfitChart } from './ProfitChart';
 import { AdSpendForm } from './AdSpendForm';
@@ -132,11 +133,21 @@ interface AnalyticsData {
   search?: SearchData;
 }
 
-type Period = '7d' | '30d' | '90d';
+type Period = '7d' | '30d' | '90d' | 'custom';
 
 // ---- Helpers ----
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+}
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysAgoStr(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
 }
 
 function formatPercent(value: number) {
@@ -177,6 +188,8 @@ function MarginBadge({ margin }: { margin: number }) {
 // ---- Main Component ----
 export function AnalyticsDashboard() {
   const [period, setPeriod] = useState<Period>('7d');
+  const [customFrom, setCustomFrom] = useState<string>(daysAgoStr(30));
+  const [customTo, setCustomTo] = useState<string>(todayStr());
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAdSpendForm, setShowAdSpendForm] = useState(false);
@@ -184,9 +197,16 @@ export function AnalyticsDashboard() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const fetchData = useCallback(async () => {
+    // A custom range needs both ends before we hit the API.
+    if (period === 'custom' && (!customFrom || !customTo)) return;
+
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admin/analytics?period=${period}`);
+      const query =
+        period === 'custom'
+          ? `period=custom&from=${customFrom}&to=${customTo}`
+          : `period=${period}`;
+      const res = await fetch(`/api/admin/analytics?${query}`);
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -194,7 +214,7 @@ export function AnalyticsDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [period]);
+  }, [period, customFrom, customTo]);
 
   useEffect(() => {
     fetchData();
@@ -230,11 +250,13 @@ export function AnalyticsDashboard() {
     { value: '7d', label: '7 days' },
     { value: '30d', label: '30 days' },
     { value: '90d', label: '90 days' },
+    { value: 'custom', label: 'Custom' },
   ];
 
   const exportCSV = (type: 'orders' | 'daily') => {
     let csvContent = '';
-    const filename = `analytics_${type}_${period}_${new Date().toISOString().split('T')[0]}.csv`;
+    const rangeLabel = period === 'custom' ? `${customFrom}_to_${customTo}` : period;
+    const filename = `analytics_${type}_${rangeLabel}_${new Date().toISOString().split('T')[0]}.csv`;
 
     if (type === 'orders') {
       csvContent = 'Order,Date,Customer,Type,Revenue,Refunded,COGS,Stripe Fee,Shipping Charged,Actual Shipping,Net Profit,Margin %,Source,COGS Source\n';
@@ -284,21 +306,46 @@ export function AnalyticsDashboard() {
   return (
     <div className="space-y-6">
       {/* Period selector */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1 rounded-lg bg-stone-100 p-1">
-          {periods.map(p => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                period === p.value
-                  ? 'bg-white text-navy-800 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1 rounded-lg bg-stone-100 p-1">
+            {periods.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  period === p.value
+                    ? 'bg-white text-navy-800 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom date range — editing a date auto-selects the Custom period */}
+          {period === 'custom' && (
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-slate-400" />
+              <input
+                type="date"
+                value={customFrom}
+                max={customTo || todayStr()}
+                onChange={(e) => { setPeriod('custom'); setCustomFrom(e.target.value); }}
+                className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+              <span className="text-xs text-slate-400">to</span>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                max={todayStr()}
+                onChange={(e) => { setPeriod('custom'); setCustomTo(e.target.value); }}
+                className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <div className="relative group">

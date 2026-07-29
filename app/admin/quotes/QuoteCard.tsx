@@ -51,7 +51,21 @@ interface Quote {
   subtotal: number;
   status: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
   created_at: string;
+  visitor_source?: string | null;
 }
+
+// Visitor-source channel pill colors (mirrors /admin/contacts).
+const VISITOR_SOURCE_COLORS: Record<string, string> = {
+  'Direct': 'bg-slate-100 text-slate-700',
+  'Google Ads': 'bg-blue-100 text-blue-800',
+  'Organic Search': 'bg-green-100 text-green-800',
+  'Organic Social': 'bg-purple-100 text-purple-800',
+  'Organic Shopping': 'bg-teal-100 text-teal-800',
+  'Referral': 'bg-amber-100 text-amber-800',
+  'Cross-network': 'bg-indigo-100 text-indigo-800',
+  'Other': 'bg-stone-100 text-stone-700',
+  'Untracked': 'bg-stone-50 text-stone-400 border border-dashed border-stone-300',
+};
 
 const statusConfig = {
   new: { label: 'New', variant: 'warning' as const },
@@ -147,6 +161,15 @@ export function QuoteCard({ quote }: { quote: Quote }) {
                 </span>
               </>
             )}
+            <span className="text-slate-300">•</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                VISITOR_SOURCE_COLORS[quote.visitor_source || 'Untracked'] ||
+                'bg-stone-100 text-stone-700'
+              }`}
+            >
+              {quote.visitor_source || 'Untracked'}
+            </span>
           </div>
           <h3 className="mt-0.5 truncate font-semibold text-navy-800">
             {quote.company || quote.customer_name}

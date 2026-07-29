@@ -3,6 +3,7 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { QuoteCard } from './QuoteCard';
 import { QuoteFilters } from './QuoteFilters';
+import { QuotesTrendChart } from './QuotesTrendChart';
 
 export const metadata = {
   title: 'Quotes',
@@ -12,7 +13,7 @@ export const metadata = {
 export default async function QuotesPage({
   searchParams,
 }: {
-  searchParams: { status?: string; search?: string };
+  searchParams: { status?: string; search?: string; date_from?: string; date_to?: string };
 }) {
   const supabase = await createSupabaseServerClient();
 
@@ -25,6 +26,15 @@ export default async function QuotesPage({
   // Filter by status if provided
   if (searchParams.status && searchParams.status !== 'all') {
     query = query.eq('status', searchParams.status);
+  }
+
+  // Date range filter (mirrors /admin/contacts). `date_to` is inclusive of the
+  // whole day, so we bump it to end-of-day.
+  if (searchParams.date_from) {
+    query = query.gte('created_at', searchParams.date_from);
+  }
+  if (searchParams.date_to) {
+    query = query.lte('created_at', `${searchParams.date_to}T23:59:59.999Z`);
   }
 
   // Search by quote_id, customer_name, or email
@@ -86,10 +96,17 @@ export default async function QuotesPage({
           </p>
         </div>
 
+        {/* Trend chart — daily quote requests broken down by visitor source */}
+        <div className="mb-6">
+          <QuotesTrendChart />
+        </div>
+
         {/* Filters */}
         <QuoteFilters 
           currentStatus={searchParams.status || 'all'} 
           currentSearch={searchParams.search || ''}
+          currentDateFrom={searchParams.date_from || ''}
+          currentDateTo={searchParams.date_to || ''}
           statusCounts={statusCounts}
         />
 
