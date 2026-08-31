@@ -729,6 +729,7 @@ export default async function OrderDetailPage({
               paidAt={order.paid_at ?? null}
               ssAutoOrderFailed={order.ss_auto_order_failed ?? false}
               ssAutoOrderError={order.ss_auto_order_error ?? null}
+              ssPlacementState={order.ss_order_placement_state ?? 'none'}
               ssOrders={(ssOrders || []) as any[]}
               isPackageOrder={isPackageOrder}
             />

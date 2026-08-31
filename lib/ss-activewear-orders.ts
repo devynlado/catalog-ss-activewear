@@ -248,6 +248,193 @@ function mapShippingMethod(method: string | null, isExpress?: boolean): string {
 }
 
 // ------------------------------------------------------------------
+// PLACEMENT GUARD (atomic mutex + verify-before-resend helpers)
+// ------------------------------------------------------------------
+
+type PlacementClaim = 'fresh' | 'reclaim' | 'skip';
+
+// A 'placing' claim older than this is treated as abandoned (e.g. the serverless
+// function was killed mid-flight). Re-claiming it always goes through
+// verify-before-resend, so a re-claim can never duplicate a committed order.
+const PLACEMENT_STALE_MS = 15 * 60 * 1000;
+
+/**
+ * Atomically claim the right to place this order with S&S, using a single-row
+ * conditional UPDATE as a mutex (safe under concurrent webhooks / cron / admin).
+ *
+ *  - 'fresh'   : order was never attempted -> safe to POST directly.
+ *  - 'reclaim' : a previous attempt failed / is undetermined / went stale ->
+ *                caller MUST verify with S&S before re-sending.
+ *  - 'skip'    : another attempt is in-flight, or the order is already placed.
+ */
+async function claimPlacement(
+  db: SupabaseClient,
+  orderId: string
+): Promise<PlacementClaim> {
+  const nowIso = new Date().toISOString();
+
+  // Fresh: never attempted. Only one concurrent caller can win this (Postgres
+  // re-checks the WHERE against the committed row version under READ COMMITTED).
+  const { data: fresh } = await db
+    .from('orders')
+    .update({ ss_order_placement_state: 'placing', ss_order_placement_at: nowIso })
+    .eq('id', orderId)
+    .eq('ss_order_placement_state', 'none')
+    .select('id');
+  if (fresh && fresh.length > 0) return 'fresh';
+
+  // Retryable: a previous definitive failure or undetermined outcome.
+  const { data: retry } = await db
+    .from('orders')
+    .update({ ss_order_placement_state: 'placing', ss_order_placement_at: nowIso })
+    .eq('id', orderId)
+    .in('ss_order_placement_state', ['failed', 'unknown'])
+    .select('id');
+  if (retry && retry.length > 0) return 'reclaim';
+
+  // Stale in-flight: a prior 'placing' that never resolved (crash / killed
+  // function). Older than PLACEMENT_STALE_MS only.
+  const staleCutoff = new Date(Date.now() - PLACEMENT_STALE_MS).toISOString();
+  const { data: stale } = await db
+    .from('orders')
+    .update({ ss_order_placement_state: 'placing', ss_order_placement_at: nowIso })
+    .eq('id', orderId)
+    .eq('ss_order_placement_state', 'placing')
+    .lt('ss_order_placement_at', staleCutoff)
+    .select('id');
+  if (stale && stale.length > 0) return 'reclaim';
+
+  return 'skip';
+}
+
+/** Set the placement state (+ optional extra order columns) in one update. */
+async function setPlacementState(
+  db: SupabaseClient,
+  orderId: string,
+  state: 'none' | 'placing' | 'placed' | 'unknown' | 'failed',
+  extra?: Record<string, unknown>
+): Promise<void> {
+  await db
+    .from('orders')
+    .update({
+      ss_order_placement_state: state,
+      ss_order_placement_at: new Date().toISOString(),
+      ...(extra || {}),
+    })
+    .eq('id', orderId);
+}
+
+/**
+ * Look up existing S&S orders by our PO number (= order_number) via
+ * `GET /orders/PO,{po}`. Used to verify whether an order already exists at S&S
+ * before re-sending, so a lost/timed-out response never produces a duplicate.
+ *
+ * Throws if the lookup itself fails: the caller MUST treat that as
+ * "outcome unknown" and NOT re-send (avoiding a duplicate on S&S downtime).
+ */
+export async function findSSOrdersByPO(
+  poNumber: string
+): Promise<SSOrderResponse[]> {
+  if (!poNumber) return [];
+  const encoded = encodeURIComponent(poNumber);
+  const res = await ssOrderRequest<SSOrderResponse[]>(`/orders/PO,${encoded}`);
+  const list = Array.isArray(res) ? res : [];
+  // Defensive exact-match (the API filter is a comma-list identifier search).
+  return list.filter((o) => (o.poNumber || '').trim() === poNumber.trim());
+}
+
+/**
+ * Reconcile our DB with orders that already exist at S&S (found via PO lookup).
+ * Inserts any missing ss_orders rows idempotently (ON CONFLICT on ss_guid) and
+ * marks the order as placed. This both prevents duplicate re-sends and heals
+ * rows lost when the original POST response never came back.
+ */
+export async function reconcileSSOrdersFromRemote(
+  orderId: string,
+  remoteOrders: SSOrderResponse[],
+  supabase?: SupabaseClient
+): Promise<void> {
+  const db = supabase || getServiceSupabase();
+
+  const { data: shipments } = await db
+    .from('order_shipments')
+    .select('*')
+    .eq('order_id', orderId)
+    .order('shipment_index', { ascending: true });
+
+  for (const ssOrder of remoteOrders) {
+    const matchingShipment = shipments?.find((s) => !s.ss_order_number);
+
+    const { data: inserted } = await db
+      .from('ss_orders')
+      .upsert(
+        {
+          order_id: orderId,
+          shipment_id: matchingShipment?.id || null,
+          ss_order_number: ssOrder.orderNumber,
+          ss_invoice_number: ssOrder.invoiceNumber || null,
+          ss_guid: ssOrder.guid,
+          ss_warehouse: ssOrder.warehouseAbbr,
+          ss_order_status: ssOrder.orderStatus,
+          ss_delivery_status: ssOrder.deliveryStatus || null,
+          ss_expected_delivery_date: ssOrder.expectedDeliveryDate || null,
+          ss_tracking_number: ssOrder.trackingNumber || null,
+          ss_carrier: ssOrder.shippingCarrier || null,
+          ss_subtotal: ssOrder.subtotal,
+          ss_shipping: ssOrder.shipping,
+          ss_total: ssOrder.total,
+          ss_total_weight: ssOrder.totalWeight,
+          ss_total_boxes: ssOrder.totalBoxes,
+          ss_raw_response: ssOrder as unknown as Record<string, unknown>,
+        },
+        { onConflict: 'ss_guid', ignoreDuplicates: true }
+      )
+      .select()
+      .maybeSingle();
+
+    if (matchingShipment && inserted) {
+      await db
+        .from('order_shipments')
+        .update({
+          ss_order_number: ssOrder.orderNumber,
+          ss_invoice_number: ssOrder.invoiceNumber || null,
+          ss_guid: ssOrder.guid,
+          expected_delivery_date: ssOrder.expectedDeliveryDate || null,
+        })
+        .eq('id', matchingShipment.id);
+    }
+  }
+
+  const deliveryDates = remoteOrders
+    .map((o) => o.expectedDeliveryDate)
+    .filter(Boolean)
+    .sort();
+
+  const updateData: Record<string, unknown> = {
+    status: 'ordered',
+    ordered_at: new Date().toISOString(),
+    ss_auto_order_failed: false,
+    ss_auto_order_error: null,
+    ss_order_placement_state: 'placed',
+    ss_order_placement_at: new Date().toISOString(),
+  };
+  if (deliveryDates.length > 0) {
+    updateData.expected_delivery_date = deliveryDates[deliveryDates.length - 1];
+  }
+  await db.from('orders').update(updateData).eq('id', orderId);
+
+  await db.from('order_activities').insert({
+    order_id: orderId,
+    activity_type: 'ordered',
+    details: {
+      ss_order_numbers: remoteOrders.map((o) => o.orderNumber),
+      auto_ordered: true,
+      reconciled: true,
+    },
+  });
+}
+
+// ------------------------------------------------------------------
 // PLACE ORDER with SS Activewear
 // ------------------------------------------------------------------
 
@@ -373,25 +560,78 @@ export async function placeSSOrder(
     throw new Error(`Order ${orderId} not found`);
   }
 
-  // Idempotency: check if we already placed an SS order for this order
-  const { data: existingSS } = await db
-    .from('ss_orders')
-    .select('id, ss_order_number')
-    .eq('order_id', orderId);
+  // --- Atomic placement guard (DB-level mutex) ---------------------------
+  // Replaces the old non-atomic "read ss_orders then POST" idempotency check.
+  // Only one caller can flip the order into 'placing'; everyone else backs off.
+  // This closes the concurrent-webhook / admin-vs-cron duplicate race.
+  const claim = await claimPlacement(db, orderId);
 
-  if (existingSS && existingSS.length > 0) {
+  if (claim === 'skip') {
     await logSSActivity({
       orderId,
       activityType: 'auto_order_skipped',
       status: 'info',
-      title: 'SS order already exists (idempotency check)',
-      details: { existing_ss_orders: existingSS.map(s => s.ss_order_number) },
+      title: 'SS placement already completed or in progress (idempotency guard)',
       supabase: db,
     });
-    return { success: true, ssOrders: [], lineErrors: [], error: 'Already placed' };
+    return {
+      success: true,
+      ssOrders: [],
+      lineErrors: [],
+      error: 'Already placed or in progress',
+    };
   }
 
-  // Kill switch (after idempotency — do not mark failed when an SS order already exists)
+  // --- Verify-before-resend --------------------------------------------
+  // For any re-entry (previous failed / undetermined / stale attempt) the order
+  // may already exist at S&S even though our DB has no ss_orders row — e.g. the
+  // first POST timed out AFTER S&S committed it. That is the exact bug that made
+  // the retry cron duplicate ORD-260813-E0MS / ORD-260816-4564. So ask S&S by PO
+  // first; if it already has the order, reconcile and DO NOT re-send.
+  if (claim === 'reclaim' && process.env.SS_VERIFY_BEFORE_PLACE !== 'false') {
+    let remote: SSOrderResponse[] = [];
+    try {
+      remote = await findSSOrdersByPO(order.order_number);
+    } catch (err) {
+      // Verification itself failed (S&S unreachable). We must NOT risk a
+      // duplicate — leave the order 'unknown' and let a later run retry.
+      const msg = `Could not verify with S&S before re-send: ${
+        err instanceof Error ? err.message : 'lookup failed'
+      }`;
+      await setPlacementState(db, orderId, 'unknown', {
+        ss_auto_order_failed: true,
+        ss_auto_order_error: msg,
+      });
+      await logSSActivity({
+        orderId,
+        activityType: 'order_verify_failed',
+        status: 'warning',
+        title: 'Skipped re-send — could not verify existing order with S&S',
+        details: { po_number: order.order_number, error: msg },
+        supabase: db,
+      });
+      return { success: false, ssOrders: [], lineErrors: [], error: msg };
+    }
+
+    if (remote.length > 0) {
+      await reconcileSSOrdersFromRemote(orderId, remote, db);
+      await logSSActivity({
+        orderId,
+        activityType: 'auto_order_skipped',
+        status: 'info',
+        title: `SS order already existed at S&S (verified by PO) — reconciled ${remote.length} order(s), skipped duplicate re-send`,
+        details: {
+          po_number: order.order_number,
+          ss_order_numbers: remote.map((r) => r.orderNumber),
+        },
+        supabase: db,
+      });
+      return { success: true, ssOrders: remote, lineErrors: [] };
+    }
+    // Nothing at S&S — safe to place below.
+  }
+
+  // Kill switch (after guard/verify — do not mark failed when an SS order already exists)
   if (process.env.SS_AUTO_ORDER_ENABLED === 'false') {
     await logSSActivity({
       orderId,
@@ -403,10 +643,10 @@ export async function placeSSOrder(
     });
     const killMsg =
       'Automatic S&S ordering is disabled (SS_AUTO_ORDER_ENABLED=false). Turn it on in Vercel env and use Retry, or place the order on ssactivewear.com manually.';
-    await db.from('orders').update({
+    await setPlacementState(db, orderId, 'failed', {
       ss_auto_order_failed: true,
       ss_auto_order_error: killMsg,
-    }).eq('id', orderId);
+    });
     return { success: false, ssOrders: [], lineErrors: [], error: 'Auto-ordering disabled' };
   }
 
@@ -502,19 +742,29 @@ export async function placeSSOrder(
         skippedItems.length > 0
           ? `Could not build S&S order lines: ${skippedItems.length} cart line(s) did not match an S&S SKU (check cart SKUs vs product_skus, color/size spelling, or supplier).`
           : 'Cart has product lines but none map to S&S Activewear.';
-      await db.from('orders').update({
+      await setPlacementState(db, orderId, 'failed', {
         ss_auto_order_failed: true,
         ss_auto_order_error: msg,
-      }).eq('id', orderId);
+      });
       return { success: false, ssOrders: [], lineErrors: [], error: msg };
     }
+    // No S&S-supplied items at all (e.g. decoration-only) — nothing to place.
+    // Resolve so the retry cron never picks this up again.
+    await setPlacementState(db, orderId, 'placed');
     return { success: true, ssOrders: [], lineErrors: [] };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const shippingAddr = order.shipping_address as any;
   if (!shippingAddr) {
-    throw new Error('Order has no shipping address');
+    // Definitive misconfiguration — nothing was sent to S&S, so this is a
+    // safe-to-retry failure (not 'unknown'). Release the claim.
+    const msg = 'Order has no shipping address';
+    await setPlacementState(db, orderId, 'failed', {
+      ss_auto_order_failed: true,
+      ss_auto_order_error: msg,
+    });
+    return { success: false, ssOrders: [], lineErrors: [], error: msg };
   }
 
   // If the order includes decoration services, ship blanks to the Garment Decor
@@ -619,11 +869,12 @@ export async function placeSSOrder(
     }
 
     if (ssOrders.length === 0 && lineErrors.length > 0) {
-      // Total failure - all items rejected
-      await db.from('orders').update({
+      // Total failure - all items rejected. Nothing was created at S&S, so this
+      // is a safe-to-retry failure. Release the claim.
+      await setPlacementState(db, orderId, 'failed', {
         ss_auto_order_failed: true,
         ss_auto_order_error: `All ${lineErrors.length} items rejected by SS Activewear`,
-      }).eq('id', orderId);
+      });
 
       await logSSActivity({
         orderId,
@@ -717,6 +968,8 @@ export async function placeSSOrder(
       ordered_at: new Date().toISOString(),
       ss_auto_order_failed: false,
       ss_auto_order_error: null,
+      ss_order_placement_state: 'placed',
+      ss_order_placement_at: new Date().toISOString(),
     };
 
     // Set expected delivery from earliest SS order
@@ -747,17 +1000,21 @@ export async function placeSSOrder(
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     const summary = summarizeSsPlaceOrderError(errorMsg);
 
-    await db.from('orders').update({
+    // The POST may have reached S&S and committed the order even though we hit a
+    // timeout / 5xx / network / parse error before recording it. Mark the outcome
+    // as 'unknown' (NOT 'failed') so the retry path verifies with S&S by PO before
+    // re-sending — preventing the duplicate-order bug.
+    await setPlacementState(db, orderId, 'unknown', {
       ss_auto_order_failed: true,
       ss_auto_order_error: summary,
-    }).eq('id', orderId);
+    });
 
     await logSSActivity({
       orderId,
       activityType: 'order_failed',
       status: 'error',
-      title: 'Failed to place SS Activewear order',
-      details: { error: errorMsg, summary },
+      title: 'SS Activewear order outcome undetermined — will verify before any re-send',
+      details: { error: errorMsg, summary, outcome: 'unknown', placement_state: 'unknown' },
       supabase: db,
     });
 
@@ -1133,10 +1390,13 @@ export async function retryFailedOrders(
 ): Promise<{ retried: number; succeeded: number; failed: number }> {
   const db = supabase || getServiceSupabase();
 
+  // Pick up both definitive failures and undetermined ('unknown') outcomes.
+  // placeSSOrder will verify each with S&S by PO before re-sending, so this can
+  // never duplicate an order that actually succeeded.
   const { data: failedOrders } = await db
     .from('orders')
     .select('id, order_number')
-    .eq('ss_auto_order_failed', true)
+    .in('ss_order_placement_state', ['failed', 'unknown'])
     .eq('status', 'awaiting_purchasing')
     .eq('payment_status', 'paid')
     .limit(10);
@@ -1157,8 +1417,9 @@ export async function retryFailedOrders(
       supabase: db,
     });
 
-    // Clear the failure flag so placeSSOrder doesn't skip due to idempotency
-    // (it checks ss_orders table, not the flag)
+    // placeSSOrder re-claims this order (state is 'failed'/'unknown') and runs
+    // verify-before-resend: it reconciles instead of re-sending if S&S already
+    // has the order, so retries are idempotent.
     const result = await placeSSOrder(order.id, db);
     if (result.success) succeeded++;
     else failed++;

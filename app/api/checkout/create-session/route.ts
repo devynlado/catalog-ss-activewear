@@ -8,6 +8,7 @@ import { hasTieredPricing, getEffectiveItemPrice } from '@/lib/tiered-pricing';
 import { prepareCartItemsForPricing, toOrderProductRow } from '@/lib/cart-pricing-server';
 import { groupCartByWarehouse, calculateShippingBreakdown } from '@/lib/shipping';
 import { placeSSOrder } from '@/lib/ss-activewear-orders';
+import { scheduleBackground } from '@/lib/schedule-background';
 import { checkLiveStock, logStockCheckFailures } from '@/lib/stock-check';
 import { validateCartMinimumQuantities, formatMinQuantityMessage } from '@/lib/product-rules';
 
@@ -365,9 +366,12 @@ export async function POST(request: NextRequest) {
         }),
       ]);
 
-      // Auto-place order with SS Activewear (fire-and-forget, non-blocking)
-      placeSSOrder(order.id).catch((err) =>
-        console.error('[SS Activewear] Auto-order failed for free order:', err)
+      // Auto-place order with SS Activewear as background work that outlives the
+      // response (via waitUntil when available), so a returning serverless
+      // function isn't frozen mid-placement.
+      scheduleBackground(
+        placeSSOrder(order.id),
+        'SS auto-order for free order'
       );
 
       return NextResponse.json({
