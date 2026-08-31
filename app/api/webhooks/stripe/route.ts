@@ -20,6 +20,7 @@ import {
 } from '@/lib/emails/components';
 import { syncOrderToMedusa } from '@/lib/medusa';
 import { placeSSOrder } from '@/lib/ss-activewear-orders';
+import { scheduleBackground } from '@/lib/schedule-background';
 
 // Lazy initialization for Resend
 function getResend() {
@@ -64,6 +65,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Idempotency: Stripe re-delivers events (and can deliver duplicates in
+  // parallel). Insert-first on the event id; a duplicate primary key means the
+  // event is already being / has been handled, so we skip. This closes the
+  // "two webhook deliveries both run placeSSOrder" window at the event level.
+  const { error: dedupError } = await supabase
+    .from('processed_stripe_events')
+    .insert({ event_id: event.id, event_type: event.type });
+
+  if (dedupError) {
+    if (dedupError.code === '23505') {
+      console.log(`Duplicate Stripe event ${event.id} (${event.type}), skipping`);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    // Table unavailable / unexpected error — log and continue rather than drop a
+    // real event (the downstream handlers have their own atomic guards).
+    console.error('processed_stripe_events insert error (continuing):', dedupError);
+  }
+
   // Handle the event
   try {
     switch (event.type) {
@@ -87,6 +106,10 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Error processing webhook:', error);
+    // Processing failed — release the dedup row so Stripe's automatic retry can
+    // re-process this event later (we only want to dedup successful/in-flight
+    // handling, not permanently drop events that errored).
+    await supabase.from('processed_stripe_events').delete().eq('event_id', event.id);
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
@@ -104,15 +127,24 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
     return;
   }
 
-  // Idempotency check - don't process if already paid
-  const { data: existingOrder } = await supabase
+  // Idempotency: atomically claim this payment. Only the first delivery flips
+  // payment_status to 'paid' (Postgres serializes the conditional UPDATE), so
+  // duplicate/concurrent deliveries get 0 rows and bail out before any
+  // downstream side effects (including placeSSOrder).
+  const { data: claimedRows, error: claimError } = await supabase
     .from('orders')
-    .select('id, payment_status')
+    .update({ payment_status: 'paid' })
     .eq('id', orderId)
-    .single();
+    .neq('payment_status', 'paid')
+    .select('id');
 
-  if (existingOrder?.payment_status === 'paid') {
-    console.log(`Order ${orderId} already marked as paid, skipping`);
+  if (claimError) {
+    console.error('Error claiming order payment:', claimError);
+    throw claimError;
+  }
+
+  if (!claimedRows || claimedRows.length === 0) {
+    console.log(`Order ${orderId} payment already processed, skipping`);
     return;
   }
 
@@ -242,10 +274,13 @@ async function handlePaymentSucceeded(supabase: SupabaseClient<any>, paymentInte
       .eq('status', 'new');
   }
 
-  // Auto-place order with SS Activewear (fire-and-forget, non-blocking)
+  // Auto-place order with SS Activewear. Runs as background work that outlives
+  // the webhook response (via waitUntil when available) so the serverless
+  // function isn't frozen mid-placement.
   if (orderType !== 'package') {
-    placeSSOrder(orderId, supabase).catch((err) =>
-      console.error('[SS Activewear] Auto-order failed after payment:', err)
+    scheduleBackground(
+      placeSSOrder(orderId, supabase),
+      'SS auto-order after payment'
     );
   }
 

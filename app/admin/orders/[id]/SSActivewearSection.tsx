@@ -47,6 +47,13 @@ interface SSActivewearSectionProps {
   paidAt: string | null;
   ssAutoOrderFailed: boolean;
   ssAutoOrderError: string | null;
+  /**
+   * Placement state machine value (orders.ss_order_placement_state):
+   * 'none' | 'placing' | 'placed' | 'unknown' | 'failed'. 'unknown' means the
+   * last attempt's outcome is undetermined (timeout/lost response) and any retry
+   * verifies with S&S by PO before re-sending, so it can't duplicate.
+   */
+  ssPlacementState?: string;
   ssOrders: SSOrder[];
   /**
    * True for orders created via /api/packages/checkout (cap packages / embroidery
@@ -86,9 +93,11 @@ export function SSActivewearSection({
   paidAt,
   ssAutoOrderFailed,
   ssAutoOrderError,
+  ssPlacementState = 'none',
   ssOrders: initialSSOrders,
   isPackageOrder = false,
 }: SSActivewearSectionProps) {
+  const isUnknownOutcome = ssPlacementState === 'unknown';
   const [ssOrders, setSSOrders] = useState<SSOrder[]>(initialSSOrders);
   const [isRetrying, setIsRetrying] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState<string | null>(null);
@@ -279,12 +288,21 @@ export function SSActivewearSection({
                 }`}
               >
                 {ssAutoOrderFailed
-                  ? 'Auto-order failed'
+                  ? isUnknownOutcome
+                    ? 'Placement outcome unverified'
+                    : 'Auto-order failed'
                   : 'No S&S order on file yet'}
               </p>
               {ssAutoOrderFailed && ssAutoOrderError && (
                 <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-amber-800">
                   {ssAutoOrderError}
+                </p>
+              )}
+              {isUnknownOutcome && (
+                <p className="mt-1 text-xs leading-relaxed text-amber-700">
+                  The last attempt&apos;s result is undetermined (e.g. a timeout).
+                  Retrying is safe — it checks S&S by PO first and reconciles the
+                  existing order instead of sending a duplicate.
                 </p>
               )}
               {!ssAutoOrderFailed && (
