@@ -450,8 +450,12 @@ async function sendPackageOrderEmails(
       
       // Package details from metadata/order
       packageType: metadata.package_type || item.packageType || 'embroidered-caps',
-      packageDisplayName: metadata.product_name || item.productName || 'Custom Embroidered Caps',
-      productName: metadata.product_style || item.productStyle || 'Richardson 112',
+      packageDisplayName: metadata.product_name || item.productName || 'Custom Product',
+      // Specific blank style (e.g. "Gildan 5000"). Package checkout now stores this
+      // as product_style / productStyle; fall back to the package display name for
+      // legacy orders instead of a hardcoded product (which mislabeled non-cap
+      // packages as "Richardson 112").
+      productName: metadata.product_style || item.productStyle || metadata.product_name || item.productName || 'Custom Product',
       productUnit: metadata.product_unit || item.productUnit || 'caps',
       decorationMethod: (metadata.decoration_method || item.decorationMethod || 'embroidery') as DecorationMethod,
       
