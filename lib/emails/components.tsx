@@ -461,7 +461,7 @@ export interface PackageOrderEmailProps {
   // Package details (dynamic)
   packageType: string;               // 'embroidered-caps', 'printed-tees-gildan', etc.
   packageDisplayName: string;        // "Custom Embroidered Caps"
-  productName: string;               // "Richardson 112 Trucker Cap"
+  productName: string;               // Specific blank style, e.g. "Gildan 5000" or "Richardson 112"
   productUnit: string;               // "caps", "shirts", "polos"
   decorationMethod: DecorationMethod;
   

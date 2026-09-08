@@ -253,6 +253,19 @@ export async function POST(request: NextRequest) {
       ? Math.round(avgBlankCogs * totalQuantity * 100) / 100
       : null;
 
+    // Resolve the real blank style name (e.g. "Gildan 5000") from our catalog by
+    // the same style_id the builder used. Order confirmation / internal
+    // notification emails render this as the "Product" line; without it the email
+    // layer falls back to a misleading hardcoded default. Falls back to the
+    // client-supplied product name when the style isn't found in the catalog.
+    const { data: styleRow } = await supabaseService
+      .from('products')
+      .select('brand_name, style_name')
+      .eq('style_id', productStyleId)
+      .maybeSingle() as { data: { brand_name: string | null; style_name: string | null } | null };
+    const productStyleName =
+      [styleRow?.brand_name, styleRow?.style_name].filter(Boolean).join(' ').trim() || productName;
+
     // Generate order number
     const orderNumber = generateOrderNumber();
 
@@ -276,6 +289,7 @@ export async function POST(request: NextRequest) {
       decoration_method: decorationMethod,
       product_style_id: productStyleId,
       product_name: productName,
+      product_style: productStyleName,
       product_unit: productUnit,
       colors: colorsForStorage,
       ...(isPrintPackage
@@ -318,6 +332,7 @@ export async function POST(request: NextRequest) {
           decorationMethod,
           productStyleId,
           productName,
+          productStyle: productStyleName,
           productUnit,
           colors: colorsForStorage,
           totalQuantity,
@@ -411,6 +426,7 @@ export async function POST(request: NextRequest) {
         customer_phone: customerPhone || '',
         customer_company: company || '',
         product_name: productName,
+        product_style: productStyleName,
         total_quantity: totalQuantity.toString(),
         color_summary: selectedColors.map(c => c.colorName).join(', '),
         addons: addonsList.join(', '),
