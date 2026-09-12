@@ -150,6 +150,38 @@ export const DECORATION_METHOD_OPTIONS: DecorationMethodOption[] = [
   },
 ];
 
+// Legacy cart-quote decoration.type -> canonical decoration-method id.
+// Legacy quotes stored a single `decoration.type`; project quotes use the ids
+// in DECORATION_METHOD_OPTIONS directly.
+export const LEGACY_DECORATION_TYPE_MAP: Record<string, QuoteDecorationMethod> = {
+  screen: 'screen-printing',
+  jumbo: 'jumbo',
+  embroidery: 'embroidery',
+  digital: 'digital',
+};
+
+// Derive the set of canonical decoration-method ids on a quote, from either the
+// new project items[] shape (items[].decorationMethod) or the legacy row-level
+// `decoration` blob (decoration.type). Used to populate quotes.decoration_methods
+// so the /admin/quotes "Project Category" filter can query it server-side.
+export function deriveQuoteDecorationMethods(
+  items: unknown,
+  decoration?: { type?: string | null } | null,
+): string[] {
+  const methods = new Set<string>();
+  if (Array.isArray(items)) {
+    for (const it of items) {
+      const m = (it as { decorationMethod?: string } | null)?.decorationMethod;
+      if (m) methods.add(m);
+    }
+  }
+  const legacy = decoration?.type;
+  if (legacy && legacy !== 'none') {
+    methods.add(LEGACY_DECORATION_TYPE_MAP[legacy] ?? legacy);
+  }
+  return Array.from(methods);
+}
+
 // ---------------------------------------------------------------------------
 // Blank product source (the two-way branch at the top of each project block)
 // ---------------------------------------------------------------------------

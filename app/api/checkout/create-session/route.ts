@@ -11,6 +11,7 @@ import { placeSSOrder } from '@/lib/ss-activewear-orders';
 import { scheduleBackground } from '@/lib/schedule-background';
 import { checkLiveStock, logStockCheckFailures } from '@/lib/stock-check';
 import { validateCartMinimumQuantities, formatMinQuantityMessage } from '@/lib/product-rules';
+import { classifyOrderSource } from '@/lib/order-source';
 
 interface ShippingInfo {
   email: string;
@@ -73,6 +74,10 @@ export async function POST(request: NextRequest) {
       gclid,
       referrer,
     } = body;
+
+    // Derive the canonical visitor-source key once so it can be stored on the
+    // order for fast, indexed filtering in /admin/orders.
+    const visitorSource = classifyOrderSource({ utm_source, utm_medium, gclid, referrer }).key;
 
     if (!rawItems || rawItems.length === 0) {
       return NextResponse.json(
@@ -298,6 +303,7 @@ export async function POST(request: NextRequest) {
           utm_campaign: utm_campaign || null,
           gclid: gclid || null,
           referrer: referrer || null,
+          visitor_source: visitorSource,
           metadata: {
             order_type: 'cart',
             po_number: poNumber || null,
@@ -460,6 +466,7 @@ export async function POST(request: NextRequest) {
         utm_campaign: utm_campaign || null,
         gclid: gclid || null,
         referrer: referrer || null,
+        visitor_source: visitorSource,
         metadata: {
           order_type: 'cart',
           po_number: poNumber || null,

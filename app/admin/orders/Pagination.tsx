@@ -8,9 +8,11 @@ interface PaginationProps {
   totalPages: number;
   totalItems: number;
   perPage: number;
+  /** Route the page links point at. Defaults to the orders list. */
+  basePath?: string;
 }
 
-export function Pagination({ currentPage, totalPages, totalItems, perPage }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, totalItems, perPage, basePath = '/admin/orders' }: PaginationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -23,7 +25,7 @@ export function Pagination({ currentPage, totalPages, totalItems, perPage }: Pag
     } else {
       params.set('page', String(page));
     }
-    router.push(`/admin/orders?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   const rangeStart = (currentPage - 1) * perPage + 1;

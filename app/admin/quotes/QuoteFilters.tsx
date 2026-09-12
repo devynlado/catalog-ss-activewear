@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Calendar, Search, X } from 'lucide-react';
+import { Calendar, Search, X, Globe, Palette } from 'lucide-react';
+import { DECORATION_METHOD_OPTIONS } from '@/lib/quote-form-options';
 
 interface QuoteFiltersProps {
   currentStatus: string;
   currentSearch: string;
   currentDateFrom: string;
   currentDateTo: string;
+  currentVisitorSource: string;
+  currentCategory: string;
   statusCounts: {
     all: number;
     new: number;
@@ -24,14 +27,38 @@ const statusTabs = [
   { id: 'quoted', label: 'Quoted' },
 ];
 
-export function QuoteFilters({ currentStatus, currentSearch, currentDateFrom, currentDateTo, statusCounts }: QuoteFiltersProps) {
+// Visitor-source display labels stored on quotes.visitor_source (from
+// lib/attribution.ts getVisitorSource()). Mirrors the /admin/contacts filter.
+// The '(untracked)' sentinel matches quotes with a NULL visitor_source.
+const visitorSourceOptions: { id: string; label: string }[] = [
+  { id: '', label: 'All Sources' },
+  { id: 'Direct', label: 'Direct' },
+  { id: 'Google Ads', label: 'Google Ads' },
+  { id: 'Organic Search', label: 'Organic Search' },
+  { id: 'Organic Social', label: 'Organic Social' },
+  { id: 'Organic Shopping', label: 'Organic Shopping' },
+  { id: 'Referral', label: 'Referral' },
+  { id: 'Cross-network', label: 'Cross-network' },
+  { id: 'Other', label: 'Other' },
+  { id: '(untracked)', label: 'Untracked' },
+];
+
+// Project category = decoration method (canonical ids from DECORATION_METHOD_OPTIONS).
+const categoryOptions: { id: string; label: string }[] = [
+  { id: '', label: 'All Categories' },
+  ...DECORATION_METHOD_OPTIONS.map((o) => ({ id: o.id, label: o.name })),
+];
+
+export function QuoteFilters({ currentStatus, currentSearch, currentDateFrom, currentDateTo, currentVisitorSource, currentCategory, statusCounts }: QuoteFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(currentSearch);
 
   const updateParams = (updates: Record<string, string | undefined>) => {
     const params = new URLSearchParams(searchParams.toString());
-    
+    // Any filter change resets to the first page.
+    params.delete('page');
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value) {
         params.set(key, value);
@@ -112,6 +139,41 @@ export function QuoteFilters({ currentStatus, currentSearch, currentDateFrom, cu
             <X className="h-3 w-3" /> Clear dates
           </button>
         )}
+      </div>
+
+      {/* Visitor Source + Project Category filters */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 text-sm text-slate-500">
+            <Globe className="h-4 w-4" />
+            Visitor Source
+          </div>
+          <select
+            value={currentVisitorSource}
+            onChange={(e) => updateParams({ visitor_source: e.target.value || undefined })}
+            className="h-9 rounded-lg border border-stone-200 bg-white px-3 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            {visitorSourceOptions.map((opt) => (
+              <option key={opt.id} value={opt.id}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 text-sm text-slate-500">
+            <Palette className="h-4 w-4" />
+            Project Category
+          </div>
+          <select
+            value={currentCategory}
+            onChange={(e) => updateParams({ category: e.target.value || undefined })}
+            className="h-9 rounded-lg border border-stone-200 bg-white px-3 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            {categoryOptions.map((opt) => (
+              <option key={opt.id} value={opt.id}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Status Tabs */}

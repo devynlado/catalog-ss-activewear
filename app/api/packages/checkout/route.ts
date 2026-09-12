@@ -10,6 +10,7 @@ import {
   isPrintPackageType,
 } from '@/lib/package-pricing';
 import { validateCoupon } from '@/lib/coupon-utils';
+import { classifyOrderSource } from '@/lib/order-source';
 
 export interface PackageCheckoutRequest {
   // Customer info
@@ -103,7 +104,11 @@ export async function POST(request: NextRequest) {
       utm_campaign,
       gclid,
     } = body;
-    
+
+    // Derive the canonical visitor-source key for indexed filtering in
+    // /admin/orders. This path doesn't capture a referrer.
+    const visitorSource = classifyOrderSource({ utm_source, utm_medium, gclid }).key;
+
     // Validate required fields
     if (!customerEmail || !customerName) {
       return NextResponse.json(
@@ -370,6 +375,7 @@ export async function POST(request: NextRequest) {
         utm_medium: utm_medium || null,
         utm_campaign: utm_campaign || null,
         gclid: gclid || null,
+        visitor_source: visitorSource,
         metadata: packageMetadata,
       })
       .select()

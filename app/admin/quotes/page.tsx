@@ -4,48 +4,88 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { QuoteCard } from './QuoteCard';
 import { QuoteFilters } from './QuoteFilters';
 import { QuotesTrendChart } from './QuotesTrendChart';
+import { Pagination } from '../orders/Pagination';
 
 export const metadata = {
   title: 'Quotes',
   description: 'Manage customer quote requests',
 };
 
+const PER_PAGE = 25;
+
 export default async function QuotesPage({
   searchParams,
 }: {
-  searchParams: { status?: string; search?: string; date_from?: string; date_to?: string };
+  searchParams: {
+    status?: string;
+    search?: string;
+    date_from?: string;
+    date_to?: string;
+    visitor_source?: string;
+    category?: string;
+    page?: string;
+  };
 }) {
   const supabase = await createSupabaseServerClient();
 
-  // Build query
+  // Shared filter clauses applied to both the data query and the count query
+  // so pagination totals reflect the active filters.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applyFilters = (q: any) => {
+    // Filter by status if provided
+    if (searchParams.status && searchParams.status !== 'all') {
+      q = q.eq('status', searchParams.status);
+    }
+
+    // Date range filter (mirrors /admin/contacts). `date_to` is inclusive of
+    // the whole day, so we bump it to end-of-day.
+    if (searchParams.date_from) {
+      q = q.gte('created_at', searchParams.date_from);
+    }
+    if (searchParams.date_to) {
+      q = q.lte('created_at', `${searchParams.date_to}T23:59:59.999Z`);
+    }
+
+    // Visitor source (indexed TEXT column). '(untracked)' matches NULL rows.
+    if (searchParams.visitor_source === '(untracked)') {
+      q = q.is('visitor_source', null);
+    } else if (searchParams.visitor_source) {
+      q = q.eq('visitor_source', searchParams.visitor_source);
+    }
+
+    // Project category = decoration method, stored in the indexed
+    // decoration_methods TEXT[] column (populated at write time / backfilled).
+    if (searchParams.category) {
+      q = q.contains('decoration_methods', [searchParams.category]);
+    }
+
+    // Search by quote_id, customer_name, email, or company
+    if (searchParams.search) {
+      q = q.or(
+        `quote_id.ilike.%${searchParams.search}%,customer_name.ilike.%${searchParams.search}%,customer_email.ilike.%${searchParams.search}%,company.ilike.%${searchParams.search}%`
+      );
+    }
+    return q;
+  };
+
+  const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
+  const pageFrom = (currentPage - 1) * PER_PAGE;
+
+  // Total matching the active filters — drives the numbered pagination.
+  let countQuery = supabase.from('quotes').select('*', { count: 'exact', head: true });
+  countQuery = applyFilters(countQuery);
+  const { count: filteredCount } = await countQuery;
+  const totalFiltered = filteredCount || 0;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PER_PAGE));
+
+  // Page of quotes
   let query = supabase
     .from('quotes')
     .select('*')
     .order('created_at', { ascending: false });
-
-  // Filter by status if provided
-  if (searchParams.status && searchParams.status !== 'all') {
-    query = query.eq('status', searchParams.status);
-  }
-
-  // Date range filter (mirrors /admin/contacts). `date_to` is inclusive of the
-  // whole day, so we bump it to end-of-day.
-  if (searchParams.date_from) {
-    query = query.gte('created_at', searchParams.date_from);
-  }
-  if (searchParams.date_to) {
-    query = query.lte('created_at', `${searchParams.date_to}T23:59:59.999Z`);
-  }
-
-  // Search by quote_id, customer_name, or email
-  if (searchParams.search) {
-    query = query.or(
-      `quote_id.ilike.%${searchParams.search}%,customer_name.ilike.%${searchParams.search}%,customer_email.ilike.%${searchParams.search}%,company.ilike.%${searchParams.search}%`
-    );
-  }
-
+  query = applyFilters(query);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: quotes } = await query.limit(50) as { data: any[] | null };
+  const { data: quotes } = await query.range(pageFrom, pageFrom + PER_PAGE - 1) as { data: any[] | null };
 
   // Get status counts
   const { count: allCount } = await supabase
@@ -107,11 +147,26 @@ export default async function QuotesPage({
           currentSearch={searchParams.search || ''}
           currentDateFrom={searchParams.date_from || ''}
           currentDateTo={searchParams.date_to || ''}
+          currentVisitorSource={searchParams.visitor_source || ''}
+          currentCategory={searchParams.category || ''}
           statusCounts={statusCounts}
         />
 
+        {/* Top Pagination */}
+        {quotes && quotes.length > 0 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalFiltered}
+              perPage={PER_PAGE}
+              basePath="/admin/quotes"
+            />
+          </div>
+        )}
+
         {/* Quote List */}
-        <div className="mt-6 space-y-4">
+        <div className="mt-4 space-y-4">
           {quotes && quotes.length > 0 ? (
             quotes.map((quote) => (
               <QuoteCard key={quote.id} quote={quote} />
@@ -131,6 +186,19 @@ export default async function QuotesPage({
             </div>
           )}
         </div>
+
+        {/* Bottom Pagination */}
+        {quotes && quotes.length > 0 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalFiltered}
+              perPage={PER_PAGE}
+              basePath="/admin/quotes"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

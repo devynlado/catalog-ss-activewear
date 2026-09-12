@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronDown, ChevronUp, Package, User, Building2, Mail, Phone, MapPin, Truck, CreditCard, Check, Loader2, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { classifyOrderSource } from '@/lib/order-source';
 
 interface OrderItem {
   type?: string;
@@ -88,49 +89,6 @@ const paymentConfig: Record<string, { label: string; variant: 'default' | 'succe
   failed: { label: 'Failed', variant: 'error' },
   refunded: { label: 'Refunded', variant: 'default' },
 };
-
-type SourceChannel = { label: string; color: string };
-
-const SEARCH_ENGINES = ['google', 'bing', 'yahoo', 'duckduckgo', 'baidu', 'yandex'];
-const SOCIAL_NETWORKS = ['facebook', 'instagram', 'tiktok', 'twitter', 'linkedin', 'pinterest', 'youtube', 'reddit', 'x.com'];
-const AI_CHATBOTS = ['chatgpt', 'chat.openai', 'perplexity', 'gemini', 'copilot'];
-
-function domainFromUrl(url: string): string {
-  try { return new URL(url).hostname.replace('www.', '').toLowerCase(); }
-  catch { return url.toLowerCase(); }
-}
-
-function deriveChannel(order: Pick<Order, 'utm_source' | 'utm_medium' | 'gclid' | 'referrer'>): SourceChannel | null {
-  const src = (order.utm_source || '').toLowerCase();
-  const med = (order.utm_medium || '').toLowerCase();
-
-  if (order.gclid || med === 'cpc' || med === 'ppc' || med === 'paid')
-    return { label: 'Google Ads', color: 'bg-blue-100 text-blue-700' };
-  if (med === 'organic' || src === 'google' || src === 'bing' || src === 'yahoo')
-    return { label: 'Organic Search', color: 'bg-green-100 text-green-700' };
-  if (med === 'social' || SOCIAL_NETWORKS.includes(src))
-    return { label: 'Social', color: 'bg-purple-100 text-purple-700' };
-  if (med === 'referral')
-    return { label: 'Referral', color: 'bg-amber-100 text-amber-700' };
-  if (med === 'email')
-    return { label: 'Email', color: 'bg-sky-100 text-sky-700' };
-  if (src || med)
-    return { label: src || med, color: 'bg-stone-100 text-stone-600' };
-
-  // Fallback: classify using referrer domain when no UTM/gclid data
-  if (order.referrer) {
-    const domain = domainFromUrl(order.referrer);
-    if (AI_CHATBOTS.some(ai => domain.includes(ai)))
-      return { label: 'AI / ChatGPT', color: 'bg-teal-100 text-teal-700' };
-    if (SEARCH_ENGINES.some(se => domain.includes(se)))
-      return { label: 'Organic Search', color: 'bg-green-100 text-green-700' };
-    if (SOCIAL_NETWORKS.some(sn => domain.includes(sn)))
-      return { label: 'Social', color: 'bg-purple-100 text-purple-700' };
-    return { label: 'Referral', color: 'bg-amber-100 text-amber-700' };
-  }
-
-  return null;
-}
 
 function formatDecoLabel(item: OrderItem): string {
   const type = item.decorationType
@@ -354,7 +312,7 @@ export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unread
     ? [shippingAddr.city, shippingAddr.state].filter(Boolean).join(', ')
     : null;
 
-  const channel = deriveChannel(order);
+  const channel = classifyOrderSource(order);
 
   return (
     <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md">
@@ -376,22 +334,10 @@ export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unread
             <span className="text-xs font-medium text-slate-500">{order.order_number}</span>
             <span className="text-slate-300">&middot;</span>
             <span className="text-xs text-slate-500">{createdDate} {createdTime}</span>
-            {channel && (
-              <>
-                <span className="text-slate-300">&middot;</span>
-                <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${channel.color}`}>
-                  {channel.label}
-                </span>
-              </>
-            )}
-            {!channel && (
-              <>
-                <span className="text-slate-300">&middot;</span>
-                <span className="inline-flex items-center rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-stone-500">
-                  Direct
-                </span>
-              </>
-            )}
+            <span className="text-slate-300">&middot;</span>
+            <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${channel.color}`}>
+              {channel.label}
+            </span>
           </div>
           <h3 className="mt-0.5 truncate font-semibold text-navy-800">
             {order.company || order.customer_name || order.customer_email}
