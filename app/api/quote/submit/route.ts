@@ -29,6 +29,7 @@ import { readTurnstileToken, verifyTurnstileToken } from '@/lib/turnstile';
 import {
   DECORATION_METHOD_OPTIONS,
   MAX_PROJECTS_PER_QUOTE,
+  deriveQuoteDecorationMethods,
   type QuoteDecorationMethod,
 } from '@/lib/quote-form-options';
 
@@ -348,6 +349,7 @@ export async function POST(request: NextRequest) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const supabase = createServerSupabaseClient() as any;
+        const decorationMethods = deriveQuoteDecorationMethods(serialized, null);
         await supabase.from('quotes').insert({
           quote_id: quoteId,
           customer_name: body.contact.name,
@@ -361,6 +363,7 @@ export async function POST(request: NextRequest) {
           subtotal: 0,
           status: 'new',
           visitor_source: body.visitor_source || null,
+          decoration_methods: decorationMethods.length ? decorationMethods : null,
         });
         console.log(`Quote ${quoteId} saved to Supabase (project form)`);
       } catch (dbError) {
@@ -485,6 +488,7 @@ export async function POST(request: NextRequest) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const supabase = createServerSupabaseClient() as any;
+      const decorationMethods = deriveQuoteDecorationMethods(body.items, body.decoration);
       await supabase.from('quotes').insert({
         quote_id: quoteId,
         customer_name: body.contact.name,
@@ -498,6 +502,7 @@ export async function POST(request: NextRequest) {
         subtotal,
         status: 'new',
         visitor_source: (body as { visitor_source?: string | null }).visitor_source || null,
+        decoration_methods: decorationMethods.length ? decorationMethods : null,
       });
       console.log(`Quote ${quoteId} saved to Supabase`);
     } catch (dbError) {

@@ -28,6 +28,8 @@ export interface Database {
           status: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
           customer_id: string | null;
           assigned_sales_rep_id: string | null;
+          visitor_source: string | null;
+          decoration_methods: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -46,6 +48,8 @@ export interface Database {
           status?: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
           customer_id?: string | null;
           assigned_sales_rep_id?: string | null;
+          visitor_source?: string | null;
+          decoration_methods?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -64,6 +68,8 @@ export interface Database {
           status?: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
           customer_id?: string | null;
           assigned_sales_rep_id?: string | null;
+          visitor_source?: string | null;
+          decoration_methods?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -677,6 +683,12 @@ export interface Database {
           expected_delivery_date: string | null;
           ss_auto_order_failed: boolean;
           ss_auto_order_error: string | null;
+          utm_source: string | null;
+          utm_medium: string | null;
+          utm_campaign: string | null;
+          gclid: string | null;
+          referrer: string | null;
+          visitor_source: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -714,6 +726,12 @@ export interface Database {
           expected_delivery_date?: string | null;
           ss_auto_order_failed?: boolean;
           ss_auto_order_error?: string | null;
+          utm_source?: string | null;
+          utm_medium?: string | null;
+          utm_campaign?: string | null;
+          gclid?: string | null;
+          referrer?: string | null;
+          visitor_source?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -751,6 +769,12 @@ export interface Database {
           expected_delivery_date?: string | null;
           ss_auto_order_failed?: boolean;
           ss_auto_order_error?: string | null;
+          utm_source?: string | null;
+          utm_medium?: string | null;
+          utm_campaign?: string | null;
+          gclid?: string | null;
+          referrer?: string | null;
+          visitor_source?: string | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, X, SlidersHorizontal, Calendar, Truck, Palette } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Calendar, Truck, Palette, Globe } from 'lucide-react';
+import { orderSourceFilterOptions } from '@/lib/order-source';
 
 interface OrderFiltersProps {
   currentStatus: string;
@@ -48,11 +49,12 @@ export function OrderFilters({ currentStatus, currentSearch, statusCounts }: Ord
   const currentDateTo = searchParams.get('date_to') || '';
   const currentSupplier = searchParams.get('supplier') || '';
   const currentContent = searchParams.get('content') || '';
+  const currentSource = searchParams.get('source') || '';
 
-  const hasAdvancedFilters = !!(currentDateFrom || currentDateTo || currentSupplier || currentContent);
+  const hasAdvancedFilters = !!(currentDateFrom || currentDateTo || currentSupplier || currentContent || currentSource);
   const [showAdvanced, setShowAdvanced] = useState(hasAdvancedFilters);
 
-  const activeFilterCount = [currentDateFrom || currentDateTo, currentSupplier, currentContent].filter(Boolean).length;
+  const activeFilterCount = [currentDateFrom || currentDateTo, currentSupplier, currentContent, currentSource].filter(Boolean).length;
 
   const updateParams = (updates: Record<string, string | undefined>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -85,6 +87,7 @@ export function OrderFilters({ currentStatus, currentSearch, statusCounts }: Ord
       date_to: undefined,
       supplier: undefined,
       content: undefined,
+      source: undefined,
     });
   };
 
@@ -177,29 +180,32 @@ export function OrderFilters({ currentStatus, currentSearch, statusCounts }: Ord
               </button>
             )}
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {/* Date Range */}
+          <div className="space-y-4">
+            {/* Date Range — full width on its own row so the two date inputs
+                never overlap the dropdowns below. */}
             <div>
               <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
                 <Calendar className="h-3.5 w-3.5" /> Date Range
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="date"
                   value={currentDateFrom}
                   onChange={(e) => updateParams({ date_from: e.target.value || undefined })}
-                  className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:max-w-[180px]"
                 />
                 <span className="text-xs text-slate-400">to</span>
                 <input
                   type="date"
                   value={currentDateTo}
                   onChange={(e) => updateParams({ date_to: e.target.value || undefined })}
-                  className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:max-w-[180px]"
                 />
               </div>
             </div>
 
+            {/* Supplier / Content / Visitor Source — second row */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Supplier Type */}
             <div>
               <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
@@ -230,6 +236,23 @@ export function OrderFilters({ currentStatus, currentSearch, statusCounts }: Ord
                   <option key={opt.id} value={opt.id}>{opt.label}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Visitor Source */}
+            <div>
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                <Globe className="h-3.5 w-3.5" /> Visitor Source
+              </label>
+              <select
+                value={currentSource}
+                onChange={(e) => updateParams({ source: e.target.value || undefined })}
+                className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              >
+                {orderSourceFilterOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
             </div>
           </div>
         </div>

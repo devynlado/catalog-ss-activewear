@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { OrderCard } from './OrderCard';
 import { OrderFilters } from './OrderFilters';
 import { Pagination } from './Pagination';
+import { sourceFilterKeys } from '@/lib/order-source';
 
 export const metadata = {
   title: 'Orders',
@@ -25,6 +26,7 @@ export default async function OrdersPage({
     date_to?: string;
     supplier?: string;
     content?: string;
+    source?: string;
   };
 }) {
   const supabase = await createSupabaseServerClient();
@@ -50,9 +52,26 @@ export default async function OrdersPage({
     if (searchParams.date_to) {
       q = q.lte('created_at', `${searchParams.date_to}T23:59:59`);
     }
+    // Visitor source is a stored, indexed column, so it filters server-side.
+    if (searchParams.source) {
+      const spec = sourceFilterKeys(searchParams.source);
+      if (spec) {
+        if (spec.includeNull) {
+          q = q.or(
+            [...spec.keys.map((k) => `visitor_source.eq.${k}`), 'visitor_source.is.null'].join(',')
+          );
+        } else if (spec.keys.length === 1) {
+          q = q.eq('visitor_source', spec.keys[0]);
+        } else {
+          q = q.in('visitor_source', spec.keys);
+        }
+      }
+    }
     return q;
   };
 
+  // Supplier/content are derived from the JSONB items column and must be
+  // filtered in JS. Visitor source is handled server-side in applyFilters.
   const needsClientFilter = !!(searchParams.supplier || searchParams.content);
   const currentPage = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
   const pageFrom = (currentPage - 1) * PER_PAGE;
@@ -62,16 +81,27 @@ export default async function OrdersPage({
   let totalFiltered = 0;
 
   if (needsClientFilter) {
-    // Supplier/content filters require inspecting the JSONB items column,
-    // so we fetch a larger batch and filter in JS.
-    let query = supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-    query = applyFilters(query);
+    // Supplier/content filters require inspecting the JSONB items column, so we
+    // must filter in JS. applyFilters (incl. visitor source) already runs
+    // server-side to shrink the set first. Supabase/PostgREST caps a single
+    // request at 1000 rows, so we page through all matching rows in batches to
+    // avoid silently dropping orders beyond the first 1000 (>1000 orders exist).
+    const BATCH_SIZE = 1000;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: allOrders } = await query.range(0, 999) as { data: any[] | null };
-    let filtered = allOrders || [];
+    let allOrders: any[] = [];
+    for (let batchFrom = 0; ; batchFrom += BATCH_SIZE) {
+      let query = supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      query = applyFilters(query);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: batch } = await query.range(batchFrom, batchFrom + BATCH_SIZE - 1) as { data: any[] | null };
+      if (!batch || batch.length === 0) break;
+      allOrders = allOrders.concat(batch);
+      if (batch.length < BATCH_SIZE) break;
+    }
+    let filtered = allOrders;
 
     if (searchParams.supplier) {
       filtered = filtered.filter((order) => {
