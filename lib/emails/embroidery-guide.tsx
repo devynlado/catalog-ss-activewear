@@ -32,7 +32,7 @@ export function getEmbroideryGuidePreheader(): string {
 }
 
 export function generateEmbroideryGuideHtml(): string {
-  const ctaUrl = buildUTMUrl(`${COMPANY_INFO.website}/pricing`, {
+  const ctaUrl = buildUTMUrl(`${COMPANY_INFO.website}/quote`, {
     source: 'email',
     medium: 'guide',
     campaign: 'embroidery_guide',
@@ -235,7 +235,7 @@ PRO TIPS FOR SAVINGS
 
 ---
 Ready to start? Get an instant estimate:
-${COMPANY_INFO.website}/pricing?service=embroidery
+${COMPANY_INFO.website}/quote?service=embroidery
 
 ${COMPANY_INFO.name}
 ${COMPANY_INFO.address}

@@ -5,7 +5,6 @@ import { FloatingInquiryBar } from './_components/FloatingInquiryBar';
 import { HowItWorks } from './_components/HowItWorks';
 import { DecorationMethods } from './_components/DecorationMethods';
 import { StreetWearForm } from './_components/StreetWearForm';
-import { PackagesCTA } from './_components/PackagesCTA';
 
 export const metadata = createPageMetadata({
   title: 'Cut & Sew Sourcing With Garment Decor | Custom Manufacturing',
@@ -22,7 +21,6 @@ export default function StreetWearPage() {
       <HowItWorks />
       <DecorationMethods />
       <StreetWearForm />
-      <PackagesCTA />
       <FloatingInquiryBar />
     </>
   );

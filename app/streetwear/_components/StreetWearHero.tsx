@@ -1,5 +1,4 @@
 import { ArrowDown } from 'lucide-react';
-import Link from 'next/link';
 
 export function StreetWearHero() {
   return (
@@ -47,12 +46,6 @@ export function StreetWearHero() {
               Browse Products
               <ArrowDown className="h-4 w-4" />
             </a>
-            <Link
-              href="/packages"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 px-6 py-3 text-sm font-medium text-white transition-all hover:border-white/40 hover:bg-white/5"
-            >
-              View Ready-to-Order Packages
-            </Link>
           </div>
 
           {/* Trust signals */}

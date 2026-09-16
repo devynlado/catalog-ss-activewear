@@ -1034,23 +1034,6 @@ export function Header() {
                         </div>
                       </Link>
 
-                      {/* All-Inclusive Packages */}
-                      <Link
-                        href="/packages"
-                        onClick={() => setServicesOpen(false)}
-                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-stone-50 group"
-                      >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
-                          <Star className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 group-hover:text-brand-600">
-                            All-Inclusive Packages
-                          </h3>
-                          <p className="text-xs text-slate-500">Instant pricing, no hidden fees</p>
-                        </div>
-                      </Link>
-
                       {/* Rush - Full Width Highlight */}
                       <Link
                         href={servicesMenu.rush.href}
@@ -1118,19 +1101,6 @@ export function Header() {
                   </div>
                 )}
               </div>
-
-              {/* Pricing - Direct Link */}
-              <Link
-                href="/pricing"
-                className={cn(
-                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                  pathname === '/pricing'
-                    ? 'bg-stone-100 text-slate-900'
-                    : 'text-slate-700 hover:bg-stone-50 hover:text-slate-900'
-                )}
-              >
-                Pricing
-              </Link>
 
               {/* Portfolio - Direct Link */}
               <Link
@@ -1482,27 +1452,8 @@ export function Header() {
                 </Link>
               </div>
 
-              {/* Package Deals Section - Mobile */}
-              <div className="border-t border-stone-100 pt-3 mt-3">
-                <Link
-                  href="/packages"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg my-1 px-3 py-2.5 text-sm font-medium text-brand-800 bg-brand-50 border border-brand-200 hover:bg-brand-100"
-                >
-                  <Star className="h-4 w-4 text-brand-500" />
-                  All-Inclusive Packages
-                </Link>
-              </div>
-
               {/* Quick Links */}
               <div className="border-t border-stone-100 pt-3 mt-3">
-                <Link
-                  href="/pricing"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
-                >
-                  Pricing Calculator
-                </Link>
                 <Link
                   href="/portfolio"
                   onClick={() => setMobileMenuOpen(false)}

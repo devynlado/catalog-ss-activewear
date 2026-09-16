@@ -397,17 +397,11 @@ export default function EmbroideryGuidePage() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/pricing?service=embroidery"
+              href="/quote?service=embroidery"
               className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
             >
-              Get Instant Estimate
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/quote?service=embroidery"
-              className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-white/20 transition-colors"
-            >
               Request a Quote
+              <ArrowRight className="h-5 w-5" />
             </Link>
           </div>
         </div>

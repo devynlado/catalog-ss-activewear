@@ -132,10 +132,10 @@ export function Hero() {
                 </Link>
                 
                 <Link
-                  href="/packages"
+                  href="/quote"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-navy-800 px-6 py-3.5 text-base font-semibold text-navy-800 transition-all hover:bg-navy-800 hover:text-white hover:-translate-y-0.5"
                 >
-                  All-Inclusive Packages
+                  Request a Quote
                 </Link>
               </div>
               <p className="mt-4 text-sm text-slate-500">
