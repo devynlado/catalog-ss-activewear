@@ -141,13 +141,6 @@ export function ShopBlanksSection({ title, subtitle, categories, serviceSlug }: 
             <ShoppingBag className="h-5 w-5" />
             Shop All Products
           </Link>
-          <Link
-            href="/pricing"
-            className="inline-flex items-center gap-2 text-slate-600 font-medium hover:text-brand-600 transition-colors"
-          >
-            See Pricing First
-            <ArrowRight className="h-4 w-4" />
-          </Link>
         </motion.div>
       </div>
     </section>

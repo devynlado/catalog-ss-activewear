@@ -32,7 +32,7 @@ export function getScreenPrintingGuidePreheader(): string {
 }
 
 export function generateScreenPrintingGuideHtml(): string {
-  const ctaUrl = buildUTMUrl(`${COMPANY_INFO.website}/pricing`, {
+  const ctaUrl = buildUTMUrl(`${COMPANY_INFO.website}/quote`, {
     source: 'email',
     medium: 'guide',
     campaign: 'screen_printing_guide',
@@ -209,7 +209,7 @@ EXAMPLE PRICING
 
 ---
 Ready to start? Get an instant estimate:
-${COMPANY_INFO.website}/pricing?service=screen-printing
+${COMPANY_INFO.website}/quote?service=screen-printing
 
 ${COMPANY_INFO.name}
 ${COMPANY_INFO.address}

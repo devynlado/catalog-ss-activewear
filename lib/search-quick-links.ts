@@ -36,13 +36,6 @@ export const PAGE_LINKS: QuickLink[] = [
   },
   {
     type: 'page',
-    label: 'Pricing Calculator',
-    sublabel: 'Estimate your cost',
-    href: '/pricing',
-    keywords: ['pricing', 'price', 'cost', 'calculator', 'estimate', 'how much'],
-  },
-  {
-    type: 'page',
     label: 'Request a Quote',
     sublabel: 'Start a custom quote',
     href: '/quote',
@@ -117,13 +110,6 @@ export const PAGE_LINKS: QuickLink[] = [
     sublabel: 'Orders',
     href: '/orders',
     keywords: ['order', 'orders', 'track', 'track order', 'my order', 'status'],
-  },
-  {
-    type: 'page',
-    label: 'Packages',
-    sublabel: 'Ready-made bundles',
-    href: '/packages',
-    keywords: ['package', 'packages', 'bundle', 'deal', 'kit'],
   },
   {
     type: 'page',

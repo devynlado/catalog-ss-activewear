@@ -139,11 +139,6 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
-                  Pricing Calculator
-                </Link>
-              </li>
-              <li>
                 <Link href="/services/live-screen-printing" className="text-sm text-slate-300 hover:text-brand-400 transition-colors">
                   Live Printing
                 </Link>

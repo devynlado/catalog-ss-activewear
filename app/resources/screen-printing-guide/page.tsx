@@ -443,17 +443,11 @@ export default function ScreenPrintingGuidePage() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/pricing?service=screen-printing"
+              href="/quote?service=screen-printing"
               className="inline-flex items-center gap-2 bg-brand-500 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-brand-600 transition-colors"
             >
-              Get Instant Estimate
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/quote?service=screen-printing"
-              className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-white/20 transition-colors"
-            >
               Request a Quote
+              <ArrowRight className="h-5 w-5" />
             </Link>
           </div>
         </div>

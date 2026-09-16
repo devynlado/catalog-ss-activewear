@@ -2,7 +2,6 @@ import { createPageMetadata } from '@/lib/metadata';
 import { Hero } from '@/components/home/Hero';
 import { WhoWeService } from '@/components/home/WhoWeService';
 import { TurnaroundBanner } from '@/components/home/TurnaroundBanner';
-import { PackageDeals } from '@/components/home/PackageDeals';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { FeaturedProducts } from '@/components/home/FeaturedProducts';
@@ -25,9 +24,6 @@ export default function HomePage() {
       
       {/* 2. Turnaround Banner - Urgency: We're fast */}
       <TurnaroundBanner />
-      
-      {/* 3. Package Deals - Instant pricing path */}
-      <PackageDeals />
       
       {/* 4. Services - Our bread & butter: Here's what we do */}
       <ServicesGrid />
