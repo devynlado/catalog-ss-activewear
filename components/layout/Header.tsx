@@ -638,6 +638,15 @@ export function Header() {
             
             {/* Right - Resources dropdown + Rush promo */}
             <div className="flex items-center gap-4">
+              {/* Request a Quote */}
+              <Link
+                href="/quote"
+                className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition-colors"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>Request a Quote</span>
+              </Link>
+
               {/* Resources Dropdown */}
               <div 
                 className="relative" 
@@ -744,7 +753,7 @@ export function Header() {
               {/* Rush Promo - subtle upsell */}
               <Link
                 href="/services/rush"
-                className="hidden items-center gap-1.5 text-amber-400 hover:text-amber-300 transition-colors sm:flex"
+                className="hidden items-center gap-1.5 text-stone-300 hover:text-white transition-colors sm:flex"
               >
                 <Zap className="h-3.5 w-3.5" />
                 <span className="text-xs font-medium">Rush: 48hr</span>
@@ -1467,6 +1476,18 @@ export function Header() {
                   className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
                 >
                   Contact Us
+                </Link>
+              </div>
+
+              {/* Request a Quote */}
+              <div className="border-t border-stone-100 pt-3 mt-3">
+                <Link
+                  href="/quote"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
+                >
+                  <FileText className="h-4 w-4 text-brand-500" />
+                  Request a Quote
                 </Link>
               </div>
 
