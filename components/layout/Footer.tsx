@@ -187,6 +187,11 @@ export function Footer() {
                   Contact Us
                 </Link>
               </li>
+              <li>
+                <Link href="/quote" className="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+                  Request a Quote
+                </Link>
+              </li>
             </ul>
           </div>
 
