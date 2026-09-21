@@ -7,6 +7,7 @@ import { trackContactFormSubmit, trackPhoneClick, trackContactEmailClick, trackC
 import { getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { DesignUpload } from '@/components/forms/DesignUpload';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 // Service name mapping for pre-filling the message
@@ -53,6 +54,10 @@ function ContactForm() {
     company: '',
     message: '',
   });
+  // Uploaded file (general purpose — questions or quotes). Held client-side
+  // only for now; upload/storage and AV scanning are a later phase, so it's
+  // not sent to the API yet.
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -165,6 +170,7 @@ function ContactForm() {
                     onClick={() => {
                       setIsSubmitted(false);
                       setFormState({ name: '', email: '', phone: '', company: '', message: '' });
+                      setUploadFile(null);
                     }}
                     className="mt-6 text-sm font-medium text-brand-600 hover:text-brand-700"
                   >
@@ -257,6 +263,20 @@ function ContactForm() {
                         onChange={handleChange}
                         className="mt-1 block w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                         placeholder="Tell us about your project, questions, or how we can assist you..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">
+                        Upload your File
+                      </label>
+                      <p className="mt-1 mb-2 text-xs text-slate-500">
+                        Optional — attach a reference image or document.
+                      </p>
+                      <DesignUpload
+                        value={uploadFile}
+                        onChange={setUploadFile}
+                        fileNoun="file"
                       />
                     </div>
 

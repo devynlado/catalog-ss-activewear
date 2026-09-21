@@ -12,6 +12,7 @@ import {
 } from '@/components/services';
 import type { ServiceFaqItem } from '@/components/services';
 import { SalesRepCard } from '@/components/admin/SalesRepCard';
+import { DesignUpload } from '@/components/forms/DesignUpload';
 import { trackGenerateLead } from '@/lib/analytics';
 
 const whyChooseReasons = [
@@ -127,6 +128,9 @@ export default function LargeOrdersPage() {
     timeline: '',
     details: '',
   });
+  // Artwork for this inquiry. Held client-side only for now — upload/storage
+  // and AV scanning are a later phase, so it's not sent to the API yet.
+  const [designFile, setDesignFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -483,6 +487,17 @@ export default function LargeOrdersPage() {
                       className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-navy-800 placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors resize-none"
                       placeholder="Tell us about your project — products, designs, special requirements, delivery locations, etc."
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-navy-800 mb-1">
+                      Design
+                    </label>
+                    <p className="mb-2 text-xs text-slate-500">
+                      Upload your artwork (optional) so we can quote from the
+                      real design.
+                    </p>
+                    <DesignUpload value={designFile} onChange={setDesignFile} />
                   </div>
 
                   <button

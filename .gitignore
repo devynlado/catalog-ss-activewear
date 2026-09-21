@@ -30,6 +30,9 @@ yarn-error.log*
 # GA4 service account key (keep credentials out of repo)
 /keys/
 
+# Quote recovery: exported customer emails (.eml/.mbox/.txt) — keep PII out of repo
+/quote-emails/
+
 # Vercel
 .vercel
 

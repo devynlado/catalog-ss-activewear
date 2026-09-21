@@ -258,11 +258,20 @@ function QuotePageContent() {
         'website',
       ) as HTMLInputElement | null;
 
+      // The per-project `designFile` (a File object) is held in state for the
+      // UI only — upload/storage is a later phase — so strip it before we
+      // JSON-serialize the payload. (A File would serialize to `{}` anyway.)
+      const projectsPayload = projects.map((p) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { designFile, ...rest } = p;
+        return rest;
+      });
+
       const response = await fetch('/api/quote/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projects,
+          projects: projectsPayload,
           contact: {
             name: contact.name,
             email: contact.email,

@@ -350,25 +350,43 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const supabase = createServerSupabaseClient() as any;
         const decorationMethods = deriveQuoteDecorationMethods(serialized, null);
-        await supabase.from('quotes').insert({
-          quote_id: quoteId,
-          customer_name: body.contact.name,
-          customer_email: body.contact.email,
-          customer_phone: body.contact.phone || null,
-          company: body.contact.company || null,
-          items: serialized,
-          decoration: null,
-          finishing: null,
-          notes: body.contact.message || null,
-          subtotal: 0,
-          status: 'new',
-          visitor_source: body.visitor_source || null,
-          decoration_methods: decorationMethods.length ? decorationMethods : null,
-        });
-        console.log(`Quote ${quoteId} saved to Supabase (project form)`);
+        // NOTE: supabase-js returns DB errors as `{ error }` and does NOT throw,
+        // so the result MUST be checked explicitly. Awaiting without reading
+        // `.error` silently drops failed inserts (this is exactly how a missing
+        // `decoration_methods` column went unnoticed for ~10 days).
+        const { error: dbInsertError } = await supabase
+          .from('quotes')
+          .insert({
+            quote_id: quoteId,
+            customer_name: body.contact.name,
+            customer_email: body.contact.email,
+            customer_phone: body.contact.phone || null,
+            company: body.contact.company || null,
+            items: serialized,
+            decoration: null,
+            finishing: null,
+            notes: body.contact.message || null,
+            subtotal: 0,
+            status: 'new',
+            visitor_source: body.visitor_source || null,
+            decoration_methods: decorationMethods.length ? decorationMethods : null,
+          });
+        if (dbInsertError) {
+          console.error(
+            `[quote/submit] FAILED to save quote ${quoteId} (project form) to Supabase — ` +
+              `emails were already sent, so this row is lost unless recovered. ` +
+              `code=${dbInsertError.code ?? 'n/a'} message=${dbInsertError.message ?? 'n/a'} ` +
+              `details=${dbInsertError.details ?? 'n/a'} hint=${dbInsertError.hint ?? 'n/a'}`,
+          );
+        } else {
+          console.log(`Quote ${quoteId} saved to Supabase (project form)`);
+        }
       } catch (dbError) {
         // Non-fatal: emails already sent, admin will see it via inbox.
-        console.error('Failed to save quote to Supabase:', dbError);
+        console.error(
+          `[quote/submit] Unexpected error saving quote ${quoteId} (project form) to Supabase:`,
+          dbError,
+        );
       }
 
       console.log(
@@ -489,7 +507,8 @@ export async function POST(request: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const supabase = createServerSupabaseClient() as any;
       const decorationMethods = deriveQuoteDecorationMethods(body.items, body.decoration);
-      await supabase.from('quotes').insert({
+      // See note above: supabase-js does NOT throw on DB errors — check `.error`.
+      const { error: dbInsertError } = await supabase.from('quotes').insert({
         quote_id: quoteId,
         customer_name: body.contact.name,
         customer_email: body.contact.email,
@@ -504,9 +523,21 @@ export async function POST(request: NextRequest) {
         visitor_source: (body as { visitor_source?: string | null }).visitor_source || null,
         decoration_methods: decorationMethods.length ? decorationMethods : null,
       });
-      console.log(`Quote ${quoteId} saved to Supabase`);
+      if (dbInsertError) {
+        console.error(
+          `[quote/submit] FAILED to save quote ${quoteId} (legacy cart) to Supabase — ` +
+            `emails were already sent, so this row is lost unless recovered. ` +
+            `code=${dbInsertError.code ?? 'n/a'} message=${dbInsertError.message ?? 'n/a'} ` +
+            `details=${dbInsertError.details ?? 'n/a'} hint=${dbInsertError.hint ?? 'n/a'}`,
+        );
+      } else {
+        console.log(`Quote ${quoteId} saved to Supabase`);
+      }
     } catch (dbError) {
-      console.error('Failed to save quote to Supabase:', dbError);
+      console.error(
+        `[quote/submit] Unexpected error saving quote ${quoteId} (legacy cart) to Supabase:`,
+        dbError,
+      );
     }
 
     console.log(
