@@ -6,6 +6,7 @@ import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { DesignUpload } from '@/components/forms/DesignUpload';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 interface ServiceQuoteFormProps {
@@ -27,6 +28,10 @@ export function ServiceQuoteForm({
     phone: '',
     message: '',
   });
+  // Artwork for this inquiry. Held client-side only for now — upload/storage
+  // and AV scanning are a later phase, so it's intentionally not sent to the
+  // API yet.
+  const [designFile, setDesignFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -225,6 +230,18 @@ export function ServiceQuoteForm({
                       className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-navy-800 placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors resize-none"
                       placeholder="Tell us about your project — quantity, timeline, design ideas..."
                     />
+                  </div>
+
+                  {/* Design */}
+                  <div>
+                    <label className="block text-sm font-medium text-navy-800 mb-1">
+                      Design
+                    </label>
+                    <p className="mb-2 text-xs text-slate-500">
+                      Upload your artwork (optional) so we can quote from the
+                      real design.
+                    </p>
+                    <DesignUpload value={designFile} onChange={setDesignFile} />
                   </div>
 
                   {/* Error Message */}

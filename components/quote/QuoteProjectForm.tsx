@@ -46,6 +46,7 @@ import {
   type BlankSource,
   type QuoteDecorationMethod,
 } from '@/lib/quote-form-options';
+import { DesignUpload } from '@/components/forms/DesignUpload';
 
 // ---------------------------------------------------------------------------
 // Public state shape
@@ -91,6 +92,11 @@ export interface QuoteProject {
   finishingServices: string[];
 
   designNotes: string;
+
+  // Customer-supplied artwork for this project. Held client-side only for
+  // now (single file per project). It is intentionally NOT sent to
+  // /api/quote/submit yet — upload/storage is a later phase.
+  designFile: File | null;
 }
 
 export function makeEmptyProject(
@@ -112,6 +118,7 @@ export function makeEmptyProject(
     finishingQuantity: 100,
     finishingServices: ['fold-bag-shirts'],
     designNotes: '',
+    designFile: null,
   };
 }
 
@@ -915,21 +922,39 @@ export function QuoteProjectForm({
               </>
             )}
 
-            {/* Design notes — shared across methods */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Design Notes (optional)
-              </label>
-              <textarea
-                value={project.designNotes}
-                onChange={(e) => onChange({ designNotes: e.target.value })}
-                rows={2}
-                placeholder="Describe the design, colors, and placement. Attach artwork later — we'll request it in our reply."
-                className="w-full rounded-lg border border-stone-200 px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-            </div>
           </section>
         )}
+
+        {/* --------- Design --------- */}
+        <section>
+          <div className="mb-3">
+            <h4 className="text-sm font-semibold text-slate-800">Design</h4>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Upload your artwork (optional) so our team can quote from the real
+              design.
+            </p>
+          </div>
+
+          <DesignUpload
+            value={project.designFile}
+            onChange={(file) => onChange({ designFile: file })}
+          />
+
+          {/* Design notes — moved under Design so all artwork context lives
+              in one place. */}
+          <div className="mt-4">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Design Notes (optional)
+            </label>
+            <textarea
+              value={project.designNotes}
+              onChange={(e) => onChange({ designNotes: e.target.value })}
+              rows={2}
+              placeholder="Describe the design, colors, and placement."
+              className="w-full rounded-lg border border-stone-200 px-4 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+        </section>
       </div>
     </div>
   );

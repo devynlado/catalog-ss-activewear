@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { DesignUpload } from '@/components/forms/DesignUpload';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 interface FormData {
@@ -44,6 +45,9 @@ export function ProjectInquiryForm() {
     timeline: '',
     budget: '',
   });
+  // Artwork for this inquiry. Held client-side only for now — upload/storage
+  // and AV scanning are a later phase, so it's not sent to the API yet.
+  const [designFile, setDesignFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +112,7 @@ BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not sp
         timeline: '',
         budget: '',
       });
+      setDesignFile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -345,6 +350,18 @@ BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not sp
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Design */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Design
+                  </label>
+                  <p className="mb-2 text-xs text-slate-500">
+                    Upload your artwork (optional) so we can quote from the real
+                    design.
+                  </p>
+                  <DesignUpload value={designFile} onChange={setDesignFile} />
                 </div>
 
                 <TurnstileWidget onTokenChange={setTurnstileToken} action="project-inquiry" />

@@ -7,6 +7,7 @@ import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
 import { getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
+import { DesignUpload } from '@/components/forms/DesignUpload';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 const DECORATION_OPTIONS = [
@@ -60,6 +61,9 @@ export function PortfolioQuoteModal({
     turnaround: '',
     notes: '',
   });
+  // Artwork for this inquiry. Held client-side only for now — upload/storage
+  // and AV scanning are a later phase, so it's not sent to the API yet.
+  const [designFile, setDesignFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -271,6 +275,16 @@ export function PortfolioQuoteModal({
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Design */}
+              <div>
+                <label className={labelCls}>Design</label>
+                <DesignUpload
+                  value={designFile}
+                  onChange={setDesignFile}
+                  compact
+                />
               </div>
 
               {/* Notes */}
