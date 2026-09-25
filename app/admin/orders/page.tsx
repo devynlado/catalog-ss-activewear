@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft, Search, Package, MessageCircle } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { OrderCard } from './OrderCard';
+import { OrdersListClient } from './OrdersListClient';
 import { OrderFilters } from './OrderFilters';
 import { Pagination } from './Pagination';
 import { sourceFilterKeys } from '@/lib/order-source';
@@ -271,11 +271,9 @@ export default async function OrdersPage({
           </div>
         )}
 
-        <div className="mt-4 space-y-4">
+        <div className="mt-4">
           {orders && orders.length > 0 ? (
-            orders.map((order) => (
-              <OrderCard key={order.id} order={order} unreadChatCount={chatUnreadMap[order.id] || 0} />
-            ))
+            <OrdersListClient orders={orders} chatUnreadMap={chatUnreadMap} />
           ) : (
             <div className="rounded-xl border border-stone-200 bg-white p-12 text-center shadow-sm">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">

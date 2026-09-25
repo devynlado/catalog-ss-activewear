@@ -11,8 +11,12 @@ function getServiceSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key);
 }
 
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 50;
+const PER_PAGE = 20;
+// Hard cap on how many matching rows we pull for in-memory relevance ranking.
+// PostgREST caps a single request at 1000 rows anyway, and ranking is
+// query-dependent so it must happen over the full match set for pagination to
+// be consistent across pages.
+const FETCH_CAP = 1000;
 const MIN_QUERY_LENGTH = 2;
 
 export interface AdminProductSearchResult {
@@ -29,9 +33,17 @@ export interface AdminProductSearchResult {
   variant_overrides_count: number;
 }
 
-interface AdminProductSearchResponse {
+export interface AdminProductSearchResponse {
   results: AdminProductSearchResult[];
-  truncated: boolean;
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+  /**
+   * True when the number of matches may exceed FETCH_CAP, in which case
+   * `total` is a lower bound rather than an exact count.
+   */
+  capped: boolean;
 }
 
 interface ProductRow {
@@ -86,32 +98,37 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get('q') || '').trim();
-  const limitRaw = parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10);
-  const limit = Math.min(
-    Math.max(Number.isFinite(limitRaw) ? limitRaw : DEFAULT_LIMIT, 1),
-    MAX_LIMIT,
-  );
+  const brand = (searchParams.get('brand') || '').trim();
+  const category = (searchParams.get('category') || '').trim();
+  const pageRaw = parseInt(searchParams.get('page') || '1', 10);
+  const requestedPage = Math.max(Number.isFinite(pageRaw) ? pageRaw : 1, 1);
 
-  if (q.length < MIN_QUERY_LENGTH) {
-    const empty: AdminProductSearchResponse = { results: [], truncated: false };
+  const hasText = q.length >= MIN_QUERY_LENGTH;
+  const hasFilter = brand.length > 0 || category.length > 0;
+
+  // Require at least a text query (>= MIN_QUERY_LENGTH) OR a brand/category
+  // filter. Brand/category-only searches are allowed so admins can target a
+  // whole brand for bulk actions without typing anything.
+  if (!hasText && !hasFilter) {
+    const empty: AdminProductSearchResponse = {
+      results: [],
+      page: 1,
+      perPage: PER_PAGE,
+      total: 0,
+      totalPages: 0,
+      capped: false,
+    };
     return NextResponse.json(empty);
   }
 
   const service = getServiceSupabase();
 
-  // Escape ilike special characters to prevent pattern-injection.
-  const safe = q.replace(/[\\%_]/g, (m) => `\\${m}`);
-  const pattern = `%${safe}%`;
-
   // Search across the four most relevant fields. Note: this query intentionally
   // does NOT filter by is_active — admins need to manage hidden products too.
-  // Fetch limit + 1 to detect truncation; over-fetch a small extra slice to
-  // give the relevance scorer something to re-rank.
-  const overFetch = Math.min(limit * 3, 80);
-  const { data, error } = await service
-    .from('products')
-    .select(
-      `
+  // Pull up to FETCH_CAP matches so the relevance scorer ranks the full set and
+  // pagination stays consistent from one page to the next.
+  let query = service.from('products').select(
+    `
       style_id,
       style_name,
       brand_name,
@@ -124,11 +141,20 @@ export async function GET(request: NextRequest) {
       admin_note,
       min_order_quantity
     `,
-    )
-    .or(
+  );
+
+  if (hasText) {
+    // Escape ilike special characters to prevent pattern-injection.
+    const safe = q.replace(/[\\%_]/g, (m) => `\\${m}`);
+    const pattern = `%${safe}%`;
+    query = query.or(
       `style_name.ilike.${pattern},brand_name.ilike.${pattern},title_raw.ilike.${pattern},title_optimized.ilike.${pattern}`,
-    )
-    .limit(overFetch);
+    );
+  }
+  if (brand) query = query.eq('brand_name', brand);
+  if (category) query = query.eq('base_category', category);
+
+  const { data, error } = await query.limit(FETCH_CAP);
 
   if (error) {
     console.error('[admin/products/search] Search error:', error);
@@ -144,8 +170,14 @@ export async function GET(request: NextRequest) {
     if (sb !== sa) return sb - sa;
     return (a.style_name || '').localeCompare(b.style_name || '');
   });
-  const truncated = ranked.length > limit;
-  const trimmed = ranked.slice(0, limit);
+  const total = ranked.length;
+  // If we filled the cap, there may be more matches we didn't fetch, so `total`
+  // is only a lower bound.
+  const capped = rows.length >= FETCH_CAP;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const page = Math.min(requestedPage, totalPages);
+  const from = (page - 1) * PER_PAGE;
+  const trimmed = ranked.slice(from, from + PER_PAGE);
 
   // Augment with variant override counts in one batched query.
   const styleIds = trimmed.map((r) => r.style_id);
@@ -186,6 +218,13 @@ export async function GET(request: NextRequest) {
     variant_overrides_count: variantOverrides.get(r.style_id) || 0,
   }));
 
-  const response: AdminProductSearchResponse = { results, truncated };
+  const response: AdminProductSearchResponse = {
+    results,
+    page,
+    perPage: PER_PAGE,
+    total,
+    totalPages,
+    capped,
+  };
   return NextResponse.json(response);
 }

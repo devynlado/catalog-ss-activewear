@@ -43,7 +43,7 @@ interface OrderItem {
   colors?: Array<{ colorCode?: string; colorName?: string; quantity?: number }>;
 }
 
-interface Order {
+export interface Order {
   id: string;
   order_number: string;
   customer_name: string | null;
@@ -133,7 +133,19 @@ const carriers = [
   { id: 'other', label: 'Other' },
 ];
 
-export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unreadChatCount?: number }) {
+export function OrderCard({
+  order,
+  unreadChatCount = 0,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
+}: {
+  order: Order;
+  unreadChatCount?: number;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string, event: React.MouseEvent) => void;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [carrier, setCarrier] = useState(order.carrier || '');
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
@@ -315,11 +327,32 @@ export function OrderCard({ order, unreadChatCount = 0 }: { order: Order; unread
   const channel = classifyOrderSource(order);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+    <div
+      className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
+        selected ? 'border-brand-400 ring-1 ring-brand-400' : 'border-stone-200'
+      }`}
+    >
       <div
         className="flex cursor-pointer items-center gap-4 p-4"
         onClick={() => setIsExpanded(!isExpanded)}
       >
+        {selectable && (
+          <div
+            className="flex flex-shrink-0 items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect?.(order.id, e);
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={selected}
+              readOnly
+              aria-label={`Select order ${order.order_number}`}
+              className="h-4 w-4 cursor-pointer rounded border-stone-300 text-brand-600 focus:ring-brand-500/30"
+            />
+          </div>
+        )}
         <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-stone-100">
           <Package className="h-5 w-5 text-stone-500" />
           {unreadChatCount > 0 && (
