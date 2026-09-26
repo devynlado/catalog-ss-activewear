@@ -1232,11 +1232,16 @@ export async function syncFullCatalog(resumeFromLogId?: number): Promise<SyncRes
       await updateSyncCheckpoint(logId, batchIndex + MAX_PARALLEL_BATCHES, totalBatches);
     }
     
-    // Mark discontinued products (products in DB but not in SS API)
+    // Mark discontinued products (products in DB but not in SS API).
+    // IMPORTANT: only SS Activewear products are represented in `syncedStyleIds`
+    // (populated from the SS `/styles/` catalog). Non-SS products (LA Apparel,
+    // Otto Cap, AS Colour) must be excluded here, otherwise they would always
+    // be marked discontinued (is_active = false).
     console.log('[Sync] Marking discontinued products...');
     const { data: existingProducts } = await supabase
       .from('products')
       .select('style_id')
+      .eq('supplier', 'ss_activewear')
       .eq('is_active', true);
     
     const existingList = existingProducts as Array<{ style_id: number }> | null;
@@ -1471,11 +1476,16 @@ export async function checkDiscontinuedProducts(): Promise<DiscontinuedCheckResu
     const ssStyleIds = new Set(allStyles.map((s) => s.styleID));
     console.log(`[Discontinued] SS catalog has ${ssStyleIds.size} active styles`);
 
-    // Fetch all products from our DB that are active or recently flagged
+    // Fetch all products from our DB that are active or recently flagged.
+    // IMPORTANT: only consider SS Activewear products here. This check compares
+    // against the SS catalog (`/styles/`) only, so non-SS products (LA Apparel,
+    // Otto Cap, AS Colour) would never be "found" and would be wrongly
+    // auto-hidden. Scope the query to `supplier = 'ss_activewear'`.
     // Use `as any` because discontinued_detected_at / manually_kept_active
     // are not yet in the generated Supabase types.
     const { data: dbProducts, error: dbError } = await (supabase.from as any)('products')
       .select('style_id, is_active, discontinued_detected_at, manually_kept_active')
+      .eq('supplier', 'ss_activewear')
       .or('is_active.eq.true,discontinued_detected_at.not.is.null') as {
         data: Array<{
           style_id: number;
