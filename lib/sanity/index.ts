@@ -34,3 +34,11 @@ export type {
   BlogArticleDetail,
   BlogArticleSlugEntry,
 } from './blogFetch';
+
+// Portfolio Gallery (photos & videos)
+export { getGalleryItems } from './galleryFetch';
+export type {
+  GalleryItem,
+  GalleryContentType,
+  GalleryFilterParams,
+} from './galleryFetch';
