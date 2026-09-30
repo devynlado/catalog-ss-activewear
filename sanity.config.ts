@@ -33,6 +33,16 @@ const structure = (S: StructureBuilder) =>
               S.documentTypeListItem('portfolioCategory').title('Categories'),
             ])
         ),
+      S.divider(),
+      S.listItem()
+        .title('Portfolio Gallery')
+        .child(
+          S.list()
+            .title('Portfolio Gallery')
+            .items([
+              S.documentTypeListItem('portfolioGalleryItem').title('Gallery Items'),
+            ])
+        ),
     ]);
 
 export default defineConfig({

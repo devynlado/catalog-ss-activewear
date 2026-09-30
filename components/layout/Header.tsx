@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingCart, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard, FileText, Heart } from 'lucide-react';
+import { Menu, X, ShoppingCart, Search, ChevronDown, ChevronRight, Phone, Zap, Layers, Sparkles, Maximize2, Monitor, Palette, Scissors, Package, Star, BookOpen, HelpCircle, Users, Mail, User, LogOut, Settings, LayoutDashboard, FileText, Heart, Camera, Video } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useCartStore } from '@/lib/cart-store';
 import { useWishlistStore } from '@/lib/wishlist-store';
@@ -348,6 +348,7 @@ export function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
@@ -358,11 +359,13 @@ export function Header() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const shopRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
+  const portfolioRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const megaMenuCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const servicesCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const shopCloseTimer = useRef<NodeJS.Timeout | null>(null);
+  const portfolioCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const resourcesCloseTimer = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
   const { items, openDrawer, justAdded } = useCartStore();
@@ -385,6 +388,7 @@ export function Header() {
     setShopOpen(true);
     setServicesOpen(false);
     setResourcesOpen(false);
+    setPortfolioOpen(false);
   };
 
   const handleShopLeave = () => {
@@ -404,12 +408,32 @@ export function Header() {
     setServicesOpen(true);
     setShopOpen(false);
     setResourcesOpen(false);
+    setPortfolioOpen(false);
   };
 
   const handleServicesLeave = () => {
     servicesCloseTimer.current = setTimeout(() => {
       setServicesOpen(false);
       servicesCloseTimer.current = null;
+    }, 300);
+  };
+
+  // Portfolio menu hover handlers with 300ms close delay
+  const handlePortfolioEnter = () => {
+    if (portfolioCloseTimer.current) {
+      clearTimeout(portfolioCloseTimer.current);
+      portfolioCloseTimer.current = null;
+    }
+    setPortfolioOpen(true);
+    setShopOpen(false);
+    setServicesOpen(false);
+    setResourcesOpen(false);
+  };
+
+  const handlePortfolioLeave = () => {
+    portfolioCloseTimer.current = setTimeout(() => {
+      setPortfolioOpen(false);
+      portfolioCloseTimer.current = null;
     }, 300);
   };
 
@@ -422,6 +446,7 @@ export function Header() {
     setResourcesOpen(true);
     setShopOpen(false);
     setServicesOpen(false);
+    setPortfolioOpen(false);
   };
 
   const handleResourcesLeave = () => {
@@ -460,6 +485,9 @@ export function Header() {
       }
       if (shopCloseTimer.current) {
         clearTimeout(shopCloseTimer.current);
+      }
+      if (portfolioCloseTimer.current) {
+        clearTimeout(portfolioCloseTimer.current);
       }
       if (resourcesCloseTimer.current) {
         clearTimeout(resourcesCloseTimer.current);
@@ -559,6 +587,9 @@ export function Header() {
       }
       if (servicesRef.current && !servicesRef.current.contains(event.target as Node)) {
         setServicesOpen(false);
+      }
+      if (portfolioRef.current && !portfolioRef.current.contains(event.target as Node)) {
+        setPortfolioOpen(false);
       }
       if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
         setResourcesOpen(false);
@@ -1111,18 +1142,71 @@ export function Header() {
                 )}
               </div>
 
-              {/* Portfolio - Direct Link */}
-              <Link
-                href="/portfolio"
-                className={cn(
-                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                  pathname === '/portfolio' || pathname?.startsWith('/portfolio/')
-                    ? 'bg-stone-100 text-slate-900'
-                    : 'text-slate-700 hover:bg-stone-50 hover:text-slate-900'
-                )}
+              {/* Portfolio Dropdown */}
+              <div
+                className="relative"
+                ref={portfolioRef}
+                onMouseEnter={handlePortfolioEnter}
+                onMouseLeave={handlePortfolioLeave}
               >
-                Portfolio
-              </Link>
+                <Link
+                  href="/portfolio"
+                  onClick={() => setPortfolioOpen(false)}
+                  className={cn(
+                    'flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                    portfolioOpen || pathname === '/portfolio' || pathname?.startsWith('/portfolio/')
+                      ? 'bg-stone-100 text-slate-900'
+                      : 'text-slate-700 hover:bg-stone-50 hover:text-slate-900'
+                  )}
+                >
+                  Portfolio
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', portfolioOpen && 'rotate-180')} />
+                </Link>
+
+                {portfolioOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1 w-60 rounded-xl bg-white p-2 shadow-xl ring-1 ring-stone-200">
+                    <Link
+                      href="/portfolio"
+                      onClick={() => setPortfolioOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-stone-50 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-slate-600 group-hover:bg-stone-200">
+                        <LayoutDashboard className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Projects</span>
+                        <span className="text-xs text-slate-500">Project stories</span>
+                      </div>
+                    </Link>
+                    <Link
+                      href="/portfolio/photos"
+                      onClick={() => setPortfolioOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-stone-50 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+                        <Camera className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Photos</span>
+                        <span className="text-xs text-slate-500">Photo gallery</span>
+                      </div>
+                    </Link>
+                    <Link
+                      href="/portfolio/videos"
+                      onClick={() => setPortfolioOpen(false)}
+                      className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-stone-50 group"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                        <Video className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-slate-900 group-hover:text-brand-600">Videos</span>
+                        <span className="text-xs text-slate-500">Video gallery</span>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+              </div>
 
               {/* Contact - Direct Link */}
               <Link
@@ -1469,6 +1553,22 @@ export function Header() {
                   className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 hover:bg-stone-50"
                 >
                   Portfolio
+                </Link>
+                <Link
+                  href="/portfolio/photos"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 pl-6 text-sm text-slate-700 hover:bg-stone-50"
+                >
+                  <Camera className="h-4 w-4 text-sky-500" />
+                  Photos
+                </Link>
+                <Link
+                  href="/portfolio/videos"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 pl-6 text-sm text-slate-700 hover:bg-stone-50"
+                >
+                  <Video className="h-4 w-4 text-amber-500" />
+                  Videos
                 </Link>
                 <Link
                   href="/contact"
