@@ -90,6 +90,12 @@ export interface Database {
           visitor_source: string | null;
           is_spam: boolean;
           blocked_at: string | null;
+          gclid: string | null;
+          gbraid: string | null;
+          wbraid: string | null;
+          offline_conv_status: string | null;
+          offline_conv_uploaded_at: string | null;
+          qualified_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -108,6 +114,12 @@ export interface Database {
           visitor_source?: string | null;
           is_spam?: boolean;
           blocked_at?: string | null;
+          gclid?: string | null;
+          gbraid?: string | null;
+          wbraid?: string | null;
+          offline_conv_status?: string | null;
+          offline_conv_uploaded_at?: string | null;
+          qualified_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -126,6 +138,12 @@ export interface Database {
           visitor_source?: string | null;
           is_spam?: boolean;
           blocked_at?: string | null;
+          gclid?: string | null;
+          gbraid?: string | null;
+          wbraid?: string | null;
+          offline_conv_status?: string | null;
+          offline_conv_uploaded_at?: string | null;
+          qualified_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

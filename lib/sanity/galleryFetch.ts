@@ -1,5 +1,10 @@
 import { client } from './client';
 import { galleryItemsQuery } from './galleryQueries';
+import {
+  getDecorationTitles,
+  normalizeDecorations,
+} from '@/sanity/schema/decorationOptions';
+import { getBlankTitle } from '@/sanity/schema/blankOptions';
 
 export type GalleryContentType = 'photo' | 'video';
 
@@ -42,4 +47,34 @@ export async function getGalleryItems(
     blankSlug: blankSlug?.trim() || '',
   });
   return data ?? [];
+}
+
+/**
+ * In-memory free-text search over gallery items. Scans the human-readable
+ * title, decoration names + slugs, blank name + slug, client, turnaround, and
+ * quantity. Multiple words are AND-matched (all terms must be present).
+ */
+export function filterGalleryItemsBySearch(
+  items: GalleryItem[],
+  query: string | null | undefined
+): GalleryItem[] {
+  const q = (query ?? '').trim().toLowerCase();
+  if (!q) return items;
+  const terms = q.split(/\s+/).filter(Boolean);
+
+  return items.filter((item) => {
+    const haystack = [
+      item.title,
+      getDecorationTitles(item.decoration),
+      normalizeDecorations(item.decoration).join(' '),
+      getBlankTitle(item.blankCategory),
+      item.blankCategory ?? '',
+      item.client ?? '',
+      item.turnaround ?? '',
+      item.quantity ?? '',
+    ]
+      .join(' ')
+      .toLowerCase();
+    return terms.every((t) => haystack.includes(t));
+  });
 }

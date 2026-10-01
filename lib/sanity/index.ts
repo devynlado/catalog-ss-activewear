@@ -36,7 +36,7 @@ export type {
 } from './blogFetch';
 
 // Portfolio Gallery (photos & videos)
-export { getGalleryItems } from './galleryFetch';
+export { getGalleryItems, filterGalleryItemsBySearch } from './galleryFetch';
 export type {
   GalleryItem,
   GalleryContentType,

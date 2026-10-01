@@ -18,6 +18,8 @@ export interface AttributionData {
   utm_term?: string;
   utm_content?: string;
   gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
   referrer?: string;
 }
 
@@ -48,10 +50,15 @@ export function captureAttribution(): void {
   const utm_term = params.get('utm_term');
   const utm_content = params.get('utm_content');
   const gclid = params.get('gclid');
+  // gbraid/wbraid are Google click ids used in place of gclid for some
+  // iOS/privacy-restricted traffic; capture them so those clicks remain
+  // eligible for offline conversion upload.
+  const gbraid = params.get('gbraid');
+  const wbraid = params.get('wbraid');
 
   const referrer = document.referrer || '';
 
-  if (!utm_source && !gclid && !referrer) return;
+  if (!utm_source && !gclid && !gbraid && !wbraid && !referrer) return;
 
   const data: AttributionData = {};
   if (utm_source) data.utm_source = utm_source;
@@ -60,6 +67,8 @@ export function captureAttribution(): void {
   if (utm_term) data.utm_term = utm_term;
   if (utm_content) data.utm_content = utm_content;
   if (gclid) data.gclid = gclid;
+  if (gbraid) data.gbraid = gbraid;
+  if (wbraid) data.wbraid = wbraid;
   if (referrer) data.referrer = referrer;
 
   setCookie(COOKIE_NAME, JSON.stringify(data), COOKIE_MAX_AGE);
