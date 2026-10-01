@@ -88,7 +88,7 @@ export function GalleryGrid({ items }: Props) {
 
   return (
     <>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
         {items.map((item, i) => {
           const isVideo = item.contentType === 'video';
           const thumb = isVideo ? item.coverImage : item.image;
@@ -107,7 +107,7 @@ export function GalleryGrid({ items }: Props) {
                   alt={alt}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  sizes="(min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
                   unoptimized
                 />
               ) : (

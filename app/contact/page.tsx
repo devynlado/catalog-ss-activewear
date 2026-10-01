@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 import { trackContactFormSubmit, trackPhoneClick, trackContactEmailClick, trackContactLocationClick } from '@/lib/analytics';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
@@ -97,6 +97,9 @@ function ContactForm() {
           service: serviceParam ? serviceNames[serviceParam] : undefined,
           source: 'contact_page',
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           website: honeypotValue,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
@@ -108,13 +111,17 @@ function ContactForm() {
         throw new Error(data.error || 'Failed to send message');
       }
 
-      // Track successful form submission
-      trackContactFormSubmit({
-        service: serviceParam ? serviceNames[serviceParam] : undefined,
-        hasPhone: !!formState.phone,
-        hasCompany: !!formState.company,
-        contact_source_page: sourcePage || '(direct)',
-      });
+      // Track successful form submission — but skip when the server flags the
+      // submission as uncounted (blocked/spam silent-success). This stops spam
+      // resubmissions from firing the Google Ads `generate_lead` conversion.
+      if (data.counted !== false) {
+        trackContactFormSubmit({
+          service: serviceParam ? serviceNames[serviceParam] : undefined,
+          hasPhone: !!formState.phone,
+          hasCompany: !!formState.company,
+          contact_source_page: sourcePage || '(direct)',
+        });
+      }
 
       setIsSubmitted(true);
     } catch (error) {

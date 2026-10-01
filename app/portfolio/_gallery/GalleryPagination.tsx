@@ -6,21 +6,23 @@ type Props = {
   totalPages: number;
   decoration?: string;
   blank?: string;
+  q?: string;
 };
 
 function buildHref(
   basePath: string,
-  params: { decoration?: string; blank?: string; page: number }
+  params: { decoration?: string; blank?: string; q?: string; page: number }
 ) {
   const sp = new URLSearchParams();
   if (params.decoration?.trim()) sp.set('decoration', params.decoration.trim());
   if (params.blank?.trim()) sp.set('blank', params.blank.trim());
+  if (params.q?.trim()) sp.set('q', params.q.trim());
   if (params.page > 1) sp.set('page', String(params.page));
   const qs = sp.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }
 
-export function GalleryPagination({ basePath, currentPage, totalPages, decoration, blank }: Props) {
+export function GalleryPagination({ basePath, currentPage, totalPages, decoration, blank, q }: Props) {
   if (totalPages <= 1) return null;
 
   return (
@@ -33,7 +35,7 @@ export function GalleryPagination({ basePath, currentPage, totalPages, decoratio
         return (
           <Link
             key={p}
-            href={buildHref(basePath, { decoration, blank, page: p })}
+            href={buildHref(basePath, { decoration, blank, q, page: p })}
             scroll
             className={`min-w-[2.25rem] rounded-lg px-3 py-2 text-center text-sm font-medium transition-colors ${
               isCurrent

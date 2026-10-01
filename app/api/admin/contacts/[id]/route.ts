@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 import { logAdminActivity } from '@/lib/admin-audit';
+import { retractQualifiedLead, isGoogleAdsConfigured } from '@/lib/google-ads';
 
 function getServiceSupabase() {
   return createClient(
@@ -49,7 +50,7 @@ export async function PATCH(
   // Fetch the contact first
   const { data: contact, error: fetchErr } = await serviceSupabase
     .from('contacts')
-    .select('id, email')
+    .select('id, email, offline_conv_status, gclid, gbraid, wbraid')
     .eq('id', id)
     .single();
 
@@ -95,6 +96,34 @@ export async function PATCH(
       .update({ is_spam: true, status: 'spam', blocked_at: new Date().toISOString() } as Record<string, unknown>)
       .eq('email', contact.email)
       .eq('is_spam', false);
+  }
+
+  // Retract a previously-uploaded qualified conversion when flagging as spam,
+  // so junk that slipped through doesn't keep driving Google Ads bidding.
+  const contactConv = contact as {
+    offline_conv_status?: string | null;
+    gclid?: string | null;
+    gbraid?: string | null;
+    wbraid?: string | null;
+  };
+  if (is_spam === true && contactConv.offline_conv_status === 'uploaded') {
+    try {
+      if (isGoogleAdsConfigured()) {
+        await retractQualifiedLead({
+          orderId: contact.id,
+          gclid: contactConv.gclid,
+          gbraid: contactConv.gbraid,
+          wbraid: contactConv.wbraid,
+        });
+        await serviceSupabase
+          .from('contacts')
+          .update({ offline_conv_status: 'retracted' } as Record<string, unknown>)
+          .eq('id', id);
+      }
+    } catch (retractErr) {
+      console.error('[Admin Contacts] Qualified-conversion retraction failed:', retractErr);
+      // Non-fatal: the spam flag was already applied.
+    }
   }
 
   // Un-spam: also remove from blocklist if explicitly un-marking

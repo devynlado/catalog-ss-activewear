@@ -1,7 +1,7 @@
 import { createPageMetadata } from '@/lib/metadata';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { getGalleryItems } from '@/lib/sanity';
+import { getGalleryItems, filterGalleryItemsBySearch } from '@/lib/sanity';
 import { GalleryFilterBar } from '../_gallery/GalleryFilterBar';
 import { GalleryGrid } from '../_gallery/GalleryGrid';
 import { GalleryPagination } from '../_gallery/GalleryPagination';
@@ -18,21 +18,23 @@ export const revalidate = 60;
 const ITEMS_PER_PAGE = 15;
 
 type PageProps = {
-  searchParams: Promise<{ decoration?: string; blank?: string; page?: string }>;
+  searchParams: Promise<{ decoration?: string; blank?: string; q?: string; page?: string }>;
 };
 
 export default async function PortfolioVideosPage({ searchParams }: PageProps) {
-  const { decoration, blank, page: pageParam } = await searchParams;
+  const { decoration, blank, q, page: pageParam } = await searchParams;
   const selectedDecorations = decoration
     ? decoration.split(',').map((s) => s.trim()).filter(Boolean)
     : [];
   const selectedBlank = blank?.trim() ?? '';
+  const searchQuery = q?.trim() ?? '';
 
-  const items = await getGalleryItems({
+  const allItems = await getGalleryItems({
     contentType: 'video',
     decorationSlugs: selectedDecorations,
     blankSlug: selectedBlank,
   });
+  const items = filterGalleryItemsBySearch(allItems, searchQuery);
 
   const totalPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
   const rawPage = Math.max(1, parseInt(String(pageParam ?? '1'), 10) || 1);
@@ -71,6 +73,7 @@ export default async function PortfolioVideosPage({ searchParams }: PageProps) {
               basePath="/portfolio/videos"
               selectedDecorations={selectedDecorations}
               selectedBlank={selectedBlank}
+              searchQuery={searchQuery}
             />
           </div>
           <GalleryGrid items={pageItems} />
@@ -80,6 +83,7 @@ export default async function PortfolioVideosPage({ searchParams }: PageProps) {
             totalPages={totalPages}
             decoration={decoration}
             blank={selectedBlank}
+            q={searchQuery}
           />
         </div>
       </section>

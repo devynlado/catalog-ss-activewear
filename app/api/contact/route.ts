@@ -39,6 +39,9 @@ interface ContactFormData {
   resolved_location?: string; // Dynamic copy location (e.g., "Pasadena")
   copy_variant?: string;      // keyword_location | geo_location | default
   resolution_source?: string; // url_param | geo_ip | fallback
+  gclid?: string;             // Google Ads click id (for offline conversions)
+  gbraid?: string;            // Google click id (iOS/app traffic)
+  wbraid?: string;            // Google click id (web, privacy-restricted)
 }
 
 export async function POST(request: NextRequest) {
@@ -94,6 +97,9 @@ export async function POST(request: NextRequest) {
           service: body.service || null,
           message: body.message ?? '',
           source: body.source || null,
+          gclid: body.gclid || null,
+          gbraid: body.gbraid || null,
+          wbraid: body.wbraid || null,
           status: 'spam',
           is_spam: true,
           blocked_at: new Date().toISOString(),
@@ -101,7 +107,8 @@ export async function POST(request: NextRequest) {
       } catch (honeypotInsertErr) {
         console.error('[Contact] Honeypot DB insert failed:', honeypotInsertErr);
       }
-      return NextResponse.json({ success: true, message: 'Message sent successfully' });
+      // counted:false → client must NOT fire the Google Ads lead conversion.
+      return NextResponse.json({ success: true, message: 'Message sent successfully', counted: false });
     }
 
     // Cloudflare Turnstile — separate from honeypot because it catches
@@ -170,6 +177,9 @@ export async function POST(request: NextRequest) {
           variant: body.variant || null,
           quantity: body.quantity || null,
           visitor_source: body.visitor_source || null,
+          gclid: body.gclid || null,
+          gbraid: body.gbraid || null,
+          wbraid: body.wbraid || null,
           resolved_location: body.resolved_location || null,
           copy_variant: body.copy_variant || null,
           resolution_source: body.resolution_source || null,
@@ -177,7 +187,8 @@ export async function POST(request: NextRequest) {
           is_spam: true,
           blocked_at: new Date().toISOString(),
         });
-        return NextResponse.json({ success: true, message: 'Message sent successfully' });
+        // counted:false → client must NOT fire the Google Ads lead conversion.
+        return NextResponse.json({ success: true, message: 'Message sent successfully', counted: false });
       }
     } catch (blockCheckErr) {
       console.error('[Contact] Block check failed, proceeding normally:', blockCheckErr);
@@ -253,11 +264,14 @@ export async function POST(request: NextRequest) {
         source: body.source || null,
         variant: body.variant || null,
         quantity: body.quantity || null,
-        visitor_source: body.visitor_source || null,
-        resolved_location: body.resolved_location || null,
-        copy_variant: body.copy_variant || null,
-        resolution_source: body.resolution_source || null,
-        status: 'new',
+          visitor_source: body.visitor_source || null,
+          gclid: body.gclid || null,
+          gbraid: body.gbraid || null,
+          wbraid: body.wbraid || null,
+          resolved_location: body.resolved_location || null,
+          copy_variant: body.copy_variant || null,
+          resolution_source: body.resolution_source || null,
+          status: 'new',
       });
       console.log(`Contact saved to Supabase for ${body.email}`);
     } catch (dbError) {
@@ -271,6 +285,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Message sent successfully',
+      counted: true,
     });
   } catch (error) {
     console.error('Error submitting contact form:', error);

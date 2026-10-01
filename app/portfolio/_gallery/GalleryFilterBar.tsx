@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, Check, X } from 'lucide-react';
+import { ChevronDown, Check, X, Search } from 'lucide-react';
 import { DECORATION_OPTIONS } from '@/sanity/schema/decorationOptions';
 import { BLANK_OPTIONS } from '@/sanity/schema/blankOptions';
 
@@ -10,6 +10,7 @@ type Props = {
   basePath: string;
   selectedDecorations: string[];
   selectedBlank: string;
+  searchQuery: string;
 };
 
 /** Decoration values hidden from the gallery filter (still valid in the CMS). */
@@ -18,22 +19,44 @@ const DECORATION_FILTER_OPTIONS = DECORATION_OPTIONS.filter(
   (o) => !HIDDEN_DECORATIONS.has(o.value)
 );
 
-export function GalleryFilterBar({ basePath, selectedDecorations, selectedBlank }: Props) {
+export function GalleryFilterBar({
+  basePath,
+  selectedDecorations,
+  selectedBlank,
+  searchQuery,
+}: Props) {
   const router = useRouter();
   const [openMenu, setOpenMenu] = useState<'decoration' | 'blank' | null>(null);
+  const [search, setSearch] = useState(searchQuery);
   const decorationRef = useRef<HTMLDivElement>(null);
   const blankRef = useRef<HTMLDivElement>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pushState = useCallback(
-    (decorations: string[], blank: string) => {
+    (decorations: string[], blank: string, query: string) => {
       const params = new URLSearchParams();
       if (decorations.length > 0) params.set('decoration', decorations.join(','));
       if (blank) params.set('blank', blank);
+      if (query.trim()) params.set('q', query.trim());
       const qs = params.toString();
       router.push(qs ? `${basePath}?${qs}` : basePath, { scroll: false });
     },
     [basePath, router]
   );
+
+  // Keep the input in sync when the URL changes from outside (clear, back/forward).
+  useEffect(() => {
+    setSearch(searchQuery);
+  }, [searchQuery]);
+
+  // Debounce URL updates while typing in the search box.
+  const onSearchChange = (value: string) => {
+    setSearch(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      pushState(selectedDecorations, selectedBlank, value);
+    }, 350);
+  };
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -65,20 +88,23 @@ export function GalleryFilterBar({ basePath, selectedDecorations, selectedBlank 
     const next = selectedDecorations.includes(slug)
       ? selectedDecorations.filter((s) => s !== slug)
       : [...selectedDecorations, slug];
-    pushState(next, selectedBlank);
+    pushState(next, selectedBlank, search);
   };
 
   const selectBlank = (slug: string) => {
-    pushState(selectedDecorations, slug);
+    pushState(selectedDecorations, slug, search);
     setOpenMenu(null);
   };
 
   const clearAll = () => {
-    pushState([], '');
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    setSearch('');
+    pushState([], '', '');
     setOpenMenu(null);
   };
 
-  const hasFilters = selectedDecorations.length > 0 || Boolean(selectedBlank);
+  const hasFilters =
+    selectedDecorations.length > 0 || Boolean(selectedBlank) || Boolean(search.trim());
   const blankLabel =
     BLANK_OPTIONS.find((o) => o.value === selectedBlank)?.title ?? 'All Blanks';
   const decorationLabel =
@@ -174,6 +200,33 @@ export function GalleryFilterBar({ basePath, selectedDecorations, selectedBlank 
               </button>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Search box */}
+      <div className="relative w-full sm:w-64">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search projects…"
+          aria-label="Search portfolio"
+          className="w-full rounded-lg border border-stone-200 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-700 placeholder:text-slate-400 transition-colors hover:border-stone-300 focus:border-navy-300 focus:outline-none focus:ring-2 focus:ring-navy-100"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => {
+              if (searchTimer.current) clearTimeout(searchTimer.current);
+              setSearch('');
+              pushState(selectedDecorations, selectedBlank, '');
+            }}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-stone-100 hover:text-slate-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
         )}
       </div>
 

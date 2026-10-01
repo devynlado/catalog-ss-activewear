@@ -43,6 +43,11 @@ interface ContactItem {
   visitor_source: string | null;
   is_spam: boolean;
   blocked_at: string | null;
+  gclid: string | null;
+  gbraid: string | null;
+  wbraid: string | null;
+  qualified_at: string | null;
+  offline_conv_status: string | null;
   created_at: string;
 }
 
@@ -278,6 +283,33 @@ export function ContactLeadsClient() {
       }
     } catch {
       setToast({ type: 'error', message: 'Failed to unmark spam' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleMarkQualified = async (id: string) => {
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/contacts/${id}/offline-conversion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'upload' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setToast({
+          type: 'success',
+          message: data.alreadyUploaded
+            ? 'Already uploaded to Google Ads'
+            : 'Qualified lead uploaded to Google Ads',
+        });
+        fetchContacts();
+      } else {
+        setToast({ type: 'error', message: data.error || 'Failed to upload qualified lead' });
+      }
+    } catch {
+      setToast({ type: 'error', message: 'Failed to upload qualified lead' });
     } finally {
       setActionLoading(null);
     }
@@ -593,6 +625,7 @@ export function ContactLeadsClient() {
                   onStatusChange={(s) => handleStatusChange(contact.id, s)}
                   onMarkSpam={() => handleMarkSpam(contact.id)}
                   onUnmarkSpam={() => handleUnmarkSpam(contact.id)}
+                  onMarkQualified={() => handleMarkQualified(contact.id)}
                 />
               ))}
             </tbody>
@@ -676,7 +709,7 @@ function StatCard({ icon, bg, value, label, clickable }: {
   );
 }
 
-function ContactRow({ contact, expanded, onToggle, selected, onSelect, actionLoading, onStatusChange, onMarkSpam, onUnmarkSpam }: {
+function ContactRow({ contact, expanded, onToggle, selected, onSelect, actionLoading, onStatusChange, onMarkSpam, onUnmarkSpam, onMarkQualified }: {
   contact: ContactItem;
   expanded: boolean;
   onToggle: () => void;
@@ -686,7 +719,9 @@ function ContactRow({ contact, expanded, onToggle, selected, onSelect, actionLoa
   onStatusChange: (s: string) => void;
   onMarkSpam: () => void;
   onUnmarkSpam: () => void;
+  onMarkQualified: () => void;
 }) {
+  const hasClickId = !!(contact.gclid || contact.gbraid || contact.wbraid);
   return (
     <>
       <tr className={cn(
@@ -762,6 +797,26 @@ function ContactRow({ contact, expanded, onToggle, selected, onSelect, actionLoa
                   <option value="contacted">Contacted</option>
                   <option value="resolved">Resolved</option>
                 </select>
+                {hasClickId && (
+                  contact.offline_conv_status === 'uploaded' ? (
+                    <span
+                      title="Uploaded to Google Ads as a qualified lead"
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      Qualified
+                    </span>
+                  ) : (
+                    <button
+                      onClick={onMarkQualified}
+                      disabled={actionLoading}
+                      title="Mark as qualified & upload conversion to Google Ads"
+                      className="rounded p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+                    >
+                      {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    </button>
+                  )
+                )}
                 <button
                   onClick={onMarkSpam}
                   disabled={actionLoading}
