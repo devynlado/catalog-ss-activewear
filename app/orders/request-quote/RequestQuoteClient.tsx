@@ -6,7 +6,7 @@ import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { trackGenerateLead } from '@/lib/analytics';
 
 interface RequestQuoteClientProps {
@@ -81,6 +81,9 @@ export function RequestQuoteClient({ email, name, phone, company }: RequestQuote
           message: details,
           source: 'orders_inquiry',
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           website: honeypot,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),

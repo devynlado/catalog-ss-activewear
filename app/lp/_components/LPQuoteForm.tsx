@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
@@ -62,6 +62,9 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
           source: source || `lp_${service}`,
           variant: variant,
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           resolved_location: resolvedLocation || undefined,
           copy_variant: copyVariant || undefined,
           resolution_source: resolutionSource || undefined,

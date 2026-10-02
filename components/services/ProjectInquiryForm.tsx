@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Loader2, CheckCircle, MessageSquare, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
@@ -92,6 +92,9 @@ BUDGET: ${budgetOptions.find(b => b.value === formData.budget)?.label || 'Not sp
           source: 'services_page_inquiry_form',
           quantity: formData.budget,
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           website: honeypotValue,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Send, Loader2, CheckCircle2, Phone } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
@@ -132,6 +132,9 @@ export function PortfolioQuoteModal({
           source: 'portfolio_quote_modal',
           quantity: formData.quantity || undefined,
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           website: honeypotValue,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
