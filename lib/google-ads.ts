@@ -60,13 +60,22 @@ function toConversionActionId(raw: string): string {
   return last.replace(/[^0-9]/g, '');
 }
 
-function getConfig(): GoogleAdsConfig | null {
+/**
+ * Which qualified-conversion this upload targets. Leads (contact forms) and
+ * quotes (the /quote project form) report to SEPARATE Google Ads conversion
+ * actions so they can be bid on and reported independently.
+ */
+export type ConversionKind = 'lead' | 'quote';
+
+function getConfig(kind: ConversionKind = 'lead'): GoogleAdsConfig | null {
   const clientId = process.env.GADS_CLIENT_ID;
   const clientSecret = process.env.GADS_CLIENT_SECRET;
   const refreshToken = process.env.GADS_REFRESH_TOKEN;
   const customerId = (process.env.GADS_CUSTOMER_ID || '').replace(/[^0-9]/g, '');
   const conversionActionId = toConversionActionId(
-    process.env.GADS_QUALIFIED_LEAD_CONVERSION_ACTION || ''
+    (kind === 'quote'
+      ? process.env.GADS_QUALIFIED_QUOTE_CONVERSION_ACTION
+      : process.env.GADS_QUALIFIED_LEAD_CONVERSION_ACTION) || ''
   );
 
   if (!clientId || !clientSecret || !refreshToken || !customerId || !conversionActionId) {
@@ -81,14 +90,19 @@ function getConfig(): GoogleAdsConfig | null {
     loginCustomerId:
       (process.env.GADS_LOGIN_CUSTOMER_ID || '').replace(/[^0-9]/g, '') || undefined,
     conversionActionId,
-    defaultValue: Number(process.env.GADS_QUALIFIED_LEAD_VALUE || '100'),
+    // Quotes use a flat value (default $150); leads default to $100.
+    defaultValue: Number(
+      kind === 'quote'
+        ? process.env.GADS_QUALIFIED_QUOTE_VALUE || '150'
+        : process.env.GADS_QUALIFIED_LEAD_VALUE || '100'
+    ),
     currency: process.env.GADS_QUALIFIED_LEAD_CURRENCY || 'USD',
   };
 }
 
-/** True when all required env vars are present. */
-export function isGoogleAdsConfigured(): boolean {
-  return getConfig() !== null;
+/** True when all required env vars are present for the given conversion kind. */
+export function isGoogleAdsConfigured(kind: ConversionKind = 'lead'): boolean {
+  return getConfig(kind) !== null;
 }
 
 async function getAccessToken(cfg: GoogleAdsConfig): Promise<string> {
@@ -184,10 +198,11 @@ function buildAdIdentifiers(p: {
  * Upload one qualified-lead conversion keyed by the Google click id.
  * Returns the conversionDateTime used (for auditing).
  */
-export async function uploadQualifiedLead(
+async function uploadQualified(
+  kind: ConversionKind,
   params: UploadQualifiedLeadParams
 ): Promise<{ conversionDateTime: string; requestId?: string }> {
-  const cfg = getConfig();
+  const cfg = getConfig(kind);
   if (!cfg) throw new Error('Google Ads is not configured (missing env vars)');
 
   const adIdentifiers = buildAdIdentifiers(params);
@@ -209,6 +224,25 @@ export async function uploadQualifiedLead(
 
   const resp = await ingestEvents(cfg, accessToken, [event], params.validateOnly);
   return { conversionDateTime: eventTimestamp, requestId: resp.requestId };
+}
+
+/** Upload one qualified-lead conversion (contact forms) keyed by the click id. */
+export function uploadQualifiedLead(
+  params: UploadQualifiedLeadParams
+): Promise<{ conversionDateTime: string; requestId?: string }> {
+  return uploadQualified('lead', params);
+}
+
+/**
+ * Upload one qualified-quote conversion (the /quote project form) keyed by the
+ * click id. Reports to the SEPARATE quote conversion action
+ * (GADS_QUALIFIED_QUOTE_CONVERSION_ACTION) at the quote flat value
+ * (GADS_QUALIFIED_QUOTE_VALUE, default $150). Quotes have no retraction path.
+ */
+export function uploadQualifiedQuote(
+  params: UploadQualifiedLeadParams
+): Promise<{ conversionDateTime: string; requestId?: string }> {
+  return uploadQualified('quote', params);
 }
 
 /**

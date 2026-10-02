@@ -73,6 +73,9 @@ interface QuoteProjectSubmission {
   eventDate?: string | null;
   submittedAt?: string;
   visitor_source?: string | null;
+  gclid?: string | null;
+  gbraid?: string | null;
+  wbraid?: string | null;
 }
 
 // -----------------------------------------------------------------------------
@@ -369,6 +372,9 @@ export async function POST(request: NextRequest) {
             subtotal: 0,
             status: 'new',
             visitor_source: body.visitor_source || null,
+            gclid: body.gclid || null,
+            gbraid: body.gbraid || null,
+            wbraid: body.wbraid || null,
             decoration_methods: decorationMethods.length ? decorationMethods : null,
           });
         if (dbInsertError) {
@@ -521,6 +527,9 @@ export async function POST(request: NextRequest) {
         subtotal,
         status: 'new',
         visitor_source: (body as { visitor_source?: string | null }).visitor_source || null,
+        gclid: (body as { gclid?: string | null }).gclid || null,
+        gbraid: (body as { gbraid?: string | null }).gbraid || null,
+        wbraid: (body as { wbraid?: string | null }).wbraid || null,
         decoration_methods: decorationMethods.length ? decorationMethods : null,
       });
       if (dbInsertError) {

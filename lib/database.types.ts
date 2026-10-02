@@ -30,6 +30,12 @@ export interface Database {
           assigned_sales_rep_id: string | null;
           visitor_source: string | null;
           decoration_methods: string[] | null;
+          gclid: string | null;
+          gbraid: string | null;
+          wbraid: string | null;
+          offline_conv_status: string | null;
+          offline_conv_uploaded_at: string | null;
+          qualified_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -50,6 +56,12 @@ export interface Database {
           assigned_sales_rep_id?: string | null;
           visitor_source?: string | null;
           decoration_methods?: string[] | null;
+          gclid?: string | null;
+          gbraid?: string | null;
+          wbraid?: string | null;
+          offline_conv_status?: string | null;
+          offline_conv_uploaded_at?: string | null;
+          qualified_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -70,6 +82,12 @@ export interface Database {
           assigned_sales_rep_id?: string | null;
           visitor_source?: string | null;
           decoration_methods?: string[] | null;
+          gclid?: string | null;
+          gbraid?: string | null;
+          wbraid?: string | null;
+          offline_conv_status?: string | null;
+          offline_conv_uploaded_at?: string | null;
+          qualified_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
