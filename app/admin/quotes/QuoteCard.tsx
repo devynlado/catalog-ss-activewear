@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
   Building2,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Layers,
+  Loader2,
   Mail,
   MapPin,
   Package,
@@ -52,6 +55,10 @@ interface Quote {
   status: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed';
   created_at: string;
   visitor_source?: string | null;
+  gclid?: string | null;
+  gbraid?: string | null;
+  wbraid?: string | null;
+  offline_conv_status?: string | null;
 }
 
 // Visitor-source channel pill colors (mirrors /admin/contacts).
@@ -86,7 +93,37 @@ const legacyDecorationLabels: Record<string, string> = {
 };
 
 export function QuoteCard({ quote }: { quote: Quote }) {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [qualifying, setQualifying] = useState(false);
+  const [qualError, setQualError] = useState<string | null>(null);
+
+  // A quote can be reported to Google Ads as a qualified conversion only when
+  // it carries a Google click id captured at submit time.
+  const hasClickId = !!(quote.gclid || quote.gbraid || quote.wbraid);
+  const isUploaded = quote.offline_conv_status === 'uploaded';
+
+  const handleMarkQualified = async () => {
+    setQualifying(true);
+    setQualError(null);
+    try {
+      const res = await fetch(`/api/admin/quotes/${quote.id}/offline-conversion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'upload' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        router.refresh();
+      } else {
+        setQualError(data.error || 'Failed to upload qualified quote');
+      }
+    } catch {
+      setQualError('Failed to upload qualified quote');
+    } finally {
+      setQualifying(false);
+    }
+  };
 
   const items: AnyQuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
   const isProject = isProjectQuote(items);
@@ -170,6 +207,15 @@ export function QuoteCard({ quote }: { quote: Quote }) {
             >
               {quote.visitor_source || 'Untracked'}
             </span>
+            {isUploaded && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Qualified
+                </span>
+              </>
+            )}
           </div>
           <h3 className="mt-0.5 truncate font-semibold text-navy-800">
             {quote.company || quote.customer_name}
@@ -351,6 +397,38 @@ export function QuoteCard({ quote }: { quote: Quote }) {
                 <Phone className="mr-2 h-4 w-4" />
                 Call
               </a>
+            )}
+
+            {/* Qualified — upload an offline conversion to Google Ads. Only
+                shown for quotes that carry a Google click id. */}
+            {hasClickId && (
+              isUploaded ? (
+                <span
+                  title="Uploaded to Google Ads as a qualified quote"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Qualified
+                </span>
+              ) : (
+                <button
+                  onClick={handleMarkQualified}
+                  disabled={qualifying}
+                  title="Mark as qualified & upload conversion to Google Ads"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                >
+                  {qualifying ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Mark Qualified
+                </button>
+              )
+            )}
+
+            {qualError && (
+              <p className="mt-2 w-full text-xs text-red-600">{qualError}</p>
             )}
           </div>
         </div>

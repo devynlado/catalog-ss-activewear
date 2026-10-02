@@ -42,7 +42,7 @@ import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 import { trackQuoteFormSubmit } from '@/lib/analytics';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import {
   MAX_PROJECTS_PER_QUOTE,
   SERVICE_QUERY_MAPPING,
@@ -281,6 +281,9 @@ function QuotePageContent() {
           },
           eventDate: contact.eventDate || null,
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           website: honeypotInput?.value ?? '',
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
           submittedAt: new Date().toISOString(),
