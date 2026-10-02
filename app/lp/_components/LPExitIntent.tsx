@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Phone, Clock, MessageSquare, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
@@ -101,6 +101,9 @@ export function LPExitIntent({ service }: LPExitIntentProps) {
           source: `lp_${service}_exit_intent`,
           message: 'Exit intent capture - requested callback',
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           website: honeypotValue,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),

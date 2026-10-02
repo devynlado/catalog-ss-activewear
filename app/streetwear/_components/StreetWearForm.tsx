@@ -6,7 +6,7 @@ import { Send, Loader2, CheckCircle2, Phone, Trash2 } from 'lucide-react';
 import { useStreetWearInquiry } from '@/lib/streetwear-inquiry-store';
 import { VOLUME_TIERS, type TierQty } from '@/lib/streetwear-config';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
@@ -60,6 +60,9 @@ export function StreetWearForm() {
           service: 'Streetwear Brand Inquiry',
           source: 'streetwear',
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           quantity:
             selectedProducts.length > 0
               ? `${selectedProducts.length} products`

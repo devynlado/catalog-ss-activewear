@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Send, Loader2, CheckCircle2, Phone, MessageCircle, User, Calendar } from 'lucide-react';
 import { trackGenerateLead, trackPhoneClick } from '@/lib/analytics';
-import { getVisitorSource } from '@/lib/attribution';
+import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
@@ -56,6 +56,9 @@ ${formData.message || 'None provided'}
           service: 'Live Screen Printing',
           source: 'service_live-screen-printing',
           visitor_source: getVisitorSource(),
+          // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
+          // so the server can store the Google click id for offline conversions.
+          ...getAttribution(),
           website: honeypotValue,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),
