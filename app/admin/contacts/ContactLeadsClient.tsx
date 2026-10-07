@@ -28,6 +28,13 @@ import { LeadsTrendChart } from './LeadsTrendChart';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
+interface ArtworkLink {
+  path: string;
+  url: string | null;
+  name: string;
+  isImage: boolean;
+}
+
 interface ContactItem {
   id: string;
   name: string;
@@ -36,6 +43,7 @@ interface ContactItem {
   company: string | null;
   service: string | null;
   message: string;
+  artwork?: ArtworkLink[];
   status: string;
   source: string | null;
   variant: string | null;
@@ -907,6 +915,50 @@ function ContactRow({ contact, expanded, onToggle, selected, onSelect, actionLoa
                   {contact.message}
                 </div>
               </div>
+
+              {/* Customer artwork */}
+              {contact.artwork && contact.artwork.length > 0 && (
+                <div className="md:col-span-2">
+                  <h4 className="mb-2 text-sm font-semibold text-navy-800">Customer Artwork</h4>
+                  <div className="flex flex-wrap gap-3">
+                    {contact.artwork.map((a) => (
+                      <div
+                        key={a.path}
+                        className="flex items-center gap-3 rounded-lg border border-stone-200 bg-white p-2.5"
+                      >
+                        <a
+                          href={a.url || undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block h-14 w-14 flex-shrink-0 overflow-hidden rounded-md border border-stone-200 bg-stone-50"
+                        >
+                          {a.isImage && a.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={a.url} alt={a.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-400">
+                              FILE
+                            </span>
+                          )}
+                        </a>
+                        {a.url ? (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                          >
+                            Download {a.name}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">{a.name}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </td>
         </tr>

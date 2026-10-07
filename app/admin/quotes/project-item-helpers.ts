@@ -51,6 +51,14 @@ export interface QuoteProjectItem {
   finishingQuantity: number | null;
   finishingServices: string[] | null;
   designNotes: string | null;
+  // Storage path of the customer's uploaded artwork (private quote-artwork
+  // bucket). Persisted in quotes.items[].
+  artworkPath?: string | null;
+  // Transient: a fresh signed download URL + display metadata, injected by the
+  // admin server components before rendering. Not persisted.
+  artworkUrl?: string | null;
+  artworkName?: string | null;
+  artworkIsImage?: boolean;
 }
 
 export type AnyQuoteItem = LegacyQuoteLineItem | QuoteProjectItem;

@@ -54,6 +54,7 @@ import {
   type QuoteProject,
   type QuoteProjectErrors,
 } from '@/components/quote/QuoteProjectForm';
+import { uploadOptionalArtwork } from '@/lib/artwork';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -258,20 +259,27 @@ function QuotePageContent() {
         'website',
       ) as HTMLInputElement | null;
 
-      // The per-project `designFile` (a File object) is held in state for the
-      // UI only — upload/storage is a later phase — so strip it before we
-      // JSON-serialize the payload. (A File would serialize to `{}` anyway.)
-      const projectsPayload = projects.map((p) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { designFile, ...rest } = p;
-        return rest;
-      });
+      // Upload each project's artwork (if any) to storage first, then send the
+      // resulting storage path with that project. Uploads run in parallel. A
+      // File can't be JSON-serialized, so `designFile` is stripped regardless;
+      // what persists is `artworkPath`. A failed upload never blocks the quote.
+      let anyArtworkFailed = false;
+      const projectsPayload = await Promise.all(
+        projects.map(async (p) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { designFile, ...rest } = p;
+          const { paths, failed } = await uploadOptionalArtwork(designFile);
+          if (failed) anyArtworkFailed = true;
+          return { ...rest, artworkPath: paths[0] ?? null };
+        }),
+      );
 
       const response = await fetch('/api/quote/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projects: projectsPayload,
+          artwork_failed: anyArtworkFailed,
           contact: {
             name: contact.name,
             email: contact.email,

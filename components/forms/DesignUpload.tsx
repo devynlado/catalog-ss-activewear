@@ -3,16 +3,18 @@
 /**
  * DesignUpload — shared, controlled artwork upload widget.
  *
- * Used by the /quote project form and the /services/* quote forms so the
- * upload UX and client-side validation stay identical everywhere.
+ * Used by the /quote project form, /contact, the LP forms and the /services/*
+ * quote forms so the upload UX and client-side validation stay identical
+ * everywhere.
  *
- * Scope (for now): UI/UX only. The selected File is held in the parent's
- * state and is intentionally NOT sent to any backend yet — storage, server
- * side validation, and AV scanning are a later phase. Keep it that way until
- * that work lands.
+ * The selected File is held in the parent's state. On form submit the parent
+ * uploads it via `uploadArtworkFile()` (lib/artwork.ts) to the private
+ * `quote-artwork` Supabase bucket and sends the resulting storage path to the
+ * API. Validation constants live in lib/artwork.ts so this widget, the client
+ * uploader, and the server validator never drift apart.
  *
- * Constraints:
- *   - Formats: PNG, JPG, WEBP, PDF
+ * Constraints (see lib/artwork.ts):
+ *   - Formats: PNG, JPG, WEBP, PDF (SVG rejected)
  *   - Max size: 20MB per file
  *   - Quantity: exactly 1 file
  */
@@ -20,17 +22,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, FileText, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  ARTWORK_ACCEPTED_EXT,
+  ARTWORK_MAX_SIZE_LABEL,
+  validateArtworkMeta,
+} from '@/lib/artwork';
 
-const DESIGN_ACCEPTED_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'application/pdf',
-];
 // `accept` attribute hint for the file picker (extensions).
-const DESIGN_ACCEPTED_EXT = '.png,.jpg,.jpeg,.webp,.pdf';
-const DESIGN_MAX_SIZE = 20 * 1024 * 1024; // 20MB per file
-const DESIGN_MAX_SIZE_LABEL = '20MB';
+const DESIGN_ACCEPTED_EXT = ARTWORK_ACCEPTED_EXT;
+const DESIGN_MAX_SIZE_LABEL = ARTWORK_MAX_SIZE_LABEL;
 
 export interface DesignUploadProps {
   value: File | null;
@@ -73,13 +73,11 @@ export function DesignUpload({
   }, [value]);
 
   const validateFile = (file: File): string | null => {
-    if (!DESIGN_ACCEPTED_TYPES.includes(file.type)) {
-      return 'Unsupported format. Please use PNG, JPG, WEBP, or PDF.';
-    }
-    if (file.size > DESIGN_MAX_SIZE) {
-      return `"${file.name}" is too large. Maximum size is ${DESIGN_MAX_SIZE_LABEL}.`;
-    }
-    return null;
+    return validateArtworkMeta({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    });
   };
 
   const acceptFiles = (fileList: FileList | File[]) => {

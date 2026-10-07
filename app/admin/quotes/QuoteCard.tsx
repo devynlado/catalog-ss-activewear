@@ -503,6 +503,57 @@ function ProjectItemPanel({
           </p>
         </div>
       )}
+
+      <ArtworkPreview project={project} />
+    </div>
+  );
+}
+
+// Customer artwork thumbnail + download link. Uses a plain <img> because the
+// signed URL is time-limited and not in next.config's remotePatterns.
+function ArtworkPreview({ project }: { project: QuoteProjectItem }) {
+  if (!project.artworkPath) return null;
+  const { artworkUrl, artworkName, artworkIsImage } = project;
+  return (
+    <div className="mt-3 rounded-md border border-stone-200 bg-stone-50 p-2.5">
+      <p className="mb-2 text-xs font-medium text-slate-500">Customer artwork</p>
+      {artworkUrl ? (
+        <div className="flex items-center gap-3">
+          <a
+            href={artworkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block h-14 w-14 flex-shrink-0 overflow-hidden rounded-md border border-stone-200 bg-white"
+          >
+            {artworkIsImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={artworkUrl}
+                alt={artworkName || 'Artwork'}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-400">
+                FILE
+              </span>
+            )}
+          </a>
+          <a
+            href={artworkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700"
+          >
+            Download {artworkName || 'artwork'}
+          </a>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400">
+          Attached ({project.artworkPath.split('/').pop()}) — preview link
+          unavailable.
+        </p>
+      )}
     </div>
   );
 }
