@@ -13,6 +13,10 @@ export const client: SanityClient | null = projectId && dataset
       projectId,
       dataset,
       apiVersion,
-      useCdn: typeof window !== 'undefined',
+      // Use Sanity's cached CDN (apicdn.sanity.io) on both server and client.
+      // Gallery/portfolio content is published and pages use ISR
+      // (`revalidate`), so the slightly-stale CDN is the right trade-off and is
+      // much faster than hitting the live API on every server render.
+      useCdn: true,
     })
   : null;
