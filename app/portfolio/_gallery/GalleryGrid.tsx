@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback, type CSSProperties } from 'react';
 import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import type { GalleryItem } from '@/lib/sanity';
+import { sanityImageUrl } from '@/lib/sanity';
 import { getDecorationTitles } from '@/sanity/schema/decorationOptions';
 import { getBlankTitle } from '@/sanity/schema/blankOptions';
 import { parseVideoUrl } from './videoEmbed';
 
 type Props = {
   items: GalleryItem[];
+  /** Tailwind class for each tile's corner radius. Defaults to `rounded-2xl` (16px). */
+  tileRoundedClassName?: string;
 };
 
 /** Rows of metadata, skipping any field that isn't filled in. */
@@ -35,7 +38,7 @@ function MetaRows({ item, compact = false }: { item: GalleryItem; compact?: bool
   );
 }
 
-export function GalleryGrid({ items }: Props) {
+export function GalleryGrid({ items, tileRoundedClassName = 'rounded-2xl' }: Props) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const openLightbox = (i: number) => setLightboxIndex(i);
@@ -91,14 +94,20 @@ export function GalleryGrid({ items }: Props) {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
         {items.map((item, i) => {
           const isVideo = item.contentType === 'video';
-          const thumb = isVideo ? item.coverImage : item.image;
+          // Request a square, modern-format thumbnail from Sanity's CDN rather
+          // than downloading the full-resolution original for a small tile.
+          const thumb = sanityImageUrl(isVideo ? item.coverImage : item.image, {
+            width: 500,
+            height: 500,
+            fit: 'crop',
+          });
           const alt = (isVideo ? item.coverImageAlt : item.imageAlt) || item.title;
           return (
             <button
               key={item._id}
               type="button"
               onClick={() => openLightbox(i)}
-              className="group relative block aspect-square w-full overflow-hidden rounded-2xl bg-stone-100 ring-1 ring-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className={`group relative block aspect-square w-full overflow-hidden ${tileRoundedClassName} bg-stone-100 ring-1 ring-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-500`}
               aria-label={`View ${item.title}`}
             >
               {thumb ? (
@@ -184,7 +193,10 @@ export function GalleryGrid({ items }: Props) {
             {active.contentType === 'photo' ? (
               active.image && (
                 <Image
-                  src={active.image}
+                  src={
+                    sanityImageUrl(active.image, { width: 1600, fit: 'max' }) ??
+                    active.image
+                  }
                   alt={active.imageAlt || active.title}
                   width={active.imageWidth ?? 1200}
                   height={active.imageHeight ?? 1200}

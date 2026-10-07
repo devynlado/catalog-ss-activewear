@@ -37,6 +37,7 @@ export type {
 
 // Portfolio Gallery (photos & videos)
 export { getGalleryItems, filterGalleryItemsBySearch } from './galleryFetch';
+export { sanityImageUrl } from './imageUrl';
 export type {
   GalleryItem,
   GalleryContentType,

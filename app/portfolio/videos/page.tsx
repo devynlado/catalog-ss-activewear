@@ -76,7 +76,7 @@ export default async function PortfolioVideosPage({ searchParams }: PageProps) {
               searchQuery={searchQuery}
             />
           </div>
-          <GalleryGrid items={pageItems} />
+          <GalleryGrid items={pageItems} tileRoundedClassName="rounded-[10px]" />
           <GalleryPagination
             basePath="/portfolio/videos"
             currentPage={currentPage}
