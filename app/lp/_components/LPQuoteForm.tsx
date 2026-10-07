@@ -7,6 +7,7 @@ import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
+import { uploadOptionalArtwork } from '@/lib/artwork';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 interface LPQuoteFormProps {
@@ -52,6 +53,10 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
       const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
       const honeypotValue = honeypotInput?.value ?? '';
 
+      // Upload the optional artwork first; a failed upload never blocks the lead.
+      const { paths: artwork_paths, failed: artwork_failed } =
+        await uploadOptionalArtwork(designFile);
+
       // Submit to API
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -68,6 +73,8 @@ export function LPQuoteForm({ service, source, variant, resolvedLocation, copyVa
           resolved_location: resolvedLocation || undefined,
           copy_variant: copyVariant || undefined,
           resolution_source: resolutionSource || undefined,
+          artwork_paths,
+          artwork_failed,
           website: honeypotValue,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),

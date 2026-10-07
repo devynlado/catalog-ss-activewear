@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Package, Palette, MapPin, User, Building2, Mail, Phone, BadgeCheck, Layers, Shirt, Sparkles } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
+import { enrichItemsWithArtwork } from '@/lib/artwork-server';
 import { Badge } from '@/components/ui/Badge';
 import { SalesRepCard } from '@/components/admin/SalesRepCard';
 import { QuoteStatusActions } from './QuoteStatusActions';
@@ -101,7 +102,9 @@ export default async function QuoteDetailPage({
     .select('id, full_name, email, avatar_url, calendly_url')
     .eq('role', 'sales_rep');
 
-  const items: AnyQuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
+  const rawItems: AnyQuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
+  // Attach fresh signed artwork URLs for display/download.
+  const items = (await enrichItemsWithArtwork(rawItems)) as AnyQuoteItem[];
   const isProject = isProjectQuote(items);
   const totalQuantity = totalEstimatedPieces(items);
 
@@ -316,6 +319,51 @@ export default async function QuoteDetailPage({
                             <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
                               {item.designNotes}
                             </p>
+                          </div>
+                        )}
+
+                        {item.artworkPath && (
+                          <div className="mt-3 rounded-md bg-white p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                              Customer artwork
+                            </p>
+                            {item.artworkUrl ? (
+                              <div className="mt-2 flex items-center gap-3">
+                                <a
+                                  href={item.artworkUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-stone-200 bg-stone-50"
+                                >
+                                  {item.artworkIsImage ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={item.artworkUrl}
+                                      alt={item.artworkName || 'Artwork'}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-400">
+                                      FILE
+                                    </span>
+                                  )}
+                                </a>
+                                <a
+                                  href={item.artworkUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
+                                >
+                                  Download {item.artworkName || 'artwork'}
+                                </a>
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-sm text-slate-400">
+                                Attached ({item.artworkPath.split('/').pop()}) —
+                                preview link unavailable.
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>

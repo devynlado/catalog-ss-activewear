@@ -17,6 +17,8 @@ import {
   type SerializedProject,
 } from '@/lib/emails/quote-project-emails';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { getArtworkLinks } from '@/lib/artwork-server';
+import { ARTWORK_EMAIL_URL_TTL } from '@/lib/artwork';
 import {
   RATE_LIMITS,
   buildRateLimitHeaders,
@@ -59,6 +61,7 @@ interface QuoteProjectPayload {
   finishingQuantity?: number;
   finishingServices?: string[];
   designNotes?: string;
+  artworkPath?: string | null;
 }
 
 interface QuoteProjectSubmission {
@@ -76,6 +79,7 @@ interface QuoteProjectSubmission {
   gclid?: string | null;
   gbraid?: string | null;
   wbraid?: string | null;
+  artwork_failed?: boolean;
 }
 
 // -----------------------------------------------------------------------------
@@ -140,6 +144,10 @@ function serializeProject(
       ? p.finishingServices
       : null,
     designNotes: p.designNotes?.trim() || null,
+    artworkPath:
+      typeof p.artworkPath === 'string' && p.artworkPath.length > 0
+        ? p.artworkPath
+        : null,
   };
 }
 
@@ -291,6 +299,28 @@ export async function POST(request: NextRequest) {
       );
       const quoteId = `QT-${Date.now().toString(36).toUpperCase()}`;
 
+      // Collect artwork storage paths across projects (for the row-level
+      // backup column + email signed URLs).
+      const artworkPaths = serialized
+        .map((p) => p.artworkPath)
+        .filter((p): p is string => typeof p === 'string' && p.length > 0);
+
+      // Resolve each path to a long-lived signed URL and attach it to a copy
+      // of the serialized projects for the email templates. Never throws.
+      const artworkLinks = artworkPaths.length
+        ? await getArtworkLinks(artworkPaths, ARTWORK_EMAIL_URL_TTL)
+        : [];
+      const linkByPath = new Map(artworkLinks.map((l) => [l.path, l]));
+      const emailProjects = serialized.map((p) => {
+        const link = p.artworkPath ? linkByPath.get(p.artworkPath) : undefined;
+        return {
+          ...p,
+          artworkUrl: link?.url ?? null,
+          artworkName: link?.name ?? null,
+          artworkIsImage: link?.isImage ?? false,
+        };
+      });
+
       // Emails
       const resend = getResend();
       const teamEmail =
@@ -299,10 +329,11 @@ export async function POST(request: NextRequest) {
       const emailProps = {
         quoteId,
         contact: body.contact,
-        projects: serialized,
+        projects: emailProjects,
         eventDate: body.eventDate ?? null,
         message: body.contact.message,
         totalPieces,
+        artworkFailed: !!body.artwork_failed,
       };
 
       const emailPromises = [
@@ -376,6 +407,7 @@ export async function POST(request: NextRequest) {
             gbraid: body.gbraid || null,
             wbraid: body.wbraid || null,
             decoration_methods: decorationMethods.length ? decorationMethods : null,
+            artwork_paths: artworkPaths.length ? artworkPaths : null,
           });
         if (dbInsertError) {
           console.error(

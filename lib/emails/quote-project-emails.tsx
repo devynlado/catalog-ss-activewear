@@ -60,6 +60,14 @@ export interface SerializedProject {
   finishingQuantity: number | null;
   finishingServices: string[] | null;
   designNotes: string | null;
+  // Storage path of the customer's uploaded artwork for this project (lives in
+  // the private `quote-artwork` bucket). Persisted in quotes.items[].
+  artworkPath?: string | null;
+  // Transient, set by the submit route just before rendering the email: a
+  // time-limited signed download URL + display metadata. Not persisted.
+  artworkUrl?: string | null;
+  artworkName?: string | null;
+  artworkIsImage?: boolean;
 }
 
 // -----------------------------------------------------------------------------
@@ -198,6 +206,27 @@ function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// Artwork link + inline thumbnail for one project block (team notification).
+// Renders only when the submit route attached a signed URL.
+function artworkBlockHtml(p: SerializedProject): string {
+  if (!p.artworkUrl) return '';
+  const name = escapeHtml(p.artworkName ?? 'artwork');
+  const thumb = p.artworkIsImage
+    ? `<a href="${p.artworkUrl}"><img src="${p.artworkUrl}" alt="${name}" width="96" height="96" style="display:block; width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid ${EMAIL_COLORS.border};" /></a>`
+    : `<div style="width:96px; height:96px; border-radius:8px; border:1px solid ${EMAIL_COLORS.border}; background-color:#f8fafc; text-align:center; line-height:96px; font-size:12px; color:${EMAIL_COLORS.textMuted}; font-family:${EMAIL_FONTS.stack};">FILE</div>`;
+  return `
+    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid ${EMAIL_COLORS.border};">
+      <p style="margin: 0 0 8px; color: ${EMAIL_COLORS.textMuted}; font-size: 12px; font-family: ${EMAIL_FONTS.stack};">Customer artwork:</p>
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:top; padding-right:12px;">${thumb}</td>
+        <td style="vertical-align:middle;">
+          <a href="${p.artworkUrl}" style="color:${EMAIL_COLORS.info}; font-size:13px; font-weight:600; text-decoration:none; font-family:${EMAIL_FONTS.stack};">Download ${name} →</a><br/>
+          <span style="color:${EMAIL_COLORS.textMuted}; font-size:11px; font-family:${EMAIL_FONTS.stack};">Link valid for 7 days — the admin dashboard always has it.</span>
+        </td>
+      </tr></table>
+    </div>`;
+}
+
 // =============================================================================
 // TEAM NOTIFICATION
 // =============================================================================
@@ -214,12 +243,13 @@ export interface ProjectQuoteNotificationProps {
   eventDate?: string | null;
   message?: string;
   totalPieces: number;
+  artworkFailed?: boolean;
 }
 
 export function generateProjectQuoteNotificationHtml(
   props: ProjectQuoteNotificationProps,
 ): string {
-  const { quoteId, contact, projects, eventDate, message, totalPieces } = props;
+  const { quoteId, contact, projects, eventDate, message, totalPieces, artworkFailed } = props;
 
   const contactRows = `
     <tr>
@@ -277,6 +307,7 @@ export function generateProjectQuoteNotificationHtml(
                   <p style="margin: 0 0 4px; color: ${EMAIL_COLORS.textMuted}; font-size: 12px; font-family: ${EMAIL_FONTS.stack};">Design notes:</p>
                   <p style="margin: 0; color: ${EMAIL_COLORS.textDark}; font-size: 13px; white-space: pre-wrap; font-family: ${EMAIL_FONTS.stack};">${escapeHtml(p.designNotes)}</p>
                 </div>` : ''}
+              ${artworkBlockHtml(p)}
             `)}
           </td>
         </tr>
@@ -284,8 +315,22 @@ export function generateProjectQuoteNotificationHtml(
     })
     .join('');
 
+  const artworkFailedRow = artworkFailed
+    ? `
+    <tr>
+      <td style="padding: 16px 32px 0;">
+        <div style="padding: 12px 16px; background-color: ${EMAIL_COLORS.warningBg}; border: 1px solid #fef08a; border-radius: 8px;">
+          <p style="margin: 0; color: ${EMAIL_COLORS.warning}; font-size: 13px; font-family: ${EMAIL_FONTS.stack};">
+            ⚠ The customer attached artwork but at least one file failed to upload. Please ask them to resend it.
+          </p>
+        </div>
+      </td>
+    </tr>`
+    : '';
+
   const content = `
     ${emailHeaderInternal('🎉 New Quote Request!', `Quote ID: ${quoteId}`)}
+    ${artworkFailedRow}
 
     <!-- Summary strip -->
     <tr>
@@ -345,7 +390,7 @@ export function generateProjectQuoteNotificationHtml(
 export function generateProjectQuoteNotificationText(
   props: ProjectQuoteNotificationProps,
 ): string {
-  const { quoteId, contact, projects, eventDate, message, totalPieces } = props;
+  const { quoteId, contact, projects, eventDate, message, totalPieces, artworkFailed } = props;
 
   const projectSection = projects
     .map((p, idx) => {
@@ -355,11 +400,18 @@ export function generateProjectQuoteNotificationText(
       const notes = p.designNotes
         ? `\n  Design notes:\n    ${p.designNotes.split('\n').join('\n    ')}`
         : '';
+      const artwork = p.artworkUrl
+        ? `\n  Artwork: ${p.artworkName ?? 'artwork'} — ${p.artworkUrl} (valid 7 days; admin dashboard always has it)`
+        : '';
       return `PROJECT ${idx + 1} — ${p.decorationLabel}
   Blank: ${blankSummaryText(p)}
-${facts}${notes}`;
+${facts}${notes}${artwork}`;
     })
     .join('\n\n');
+
+  const artworkFailedNote = artworkFailed
+    ? '\n⚠ Customer attached artwork but at least one file failed to upload. Ask them to resend.\n'
+    : '';
 
   return `
 [INTERNAL] NEW QUOTE REQUEST - ${quoteId}
@@ -367,7 +419,7 @@ ${facts}${notes}`;
 
 PROJECTS: ${projects.length}
 ESTIMATED TOTAL: ~${totalPieces} pieces (low estimate)
-
+${artworkFailedNote}
 CUSTOMER
 --------
 Name: ${contact.name}

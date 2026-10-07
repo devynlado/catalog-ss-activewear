@@ -8,6 +8,7 @@ import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
+import { uploadOptionalArtwork } from '@/lib/artwork';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 
 // Service name mapping for pre-filling the message
@@ -89,6 +90,11 @@ function ContactForm() {
       const honeypotInput = formEl.elements.namedItem('website') as HTMLInputElement | null;
       const honeypotValue = honeypotInput?.value ?? '';
 
+      // Upload the optional artwork first so we can send its storage path in
+      // the JSON payload. A failed upload never blocks the lead.
+      const { paths: artwork_paths, failed: artwork_failed } =
+        await uploadOptionalArtwork(uploadFile);
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,6 +106,8 @@ function ContactForm() {
           // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
           // so the server can store the Google click id for offline conversions.
           ...getAttribution(),
+          artwork_paths,
+          artwork_failed,
           website: honeypotValue,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),

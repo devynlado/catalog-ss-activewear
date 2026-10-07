@@ -5,6 +5,7 @@ import { Send, Loader2, CheckCircle2, Pencil, Lock, FileText, Phone, Mail, Clock
 import { HoneypotField } from '@/components/forms/HoneypotField';
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget';
 import { DesignUpload } from '@/components/forms/DesignUpload';
+import { uploadOptionalArtwork } from '@/lib/artwork';
 import { TURNSTILE_TOKEN_FIELD } from '@/lib/turnstile';
 import { getAttribution, getVisitorSource } from '@/lib/attribution';
 import { trackGenerateLead } from '@/lib/analytics';
@@ -69,6 +70,10 @@ export function RequestQuoteClient({ email, name, phone, company }: RequestQuote
       const formEl = e.currentTarget as HTMLFormElement;
       const honeypot = (formEl.elements.namedItem('website') as HTMLInputElement | null)?.value ?? '';
 
+      // Upload the optional artwork first; a failed upload never blocks the lead.
+      const { paths: artwork_paths, failed: artwork_failed } =
+        await uploadOptionalArtwork(designFile);
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,6 +89,8 @@ export function RequestQuoteClient({ email, name, phone, company }: RequestQuote
           // Pass first-touch attribution (gclid/gbraid/wbraid + utm/referrer)
           // so the server can store the Google click id for offline conversions.
           ...getAttribution(),
+          artwork_paths,
+          artwork_failed,
           website: honeypot,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken ?? '',
         }),

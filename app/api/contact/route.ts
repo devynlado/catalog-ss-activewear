@@ -10,6 +10,8 @@ import {
   getContactConfirmationSubject,
 } from '@/lib/emails/contact-confirmation';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { getArtworkLinks } from '@/lib/artwork-server';
+import { ARTWORK_EMAIL_URL_TTL } from '@/lib/artwork';
 import {
   RATE_LIMITS,
   buildRateLimitHeaders,
@@ -42,6 +44,8 @@ interface ContactFormData {
   gclid?: string;             // Google Ads click id (for offline conversions)
   gbraid?: string;            // Google click id (iOS/app traffic)
   wbraid?: string;            // Google click id (web, privacy-restricted)
+  artwork_paths?: string[];   // Storage paths of customer-uploaded artwork
+  artwork_failed?: boolean;   // True if the customer attached a file but upload failed
 }
 
 export async function POST(request: NextRequest) {
@@ -196,7 +200,17 @@ export async function POST(request: NextRequest) {
 
     const resend = getResend();
     const teamEmail = process.env.QUOTE_EMAIL_TO || 'info@garmentdecor.com';
-    
+
+    // Resolve artwork storage paths into long-lived signed URLs for the email
+    // (link + inline thumbnail). Admin always mints fresh URLs, so these only
+    // need to outlast a normal reply window.
+    const artworkPaths = Array.isArray(body.artwork_paths)
+      ? body.artwork_paths.filter((p) => typeof p === 'string' && p.length > 0)
+      : [];
+    const artworkLinks = artworkPaths.length
+      ? await getArtworkLinks(artworkPaths, ARTWORK_EMAIL_URL_TTL)
+      : [];
+
     // Send notification email to team
     await resend.emails.send({
       from: 'Garment Decor <info@garmentdecor.com>',
@@ -209,6 +223,8 @@ export async function POST(request: NextRequest) {
         company: body.company,
         message: body.message,
         service: body.service,
+        artwork: artworkLinks,
+        artworkFailed: !!body.artwork_failed,
       }),
       text: generateContactNotificationText({
         name: body.name,
@@ -217,6 +233,8 @@ export async function POST(request: NextRequest) {
         company: body.company,
         message: body.message,
         service: body.service,
+        artwork: artworkLinks,
+        artworkFailed: !!body.artwork_failed,
       }),
       replyTo: body.email,
     });
@@ -271,6 +289,7 @@ export async function POST(request: NextRequest) {
           resolved_location: body.resolved_location || null,
           copy_variant: body.copy_variant || null,
           resolution_source: body.resolution_source || null,
+          artwork_paths: artworkPaths.length ? artworkPaths : null,
           status: 'new',
       });
       console.log(`Contact saved to Supabase for ${body.email}`);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { getArtworkLinks } from '@/lib/artwork-server';
 
 function getServiceSupabase() {
   return createClient(
@@ -93,6 +94,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch contacts' }, { status: 500 });
   }
 
+  // Attach fresh signed download URLs for any uploaded artwork so the admin UI
+  // can show thumbnails + download links. Uses a short TTL (regenerated each
+  // page load). Runs per row but only for rows that actually have artwork.
+  const contactsWithArtwork = await Promise.all(
+    (contacts || []).map(async (c: { artwork_paths?: string[] | null }) => {
+      const paths = Array.isArray(c.artwork_paths) ? c.artwork_paths : [];
+      const artwork = paths.length ? await getArtworkLinks(paths) : [];
+      return { ...c, artwork };
+    }),
+  );
+
   // Aggregate stats (run in parallel)
   const [
     { count: totalCount },
@@ -131,7 +143,7 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.total - a.total);
 
   return NextResponse.json({
-    contacts: contacts || [],
+    contacts: contactsWithArtwork,
     page,
     pageSize,
     total: count || 0,

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft, Search } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { enrichItemsWithArtwork } from '@/lib/artwork-server';
 import { QuoteCard } from './QuoteCard';
 import { QuoteFilters } from './QuoteFilters';
 import { QuotesTrendChart } from './QuotesTrendChart';
@@ -87,6 +88,20 @@ export default async function QuotesPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: quotes } = await query.range(pageFrom, pageFrom + PER_PAGE - 1) as { data: any[] | null };
 
+  // Enrich each quote's project items with fresh signed artwork URLs so the
+  // (client) QuoteCard can render thumbnails + download links without ever
+  // seeing the service key.
+  const quotesWithArtwork = quotes
+    ? await Promise.all(
+        quotes.map(async (q) => ({
+          ...q,
+          items: Array.isArray(q.items)
+            ? await enrichItemsWithArtwork(q.items)
+            : q.items,
+        })),
+      )
+    : quotes;
+
   // Get status counts
   const { count: allCount } = await supabase
     .from('quotes')
@@ -167,8 +182,8 @@ export default async function QuotesPage({
 
         {/* Quote List */}
         <div className="mt-4 space-y-4">
-          {quotes && quotes.length > 0 ? (
-            quotes.map((quote) => (
+          {quotesWithArtwork && quotesWithArtwork.length > 0 ? (
+            quotesWithArtwork.map((quote) => (
               <QuoteCard key={quote.id} quote={quote} />
             ))
           ) : (

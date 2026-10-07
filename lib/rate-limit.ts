@@ -273,6 +273,14 @@ export const RATE_LIMITS = {
   quoteDaily: { tag: 'quote-daily', limit: 20, windowSeconds: 24 * 60 * 60 } satisfies RateLimitOptions,
 
   /**
+   * Artwork upload (signed-URL minting) per IP. Public/anonymous endpoint, so
+   * this is the main guard against someone spamming storage. Generous enough
+   * for a real multi-project quote (one file per project) submitted a couple
+   * of times, but tight enough to stop automated abuse.
+   */
+  artworkUpload: { tag: 'artwork-upload', limit: 30, windowSeconds: 10 * 60 } satisfies RateLimitOptions,
+
+  /**
    * Audit beacons fired by the login page after a successful auth. These
    * are background pings, not user-driven actions, so we set them just
    * tight enough to prevent log flooding by abusive clients.
