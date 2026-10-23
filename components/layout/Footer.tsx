@@ -67,7 +67,14 @@ export function Footer() {
               </a>
               <div className="flex items-center gap-3 text-sm text-slate-300">
                 <MapPin className="h-4 w-4 text-brand-500" />
-                4778 W. Mission Blvd, Montclair CA 91762
+                <a
+                  href="https://www.google.com/maps/place/Garment+Decor/@34.0565302,-117.700693,17z/data=!4m16!1m9!3m8!1s0x80c332b0ab0294ab:0x476adc033fed81e1!2sGarment+Decor!8m2!3d34.0565302!4d-117.700693!9m1!1b1!16s%2Fg%2F1pxq43y_j!3m5!1s0x80c332b0ab0294ab:0x476adc033fed81e1!8m2!3d34.0565302!4d-117.700693!16s%2Fg%2F1pxq43y_j?entry=ttu&g_ep=EgoyMDI2MTAxOS4wIKXMDSoASAFQAw%3D%3D"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-white"
+                >
+                  4778 W. Mission Blvd, Montclair CA 91762
+                </a>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-300">
                 <Clock className="h-4 w-4 text-brand-500" />

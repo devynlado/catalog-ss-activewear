@@ -30,10 +30,12 @@ const STATUS_ORDER: Record<string, number> = {
 };
 
 // Targets exposed by the bulk action bar. Mirrors BULK_TARGET_STATUSES on the
-// server (shipped/delivered intentionally excluded).
+// server (shipped intentionally excluded). `delivered` is special-cased: it can
+// only be applied to orders currently in the `shipped` status.
 const BULK_TARGET_OPTIONS: Array<{ id: string; label: string }> = [
   { id: 'ordered', label: 'Ordered' },
   { id: 'in_production', label: 'In Production' },
+  { id: 'delivered', label: 'Delivered' },
   { id: 'cancelled', label: 'Cancelled' },
 ];
 
@@ -55,6 +57,13 @@ function willSkip(order: Order, target: string): string | null {
   if (target === 'cancelled') {
     if (order.status === 'shipped' || order.status === 'delivered') {
       return `Cannot cancel a ${STATUS_LABELS[order.status] ?? order.status} order`;
+    }
+    return null;
+  }
+  if (target === 'delivered') {
+    // Only shipped orders can be bulk-marked as delivered.
+    if (order.status !== 'shipped') {
+      return `Can only mark Shipped orders as Delivered (this one is ${STATUS_LABELS[order.status] ?? order.status})`;
     }
     return null;
   }
