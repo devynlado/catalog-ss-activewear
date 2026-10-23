@@ -15,10 +15,11 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-// Statuses that bulk actions are allowed to set. `shipped`/`delivered` are
-// intentionally excluded (shipping needs per-order tracking + emails), and so
-// are the earlier lifecycle states.
-const BULK_TARGET_STATUSES = ['ordered', 'in_production', 'cancelled'] as const;
+// Statuses that bulk actions are allowed to set. `shipped` is intentionally
+// excluded (it needs per-order tracking + a customer email), and so are the
+// earlier lifecycle states. `delivered` is allowed but is special-cased below:
+// it can only be applied to orders that are currently `shipped`.
+const BULK_TARGET_STATUSES = ['ordered', 'in_production', 'delivered', 'cancelled'] as const;
 type BulkTargetStatus = (typeof BULK_TARGET_STATUSES)[number];
 
 const STATUS_ORDER: Record<string, number> = {
@@ -149,6 +150,21 @@ export async function POST(request: NextRequest) {
         });
         continue;
       }
+    } else if (targetStatus === 'delivered') {
+      // Business rule: only `shipped` orders can be bulk-marked as delivered.
+      // This lets admins correct the lag from the automated SS Activewear
+      // delivery sync without allowing arbitrary forward jumps.
+      if (order.status !== 'shipped') {
+        results.push({
+          id,
+          order_number: order.order_number,
+          outcome: 'skipped',
+          reason: `Can only mark Shipped orders as Delivered (this one is ${
+            ORDER_STATUS_LABELS[order.status] ?? order.status
+          })`,
+        });
+        continue;
+      }
     } else {
       // Forward-only for non-cancel transitions.
       const currentRank = STATUS_ORDER[order.status] ?? 0;
@@ -174,6 +190,8 @@ export async function POST(request: NextRequest) {
     const updates: Record<string, unknown> = { status: targetStatus };
     if (targetStatus === 'ordered') {
       updates.ordered_at = new Date().toISOString();
+    } else if (targetStatus === 'delivered') {
+      updates.delivered_at = new Date().toISOString();
     }
 
     const { error: updateError } = await serviceSupabase

@@ -301,7 +301,7 @@ export function DecorationUpsell() {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <a
-              href="/blanks/los-angeles-apparel-1801gd"
+              href="/quote"
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-700"
             >
               Get a Quote

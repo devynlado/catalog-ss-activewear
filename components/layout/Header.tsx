@@ -664,7 +664,14 @@ export function Header() {
                   <Star key={i} className={cn("h-3 w-3", i <= 4 ? "text-yellow-400 fill-yellow-400" : "text-yellow-400 fill-yellow-400/50")} />
                 ))}
               </div>
-              <span className="text-stone-300 ml-1">4.8 stars on Google</span>
+              <a
+                href="https://www.google.com/maps/place/Garment+Decor/@34.0565302,-117.700693,17z/data=!4m8!3m7!1s0x80c332b0ab0294ab:0x476adc033fed81e1!8m2!3d34.0565302!4d-117.700693!9m1!1b1!16s%2Fg%2F1pxq43y_j?entry=ttu&g_ep=EgoyMDI2MTAxOS4wIKXMDSoASAFQAw%3D%3D"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-stone-300 ml-1 transition-colors hover:text-white"
+              >
+                4.9 stars on Google
+              </a>
             </div>
             
             {/* Right - Resources dropdown + Rush promo */}

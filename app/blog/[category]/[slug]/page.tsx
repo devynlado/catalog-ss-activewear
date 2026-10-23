@@ -189,6 +189,14 @@ export default async function BlogArticlePage({ params }: Props) {
               {/* Article body */}
               <div className="mt-10 pb-16 rounded-2xl bg-white p-6 sm:p-10 shadow-sm shadow-stone-200/60 prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-a:text-brand-600 prose-img:rounded-xl">
                 <PortableText value={article.body as any} />
+
+                {article.tags && article.tags.length > 0 && (
+                  <div className="mt-10 flex flex-wrap gap-x-2 gap-y-1 border-t border-stone-100 pt-5 text-xs text-slate-400">
+                    {article.tags.map((tag) => (
+                      <span key={tag}>#{tag}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             </article>
 

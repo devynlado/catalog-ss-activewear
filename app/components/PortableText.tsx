@@ -21,6 +21,21 @@ const components: PortableTextComponents = {
     bullet: ({ children }) => <li>{children}</li>,
     number: ({ children }) => <li>{children}</li>,
   },
+  marks: {
+    link: ({ children, value }) => {
+      const href: string = value?.href ?? '#';
+      const isExternal = /^https?:\/\//i.test(href) && !href.includes('garmentdecor.com');
+      return (
+        <a
+          href={href}
+          className="font-medium text-brand-600 underline underline-offset-2 transition-colors hover:text-brand-700"
+          {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        >
+          {children}
+        </a>
+      );
+    },
+  },
 };
 
 interface Props {
