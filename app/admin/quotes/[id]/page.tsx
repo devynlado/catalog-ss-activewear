@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { ArrowLeft, Package, Palette, MapPin, User, Building2, Mail, Phone, BadgeCheck, Layers, Shirt, Sparkles } from 'lucide-react';
 import { createSupabaseServerClient, getServerProfile } from '@/lib/supabase-server';
 import { enrichItemsWithArtwork } from '@/lib/artwork-server';
+import { isArtworkPathExpiredByRetention } from '@/lib/artwork';
 import { Badge } from '@/components/ui/Badge';
 import { SalesRepCard } from '@/components/admin/SalesRepCard';
 import { QuoteStatusActions } from './QuoteStatusActions';
@@ -358,6 +359,11 @@ export default async function QuoteDetailPage({
                                   Download {item.artworkName || 'artwork'}
                                 </a>
                               </div>
+                            ) : isArtworkPathExpiredByRetention(item.artworkPath) ? (
+                              <p className="mt-1 text-sm text-slate-400">
+                                Arsip kedaluwarsa ({item.artworkPath.split('/').pop()}) —
+                                file dihapus sesuai kebijakan retensi.
+                              </p>
                             ) : (
                               <p className="mt-1 text-sm text-slate-400">
                                 Attached ({item.artworkPath.split('/').pop()}) —

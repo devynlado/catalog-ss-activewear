@@ -21,6 +21,7 @@ import {
   User,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { isArtworkPathExpiredByRetention } from '@/lib/artwork';
 import {
   blankSummary,
   decorationMethodsSummary,
@@ -548,6 +549,11 @@ function ArtworkPreview({ project }: { project: QuoteProjectItem }) {
             Download {artworkName || 'artwork'}
           </a>
         </div>
+      ) : isArtworkPathExpiredByRetention(project.artworkPath) ? (
+        <p className="text-xs text-slate-400">
+          Arsip kedaluwarsa ({project.artworkPath.split('/').pop()}) — file
+          dihapus sesuai kebijakan retensi.
+        </p>
       ) : (
         <p className="text-xs text-slate-400">
           Attached ({project.artworkPath.split('/').pop()}) — preview link

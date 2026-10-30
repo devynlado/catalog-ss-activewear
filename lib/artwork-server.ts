@@ -59,6 +59,97 @@ export async function createArtworkUploadUrl(
   return { signedUrl: data.signedUrl, token: data.token, path };
 }
 
+/**
+ * Walk the artwork bucket and return the full storage paths of every file whose
+ * day-folder (`YYYY-MM-DD/...`) is strictly older than `cutoff`.
+ *
+ * Uploads are grouped one folder per day (see {@link createArtworkUploadUrl}),
+ * so we only descend into folders older than the cutoff — we never list recent
+ * files. Both the folder listing and the per-folder file listing are paginated
+ * so the walk is safe for an arbitrarily large, long-lived bucket.
+ */
+export async function listArtworkPathsOlderThan(
+  cutoff: Date,
+): Promise<string[]> {
+  const supabase = getServiceSupabase();
+  const PAGE = 1000;
+  const cutoffMs = cutoff.getTime();
+  const dayFolderRe = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+  // 1) Collect day-folders older than the cutoff.
+  const oldFolders: string[] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await supabase.storage
+      .from(ARTWORK_BUCKET)
+      .list('', { limit: PAGE, offset, sortBy: { column: 'name', order: 'asc' } });
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+
+    for (const entry of data) {
+      // Folders come back with a null `id`; files have a real id.
+      if ((entry as { id?: string | null }).id) continue;
+      const m = dayFolderRe.exec(entry.name);
+      if (!m) continue;
+      const folderMs = Date.parse(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
+      if (Number.isNaN(folderMs)) continue;
+      if (folderMs < cutoffMs) oldFolders.push(entry.name);
+    }
+
+    if (data.length < PAGE) break;
+  }
+
+  // 2) List files inside each old folder.
+  const paths: string[] = [];
+  for (const folder of oldFolders) {
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await supabase.storage
+        .from(ARTWORK_BUCKET)
+        .list(folder, { limit: PAGE, offset, sortBy: { column: 'name', order: 'asc' } });
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) break;
+
+      for (const entry of data) {
+        // Skip nested folders (not expected, but be defensive).
+        if (!(entry as { id?: string | null }).id) continue;
+        paths.push(`${folder}/${entry.name}`);
+      }
+
+      if (data.length < PAGE) break;
+    }
+  }
+
+  return paths;
+}
+
+/**
+ * Delete artwork objects in batches. Returns the number successfully removed
+ * plus any per-batch error messages (never throws — a single failing batch must
+ * not abort the whole cleanup run).
+ */
+export async function removeArtworkObjects(
+  paths: string[],
+): Promise<{ removed: number; errors: string[] }> {
+  if (paths.length === 0) return { removed: 0, errors: [] };
+  const supabase = getServiceSupabase();
+  const BATCH = 100;
+  let removed = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < paths.length; i += BATCH) {
+    const batch = paths.slice(i, i + BATCH);
+    const { data, error } = await supabase.storage
+      .from(ARTWORK_BUCKET)
+      .remove(batch);
+    if (error) {
+      errors.push(error.message);
+      continue;
+    }
+    removed += data?.length ?? batch.length;
+  }
+
+  return { removed, errors };
+}
+
 export interface ArtworkLink {
   path: string;
   url: string | null;

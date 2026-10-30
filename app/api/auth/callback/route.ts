@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       if (profile?.role === 'admin') {
         redirectTo = '/admin';
       } else if (profile?.role === 'sales_rep') {
-        redirectTo = '/sales';
+        redirectTo = '/dashboard/rep';
       } else {
         redirectTo = '/dashboard';
       }

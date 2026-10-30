@@ -45,7 +45,38 @@ export const ARTWORK_MAX_SIZE_LABEL = '20MB';
 // message hours/days later, so they get a long TTL. After a link expires the
 // admin dashboard remains the permanent source of truth.
 export const ARTWORK_ADMIN_URL_TTL = 60 * 60; // 1 hour
-export const ARTWORK_EMAIL_URL_TTL = 7 * 24 * 60 * 60; // 7 days
+export const ARTWORK_EMAIL_URL_TTL = 14 * 24 * 60 * 60; // 14 days
+
+// Retention policy. The weekly cleanup cron (app/api/cron/artwork-cleanup)
+// purges stored artwork files older than this, EXCEPT files attached to quotes
+// that converted into an order (quotes.status = 'converted'), which are kept
+// indefinitely. Leads/quotes that never converted lose their attachment after
+// the window — the admin dashboard labels those as an expired archive.
+export const ARTWORK_RETENTION_DAYS = 200;
+
+/**
+ * True when a storage path is old enough to have been purged by the retention
+ * cron. Uploads are minted as `YYYY-MM-DD/uuid.ext` (see
+ * `createArtworkUploadUrl`), so the upload date is the leading folder segment.
+ *
+ * Fail-safe: returns `false` when the date can't be parsed, so a file is never
+ * mislabeled as an "expired archive" just because its path has an odd shape.
+ * This is client-safe (no storage access) — the admin UI uses it to decide
+ * whether a missing signed URL means "purged by retention" vs "temporary
+ * signing hiccup".
+ */
+export function isArtworkPathExpiredByRetention(
+  path: string | null | undefined,
+  retentionDays: number = ARTWORK_RETENTION_DAYS,
+): boolean {
+  if (!path) return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})\//.exec(path);
+  if (!match) return false;
+  const uploadedMs = Date.parse(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
+  if (Number.isNaN(uploadedMs)) return false;
+  const ageMs = Date.now() - uploadedMs;
+  return ageMs > retentionDays * 24 * 60 * 60 * 1000;
+}
 
 export interface ArtworkFileMeta {
   name: string;
