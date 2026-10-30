@@ -21,7 +21,7 @@ async function verifyAdmin(serviceSupabase: ReturnType<typeof getServiceSupabase
     .eq('id', user.id)
     .single();
 
-  if (!profile || !['admin', 'sales_rep'].includes(profile.role)) return null;
+  if (!profile || profile.role !== 'admin') return null;
   return user;
 }
 

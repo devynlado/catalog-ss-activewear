@@ -24,6 +24,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isArtworkPathExpiredByRetention } from '@/lib/artwork';
 import { LeadsTrendChart } from './LeadsTrendChart';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -951,6 +952,10 @@ function ContactRow({ contact, expanded, onToggle, selected, onSelect, actionLoa
                           >
                             Download {a.name}
                           </a>
+                        ) : isArtworkPathExpiredByRetention(a.path) ? (
+                          <span className="text-xs text-slate-400">
+                            {a.name} — arsip kedaluwarsa (dihapus sesuai kebijakan retensi)
+                          </span>
                         ) : (
                           <span className="text-xs text-slate-400">{a.name}</span>
                         )}

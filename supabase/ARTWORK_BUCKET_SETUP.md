@@ -20,7 +20,7 @@ upload/download URLs**, both of which bypass RLS:
 - Uploads: the browser gets a one-time *signed upload URL* from
   `POST /api/quote/artwork/upload` and PUTs the file straight to storage.
 - Downloads: the server mints short-lived *signed download URLs* on demand for
-  the admin dashboard (1 hour) and notification emails (7 days).
+  the admin dashboard (1 hour) and notification emails (14 days).
 
 ## Option A — Supabase Dashboard (quickest)
 

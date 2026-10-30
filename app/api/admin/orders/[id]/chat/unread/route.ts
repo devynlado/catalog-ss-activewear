@@ -18,7 +18,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { profile } = await getServerProfile();
-  if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
+  if (!profile || profile.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

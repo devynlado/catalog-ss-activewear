@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { profile } = await getServerProfile();
-  if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
+  if (!profile || profile.role !== 'admin') {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
   }
 

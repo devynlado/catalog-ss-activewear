@@ -15,7 +15,8 @@ export default async function AdminLayout({
 
   const { profile } = await getServerProfile();
 
-  if (!profile || !['admin', 'sales_rep'].includes(profile.role)) {
+  // Admin area is admin-only. Sales reps use /dashboard/rep (client lookup).
+  if (!profile || profile.role !== 'admin') {
     redirect('/dashboard');
   }
 
