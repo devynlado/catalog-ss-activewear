@@ -5,6 +5,7 @@ import { getGalleryItems, filterGalleryItemsBySearch } from '@/lib/sanity';
 import { GalleryFilterBar } from '../_gallery/GalleryFilterBar';
 import { GalleryGrid } from '../_gallery/GalleryGrid';
 import { GalleryPagination } from '../_gallery/GalleryPagination';
+import { FactoryShowcase } from '@/components/portfolio/FactoryShowcase';
 
 export const metadata = createPageMetadata({
   title: 'Photo Gallery | Custom Apparel Portfolio | Garment Decor',
@@ -87,6 +88,9 @@ export default async function PortfolioPhotosPage({ searchParams }: PageProps) {
           />
         </div>
       </section>
+
+      {/* Factory showcase - "See Where Your Order Is Made" */}
+      <FactoryShowcase />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Users, Users2, Star, TrendingUp, Building2, Heart, ArrowRight } from 'lucide-react';
 import { warehouseImages } from '@/lib/service-images';
+import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
 
 export default function AboutPage() {
   return (
@@ -87,6 +88,15 @@ export default function AboutPage() {
               <p className="text-lg font-medium text-slate-900">
                 Our journey proves one thing: when our clients succeed, we succeed together.
               </p>
+            </div>
+
+            {/* Factory Tour video */}
+            <div className="mt-12">
+              <YouTubeEmbed
+                videoId="zYIwYo_WjjQ"
+                title="Factory Tour Garment Decor"
+                thumbnail="/images/about/factory-tour-thumbnail.webp"
+              />
             </div>
           </div>
         </div>
