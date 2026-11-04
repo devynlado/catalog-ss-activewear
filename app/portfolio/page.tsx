@@ -5,6 +5,7 @@ import { PortfolioCardImage } from './PortfolioCardImage';
 import { getProjects, getProjectsFiltered, getCategories } from '@/lib/sanity';
 import { PortfolioSearch } from './PortfolioSearch';
 import { getDecorationTitles } from '@/sanity/schema/decorationOptions';
+import { FactoryShowcase } from '@/components/portfolio/FactoryShowcase';
 
 export const metadata = createPageMetadata({
   title: 'Portfolio | Custom Apparel Projects | Garment Decor',
@@ -232,6 +233,9 @@ export default async function PortfolioPage({ searchParams }: PageProps) {
           )}
         </div>
       </section>
+
+      {/* Factory showcase - "See Where Your Order Is Made" */}
+      <FactoryShowcase />
 
       {/* CTA */}
       <section className="py-16 sm:py-20 bg-brand-500">
