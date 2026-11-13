@@ -10,6 +10,7 @@ import {
   ServiceCTA,
   ServiceQuoteForm,
 } from '@/components/services';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 
 const turnaroundTiers = [
   {
@@ -259,6 +260,9 @@ export default function RushPage() {
         subtitle="Tight deadlines, delivered on time"
         decorationSlug="rush"
       />
+
+      {/* Google Reviews */}
+      <GoogleReviews />
 
       {/* Tips */}
       <TipsSection

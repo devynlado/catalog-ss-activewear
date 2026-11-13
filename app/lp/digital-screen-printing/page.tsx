@@ -15,6 +15,7 @@ import {
   LPDeliveryDates,
   LPFloatingCTA,
 } from '../_components';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import { trackPhoneClick } from '@/lib/analytics';
 
 const whyChooseReasons = [
@@ -307,6 +308,9 @@ export default function DigitalScreenPrintingLP() {
       </section>
 
       <LPPortfolio service="digital-screen-printing" dynamic categorySlug="digital-screen-printing" />
+
+      {/* Google Reviews */}
+      <GoogleReviews showSeeMore={false} />
 
       <LPTestimonials />
 

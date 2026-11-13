@@ -16,6 +16,7 @@ import {
   LPDeliveryDates,
   LPFloatingCTA,
 } from '../_components';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import { trackPhoneClick } from '@/lib/analytics';
 
 // Why Choose reasons for Embroidery
@@ -254,6 +255,9 @@ export default function EmbroideryLP() {
 
       {/* Portfolio */}
       <LPPortfolio service="embroidery" dynamic categorySlug="embroidery" />
+
+      {/* Google Reviews */}
+      <GoogleReviews showSeeMore={false} />
 
       {/* Testimonials */}
       <LPTestimonials />
