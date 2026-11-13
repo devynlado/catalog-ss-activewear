@@ -15,6 +15,7 @@ import {
   LPDeliveryDates,
   LPFloatingCTA,
 } from '../_components';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import { trackPhoneClick } from '@/lib/analytics';
 
 // Why Choose reasons
@@ -205,6 +206,9 @@ export default function CustomTShirtPrintingLP() {
 
       {/* Portfolio — dynamic from Sanity, lightbox only (no navigation) */}
       <LPPortfolio service="screen-printing" dynamic categorySlug="screen-printing" />
+
+      {/* Google Reviews */}
+      <GoogleReviews showSeeMore={false} />
 
       {/* Testimonials */}
       <LPTestimonials />

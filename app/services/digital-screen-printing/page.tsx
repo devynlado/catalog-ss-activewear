@@ -16,6 +16,7 @@ import {
   WhyChooseSection,
   ServiceFAQ,
 } from '@/components/services';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import type { ServiceFaqItem } from '@/components/services';
 import { getServiceImages } from '@/lib/service-images';
 
@@ -275,6 +276,9 @@ export default function DigitalScreenPrintingPage() {
         limit={8}
         viewAllLink="/portfolio"
       />
+
+      {/* Google Reviews */}
+      <GoogleReviews />
 
       {/* Tips */}
       <TipsSection

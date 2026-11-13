@@ -7,7 +7,7 @@ const trustSignals = [
   { icon: Factory, label: 'Factory Direct Pricing' },
   { icon: Clock, label: 'Same Week Turnaround' },
   { icon: Users, label: '50,000+ Orders' },
-  { icon: Star, label: '4.8★ on Google' },
+  { icon: Star, label: '4.9★ on Google' },
   { icon: MapPin, label: 'Southern California' },
   { icon: Shield, label: 'Quality Guaranteed' },
   { icon: Award, label: '10+ Years Experience' },

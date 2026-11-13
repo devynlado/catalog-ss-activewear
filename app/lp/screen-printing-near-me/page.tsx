@@ -15,6 +15,7 @@ import {
   LPDeliveryDates,
   LPFloatingCTA,
 } from '../_components';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import { trackPhoneClick } from '@/lib/analytics';
 import { useLPLocation } from '@/hooks/useLPLocation';
 
@@ -219,6 +220,9 @@ export default function ScreenPrintingNearMeLP() {
 
       {/* Portfolio */}
       <LPPortfolio service="screen-printing" dynamic categorySlug="screen-printing" />
+
+      {/* Google Reviews */}
+      <GoogleReviews showSeeMore={false} />
 
       {/* Testimonials */}
       <LPTestimonials />

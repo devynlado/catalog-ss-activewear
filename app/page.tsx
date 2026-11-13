@@ -8,6 +8,7 @@ import { FeaturedProducts } from '@/components/home/FeaturedProducts';
 import { ServicesGrid } from '@/components/home/ServicesGrid';
 import { BuiltForScale } from '@/components/home/BuiltForScale';
 import { TrustSignals } from '@/components/home/TrustSignals';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import { FinalCTA } from '@/components/home/FinalCTA';
 
 export const metadata = createPageMetadata({
@@ -46,7 +47,10 @@ export default function HomePage() {
       {/* 10. Trust Signals - Proof: Others trust us */}
       <TrustSignals />
       
-      {/* 11. Final CTA - Close: Let's do this */}
+      {/* 11. Google Reviews - Social proof: Real 5-star reviews */}
+      <GoogleReviews />
+      
+      {/* 12. Final CTA - Close: Let's do this */}
       <FinalCTA />
     </div>
   );

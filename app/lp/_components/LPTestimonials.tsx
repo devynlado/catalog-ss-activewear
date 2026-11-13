@@ -26,6 +26,12 @@ const testimonials: Testimonial[] = [
 ];
 
 export function LPTestimonials() {
+  // Hidden to avoid a duplicate review section on LP pages — the Google
+  // Reviews carousel (<GoogleReviews />) now serves as the social-proof
+  // section. Remove this early return to bring "What Our Clients Say" back.
+  return null;
+
+  // eslint-disable-next-line no-unreachable
   return (
     <section className="py-12 lg:py-16 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -43,7 +49,7 @@ export function LPTestimonials() {
             {[1,2,3,4,5].map((i) => (
               <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />
             ))}
-            <span className="ml-2 text-slate-600">4.8 out of 5 on Google</span>
+            <span className="ml-2 text-slate-600">4.9 out of 5 on Google</span>
           </div>
         </motion.div>
 

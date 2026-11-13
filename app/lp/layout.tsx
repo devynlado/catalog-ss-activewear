@@ -52,7 +52,7 @@ export default function LPLayout({
                     <Star key={i} className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
                   ))}
                 </div>
-                <span className="text-sm text-slate-600 ml-1">4.8 on Google</span>
+                <span className="text-sm text-slate-600 ml-1">4.9 on Google</span>
               </div>
 
               {/* Phone Button */}

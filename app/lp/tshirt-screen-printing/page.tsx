@@ -15,6 +15,7 @@ import {
   LPDeliveryDates,
   LPFloatingCTA,
 } from '../_components';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import { trackPhoneClick } from '@/lib/analytics';
 
 const whyChooseReasons = [
@@ -201,6 +202,9 @@ export default function TshirtScreenPrintingLP() {
 
       {/* Portfolio */}
       <LPPortfolio service="screen-printing" dynamic categorySlug="screen-printing" />
+
+      {/* Google Reviews */}
+      <GoogleReviews showSeeMore={false} />
 
       {/* Testimonials */}
       <LPTestimonials />

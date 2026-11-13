@@ -15,6 +15,7 @@ import {
   LPDeliveryDates,
   LPFloatingCTA,
 } from '../_components';
+import { GoogleReviews } from '@/components/home/GoogleReviews';
 import { trackPhoneClick } from '@/lib/analytics';
 
 const whyChooseReasons = [
@@ -205,6 +206,9 @@ export default function JumboScreenPrintingLP() {
       </section>
 
       <LPPortfolio service="jumbo-screen-printing" dynamic categorySlug="jumbo-screen-printing" />
+
+      {/* Google Reviews */}
+      <GoogleReviews showSeeMore={false} />
 
       <LPTestimonials />
 

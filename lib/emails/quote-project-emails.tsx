@@ -520,8 +520,7 @@ export function generateProjectQuoteConfirmationHtml(
 
   const content = `
     ${emailHeader('Quote Received!', "We'll get back to you within 2 hours", {
-      backgroundColor: EMAIL_COLORS.success,
-      iconEmoji: '✓',
+      backgroundColor: EMAIL_COLORS.secondary,
     })}
 
     <tr>
