@@ -8,6 +8,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { DecorationModal } from '@/components/cart/DecorationModal';
 import { ExitIntentPopup } from '@/components/quote/ExitIntentPopup';
 import { WishlistAuthBridge } from '@/components/wishlist/WishlistAuthBridge';
+import { LiveChatWidget } from '@/components/chat/LiveChatWidget';
 import { useCartStore } from '@/lib/cart-store';
 
 // Routes that should not show the main header/footer
@@ -23,7 +24,12 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   if (isMinimalLayout) {
     // Landing pages and auth pages get minimal layout (no header/footer)
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <LiveChatWidget />
+      </>
+    );
   }
 
   // Regular pages get full layout
@@ -42,6 +48,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       />
       <ExitIntentPopup />
       <WishlistAuthBridge />
+      <LiveChatWidget />
     </>
   );
 }
