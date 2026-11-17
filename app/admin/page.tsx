@@ -206,6 +206,13 @@ export default async function AdminDashboardPage() {
               {isAdmin && (
                 <>
                   <Link
+                    href="/admin/live-chat"
+                    className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                  >
+                    <Zap className="h-5 w-5 text-brand-500" />
+                    <span className="font-medium text-slate-700">Live Chat Leads</span>
+                  </Link>
+                  <Link
                     href="/admin/products"
                     className="flex items-center gap-3 rounded-lg border border-stone-200 p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
                   >
