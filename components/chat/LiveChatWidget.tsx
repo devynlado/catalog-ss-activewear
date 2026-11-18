@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useCartStore } from '@/lib/cart-store';
+import { getAcquisitionChannel, recordPath, getPreviousPaths } from '@/lib/livechat-context';
 
 /**
  * LiveChat.com widget (public-facing sales live chat).
@@ -108,10 +110,46 @@ function injectLiveChat() {
   /* eslint-enable */
 }
 
+// Format a dollar amount for display to the rep, e.g. 1248.5 → "$1,248.50".
+function formatUsd(amount: number): string {
+  return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
 export function LiveChatWidget() {
   const pathname = usePathname();
   const loadedRef = useRef(false);
 
+  // Visitor context (Phase 2 #2): attribution + cart + order-history sent to the
+  // rep as LiveChat session variables.
+  const [orderTotal, setOrderTotal] = useState<number | null>(null);
+  const items = useCartStore((s) => s.items);
+  const getItemCount = useCartStore((s) => s.getItemCount);
+  const getGrandTotal = useCartStore((s) => s.getGrandTotal);
+
+  // Lifetime order total — only resolves for visitors with a valid order session
+  // (the cookie is sent even on public pages). Fetched once per mount.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/orders/history');
+        if (!res.ok) return; // 401 for anonymous visitors — simply no history.
+        const data = await res.json();
+        const total = (data.orders || []).reduce(
+          (sum: number, o: { total?: number }) => sum + (Number(o.total) || 0),
+          0,
+        );
+        if (active && total > 0) setOrderTotal(total);
+      } catch {
+        /* non-fatal — context is best-effort */
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Inject / destroy the widget based on the current route (unchanged behaviour).
   useEffect(() => {
     if (!LICENSE) return;
 
@@ -134,6 +172,41 @@ export function LiveChatWidget() {
       loadedRef.current = true;
     }
   }, [pathname]);
+
+  // Record the breadcrumb and push the latest visitor context to LiveChat
+  // whenever the route, cart, or order history changes.
+  useEffect(() => {
+    if (!pathname) return;
+    recordPath(pathname);
+
+    // Only sync when the widget is actually live on a public route.
+    if (!LICENSE || isExcludedPath(pathname) || !loadedRef.current) return;
+
+    const vars: Record<string, string> = {};
+
+    const title = typeof document !== 'undefined' ? document.title : '';
+    vars['Current page'] = title ? `${pathname} (${title})` : pathname;
+
+    const previous = getPreviousPaths();
+    if (previous.length) vars['Previous pages'] = previous.join(' \u203a ');
+
+    vars['Source'] = getAcquisitionChannel();
+
+    const count = getItemCount();
+    vars['Cart'] =
+      count > 0 ? `${count} item${count > 1 ? 's' : ''} \u00b7 ${formatUsd(getGrandTotal())}` : 'Empty';
+
+    if (orderTotal && orderTotal > 0) vars['Order history'] = formatUsd(orderTotal);
+
+    try {
+      // Queued by the async loader if the widget hasn't finished loading yet.
+      window.LiveChatWidget?.call?.('update_session_variables', vars);
+    } catch {
+      /* no-op */
+    }
+    // getItemCount/getGrandTotal are stable zustand selectors; `items` drives cart updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, items, orderTotal]);
 
   return null;
 }
